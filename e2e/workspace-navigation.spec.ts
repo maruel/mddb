@@ -32,7 +32,14 @@ test.describe("Workspace tree navigation", () => {
       if (await activeTreeItem.evaluate((item) => document.activeElement === item)) break;
     }
     await expect(activeTreeItem).toBeFocused();
-    await page.keyboard.press("ArrowDown");
+    // First-login provisioning may select the new source page before this test tabs into the tree.
+    if (await sourceItem.evaluate((item) => document.activeElement === item)) {
+      await page.keyboard.press("ArrowDown");
+      await expect(targetItem).toBeFocused();
+      await page.keyboard.press("ArrowUp");
+    } else {
+      await page.keyboard.press("ArrowDown");
+    }
     await expect(sourceItem).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(tree.locator('[role="treeitem"]:focus')).toHaveCount(0);
