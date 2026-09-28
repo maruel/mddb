@@ -122,7 +122,7 @@ if ((${#python_files[@]} > 0)); then
 fi
 
 if ((${#style_files[@]} > 0)); then
-  run_check style pnpm --silent lint:style:files -- "${style_files[@]}"
+  run_check style pnpm exec stylelint -- "${style_files[@]}"
 fi
 
 if "$frontend_source_changed"; then

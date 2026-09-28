@@ -24,13 +24,6 @@
     "test:e2e:ui": "playwright test --ui",
     "coverage": "NODE_OPTIONS=--no-experimental-webstorage tsx --test --conditions=browser --test-force-exit --experimental-test-coverage --test-reporter=./scripts/quiet-test-reporter.mjs --import ./frontend/tests/setup-dom.ts 'frontend/src/**/*.test.ts' 'frontend/src/**/*.test.tsx'",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json",
-    "lint:style": "pnpm --silent lint:style:files -- \"frontend/src/**/*.css\"",
-    "lint:style:files": "stylelint",
-    "lint:style:fix": "pnpm exec stylelint --fix \"frontend/src/**/*.css\"",
-    "lint:check": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json && eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts",
-    "lint:fix": "eslint frontend/src sdk e2e playwright.config.ts --fix",
-    "format": "prettier --write --log-level warn .",
-    "format:check": "prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content .",
     "hooks:install": "scripts/install-git-hooks.sh",
     "prepare": "pnpm --silent hooks:install",
     "benchmark": "tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'"

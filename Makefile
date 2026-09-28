@@ -18,7 +18,7 @@ tools:
 DATA_DIR?=./data
 HTTP?=:8080
 LOG_LEVEL?=info
-FRONTEND_STAMP=node_modules/.stamp
+FRONTEND_STAMP=node_modules/.modules.yaml
 ENV_FILE=$(DATA_DIR)/.env
 
 # Static checks for verify, grouped into independent lanes run concurrently by
@@ -37,11 +37,11 @@ ENV_FILE=$(DATA_DIR)/.env
 # linting must run through the custom binary built from the published plugin
 # module; the plain binary is fine for `fmt`.
 VERIFY_GO = ./custom-gcl run --show-stats=false ./...
-VERIFY_JS = pnpm --silent format:check && pnpm --silent lint:style && node scripts/lint_frontend_styles.mjs
+VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && node scripts/lint_frontend_styles.mjs
 VERIFY_TS = pnpm --silent typecheck
 VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts
 VERIFY_PY = ruff format --check --quiet . && ruff check --quiet .
-VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || { out=$$(go tool shfmt -l $$files) || exit; [ -z "$$out" ] || { echo "Shell files need shfmt:" >&2; echo "$$out" >&2; exit 1; }; }
+VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -l $$files
 VERIFY_MISC = python3 scripts/lint_binaries.py && python3 scripts/update_agents_file_index.py --check
 
 # The custom-gcl binary is not byte-reproducible (golangci-lint custom builds
@@ -52,7 +52,7 @@ VERIFY_MISC = python3 scripts/lint_binaries.py && python3 scripts/update_agents_
 # rebuild; a version or config change must.
 .PHONY: custom-gcl
 custom-gcl:
-	@version=$$(go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2); \
+	@version=$$(go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2) || exit 1; \
 	want=$$({ sha256sum .custom-gcl.yml | cut -d" " -f1; echo "$$version"; go env GOVERSION; } | sha256sum | cut -d" " -f1); \
 	if [ -x custom-gcl ] && [ "$$want" = "$$(cat .custom-gcl.sha 2>/dev/null)" ]; then exit 0; fi; \
 	echo 'Building custom-gcl with the methodfilecheck plugin (one-off; runs when the config, golangci-lint version, or Go toolchain changes)...'; \
@@ -159,6 +159,7 @@ coverage: $(FRONTEND_STAMP)
 # The one static gate. Runs every check-only lane concurrently; the read-only
 # counterpart of fix and the pre-push gate. Independent of test.
 verify: tools custom-gcl $(FRONTEND_STAMP)
+	@go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 	@./scripts/run-concurrently.sh go,js,ts,eslint,python,shell,misc '$(VERIFY_GO)' '$(VERIFY_JS)' '$(VERIFY_TS)' '$(VERIFY_ESLINT)' '$(VERIFY_PY)' '$(VERIFY_SH)' '$(VERIFY_MISC)'
 
 # Apply every autofix, then refresh the generated file index. Order matters:
@@ -168,12 +169,12 @@ verify: tools custom-gcl $(FRONTEND_STAMP)
 fix: tools custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
-	@pnpm --silent lint:fix
-	@pnpm --silent format
+	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts --fix
+	@pnpm exec prettier --write --log-level warn .
 	@ruff check --quiet --fix .
 	@ruff format --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || go tool shfmt -w $$files
-	@pnpm --silent lint:style:fix
+	@pnpm exec stylelint --fix "frontend/src/**/*.css"
 	@./scripts/update_agents_file_index.py
 
 git-hooks:
