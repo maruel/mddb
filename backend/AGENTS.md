@@ -1,142 +1,26 @@
 # Backend Development Guidelines
 
-## Go Development
+## Tests
 
-### Standard Patterns
+Target 95% coverage.
 
-**Reflection**:
-- Always use reflect.Pointer instead of reflect.Ptr
-- Always use reflect.TypeFor[T]() instead of reflect.TypeOf() when the type is known at compile time.
+## HTTP API
 
-**Logging**:
-- Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc.
-- Error fields should use `"err"` not `"error"`.
+- `internal/server/dto/` holds every request, response, and error type. `dto.NewAPIError` builds errors that
+  carry an HTTP status; handlers wrapped with `Wrap` have the signature
+  `func(context.Context, *Request) (*Response, error)`.
+- Use GET for reads and POST for writes. Destructive actions end in `/delete`. Responses are JSON.
+- `internal/server/dto/sdk.go` specifies the routes. When you add or change an endpoint, update it beside
+  `router.go` and run `make types`, which uses `github.com/maruel/apisdkgen` to regenerate `sdk/types.gen.ts`,
+  `sdk/api.gen.ts`, and `sdk/API.md`. `sdk_test.go` fails when the specification and router registrations
+  diverge; raw handlers are excluded.
+- Types in `internal/storage/` and `internal/server/handlers/` never reach the SDK.
 
-**Testing**:
-- Use table-driven tests.
-- Store tests in `*_test.go` files next to implementation.
-- Target 95% coverage.
-- Use subtest. Create TestFoo then for each method create a subtest.
-- In unit tests, use t.Context(), never context.Background().
+## Storage
 
-### HTTP handlers
-
-**Errors**: Use `errors.NewAPIError(statusCode, code, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
-
-**Handler Signature**: All HTTP handlers wrapped with `Wrap()` must have signature:
-```go
-func(context.Context, RequestType) (*ResponseType, error)
-```
-
-## API Development
-
-### Type Generation (Single Source of Truth)
-
-mddb uses `github.com/maruel/apisdkgen` to generate TypeScript interfaces, the TypeScript client, and the API reference from Go DTOs and the explicit route specification in `internal/server/dto/sdk.go`. apisdkgen is pinned in `go.mod`; the server test compares the route specification with the router registrations.
-
-- **Source of Truth**: API Request, Response, and DTO structs live in `internal/server/dto/`; the SDK route specification lives in `internal/server/dto/sdk.go`.
-- **Encapsulation**: Structs in `internal/storage/` and `internal/server/handlers/` are internal implementation details and are NOT exported to the frontend.
-- **Generated Files**: `sdk/types.gen.ts`, `sdk/api.gen.ts`, `sdk/API.md` (DO NOT EDIT MANUALLY).
-- **Command**: `make types` and `go generate ./backend/internal/server` (included in `make build`).
-
-When you add or modify an API endpoint, add the Request/Response structs to `internal/server/dto/`, update `internal/server/dto/sdk.go` alongside the router, then regenerate the frontend SDK. The route parity test catches unregistered or undocumented JSON endpoints; raw handlers are intentionally excluded.
-
-### Endpoint Conventions
-
-- **HTTP Methods**: Use only GET and POST. No PUT or DELETE.
-  - GET for reads
-  - POST for creates, updates, and deletes (use `/delete` suffix for destructive actions)
-- **Response format**: Always JSON
-- **Error responses**: Include `error` field with structured details (code, message)
-- **Success responses**: Include `data` field with result (except for list endpoints which may return array directly under key like `nodes`)
-
-## File Operations
-
-### Markdown Handling (Pages)
-
-- Front matter (YAML) for metadata
-- UTF-8 encoding always
-- Normalize line endings (LF)
-
-### Database Storage Format (jsonldb)
-
-The `internal/jsonldb` package provides a generic, concurrent-safe, JSONL-backed data store.
-
-#### JSONL Table Format
-
-Tables are stored as `.jsonl` files with:
-- **Line 1**: Schema header (JSON object with `version` and `columns`)
-- **Lines 2+**: Data rows (one JSON object per line)
-
-Example `data.jsonl`:
-```jsonl
-{"version":"1","columns":[{"name":"id","type":"id"},{"name":"title","type":"string"}]}
-{"id":"01JWAB...","title":"First row"}
-{"id":"01JWAC...","title":"Second row"}
-```
-
-**Row Requirements:**
-- Must implement `Row[T]` interface: `Clone()`, `GetID()`, `Validate()`
-- IDs are 64-bit integers encoded as base32 hex strings (0-9A-V, time-sortable, case-insensitive safe)
-- Rows are kept sorted by ID on disk
-
-#### Blob Storage Format
-
-Large binary data is stored separately from JSONL rows:
-- **Location**: Sibling directory with `.blobs` suffix (e.g., `data.jsonl` → `data.blobs/`)
-- **Structure**: 256-way fan-out by first 2 chars of hash (e.g., `data.blobs/SE/OC8G...`)
-- **Reference Format**: `sha256:<BASE32HEX>-<size>` (52 uppercase base32 hex chars (0-9A-V) + decimal size)
-- **Content-Addressed**: Identical content shares the same file (deduplication)
-- **Garbage Collection**: Orphaned blobs are removed on table load
-
-Example blob ref: `sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-0`
-
-**Using Blobs in Rows:**
-```go
-type MyRow struct {
-    ID      jsonldb.ID
-    Content jsonldb.Blob  // Automatically discovered via reflection
-}
-
-// Creating a blob:
-writer, _ := table.NewBlob()
-writer.Write(data)
-blob, _ := writer.Close()
-row.Content = blob
-table.Append(&row)
-
-// Reading a blob:
-reader, _ := row.Content.Reader()
-io.Copy(dst, reader)
-reader.Close()
-```
-
-Blob fields are discovered automatically via reflection, including nested structs and slices.
-
-#### Column Types
-
-- `id` - Row identifier (required, unique)
-- `string` - Text
-- `int`, `float` - Numbers
-- `bool` - Boolean
-- `time` - Timestamp
-- `blob_ref` - Reference to external blob file
-
-## Build & Test
-
-Run these commands to verify changes:
-- `make fix` - Apply every autofix, then refresh the file index
-- `make verify` - Fast static gate; the pre-push gate
-- `make build` - Compile backend and frontend
-- `make test` - Run all tests
-
-## Code Quality & Linting
-
-**All code must pass `make verify` before commits.**
-
-### Go Backend (golangci-lint)
-
-Configured in `.golangci.yml`. Enforces error handling (`errcheck`, `errorlint`), naming (`errname`), style (`revive`, `gocritic`), and more.
+[internal/storage/static/workspace/AGENTS.md](internal/storage/static/workspace/AGENTS.md) specifies the
+workspace layout, JSONL tables, and blobs; it ships inside every workspace. `workspace_store.go` owns page
+front matter. The `jsonldb` package documentation covers its API, locking, indexes, and blobs.
 
 <!-- BEGIN FILE INDEX -->
 ## File Index
@@ -146,7 +30,7 @@ Autogenerated from first-line comments. Run scripts/update_agents_file_index.py 
 - `backend.go`: Package backend is the root module for mddb, a local-first markdown database
 - `cmd/mddb/main.go`: Package main is the entry point for the mddb server.
 - `cmd/notion-import/main.go`: Package main is the entry point for the notion-import CLI tool.
-- `docs/PLAN.md`: Backend Implementation Plan
+- `docs/PLAN_BACKEND.md`: mddb backend runs without a git binary
 - `docs/REQUIREMENTS.md`: Backend Requirements
 - `frontend/frontend.go`: Package frontend embeds the compiled SolidJS web UI assets.
 - `internal/cmd/gen-api-sdk/main.go`: Command gen-api-sdk generates mddb's TypeScript DTOs, client, and API reference.

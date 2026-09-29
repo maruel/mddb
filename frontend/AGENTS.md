@@ -1,230 +1,43 @@
 # Frontend Development Guidelines
 
-## Frontend Development (SolidJS)
+## Tests
 
-## Testing
+Unit tests run with `tsx --test`, not vitest. Assertions and mocks come from the `tests/expect.ts` facade:
+vitest's standalone expect and spy packages, plus a `vi` shim over node:test fake timers. There is no module
+mocking: contexts export their context objects for real providers, and App tests render the real tree with
+`globalThis.fetch` stubbed. `tests/setup-dom.ts`, loaded with `--import`, installs jsdom, the Solid TSX
+transform, and CSS and asset stubs. jsdom, not happy-dom, handles the select `value` fixup and the Markdown
+sanitizer.
 
-Unit tests run via `tsx --test`. Assertions and mocks
-come from the `tests/expect.ts` facade (vitest's standalone expect/spy packages
-with a `vi` shim over node:test fake timers). There is no module mocking:
-contexts export their context objects for real providers, and App-level tests
-render the real tree with `globalThis.fetch` stubbed. `tests/setup-dom.ts`
-(loaded via `--import`) provides jsdom globals, the Solid TSX transform, and
-CSS/asset stubs; the lane runs with `--conditions=browser --test-force-exit`.
-jsdom is used instead of happy-dom for the select `value` fixup and the
-markdown sanitizer.
+## Build
 
+`make build` runs `go generate`, which builds the frontend into `backend/frontend/dist/` for `go:embed`; the
+dist directory is tracked in git. `make frontend-dev` serves Vite with live reload and proxies the API to
+`localhost:8080`.
 
-### Code Organization
+## Routing
 
-- Components in `src/components/`
-- Global state in `src/stores/` (if needed) or Context
-- **CSS Modules**: Each `.tsx` file should have a corresponding `.module.css` file in the same directory. Import styles as `import styles from './ComponentName.module.css'`. This keeps component logic and styling colocated and prevents global CSS pollution.
+The router runs in `explicitLinks` mode: it intercepts only `<A>` from `@solidjs/router`. Use `<A>` for
+internal routes and `<a>` for external links, downloads, and API redirects. Derive active navigation state from
+router state, never `window.location`, which is not reactive.
 
-### Navigation & Links
+## Localization
 
-The router uses `explicitLinks` mode. This means `<a>` tags are **not** intercepted by the router.
-
-- **`<A href="...">`** (from `@solidjs/router`) - Client-side SPA navigation for internal routes
-- **`<a href="...">`** - Browser navigation for external links and API redirects
-
-```tsx
-import { A } from '@solidjs/router';
-
-// Internal app navigation - use <A> for client-side routing
-<A href="/settings/user">Profile</A>
-<A href={`/w/${wsId}`}>Workspace</A>
-
-// External links - use <a> (opens in new tab)
-<a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
-
-// For downloads
-<a href="/eventual/path/to/a/file.txt" target="_self">Download file.txt</a>
-
-// Dynamic navigation with state updates - use <a> with onClick
-<a href={url} onClick={(e) => { e.preventDefault(); doStuff(); navigate(url); }}>Link</a>
-```
-
-### Reactivity & Routing State
-
-**Never use `window.location` directly for UI state.** SolidJS won't re-render when `window.location` changes because it's not reactive.
-
-```tsx
-// BAD: Not reactive - UI won't update on navigation
-const isActive = (url: string) => {
-  return window.location.pathname === url;  // Won't trigger re-render
-};
-
-// GOOD: Use reactive props/signals passed from router
-const isActive = (url: string) => {
-  return props.currentRoute.path === url;  // Reactive, will re-render
-};
-```
-
-When determining active states for navigation items, always derive from reactive route state (props, signals, or context) rather than reading `window.location` directly.
-
-**When passing callbacks to child components, pass reactive values as parameters.** SolidJS only tracks dependencies accessed within the component's own rendering context. If a callback accesses `props.foo` from the parent's closure, the child won't re-render when `foo` changes.
-
-```tsx
-// BAD: Child won't re-render when props.currentRoute changes
-// Parent component:
-const isActive = (url: string) => {
-  return props.currentRoute.path === url;  // Accessed from parent's closure
-};
-<ChildComponent isActive={isActive} />
-
-// Child component:
-const classes = () => props.isActive('/foo') ? 'active' : '';  // Not reactive!
-
-// GOOD: Pass reactive value as parameter so child tracks the dependency
-// Parent component:
-const isActive = (url: string, route: Route) => {
-  return route.path === url;  // Route passed as parameter
-};
-<ChildComponent isActive={isActive} currentRoute={props.currentRoute} />
-
-// Child component:
-const classes = () => props.isActive('/foo', props.currentRoute) ? 'active' : '';  // Reactive!
-```
-
-### Build & Distribution
-
-mddb uses `go:embed` to include the frontend in the mddb binary created from ../backend/cmd/mddb:
-
-```bash
-# Build frontend + Go binary with embedded frontend
-make build-all
-
-# Result: ./mddb (single executable, self-contained)
-```
-
-The compiled `../backend/frontend/dist/` folder is tracked in git for reproducible builds.
-
-### Development Workflow
-
-**Frontend development** (live reload):
-```bash
-make frontend-dev
-# Frontend at http://localhost:5173 (proxies API to :8080)
-```
-
-**Backend + embedded frontend** (for testing embedded binary):
-```bash
-make frontend-build   # Build frontend once
-make build            # Build Go binary
-./mddb                # Run with embedded frontend
-```
-
-## Internationalization (i18n)
-
-**All user-visible strings must be localized.**
-
-### Adding New Strings
-
-1. **Add the key to `src/i18n/types.ts`** in the appropriate section:
-   ```typescript
-   // In the Dictionary interface
-   mySection: {
-     existingKey: string;
-     newKey: string;  // Add your new key
-   };
-   ```
-
-2. **Add translations to ALL dictionary files**:
-   - `src/i18n/dictionaries/en.ts` (English - required)
-   - `src/i18n/dictionaries/fr.ts` (French)
-   - `src/i18n/dictionaries/de.ts` (German)
-   - `src/i18n/dictionaries/es.ts` (Spanish)
-
-3. **Use the `t()` function in components**:
-   ```tsx
-   import { useI18n } from '../i18n';
-
-   function MyComponent() {
-     const { t } = useI18n();
-     return <button>{t('mySection.newKey')}</button>;
-   }
-   ```
-
-### Dictionary Structure
-
-- `common.*` - Reusable strings (loading, save, cancel, delete)
-- `app.*` - App-level UI (title, navigation, footer links)
-- `auth.*` - Authentication forms
-- `editor.*` - Document editor
-- `welcome.*` - Welcome/empty states
-- `onboarding.*` - Onboarding wizard
-- `settings.*` - Settings panels
-- `table.*` - Table views
-- `errors.*` - Error messages (keyed by ErrorCode for API errors)
-- `success.*` - Success messages
-
-### Guidelines
-
-- Never hardcode user-visible strings in components
-- Use `t('key') || 'fallback'` for placeholders/titles that need string type
-- Error messages from API use `translateError(code)` helper
-- Keep translations concise - UI space is limited
-- Test with longer languages (German) to catch overflow issues
-- Dismissable popups (modals, dropdowns, menus) must be dismissable with the Escape key
+Every user-visible string goes through `t()` from `useI18n()`. Add each key to `src/i18n/types.ts` and to all
+four dictionaries in `src/i18n/dictionaries/`: en, fr, de, and es. Where a string type is required, use
+`t("key") || "fallback"`. Translate API errors with `translateError(code)`. Keep text short, and check German
+for overflow.
 
 ## Icons
 
-mddb uses Material Symbols via the `@material-symbols/svg-400` package. Icons are imported as Solid components using `vite-solid-svg`.
+Icons come from `@material-symbols/svg-400`, imported as Solid components with the `?solid` suffix:
+`import HomeIcon from "@material-symbols/svg-400/outlined/home.svg?solid"`. Find names with
+`ls node_modules/@material-symbols/svg-400/outlined | grep keyword`. Icons size like text (`1em`) and use
+`currentColor`; `src/global.css` holds the shared rules.
 
-### Finding Icons
+## Editor
 
-To find a suitable icon:
-
-1.  **Search locally**: Search the package contents directly using `grep`:
-    ```bash
-    ls node_modules/@material-symbols/svg-400/outlined | grep "keyword"
-    ```
-2.  **Verify existing usage**: Check how similar icons are used in the codebase to maintain consistency:
-    ```bash
-    grep -r "Icon from '@material-symbols" frontend/src
-    ```
-3.  **Import and Use**: Always use the `?solid` suffix to import the SVG as a Solid component:
-    ```tsx
-    import HomeIcon from '@material-symbols/svg-400/outlined/home.svg?solid';
-
-    // Use as a component
-    <HomeIcon />
-    ```
-
-### Styling Icons
-
-Icons behave like text. They default to `1em` size and inherit `currentColor`.
-
-- **Global rules**: Defined in `src/global.css`.
-- **Custom sizing**: Set `font-size` on the parent container or the `svg` element itself.
-- **Vertical alignment**: Use `display: inline-flex` and `align-items: center` on the parent for perfect centering.
-
-## ProseMirror
-
-When inserting styled content programmatically, use marks rather than raw markdown text:
-
-```tsx
-// BAD: Raw markdown text won't render as a link
-const text = schema.text(`[${title}](${url})`);
-
-// GOOD: Use marks for inline formatting
-const linkMark = schema.marks.link.create({ href: url });
-const text = schema.text(title, [linkMark]);
-```
-
-## Code Quality & Linting
-
-**All code must pass linting before commits.**
-
-### Frontend (ESLint + Prettier)
-
-Configured in root `eslint.config.js`, `.editorconfig`, and the shared `.prettierignore`. Enforces strict equality, no-unused-vars, and consistent formatting (double quotes, 2 spaces).
-
-## Useful Resources
-
-- [SolidJS Docs](https://docs.solidjs.com)
-- [solid-primitives/i18n](https://github.com/solidjs-community/solid-primitives/tree/main/packages/i18n)
+Insert formatted content through ProseMirror marks, such as `schema.marks.link`, not Markdown text.
 
 <!-- BEGIN FILE INDEX -->
 ## File Index
@@ -232,7 +45,7 @@ Configured in root `eslint.config.js`, `.editorconfig`, and the shared `.prettie
 Autogenerated from first-line comments. Run scripts/update_agents_file_index.py to refresh.
 
 - `README.md`: mddb Frontend Architecture and Setup
-- `docs/PLAN.md`: Frontend Implementation Plan
+- `docs/PLAN_FRONTEND.md`: mddb frontend handles compound queries and Markdown tables
 - `docs/REQUIREMENTS.md`: Frontend Requirements
 - `scripts/gen-emoji-groups.mjs`: Script to generate a classified emoji list from unicode-emoji-json.
 - `scripts/gen-material-icons.mjs`: Script to generate a JSON list of all Material Symbols Outlined icon names.
