@@ -88,7 +88,7 @@ type workspaceRegistry struct {
 }
 
 func (m *workspaceRegistry) Instructions(context.Context) (string, error) {
-	return "Read documents in the authenticated user's active mddb workspace. Editors can also create and modify pages; every edit is committed to the workspace git history.", nil
+	return mddbVoiceSystemInstruction, nil
 }
 
 // readSpecs lists the tools every workspace member can call.
@@ -431,6 +431,14 @@ func nodeEventChangesTree(eventType dto.EventType) bool {
 func (m *workspaceRegistry) resource(n *content.Node) mcp.ResourceDescriptor {
 	return mcp.ResourceDescriptor{URI: m.nodeURI(n.ID), Name: n.ID.String(), Title: n.Title, MimeType: "application/json"}
 }
+
+const mddbVoiceSystemInstruction = "You are the voice assistant for the authenticated user's " +
+	"active mddb workspace.\n\n" +
+	"Use nodes_list to discover pages and tables. " +
+	"Use node_read before answering questions about a page's contents, and answer only from its result. " +
+	"Editors can create, update, and append pages. Read a page before updating it because node_update replaces " +
+	"both its title and its complete Markdown body. Every edit is committed to the workspace git history. " +
+	"Refer to pages and tables by title."
 
 type listNodesInput struct {
 	ParentID string `json:"parentId,omitempty" jsonschema:"description=Parent node ID; omit for workspace root"`

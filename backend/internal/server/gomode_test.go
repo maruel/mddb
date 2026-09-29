@@ -49,6 +49,25 @@ func (b *testVoiceBridge) Close(id string) {
 	b.mu.Unlock()
 }
 
+func TestWorkspaceRegistryInstructions(t *testing.T) {
+	t.Parallel()
+
+	instructions, err := (&workspaceRegistry{}).Instructions(t.Context())
+	if err != nil {
+		t.Fatalf("Instructions() error: %v", err)
+	}
+	for _, want := range []string{
+		"authenticated user's active mddb workspace",
+		"Use nodes_list to discover pages and tables",
+		"Use node_read before answering questions about a page's contents",
+		"node_update replaces both its title and its complete Markdown body",
+	} {
+		if !strings.Contains(instructions, want) {
+			t.Errorf("instructions missing %q: %q", want, instructions)
+		}
+	}
+}
+
 func TestGoModeVoiceGateway(t *testing.T) {
 	t.Parallel()
 	env := setupTestEnv(t)

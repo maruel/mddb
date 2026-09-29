@@ -100,7 +100,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 		Voice: voicev1.VoiceConfig{Name: "Orus", Language: "en"},
 		Tools: tools,
 		Context: voicev1.Context{
-			SystemInstruction: "You are the mddb workspace voice assistant. When the user asks about documents or pages, call the nodes_list tool before answering and answer only from its result. Keep answers to one sentence.",
+			SystemInstruction: mddbVoiceSystemInstruction,
 		},
 	})
 	client.wait(t, voicev1.MessageKindSessionReady)
