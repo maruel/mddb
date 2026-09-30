@@ -416,12 +416,12 @@ func (t *Table[T]) injectBlobStoreLocked(row T) {
 // Iter returns an iterator over clones of rows with ID strictly greater than startID.
 //
 // Pass 0 to iterate over all rows from the beginning.
-// The reader lock is held for the duration of iteration; avoid long-running
-// operations inside the loop to prevent blocking writers.
+// Row references are snapshotted under the reader lock, then cloned as yielded
+// after unlocking. Writers replace stored rows rather than mutate them in place,
+// so callers can read or write this table during iteration without blocking.
 func (t *Table[T]) Iter(startID ksid.ID) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		t.mu.RLock()
-		defer t.mu.RUnlock()
 
 		startIdx := 0
 		if !startID.IsZero() {
@@ -432,7 +432,10 @@ func (t *Table[T]) Iter(startID ksid.ID) iter.Seq[T] {
 			})
 		}
 
-		for _, row := range t.rows[startIdx:] {
+		rows := slices.Clone(t.rows[startIdx:])
+		t.mu.RUnlock()
+
+		for _, row := range rows {
 			if !yield(row.Clone()) {
 				return
 			}

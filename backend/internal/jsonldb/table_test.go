@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/maruel/ksid"
 )
@@ -572,6 +573,49 @@ not valid json
 			got := table.Get(ksid.ID(1))
 			if got.Name == "Modified" {
 				t.Error("Iter returned reference instead of clone")
+			}
+		})
+
+		t.Run("does not hold read lock during yield", func(t *testing.T) {
+			table, _ := setupTable(t)
+			if err := table.Append(&testRow{ID: 1, Name: "First"}); err != nil {
+				t.Fatal(err)
+			}
+			if err := table.Append(&testRow{ID: 2, Name: "Second"}); err != nil {
+				t.Fatal(err)
+			}
+
+			var ids []int
+			for row := range table.Iter(0) {
+				ids = append(ids, row.ID)
+				if row.ID != 1 {
+					if row.Name != "Second" {
+						t.Errorf("Iter saw updated row %q, want snapshot value Second", row.Name)
+					}
+					continue
+				}
+				done := make(chan error, 1)
+				go func() {
+					if _, err := table.Modify(ksid.ID(2), func(row *testRow) error {
+						row.Name = "Updated"
+						return nil
+					}); err != nil {
+						done <- err
+						return
+					}
+					done <- table.Append(&testRow{ID: 3, Name: "Third"})
+				}()
+				select {
+				case err := <-done:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(2 * time.Second):
+					t.Fatal("write blocked while iterator yielded a row")
+				}
+			}
+			if !slices.Equal(ids, []int{1, 2}) {
+				t.Errorf("Iter returned %v, want a snapshot of [1 2]", ids)
 			}
 		})
 	})
