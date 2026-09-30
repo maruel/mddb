@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -118,7 +120,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		GoVersion:    "go1.24.0",
 		Revision:     "abc1234",
 		Dirty:        false,
-		OAuth:        OAuthConfig{}, // all disabled
+		OAuth:        OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
 	}
 	router := NewRouter(svc, cfg)
 
@@ -779,6 +781,62 @@ func TestIntegration(t *testing.T) {
 		// 7. Expect 403 Forbidden
 		if status != http.StatusForbidden {
 			t.Errorf("Member creating workspace: got status %d, want %d", status, http.StatusForbidden)
+		}
+	})
+
+	t.Run("OAuthLink", func(t *testing.T) {
+		t.Parallel()
+		env := setupTestEnv(t)
+		var auth dto.AuthResponse
+		env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{
+			Email: "link@example.com", Password: "securePass1234", Name: "Link",
+		}, &auth, "")
+
+		link := func(token string) (int, []*http.Cookie, []byte) {
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, env.server.URL+"/api/v1/auth/oauth/link", strings.NewReader(`{"provider":"github"}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err2 := resp.Body.Close(); err == nil {
+				err = err2
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			return resp.StatusCode, resp.Cookies(), body
+		}
+
+		if status, cookies, _ := link(""); status != http.StatusUnauthorized || len(cookies) != 0 {
+			t.Errorf("unauthenticated link: status %d, cookies %v", status, cookies)
+		}
+
+		status, cookies, body := link(auth.Token)
+		if status != http.StatusOK {
+			t.Fatalf("link: status %d; body %s", status, body)
+		}
+		var out dto.LinkOAuthAccountResponse
+		if err := json.Unmarshal(body, &out); err != nil {
+			t.Fatal(err)
+		}
+		u, err := url.Parse(out.RedirectURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		state := u.Query().Get("state")
+		if u.Host != "github.com" || !strings.HasPrefix(state, "link:"+auth.User.ID.String()+":github:") {
+			t.Errorf("redirect_url = %q", out.RedirectURL)
+		}
+		if len(cookies) != 1 || cookies[0].Path != "/api/v1/auth/oauth" || !strings.HasPrefix(cookies[0].Value, state+".") {
+			t.Errorf("cookies = %v, want the signed state %q", cookies, state)
 		}
 	})
 }

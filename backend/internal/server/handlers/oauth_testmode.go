@@ -39,15 +39,18 @@ func (h *TestOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request)
 }
 
 // testUserInfo returns deterministic fake user info for test mode.
+//
+// Every fake account has a provider-verified email, as a Microsoft app
+// registration with the email and xms_edov optional claims provides.
 func testUserInfo(provider identity.OAuthProvider) oauthUserInfo {
 	switch provider {
 	case identity.OAuthProviderGoogle:
-		return oauthUserInfo{ID: "test-google-id", Email: "test-google@example.com", Name: "Google Test User"}
+		return oauthUserInfo{ID: "test-google-id", VerifiedEmail: knownEmail("test-google@example.com"), Name: "Google Test User"}
 	case identity.OAuthProviderMicrosoft:
-		return oauthUserInfo{ID: "test-ms-id", Email: "test-microsoft@example.com", Name: "Microsoft Test User"}
+		return oauthUserInfo{ID: "test-ms-id", VerifiedEmail: knownEmail("test-microsoft@example.com"), Name: "Microsoft Test User"}
 	case identity.OAuthProviderGitHub:
-		return oauthUserInfo{ID: "test-github-id", Email: "test-github@example.com", Name: "GitHub Test User"}
+		return oauthUserInfo{ID: "test-github-id", VerifiedEmail: knownEmail("test-github@example.com"), Name: "GitHub Test User"}
 	default:
-		return oauthUserInfo{}
+		return oauthUserInfo{VerifiedEmail: knownEmail("")}
 	}
 }

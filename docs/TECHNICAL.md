@@ -217,8 +217,14 @@ Supports Google and Microsoft OIDC flows.
 | Microsoft | `/api/v1/auth/oauth/microsoft` | Azure AD common |
 
 - **Callback handling**: `/api/v1/auth/oauth/{provider}/callback`
-- **Account linking**: Auto-links OAuth identity to existing user by email
-- **CSRF protection**: State token validation
+- **Account linking**: A new OAuth identity attaches to the account holding its email, or creates one, only when
+  the provider verified the email: Google `verified_email`, a verified GitHub `/user/emails` entry, or a Microsoft
+  ID-token `email` with `xms_edov` true. Otherwise the login fails with `EMAIL_NOT_VERIFIED`. A returning identity
+  signs in by provider ID.
+- **Explicit linking**: `POST /api/v1/auth/oauth/link` starts a flow bound to the signed-in user
+- **CSRF protection**: The flow start sets an HttpOnly, SameSite=Lax cookie with the HMAC-signed state. The
+  callback rejects a state that differs from the cookie, so a crafted state can neither log a browser in nor
+  name another user to link. The browser must use the `-base-url` host, which receives the callback.
 - **Implementation**: `backend/internal/server/handlers/oauth.go`
 
 ### Workspace Isolation

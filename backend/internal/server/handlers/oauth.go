@@ -4,8 +4,11 @@ package handlers
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,7 +16,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/gomode/oauth/oauthserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -26,20 +32,34 @@ import (
 	"golang.org/x/oauth2/microsoft"
 )
 
-const linkingStatePrefix = "link:"
+const (
+	// oauthStateCookie holds the HMAC-signed state of the OAuth flow the
+	// browser started. The callback accepts only the state it carries, which
+	// stops login CSRF and binds account linking to the user who requested it.
+	oauthStateCookie     = "mddb_oauth_state"
+	oauthStateCookiePath = "/api/v1/auth/oauth"
+	oauthStateMaxAge     = 600 // seconds
+	linkingStatePrefix   = "link:"
+)
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
 	svc       *Services
 	cfg       *Config
+	stateKey  []byte
 	providers map[identity.OAuthProvider]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
 func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
+	// Derive a dedicated state key so a state signature never doubles as a
+	// JWT or signed asset URL signature, which use the raw JWT secret.
+	mac := hmac.New(sha256.New, cfg.JWTSecret)
+	mac.Write([]byte("mddb oauth state v1"))
 	return &OAuthHandler{
 		svc:       svc,
 		cfg:       cfg,
+		stateKey:  mac.Sum(nil),
 		providers: make(map[identity.OAuthProvider]*oauth2.Config),
 	}
 }
@@ -84,31 +104,48 @@ func (h *OAuthHandler) ListProviders(_ context.Context, _ *dto.ProvidersRequest)
 	return &dto.ProvidersResponse{Providers: providers}, nil
 }
 
-// LinkOAuth initiates linking an OAuth provider to an existing account.
-func (h *OAuthHandler) LinkOAuth(_ context.Context, user *identity.User, req *dto.LinkOAuthAccountRequest) (*dto.LinkOAuthAccountResponse, error) {
+// LinkOAuth initiates linking an OAuth provider to the authenticated user's
+// account and responds with a dto.LinkOAuthAccountResponse.
+//
+// It reads the user from reqctx. The response also sets the state cookie that
+// names this user, so only the browser that holds the user's session can
+// complete the link in Callback.
+func (h *OAuthHandler) LinkOAuth(w http.ResponseWriter, r *http.Request) {
+	user := reqctx.User(r.Context())
+	var req dto.LinkOAuthAccountRequest
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	if err := d.Decode(&req); err != nil {
+		writeErrorResponse(w, dto.BadRequest("Invalid request body"))
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeErrorResponse(w, err)
+		return
+	}
 	provider := identity.OAuthProvider(req.Provider)
 	config, ok := h.providers[provider]
 	if !ok {
-		return nil, dto.InvalidProvider()
+		writeErrorResponse(w, dto.InvalidProvider())
+		return
 	}
-
-	// Check if provider is already linked
 	for _, ident := range user.OAuthIdentities {
 		if ident.Provider == provider {
-			return nil, dto.ProviderAlreadyLinked(dto.OAuthProvider(provider))
+			writeErrorResponse(w, dto.ProviderAlreadyLinked(dto.OAuthProvider(provider)))
+			return
 		}
 	}
 
-	// Generate linking state with user ID
-	state := generateLinkingState(user.ID, provider)
-
-	var opts []oauth2.AuthCodeOption
-	if provider == identity.OAuthProviderGoogle {
-		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
+	state, err := h.issueState(w, linkingStatePrefix+user.ID.String()+":"+string(provider)+":")
+	if err != nil {
+		slog.ErrorContext(r.Context(), "Failed to generate OAuth state", "err", err)
+		writeErrorResponse(w, dto.Internal("state_generation"))
+		return
 	}
-	authURL := config.AuthCodeURL(state, opts...)
-
-	return &dto.LinkOAuthAccountResponse{RedirectURL: authURL}, nil
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(&dto.LinkOAuthAccountResponse{RedirectURL: authCodeURL(config, provider, state)}); err != nil {
+		slog.ErrorContext(r.Context(), "Failed to encode response", "err", err)
+	}
 }
 
 // UnlinkOAuth removes an OAuth provider from the user's account.
@@ -152,14 +189,8 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *
 	return &dto.UnlinkOAuthAccountResponse{Ok: true}, nil
 }
 
-// generateLinkingState creates an OAuth state for linking that includes the user ID.
-func generateLinkingState(userID ksid.ID, provider identity.OAuthProvider) string {
-	randomPart, _ := utils.GenerateToken(16)
-	return fmt.Sprintf("%s%s:%s:%s", linkingStatePrefix, userID.String(), string(provider), randomPart)
-}
-
-// parseLinkingState parses a linking state and returns the user ID and provider.
-// Returns zero ID if the state is not a linking state.
+// parseLinkingState parses a verified linking state and returns the user ID
+// and provider. Returns zero ID if the state is not a linking state.
 func parseLinkingState(state string) (ksid.ID, identity.OAuthProvider) {
 	if !strings.HasPrefix(state, linkingStatePrefix) {
 		return 0, ""
@@ -185,19 +216,13 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In a real app, use a secure state from session/cookie
-	state, err := utils.GenerateToken(16)
+	state, err := h.issueState(w, "")
 	if err != nil {
-		slog.ErrorContext(r.Context(), "Failed to generate OAuth state token", "error", err)
+		slog.ErrorContext(r.Context(), "Failed to generate OAuth state", "err", err)
 		writeErrorResponse(w, dto.Internal("state_generation"))
 		return
 	}
-	var opts []oauth2.AuthCodeOption
-	if provider == identity.OAuthProviderGoogle {
-		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
-	}
-	authURL := config.AuthCodeURL(state, opts...)
-	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, authCodeURL(config, provider, state), http.StatusTemporaryRedirect)
 }
 
 // Callback handles the OAuth provider callback.
@@ -206,6 +231,15 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	config, ok := h.providers[provider]
 	if !ok {
 		writeErrorResponse(w, dto.InvalidProvider())
+		return
+	}
+
+	// The state cookie is single use: clear it whatever the outcome.
+	http.SetCookie(w, h.stateCookie("", -1))
+	state, err := h.verifyState(r)
+	if err != nil {
+		slog.WarnContext(r.Context(), "OAuth: rejected callback state", "err", err, "provider", provider)
+		writeErrorResponse(w, err)
 		return
 	}
 
@@ -224,12 +258,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	client := config.Client(ctx, token)
-	var userInfo struct {
-		ID        string `json:"id"`
-		Email     string `json:"email"`
-		Name      string `json:"name"`
-		AvatarURL string
-	}
+	var userInfo oauthUserInfo
 
 	switch provider {
 	case identity.OAuthProviderGoogle:
@@ -243,18 +272,17 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				slog.ErrorContext(ctx, "Failed to close Google API response body", "error", err)
 			}
 		}()
-		var googleUser struct {
-			ID      string `json:"id"`
-			Email   string `json:"email"`
-			Name    string `json:"name"`
-			Picture string `json:"picture"`
-		}
+		var googleUser googleUserInfo
 		if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
 			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
 		}
 		userInfo.ID = googleUser.ID
-		userInfo.Email = googleUser.Email
+		verified := ""
+		if googleUser.VerifiedEmail {
+			verified = googleUser.Email
+		}
+		userInfo.VerifiedEmail = knownEmail(verified)
 		userInfo.Name = googleUser.Name
 		userInfo.AvatarURL = googleUser.Picture
 	case identity.OAuthProviderMicrosoft:
@@ -269,21 +297,23 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		var msUser struct {
-			ID                string `json:"id"`
-			DisplayName       string `json:"displayName"`
-			UserPrincipalName string `json:"userPrincipalName"`
-			Mail              string `json:"mail"`
-		}
+		// A tenant admin sets mail to any address, and Graph does not report
+		// whether anyone verified mail or userPrincipalName; the email comes
+		// from the ID token instead.
+		var msUser graphUser
 		if err := json.NewDecoder(resp.Body).Decode(&msUser); err != nil {
 			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
 		}
 		userInfo.ID = msUser.ID
 		userInfo.Name = msUser.DisplayName
-		userInfo.Email = msUser.Mail
-		if userInfo.Email == "" {
-			userInfo.Email = msUser.UserPrincipalName
+		userInfo.VerifiedEmail = func() (string, error) {
+			email, err := microsoftVerifiedEmail(token, config.ClientID)
+			if err != nil {
+				slog.WarnContext(ctx, "OAuth: rejected Microsoft ID token", "err", err)
+				return "", dto.BadRequest("Invalid Microsoft ID token")
+			}
+			return email, nil
 		}
 
 		// Fetch Microsoft profile photo and convert to base64 data URL
@@ -299,13 +329,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				slog.ErrorContext(ctx, "Failed to close GitHub API response body", "error", err)
 			}
 		}()
-		var ghUser struct {
-			ID        int64  `json:"id"`
-			Login     string `json:"login"`
-			Name      string `json:"name"`
-			Email     string `json:"email"`
-			AvatarURL string `json:"avatar_url"`
-		}
+		// The profile email is the user's chosen public address, which GitHub
+		// does not document as verified; read the email from /user/emails.
+		var ghUser githubUser
 		if err := json.NewDecoder(resp.Body).Decode(&ghUser); err != nil {
 			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
@@ -315,17 +341,18 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		if userInfo.Name == "" {
 			userInfo.Name = ghUser.Login
 		}
-		userInfo.Email = ghUser.Email
 		userInfo.AvatarURL = ghUser.AvatarURL
-
-		// GitHub may not return email if set to private - fetch from emails endpoint
-		if userInfo.Email == "" {
-			userInfo.Email = fetchGitHubPrimaryEmail(ctx, client)
+		userInfo.VerifiedEmail = func() (string, error) {
+			email, err := fetchGitHubVerifiedEmail(client)
+			if err != nil {
+				slog.ErrorContext(ctx, "OAuth: failed to fetch GitHub emails", "err", err)
+				return "", dto.OAuthError("user_info")
+			}
+			return email, nil
 		}
 	}
 
 	// Check if this is a linking request
-	state := r.URL.Query().Get("state")
 	linkingUserID, linkingProvider := parseLinkingState(state)
 	if !linkingUserID.IsZero() {
 		// This is a linking callback - verify provider matches
@@ -361,12 +388,19 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// The signed-in user proves the link; the email is only a label, so a
+		// failed lookup stores none instead of blocking the link.
+		email, err := userInfo.VerifiedEmail()
+		if err != nil {
+			email = ""
+		}
+
 		// Link the OAuth identity
 		if _, err := h.svc.User.Modify(linkingUserID, func(u *identity.User) error {
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: userInfo.ID,
-				Email:      userInfo.Email,
+				Email:      email,
 				AvatarURL:  userInfo.AvatarURL,
 				LastLogin:  storage.Now(),
 			})
@@ -388,31 +422,102 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finishOAuthLogin(h.svc, h.cfg, w, r, provider, oauthUserInfo{
-		ID:        userInfo.ID,
-		Email:     userInfo.Email,
-		Name:      userInfo.Name,
-		AvatarURL: userInfo.AvatarURL,
-	})
+	finishOAuthLogin(h.svc, h.cfg, w, r, provider, userInfo)
+}
+
+// issueState returns a fresh OAuth state that starts with prefix and sets its
+// signed copy as the state cookie on w.
+func (h *OAuthHandler) issueState(w http.ResponseWriter, prefix string) (string, error) {
+	nonce, err := oauthserver.GenerateState()
+	if err != nil {
+		return "", err
+	}
+	state := prefix + nonce
+	http.SetCookie(w, h.stateCookie(oauthserver.SignState(state, h.stateKey), oauthStateMaxAge))
+	return state, nil
+}
+
+// verifyState returns the callback state after checking that it equals the
+// state in the signed cookie the browser received when the flow started.
+func (h *OAuthHandler) verifyState(r *http.Request) (string, error) {
+	c, err := r.Cookie(oauthStateCookie)
+	if err != nil {
+		return "", dto.BadRequest("Missing OAuth state cookie")
+	}
+	state, ok := oauthserver.ValidateState(c.Value, h.stateKey)
+	if !ok {
+		return "", dto.BadRequest("Invalid OAuth state cookie")
+	}
+	if r.URL.Query().Get("state") != state {
+		return "", dto.BadRequest("OAuth state mismatch")
+	}
+	return state, nil
+}
+
+// stateCookie returns the state cookie with the given value and max age.
+//
+// SameSite=Lax lets the browser send it on the provider's top-level redirect
+// back to the callback.
+func (h *OAuthHandler) stateCookie(value string, maxAge int) *http.Cookie {
+	return &http.Cookie{ //nolint:gosec // G124: Secure follows the base URL scheme so plain-HTTP deployments work.
+		Name:     oauthStateCookie,
+		Value:    value,
+		Path:     oauthStateCookiePath,
+		MaxAge:   maxAge,
+		Secure:   strings.HasPrefix(h.cfg.BaseURL, "https://"),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
+// authCodeURL returns the provider authorization URL for state.
+func authCodeURL(config *oauth2.Config, provider identity.OAuthProvider, state string) string {
+	var opts []oauth2.AuthCodeOption
+	if provider == identity.OAuthProviderGoogle {
+		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
+	}
+	return config.AuthCodeURL(state, opts...)
 }
 
 // oauthUserInfo holds user info fetched from an OAuth provider.
 type oauthUserInfo struct {
 	ID        string
-	Email     string
 	Name      string
 	AvatarURL string
+	// VerifiedEmail returns an address the provider asserts the user controls,
+	// or empty. Only a new or linking identity calls it, so a returning user
+	// signs in by provider ID even when the email lookup fails.
+	VerifiedEmail func() (string, error)
+}
+
+// knownEmail returns a VerifiedEmail for an address already in hand.
+func knownEmail(email string) func() (string, error) {
+	return func() (string, error) { return email, nil }
 }
 
 // finishOAuthLogin finds or creates a user from OAuth info, generates a JWT, and redirects.
+//
+// A provider identity that no account holds needs a verified email: it
+// attaches to the account holding that email, or creates one. Without a
+// verified email the login fails, and the user can link the provider from a
+// signed-in session instead.
 func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identity.OAuthProvider, info oauthUserInfo) {
 	ctx := r.Context()
 
 	// Try to find user by OAuth ID
 	user, err := svc.User.GetByOAuth(provider, info.ID)
 	if err != nil {
-		// Try to find user by email
-		user, err = svc.User.GetByEmail(info.Email)
+		email, err := info.VerifiedEmail()
+		if err != nil {
+			writeErrorResponse(w, err)
+			return
+		}
+		if email == "" {
+			slog.WarnContext(ctx, "OAuth: new identity without a verified email", "provider", provider)
+			writeErrorResponse(w, dto.EmailNotVerified())
+			return
+		}
+		user, err = svc.User.GetByEmail(email)
 		if err != nil {
 			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
@@ -422,20 +527,19 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 				writeErrorResponse(w, dto.Internal("password_generation"))
 				return
 			}
-			user, err = svc.User.Create(info.Email, password, info.Name)
+			user, err = svc.User.Create(email, password, info.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
 			}
 		}
 
-		// Link OAuth identity and mark email as verified (OAuth emails are trusted)
 		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
 			u.EmailVerified = true
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: info.ID,
-				Email:      info.Email,
+				Email:      email,
 				AvatarURL:  info.AvatarURL,
 				LastLogin:  storage.Now(),
 			})
@@ -481,6 +585,84 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	http.Redirect(w, r, "/?token="+url.QueryEscape(jwtToken), http.StatusFound)
 }
 
+// googleUserInfo is the Google OAuth2 v2 userinfo response.
+type googleUserInfo struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+}
+
+// graphUser is the subset of the Microsoft Graph /me response that login
+// trusts.
+type graphUser struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+}
+
+// githubUser is the GitHub /user response.
+type githubUser struct {
+	ID        int64  `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+// githubEmail is one entry of the GitHub /user/emails response.
+type githubEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"primary"`
+	Verified bool   `json:"verified"`
+}
+
+// microsoftIDClaims holds the Microsoft ID token claims that mddb reads.
+type microsoftIDClaims struct {
+	jwt.RegisteredClaims
+	TenantID string `json:"tid"`
+	Email    string `json:"email"`
+	// EmailDomainOwnerVerified is the xms_edov optional claim. Microsoft
+	// documents it as a boolean; any other value counts as unverified.
+	EmailDomainOwnerVerified any `json:"xms_edov"`
+}
+
+// microsoftVerifiedEmail returns the email in the ID token of t when Microsoft
+// asserts that its domain owner verified it, else an empty string.
+//
+// It skips the signature check because the token came straight from the token
+// endpoint over TLS (OpenID Connect Core 1.0 section 3.1.3.7), and checks the
+// audience, the expiry, and the v2.0 issuer of the token's tenant.
+//
+// The email and xms_edov claims are optional claims that the operator adds to
+// the app registration; see SELF_HOSTING.md.
+func microsoftVerifiedEmail(t *oauth2.Token, clientID string) (string, error) {
+	raw, ok := t.Extra("id_token").(string)
+	if !ok || raw == "" {
+		return "", errors.New("no ID token")
+	}
+	var c microsoftIDClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(raw, &c); err != nil {
+		return "", err
+	}
+	if c.TenantID == "" {
+		return "", errors.New("ID token has no tid")
+	}
+	v := jwt.NewValidator(
+		jwt.WithAudience(clientID),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuer("https://login.microsoftonline.com/"+c.TenantID+"/v2.0"),
+		// Tolerate clock skew with Microsoft on exp and nbf.
+		jwt.WithLeeway(time.Minute),
+	)
+	if err := v.Validate(c); err != nil {
+		return "", err
+	}
+	if c.EmailDomainOwnerVerified != true {
+		return "", nil
+	}
+	return c.Email, nil
+}
+
 // fetchMicrosoftPhoto fetches the user's profile photo from Microsoft Graph API
 // and returns it as a base64 data URL. Returns empty string on failure.
 func fetchMicrosoftPhoto(ctx context.Context, client *http.Client) string {
@@ -522,48 +704,33 @@ func fetchMicrosoftPhoto(ctx context.Context, client *http.Client) string {
 	return fmt.Sprintf("data:%s;base64,%s", contentType, encoded)
 }
 
-// fetchGitHubPrimaryEmail fetches the user's primary verified email from GitHub API.
-// Returns empty string on failure or if no verified primary email exists.
-func fetchGitHubPrimaryEmail(ctx context.Context, client *http.Client) string {
+// fetchGitHubVerifiedEmail returns the user's primary email if GitHub
+// verified it, else another verified email, else an empty string.
+func fetchGitHubVerifiedEmail(client *http.Client) (email string, err error) {
 	resp, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		slog.DebugContext(ctx, "Failed to fetch GitHub emails", "error", err)
-		return ""
+		return "", err
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.ErrorContext(ctx, "Failed to close GitHub emails response body", "error", err)
-		}
+		err = errors.Join(err, resp.Body.Close())
 	}()
-
 	if resp.StatusCode != http.StatusOK {
-		slog.DebugContext(ctx, "GitHub emails request failed", "status", resp.StatusCode)
-		return ""
+		return "", fmt.Errorf("GitHub emails: status %d", resp.StatusCode)
 	}
-
-	var emails []struct {
-		Email    string `json:"email"`
-		Primary  bool   `json:"primary"`
-		Verified bool   `json:"verified"`
-	}
+	var emails []githubEmail
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		slog.DebugContext(ctx, "Failed to decode GitHub emails", "error", err)
-		return ""
+		return "", fmt.Errorf("GitHub emails: %w", err)
 	}
 
-	// Find primary verified email
 	for _, e := range emails {
 		if e.Primary && e.Verified {
-			return e.Email
+			return e.Email, nil
 		}
 	}
-
-	// Fall back to any verified email
 	for _, e := range emails {
 		if e.Verified {
-			return e.Email
+			return e.Email, nil
 		}
 	}
-
-	return ""
+	return "", nil
 }

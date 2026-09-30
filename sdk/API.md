@@ -143,6 +143,7 @@ ErrorCode defines specific error types for the API.
 | `PROVIDER_ALREADY_LINKED` | ErrorCodeProviderAlreadyLinked is returned when trying to link an already linked provider. |
 | `PROVIDER_NOT_LINKED` | ErrorCodeProviderNotLinked is returned when trying to unlink a provider that is not linked. |
 | `EMAIL_IN_USE` | ErrorCodeEmailInUse is returned when an email is already in use by another account. |
+| `EMAIL_NOT_VERIFIED` | ErrorCodeEmailNotVerified is returned when an OAuth login matches no linked account and the provider verified no email. |
 | `QUOTA_EXCEEDED` | ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded. |
 | `PAYLOAD_TOO_LARGE` | ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit. |
 

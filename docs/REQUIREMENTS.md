@@ -36,7 +36,7 @@ mddb is a local-first markdown document and database system. The architecture fo
 - [x] **Email Verification**: Magic link verification for password-based accounts (when SMTP configured).
 - [x] **Email Change**: Users can change their primary email (triggers re-verification when SMTP configured).
 - [x] **Invitation Emails**: Localized email notifications for organization and workspace invitations.
-- **Note**: OAuth emails are trusted as pre-verified by providers. Email features require SMTP configuration.
+- **Note**: OAuth logins trust only emails the provider verified. Email features require SMTP configuration.
 
 ### 4. Local-First & Versioned
 

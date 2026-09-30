@@ -41,10 +41,14 @@ func (u *User) GetID() ksid.ID {
 
 // PreferredEmail returns the best email for external attribution
 // (e.g. git commits). Priority: GitHub > Google > Microsoft > raw email.
+// Identities without an email are skipped.
 func (u *User) PreferredEmail() string {
 	best := u.Email
 	bestRank := 4
 	for i := range u.OAuthIdentities {
+		if u.OAuthIdentities[i].Email == "" {
+			continue
+		}
 		var rank int
 		switch u.OAuthIdentities[i].Provider {
 		case OAuthProviderGitHub:

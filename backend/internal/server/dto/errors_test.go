@@ -116,6 +116,15 @@ func TestErrorConstructors(t *testing.T) {
 			t.Errorf("Expected message 'Missing required field: email', got '%s'", err.Error())
 		}
 	})
+	t.Run("EmailNotVerified", func(t *testing.T) {
+		err := EmailNotVerified()
+		if err.StatusCode() != http.StatusForbidden {
+			t.Errorf("Expected status code %d, got %d", http.StatusForbidden, err.StatusCode())
+		}
+		if err.Code() != ErrorCodeEmailNotVerified {
+			t.Errorf("Expected code %s, got %s", ErrorCodeEmailNotVerified, err.Code())
+		}
+	})
 	t.Run("Forbidden", func(t *testing.T) {
 		var err *APIError
 		if !errors.As(Forbidden("access denied"), &err) {

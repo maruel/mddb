@@ -10,6 +10,37 @@ import (
 	"github.com/maruel/ksid"
 )
 
+// preferredEmailCase is a set of OAuth identities and the email to prefer.
+type preferredEmailCase struct {
+	name       string
+	identities []OAuthIdentity
+	want       string
+}
+
+func TestUser(t *testing.T) {
+	t.Run("PreferredEmail", func(t *testing.T) {
+		for _, tc := range []preferredEmailCase{
+			{"no identity", nil, "user@example.com"},
+			{"GitHub over Microsoft", []OAuthIdentity{
+				{Provider: OAuthProviderMicrosoft, Email: "ms@example.com"},
+				{Provider: OAuthProviderGitHub, Email: "gh@example.com"},
+			}, "gh@example.com"},
+			{"identity without email", []OAuthIdentity{
+				{Provider: OAuthProviderGitHub},
+				{Provider: OAuthProviderMicrosoft, Email: "ms@example.com"},
+			}, "ms@example.com"},
+			{"only identities without email", []OAuthIdentity{{Provider: OAuthProviderMicrosoft}}, "user@example.com"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				u := User{Email: "user@example.com", OAuthIdentities: tc.identities}
+				if got := u.PreferredEmail(); got != tc.want {
+					t.Errorf("PreferredEmail() = %q, want %q", got, tc.want)
+				}
+			})
+		}
+	})
+}
+
 func TestUserStorage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {

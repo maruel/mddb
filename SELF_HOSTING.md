@@ -97,6 +97,21 @@ Microsoft OAuth is Microsoft Entra
    1. https://<host>/privacy
 1. Add yourself as owner
 1. Validate a domain name with a `/.well-known/microsoft-identity-association.json` file
+1. Token configuration ([Configure optional claims](https://learn.microsoft.com/entra/identity-platform/optional-claims))
+   1. Add optional claim
+   1. ID
+   1. Check `email` and `xms_edov`
+   1. Click Add
+   1. Check "Turn on the Microsoft Graph email permission" then click Add.
+
+Graph `mail` and `userPrincipalName` are unverified: a tenant admin can set `mail` to any address
+([Migrate away from email claims](https://learn.microsoft.com/entra/identity-platform/migrate-off-email-claim-authorization)).
+mddb therefore trusts only an ID token `email` whose `xms_edov` is `true`, meaning that the domain owner verified it,
+as Microsoft personal accounts and tenant-verified domains are
+([Optional claims reference](https://learn.microsoft.com/entra/identity-platform/optional-claims-reference)). Such an
+email creates an account or signs in to the account that holds it. Without it, a Microsoft identity that no account
+holds is refused with `EMAIL_NOT_VERIFIED`; the user signs in another way and links Microsoft from the profile
+settings. Accounts that already have Microsoft linked sign in regardless.
 
 ## GitHub App (Live Sync)
 

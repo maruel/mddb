@@ -78,6 +78,9 @@ const (
 	ErrorCodeProviderNotLinked ErrorCode = "PROVIDER_NOT_LINKED"
 	// ErrorCodeEmailInUse is returned when an email is already in use by another account.
 	ErrorCodeEmailInUse ErrorCode = "EMAIL_IN_USE"
+	// ErrorCodeEmailNotVerified is returned when an OAuth login matches no
+	// linked account and the provider verified no email.
+	ErrorCodeEmailNotVerified ErrorCode = "EMAIL_NOT_VERIFIED"
 
 	// ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded.
 	ErrorCodeQuotaExceeded ErrorCode = "QUOTA_EXCEEDED"
@@ -203,6 +206,13 @@ func ProviderNotLinked(provider OAuthProvider) *APIError {
 func EmailInUse() *APIError {
 	return NewAPIError(http.StatusConflict, ErrorCodeEmailInUse,
 		"This email address is already in use by another account")
+}
+
+// EmailNotVerified creates a 403 error for an OAuth login that has no linked
+// account and no provider-verified email.
+func EmailNotVerified() *APIError {
+	return NewAPIError(http.StatusForbidden, ErrorCodeEmailNotVerified,
+		"The provider did not verify your email address. Sign in another way, then link this provider in your profile settings")
 }
 
 // QuotaExceeded creates a 429 error for server-wide quota violations.

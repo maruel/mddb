@@ -195,7 +195,8 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/v1/auth/email/send-verification", WrapAuth(authh.SendVerificationEmail, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/switch-workspace", WrapAuth(mh.SwitchWorkspace, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/settings", WrapAuth(uh.UpdateUserSettings, svc, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/oauth/link", WrapAuth(oh.LinkOAuth, svc, hcfg, limiters))
+	// Raw: the response also sets the OAuth state cookie.
+	mux.Handle("POST /api/v1/auth/oauth/link", WrapAuthReadRaw(oh.LinkOAuth, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("POST /api/v1/auth/oauth/unlink", WrapAuth(oh.UnlinkOAuth, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/password", WrapAuth(authh.SetPassword, svc, hcfg, limiters))
 

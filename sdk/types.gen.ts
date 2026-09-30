@@ -28,6 +28,7 @@ export type ErrorCode =
   | "PROVIDER_ALREADY_LINKED"
   | "PROVIDER_NOT_LINKED"
   | "EMAIL_IN_USE"
+  | "EMAIL_NOT_VERIFIED"
   | "QUOTA_EXCEEDED"
   | "PAYLOAD_TOO_LARGE";
 /**
@@ -54,6 +55,7 @@ export const ErrorCodeCannotUnlinkOnlyAuth = "CANNOT_UNLINK_ONLY_AUTH";
 export const ErrorCodeProviderAlreadyLinked = "PROVIDER_ALREADY_LINKED";
 export const ErrorCodeProviderNotLinked = "PROVIDER_NOT_LINKED";
 export const ErrorCodeEmailInUse = "EMAIL_IN_USE";
+export const ErrorCodeEmailNotVerified = "EMAIL_NOT_VERIFIED";
 export const ErrorCodeQuotaExceeded = "QUOTA_EXCEEDED";
 export const ErrorCodePayloadTooLarge = "PAYLOAD_TOO_LARGE";
 
