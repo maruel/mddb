@@ -620,6 +620,8 @@ export const dict: Dictionary = {
     signaling: "Signaling…",
     speaker: "Speaker",
     speaking: "Speaking…",
+    thinking: "Thinking…",
+    transcribing: "Transcribing…",
     transcript: "Transcript",
     transcriptPlaceholder: "Conversation will appear here",
     unmute: "Unmute",

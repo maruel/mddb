@@ -14,31 +14,15 @@ import styles from "./VoicePanel.module.css";
 export default function VoicePanel(props: { endpoints: VoiceEndpoints; resourceSubscriptions?: string[] }) {
   const { token } = useAuth();
   const { t } = useI18n();
-  const messages = (): VoiceOverlayMessages => ({
-    assistant: t("voice.assistant") || defaultVoiceOverlayMessages.assistant,
-    cancel: t("voice.cancel") || defaultVoiceOverlayMessages.cancel,
-    cancelConnection: t("voice.cancelConnection") || defaultVoiceOverlayMessages.cancelConnection,
-    clearTranscript: t("voice.clearTranscript") || defaultVoiceOverlayMessages.clearTranscript,
-    connect: t("voice.connect") || defaultVoiceOverlayMessages.connect,
-    connectionFailed: t("voice.connectionFailed") || defaultVoiceOverlayMessages.connectionFailed,
-    endSession: t("voice.endSession") || defaultVoiceOverlayMessages.endSession,
-    listening: t("voice.listening") || defaultVoiceOverlayMessages.listening,
-    microphone: t("voice.microphone") || defaultVoiceOverlayMessages.microphone,
-    mute: t("voice.mute") || defaultVoiceOverlayMessages.mute,
-    muted: t("voice.muted") || defaultVoiceOverlayMessages.muted,
-    reconnecting: t("voice.reconnecting") || defaultVoiceOverlayMessages.reconnecting,
-    retry: t("voice.retry") || defaultVoiceOverlayMessages.retry,
-    signaling: t("voice.signaling") || defaultVoiceOverlayMessages.signaling,
-    speaker: t("voice.speaker") || defaultVoiceOverlayMessages.speaker,
-    speaking: t("voice.speaking") || defaultVoiceOverlayMessages.speaking,
-    transcript: t("voice.transcript") || defaultVoiceOverlayMessages.transcript,
-    transcriptPlaceholder: t("voice.transcriptPlaceholder") || defaultVoiceOverlayMessages.transcriptPlaceholder,
-    unmute: t("voice.unmute") || defaultVoiceOverlayMessages.unmute,
-    voiceAssistant: t("voice.voiceAssistant") || defaultVoiceOverlayMessages.voiceAssistant,
-    waitingForServer: t("voice.waitingForServer") || defaultVoiceOverlayMessages.waitingForServer,
-    settingUpWebRTC: t("voice.settingUpWebRTC") || defaultVoiceOverlayMessages.settingUpWebRTC,
-    you: t("voice.you") || defaultVoiceOverlayMessages.you,
-  });
+  // Translate every label gomode defines, so a gomode upgrade that adds labels
+  // needs only dictionary entries; VoicePanel.test.ts requires them.
+  const messages = (): VoiceOverlayMessages => {
+    const out = { ...defaultVoiceOverlayMessages };
+    for (const key of Object.keys(out) as (keyof VoiceOverlayMessages)[]) {
+      out[key] = t(`voice.${key}`) || out[key];
+    }
+    return out;
+  };
 
   onMount(() => {
     configureMcpClient(props.endpoints.mcpEndpoint, "mddb-frontend", token);

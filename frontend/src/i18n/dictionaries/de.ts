@@ -621,6 +621,8 @@ export const dict: Dictionary = {
     signaling: "Verbindung wird aufgebaut…",
     speaker: "Lautsprecher",
     speaking: "Spricht…",
+    thinking: "Denkt nach…",
+    transcribing: "Transkribiert…",
     transcript: "Transkript",
     transcriptPlaceholder: "Das Gespräch erscheint hier",
     unmute: "Stummschaltung aufheben",

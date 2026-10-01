@@ -625,6 +625,8 @@ export interface Dictionary {
     signaling: string;
     speaker: string;
     speaking: string;
+    thinking: string;
+    transcribing: string;
     transcript: string;
     transcriptPlaceholder: string;
     unmute: string;
