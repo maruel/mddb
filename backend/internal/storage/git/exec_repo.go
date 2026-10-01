@@ -302,6 +302,10 @@ func (r *ExecRepo) AbortMerge(ctx context.Context) error {
 
 // gitCmd creates an exec.Cmd for git with standard environment settings.
 func (r *ExecRepo) gitCmd(ctx context.Context, args ...string) *exec.Cmd {
+	// Keep automatic maintenance inside the command's lifetime. Detached Git
+	// processes can otherwise keep writing after a commit returns or race with
+	// workspace deletion. Command-line settings also cover existing repositories.
+	args = append([]string{"-c", "gc.autoDetach=false", "-c", "maintenance.autoDetach=false"}, args...)
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // G204: args are internal, not user input
 	cmd.Dir = r.dir
 	cmd.Env = append(os.Environ(),
