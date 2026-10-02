@@ -67,7 +67,9 @@ func newVoiceGateway(bridge voicegateway.MediaBridge) *voiceGateway {
 		inFlightUser: make(map[ksid.ID]bool),
 		offersByUser: make(map[ksid.ID][]time.Time),
 	}
-	g.handler = voicegateway.NewEmbeddedHandler(func() voicegateway.MediaBridge { return g })
+	// mddb admits and bounds WebRTC offers per user. A bridge text session would
+	// bypass that admission, so the embedded gateway serves none.
+	g.handler = voicegateway.NewEmbeddedHandler(func() voicegateway.MediaBridge { return g }, nil)
 	if lifecycle, ok := bridge.(voiceSessionLifecycle); ok {
 		lifecycle.SetOnSessionClosed(g.onSessionClosed)
 	}
