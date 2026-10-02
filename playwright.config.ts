@@ -36,6 +36,9 @@ export function playwrightConfig(fastRateLimit: boolean): PlaywrightTestConfig {
       url: "http://localhost:8080/api/v1/health",
       reuseExistingServer: false, // Always start fresh so the server uses this config's settings
       timeout: 30000,
+      // Playwright kills the process group with SIGKILL by default, which skips
+      // run-dev.py's cleanup and leaves its temporary config directory behind.
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
     },
   };
 }
