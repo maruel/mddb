@@ -31,9 +31,9 @@ the Go Mode Android shell, the hosted
 frontend hands its validated bearer token to the native MCP client and clears
 it on logout.
 
-The frontend can also host Go Mode's voice overlay. Set `GEMINI_API_KEY` in the
-server environment or the data directory's `.env` file to enable the embedded
-voice gateway. Its signaling routes require the same mddb bearer token as the
+The frontend can also host Go Mode's voice overlay. Set `voice-gateway.api_key`
+in `~/.config/mddb/config.toml` to enable the embedded voice gateway. Its
+signaling routes require the same mddb bearer token as the
 web API. Each user can have one active voice session; the server allows eight
 active sessions and limits new offers to three per minute per user and twenty
 per minute overall. When capacity is available, a new offer replaces that
@@ -45,7 +45,7 @@ The embedded backend is Google Gemini Live, so enable voice only when you accept
 sending microphone audio and voice turns off the device. While a voice session
 is connected, microphone audio, the session instructions, and the tool results
 the client executes are sent to Google; the assistant's audio comes back from
-Google. Without `GEMINI_API_KEY` the overlay is not advertised and no voice
+Google. Without a voice API key the overlay is not advertised and no voice
 audio leaves the device. Speech recognition, model inference, and speech
 synthesis all run in Google's Gemini Live service; mddb itself does not store
 voice audio, but the gateway writes transcript activity logs to a private
@@ -97,6 +97,11 @@ data/
         ├── data.blobs/             # Binary assets (images, files)
         └── <asset-files>           # Asset files stored alongside
 ```
+
+Instance configuration lives outside `data/`: the hand-written startup settings
+in `~/.config/mddb/config.toml` and the mutable server settings mddb writes to
+`~/.config/mddb/settings.json` (mode 0600, since it holds the JWT secret and the
+Web Push key pair).
 
 Every content mutation is a git commit. You can:
 

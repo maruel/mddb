@@ -88,7 +88,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	t.Cleanup(func() { bridge.CloseAll(context.WithoutCancel(t.Context())) })
 	t.Logf("voice bridge setup time, excluded from turn latency: %s", time.Since(started))
 
-	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(), RateLimits: storage.DefaultRateLimits()}
+	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "smoke", VoiceBridge: bridge}))
 	t.Cleanup(server.Close)
 

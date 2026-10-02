@@ -31,16 +31,17 @@ import (
 // Config holds configuration for the router.
 type Config struct {
 	*storage.ServerConfig
-	DataDir     string
-	BaseURL     string
-	Version     string
-	GoVersion   string
-	Revision    string
-	Dirty       bool
-	OAuth       OAuthConfig
-	GitHubApp   GitHubAppConfig
-	IPGeo       *ipgeo.Checker
-	VoiceBridge voicegateway.MediaBridge
+	ConfigDir     string
+	BaseURL       string
+	Version       string
+	GoVersion     string
+	Revision      string
+	Dirty         bool
+	FastRateLimit bool // Multiply every rate limit for the e2e suite.
+	OAuth         OAuthConfig
+	GitHubApp     GitHubAppConfig
+	IPGeo         *ipgeo.Checker
+	VoiceBridge   voicegateway.MediaBridge
 }
 
 // GitHubAppConfig holds GitHub App credentials for installation-based auth.
@@ -80,6 +81,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		cfg.RateLimits.WriteRatePerMin,
 		cfg.RateLimits.ReadAuthRatePerMin,
 		cfg.RateLimits.ReadUnauthRatePerMin,
+		cfg.FastRateLimit,
 	)
 	limiters := ratelimit.NewLimiters(rlCfg)
 
@@ -142,7 +144,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/v1/admin/server", WrapGlobalAdmin(adminh.GetServerDetail, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
-	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, FileStore: svc.FileStore, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
+	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, ConfigDir: cfg.ConfigDir, FileStore: svc.FileStore, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
 	mux.Handle("GET /api/v1/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 
@@ -168,7 +170,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		slog.Info("No OAuth providers configured")
 	}
 
-	// In test mode, use a fake handler that bypasses real OAuth providers.
+	// In an e2e build, use a fake handler that bypasses real OAuth providers.
 	loginRedirect := oh.LoginRedirect
 	if cfg.OAuth.TestOAuth {
 		toh := handlers.NewTestOAuthHandler(svc, hcfg, providers)

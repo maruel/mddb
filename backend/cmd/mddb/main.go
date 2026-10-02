@@ -2,9 +2,9 @@
 //
 // mddb is a local-first markdown database that stores content as files,
 // provides OAuth authentication (Google/Microsoft), and exposes a RESTful
-// HTTP API. Configuration is read from CLI flags, a .env file (for OAuth),
-// and config.json (for JWT secret, SMTP, quotas). An optional GEMINI_API_KEY
-// enables the embedded voice gateway.
+// HTTP API. Startup configuration is read from config.toml and mutable server
+// settings from settings.json, both in the config directory. A configured
+// voice API key enables the embedded voice gateway.
 package main
 
 import (
@@ -23,7 +23,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -55,21 +54,22 @@ func main() {
 }
 
 func mainImpl() error {
+	flag.Usage = func() {
+		w := flag.CommandLine.Output()
+		_, _ = fmt.Fprintf(w, `Usage: mddb [flags]
+
+mddb serves the web UI, the HTTP API, and the workspace MCP endpoint.
+
+Configuration is read from config.toml in the config directory
+(default: ~/.config/mddb/). See contrib/config.toml for a documented example.
+
+Flags:
+`)
+		flag.PrintDefaults()
+	}
+	configDirFlag := flag.String("config-dir", "", "Config directory (default: ~/.config/mddb)")
 	version := flag.Bool("version", false, "Print version and exit")
-	httpAddr := flag.String("http", "localhost:8080", "Address to listen on (e.g., localhost:8080, :8080, 0.0.0.0:8080). Use 0.0.0.0:port to listen on all interfaces.")
-	dataDir := flag.String("data-dir", "./data", "Data directory")
-	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
-	baseURL := flag.String("base-url", "http://localhost", "Base URL for OAuth callbacks (e.g., https://example.com)")
-	googleClientID := flag.String("google-client-id", "", "Google OAuth client ID")
-	googleClientSecret := flag.String("google-client-secret", "", "Google OAuth client secret")
-	msClientID := flag.String("ms-client-id", "", "Microsoft OAuth client ID")
-	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
-	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
-	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
-	githubAppID := flag.String("github-app-id", "", "GitHub App ID (int64)")
-	githubAppPrivateKeyFile := flag.String("github-app-private-key-file", "", "path to GitHub App private key PEM file")
-	githubAppWebhookSecret := flag.String("github-app-webhook-secret", "", "GitHub App webhook secret")
-	geoDB := flag.String("geo-db", "", "Path to MaxMind MMDB file for IP geolocation (optional)")
+	registerFastRateLimitFlag(flag.CommandLine)
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -80,10 +80,34 @@ func mainImpl() error {
 		return nil
 	}
 
+	// config.toml owns every startup setting; -config-dir only selects which
+	// directory holds it.
+	cfgDir := defaultConfigDir()
+	if *configDirFlag != "" {
+		cfgDir = *configDirFlag
+	}
+	tc, err := loadTOMLConfig(cfgDir)
+	if err != nil {
+		return err
+	}
+	// Run onboarding when no config file exists yet and stdin is a TTY.
+	if _, err := os.Stat(configPath(cfgDir)); os.IsNotExist(err) && isatty.IsTerminal(os.Stdin.Fd()) {
+		if err := runOnboarding(cfgDir, tc.Server); err != nil {
+			return fmt.Errorf("onboarding failed: %w", err)
+		}
+		if tc, err = loadTOMLConfig(cfgDir); err != nil {
+			return err
+		}
+	}
+	cfg, err := resolveConfig(&tc, cfgDir)
+	if err != nil {
+		return err
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	defer stop()
 	ll := &slog.LevelVar{}
-	ll.Set(slog.LevelInfo)
+	ll.Set(cfg.LogLevel)
 	// Skip timestamps when running under systemd (it adds its own).
 	underSystemd := os.Getenv("JOURNAL_STREAM") != ""
 	logger := slog.New(tint.NewTextHandler(colorable.NewColorable(os.Stderr), &tint.Options{
@@ -129,161 +153,32 @@ func mainImpl() error {
 	}))
 	slog.SetDefault(logger)
 
-	if err := os.MkdirAll(*dataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create data directory: %w", err)
 	}
-	// Run onboarding if no .env file exists and stdin is a TTY
-	envPath := filepath.Join(*dataDir, ".env")
-	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		if isatty.IsTerminal(os.Stdin.Fd()) {
-			if err := runOnboarding(*dataDir); err != nil {
-				return fmt.Errorf("onboarding failed: %w", err)
-			}
-		}
-	}
 
-	// Load .env for OAuth credentials and bootstrap settings
-	env, err := loadDotEnv(*dataDir)
+	// Load settings.json for JWT secret, SMTP, and quotas (creates with defaults if missing)
+	serverCfg, err := storage.LoadServerConfig(cfg.ConfigDir, e2eBuild)
 	if err != nil {
-		return err
-	}
-
-	// Load server_config.json for JWT secret, SMTP, and quotas (creates with defaults if missing)
-	serverCfg, err := storage.LoadServerConfig(*dataDir)
-	if err != nil {
-		return fmt.Errorf("failed to load server_config.json: %w", err)
-	}
-
-	// Override with .env file values if not explicitly set via flags
-	set := make(map[string]bool)
-	flag.Visit(func(f *flag.Flag) {
-		set[f.Name] = true
-	})
-
-	if !set["http"] {
-		if v := env["HTTP"]; v != "" {
-			*httpAddr = v
-		}
-	}
-	if !set["log-level"] {
-		if v := env["LOG_LEVEL"]; v != "" {
-			*logLevel = v
-		}
-	}
-	if !set["base-url"] {
-		if v := env["BASE_URL"]; v != "" {
-			*baseURL = v
-		}
-	}
-	if !set["google-client-id"] {
-		if v := env["GOOGLE_CLIENT_ID"]; v != "" {
-			*googleClientID = v
-		}
-	}
-	if !set["google-client-secret"] {
-		if v := env["GOOGLE_CLIENT_SECRET"]; v != "" {
-			*googleClientSecret = v
-		}
-	}
-	if !set["ms-client-id"] {
-		if v := env["MICROSOFT_CLIENT_ID"]; v != "" {
-			*msClientID = v
-		}
-	}
-	if !set["ms-client-secret"] {
-		if v := env["MICROSOFT_CLIENT_SECRET"]; v != "" {
-			*msClientSecret = v
-		}
-	}
-	if !set["github-client-id"] {
-		if v := env["GITHUB_CLIENT_ID"]; v != "" {
-			*githubClientID = v
-		}
-	}
-	if !set["github-client-secret"] {
-		if v := env["GITHUB_CLIENT_SECRET"]; v != "" {
-			*githubClientSecret = v
-		}
-	}
-	if !set["github-app-id"] {
-		if v := env["GITHUB_APP_ID"]; v != "" {
-			*githubAppID = v
-		}
-	}
-	if !set["github-app-private-key-file"] {
-		if v := env["GITHUB_APP_PRIVATE_KEY_FILE"]; v != "" {
-			*githubAppPrivateKeyFile = v
-		}
-	}
-	if !set["github-app-webhook-secret"] {
-		if v := env["GITHUB_APP_WEBHOOK_SECRET"]; v != "" {
-			*githubAppWebhookSecret = v
-		}
-	}
-	if !set["geo-db"] {
-		if v := env["GEO_DB"]; v != "" {
-			*geoDB = v
-		}
-	}
-
-	// Test mode: use fake OAuth credentials for testing OAuth UI flow
-	if os.Getenv("TEST_OAUTH") == "1" {
-		if *googleClientID == "" {
-			*googleClientID = "test-google-client-id"
-			*googleClientSecret = "test-google-client-secret"
-			slog.Info("TEST_OAUTH=1: Using fake Google OAuth credentials")
-		}
-		if *msClientID == "" {
-			*msClientID = "test-ms-client-id"
-			*msClientSecret = "test-ms-client-secret"
-			slog.Info("TEST_OAUTH=1: Using fake Microsoft OAuth credentials")
-		}
-		if *githubClientID == "" {
-			*githubClientID = "test-github-client-id"
-			*githubClientSecret = "test-github-client-secret"
-			slog.Info("TEST_OAUTH=1: Using fake GitHub OAuth credentials")
-		}
-	}
-
-	// Validate OAuth credentials: both ID and secret must be set, or neither
-	if (*googleClientID == "") != (*googleClientSecret == "") {
-		return errors.New("google-client-id and google-client-secret must both be set or both be empty")
-	}
-	if (*msClientID == "") != (*msClientSecret == "") {
-		return errors.New("ms-client-id and ms-client-secret must both be set or both be empty")
-	}
-	if (*githubClientID == "") != (*githubClientSecret == "") {
-		return errors.New("github-client-id and github-client-secret must both be set or both be empty")
+		return fmt.Errorf("failed to load settings.json: %w", err)
 	}
 
 	// Normalize addr: ":8080" becomes "localhost:8080"
-	addr := *httpAddr
+	addr := cfg.HTTP
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
 
 	// Append port to base URL if localhost and no port specified
-	if u, err := url.Parse(*baseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
+	if u, err := url.Parse(cfg.BaseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
 		if _, p, err := net.SplitHostPort(addr); err == nil {
 			u.Host = net.JoinHostPort(u.Hostname(), p)
-			*baseURL = u.String()
+			cfg.BaseURL = u.String()
 		}
 	}
 
-	switch *logLevel {
-	case "debug":
-		ll.Set(slog.LevelDebug)
-	case "info":
-	case "warn":
-		ll.Set(slog.LevelWarn)
-	case "error":
-		ll.Set(slog.LevelError)
-	default:
-		return fmt.Errorf("unknown log level: %q", *logLevel)
-	}
-
 	// Create db directory for identity tables
-	dbDir := filepath.Join(*dataDir, "db")
+	dbDir := filepath.Join(cfg.DataDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create db directory: %w", err)
 	}
@@ -323,14 +218,14 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize workspace invitation service: %w", err)
 	}
 
-	gitMgr := git.NewManager(*dataDir, "", "")
+	gitMgr := git.NewManager(cfg.DataDir, "", "")
 
-	rootRepo, err := git.NewRootRepo(ctx, *dataDir, "", "")
+	rootRepo, err := git.NewRootRepo(ctx, cfg.DataDir, "", "")
 	if err != nil {
 		return fmt.Errorf("failed to initialize root repo: %w", err)
 	}
 
-	fileStore, err := content.NewFileStoreService(*dataDir, gitMgr, wsService, orgService, &serverCfg.Quotas.ResourceQuotas)
+	fileStore, err := content.NewFileStoreService(cfg.DataDir, gitMgr, wsService, orgService, &serverCfg.Quotas.ResourceQuotas)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
@@ -380,25 +275,21 @@ func mainImpl() error {
 
 	// Open IP geolocation database if configured
 	var geoChecker *ipgeo.Checker
-	if *geoDB != "" {
+	if cfg.GeoDB != "" {
 		var err error
-		geoChecker, err = ipgeo.Open(*geoDB)
+		geoChecker, err = ipgeo.Open(cfg.GeoDB)
 		if err != nil {
 			return fmt.Errorf("failed to open geo database: %w", err)
 		}
 		defer func() { _ = geoChecker.Close() }()
-		slog.InfoContext(ctx, "IP geolocation enabled", "db", *geoDB)
+		slog.InfoContext(ctx, "IP geolocation enabled", "db", cfg.GeoDB)
 	}
 
 	// Parse GitHub App config if provided
 	var ghAppConfig server.GitHubAppConfig
 	var ghAppClient *githubapp.Client
-	if *githubAppID != "" && *githubAppPrivateKeyFile != "" {
-		appID, err := strconv.ParseInt(*githubAppID, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid github-app-id: %w", err)
-		}
-		pemData, err := os.ReadFile(*githubAppPrivateKeyFile)
+	if cfg.GitHubApp.ID != 0 {
+		pemData, err := os.ReadFile(cfg.GitHubApp.PrivateKeyFile)
 		if err != nil {
 			return fmt.Errorf("failed to read GitHub App private key file: %w", err)
 		}
@@ -411,20 +302,17 @@ func mainImpl() error {
 			return fmt.Errorf("failed to parse GitHub App private key: %w", err)
 		}
 		ghAppConfig = server.GitHubAppConfig{
-			AppID:         appID,
+			AppID:         cfg.GitHubApp.ID,
 			PrivateKey:    privateKey,
-			WebhookSecret: *githubAppWebhookSecret,
+			WebhookSecret: cfg.GitHubApp.WebhookSecret,
 		}
-		ghAppClient = githubapp.NewClient(appID, privateKey)
-		slog.InfoContext(ctx, "GitHub App configured", "appID", appID)
+		ghAppClient = githubapp.NewClient(cfg.GitHubApp.ID, privateKey)
+		slog.InfoContext(ctx, "GitHub App configured", "appID", cfg.GitHubApp.ID)
 	}
 
 	// Initialize sync service
 	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
-	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
-	if geminiAPIKey == "" {
-		geminiAPIKey = env["GEMINI_API_KEY"]
-	}
+	geminiAPIKey := cfg.VoiceAPIKey
 	var voiceBridge voicegateway.MediaBridge
 	if geminiAPIKey != "" {
 		voiceCfg := voicegateway.DefaultConfig()
@@ -477,31 +365,32 @@ func mainImpl() error {
 	}
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
-	cfg := &server.Config{
-		ServerConfig: serverCfg,
-		DataDir:      *dataDir,
-		BaseURL:      *baseURL,
-		Version:      buildVersion,
-		GoVersion:    buildGoVersion,
-		Revision:     buildRevision,
-		Dirty:        buildDirty,
-		IPGeo:        geoChecker,
-		VoiceBridge:  voiceBridge,
+	routerCfg := &server.Config{
+		ServerConfig:  serverCfg,
+		ConfigDir:     cfg.ConfigDir,
+		BaseURL:       cfg.BaseURL,
+		Version:       buildVersion,
+		GoVersion:     buildGoVersion,
+		Revision:      buildRevision,
+		Dirty:         buildDirty,
+		FastRateLimit: fastRateLimit,
+		IPGeo:         geoChecker,
+		VoiceBridge:   voiceBridge,
 		OAuth: server.OAuthConfig{
-			GoogleClientID:     *googleClientID,
-			GoogleClientSecret: *googleClientSecret,
-			MSClientID:         *msClientID,
-			MSClientSecret:     *msClientSecret,
-			GitHubClientID:     *githubClientID,
-			GitHubClientSecret: *githubClientSecret,
-			TestOAuth:          os.Getenv("TEST_OAUTH") == "1",
+			GoogleClientID:     cfg.OAuth.Google.ClientID,
+			GoogleClientSecret: cfg.OAuth.Google.ClientSecret,
+			MSClientID:         cfg.OAuth.Microsoft.ClientID,
+			MSClientSecret:     cfg.OAuth.Microsoft.ClientSecret,
+			GitHubClientID:     cfg.OAuth.GitHub.ClientID,
+			GitHubClientSecret: cfg.OAuth.GitHub.ClientSecret,
+			TestOAuth:          cfg.TestOAuth,
 		},
 		GitHubApp: ghAppConfig,
 	}
 
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(svc, cfg),
+		Handler:           server.NewRouter(svc, routerCfg),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -512,7 +401,7 @@ func mainImpl() error {
 	// Run server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		slog.InfoContext(ctx, "Starting server", "addr", addr, "baseURL", *baseURL, "version", buildVersion)
+		slog.InfoContext(ctx, "Starting server", "addr", addr, "baseURL", cfg.BaseURL, "version", buildVersion)
 		serverErr <- httpServer.ListenAndServe()
 	}()
 
@@ -570,155 +459,124 @@ func getBuildInfo() (version, goVersion, revision string, dirty bool) {
 	return
 }
 
-func loadDotEnv(dataDir string) (map[string]string, error) {
-	env := make(map[string]string)
-	path := filepath.Join(dataDir, ".env")
-	envContent, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir flag, not user input
+// prompt asks one onboarding question and returns the trimmed answer.
+func prompt(reader *bufio.Reader, question string) (string, error) {
+	fmt.Print(question)
+	line, err := reader.ReadString('\n')
 	if err != nil {
-		if os.IsNotExist(err) {
-			return env, nil
-		}
-		return nil, err
+		return "", err
 	}
-
-	for line := range strings.SplitSeq(string(envContent), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-
-		if strings.HasPrefix(val, "'") || strings.HasSuffix(val, "'") {
-			if strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'") {
-				return nil, fmt.Errorf("single quotes are not supported for wrapping in .env: %s", line)
-			}
-			return nil, fmt.Errorf("unbalanced single quotes in .env: %s", line)
-		}
-
-		if strings.HasPrefix(val, "\"") {
-			unquoted, err := strconv.Unquote(val)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unquote %s: %w", key, err)
-			}
-			val = unquoted
-		}
-
-		env[key] = val
-	}
-	return env, nil
+	return strings.TrimSpace(line), nil
 }
 
-func saveDotEnv(dataDir string, env map[string]string) error {
-	path := filepath.Join(dataDir, ".env")
-	var lines []string
-	for k, v := range env {
-		if v != "" {
-			lines = append(lines, fmt.Sprintf("%s=%s", k, v))
-		}
+// promptCredentials asks for one provider's client ID and, when it is given,
+// its client secret.
+func promptCredentials(reader *bufio.Reader, provider string) (oauthCredentials, error) {
+	clientID, err := prompt(reader, provider+" Client ID (optional): ")
+	if err != nil {
+		return oauthCredentials{}, fmt.Errorf("failed to read %s Client ID: %w", provider, err)
 	}
-	return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600)
+	if clientID == "" {
+		return oauthCredentials{}, nil
+	}
+	secret, err := prompt(reader, provider+" Client Secret: ")
+	if err != nil {
+		return oauthCredentials{}, fmt.Errorf("failed to read %s Client Secret: %w", provider, err)
+	}
+	if secret == "" {
+		return oauthCredentials{}, fmt.Errorf("%s Client ID requires its client secret", provider)
+	}
+	return oauthCredentials{ClientID: clientID, ClientSecret: secret}, nil
 }
 
-func runOnboarding(dataDir string) error {
+// runOnboarding asks for the OAuth settings and writes them to
+// cfgDir/config.toml. The file holds client secrets, so it is created with mode
+// 0600. defaults supplies the base URL default and the port shown in the
+// callback URLs.
+func runOnboarding(cfgDir string, defaults tomlServer) error {
 	fmt.Println("Welcome to mddb! Let's set up your configuration.")
-	fmt.Println("This wizard will help you configure OAuth settings.")
+	fmt.Println("This wizard writes " + configPath(cfgDir) + ", which holds client secrets.")
 	fmt.Println("")
 
 	reader := bufio.NewReader(os.Stdin)
-	env := make(map[string]string)
 
 	// Base URL
 	fmt.Println("\n--- Base URL Setup ---")
 	fmt.Println("The base URL is used for OAuth callback URLs.")
 	fmt.Println("If no port is specified, it will use the server's port automatically.")
-	fmt.Print("Base URL (default: http://localhost): ")
-	val, err := reader.ReadString('\n')
+	baseURL, err := prompt(reader, "Base URL (default: "+defaults.BaseURL+"): ")
 	if err != nil {
 		return fmt.Errorf("failed to read base URL: %w", err)
 	}
-	baseURL := strings.TrimSpace(val)
 	if baseURL == "" {
-		baseURL = "http://localhost"
+		baseURL = defaults.BaseURL
 	}
-	env["BASE_URL"] = baseURL
-	// For display purposes in onboarding, show with default port if localhost
+	// For display purposes in onboarding, show with the server's port if localhost.
 	displayBaseURL := baseURL
 	if u, err := url.Parse(baseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
-		u.Host = net.JoinHostPort(u.Hostname(), "8080")
-		displayBaseURL = u.String()
+		if _, p, err := net.SplitHostPort(defaults.HTTP); err == nil {
+			u.Host = net.JoinHostPort(u.Hostname(), p)
+			displayBaseURL = u.String()
+		}
 	}
 
 	// Google OAuth
 	fmt.Println("\n--- Google OAuth Setup ---")
 	fmt.Println("To use Google login, create a project at https://console.cloud.google.com/apis/credentials")
 	fmt.Printf("Configure an OAuth 2.0 Client ID with redirect URI: %s/api/v1/auth/oauth/google/callback\n", displayBaseURL)
-	fmt.Print("Google Client ID (optional): ")
-	val, err = reader.ReadString('\n')
+	google, err := promptCredentials(reader, "Google")
 	if err != nil {
-		return fmt.Errorf("failed to read Google Client ID: %w", err)
-	}
-	env["GOOGLE_CLIENT_ID"] = strings.TrimSpace(val)
-	if env["GOOGLE_CLIENT_ID"] != "" {
-		fmt.Print("Google Client Secret: ")
-		val, err = reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read Google Client Secret: %w", err)
-		}
-		env["GOOGLE_CLIENT_SECRET"] = strings.TrimSpace(val)
+		return err
 	}
 
 	// Microsoft OAuth
 	fmt.Println("\n--- Microsoft OAuth Setup ---")
 	fmt.Println("To use Microsoft login, register an app at https://portal.azure.com/")
 	fmt.Printf("Configure a redirect URI: %s/api/v1/auth/oauth/microsoft/callback\n", displayBaseURL)
-	fmt.Print("Microsoft Client ID (optional): ")
-	val, err = reader.ReadString('\n')
+	microsoft, err := promptCredentials(reader, "Microsoft")
 	if err != nil {
-		return fmt.Errorf("failed to read Microsoft Client ID: %w", err)
-	}
-	env["MICROSOFT_CLIENT_ID"] = strings.TrimSpace(val)
-	if env["MICROSOFT_CLIENT_ID"] != "" {
-		fmt.Print("Microsoft Client Secret: ")
-		val, err = reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read Microsoft Client Secret: %w", err)
-		}
-		env["MICROSOFT_CLIENT_SECRET"] = strings.TrimSpace(val)
+		return err
 	}
 
 	// GitHub OAuth
 	fmt.Println("\n--- GitHub OAuth Setup ---")
 	fmt.Println("To use GitHub login, create an OAuth App at https://github.com/settings/developers")
 	fmt.Printf("Configure a redirect URI: %s/api/v1/auth/oauth/github/callback\n", displayBaseURL)
-	fmt.Print("GitHub Client ID (optional): ")
-	val, err = reader.ReadString('\n')
+	github, err := promptCredentials(reader, "GitHub")
 	if err != nil {
-		return fmt.Errorf("failed to read GitHub Client ID: %w", err)
+		return err
 	}
-	env["GITHUB_CLIENT_ID"] = strings.TrimSpace(val)
-	if env["GITHUB_CLIENT_ID"] != "" {
-		fmt.Print("GitHub Client Secret: ")
-		val, err = reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read GitHub Client Secret: %w", err)
+
+	var b strings.Builder
+	b.WriteString("# mddb instance configuration written by the onboarding wizard.\n")
+	b.WriteString("# This file holds client secrets; keep it readable by the server account only (mode 0600).\n")
+	b.WriteString("# See contrib/config.toml for every option and its default.\n\n")
+	b.WriteString("[server]\n")
+	fmt.Fprintf(&b, "base_url = %q\n", baseURL)
+	for _, provider := range []struct {
+		section string
+		creds   oauthCredentials
+	}{
+		{"google", google},
+		{"microsoft", microsoft},
+		{"github", github},
+	} {
+		if provider.creds.ClientID == "" {
+			continue
 		}
-		env["GITHUB_CLIENT_SECRET"] = strings.TrimSpace(val)
+		fmt.Fprintf(&b, "\n[oauth.%s]\nclient_id = %q\nclient_secret = %q\n", provider.section, provider.creds.ClientID, provider.creds.ClientSecret)
 	}
 
-	fmt.Println("")
-	if err := saveDotEnv(dataDir, env); err != nil {
-		return fmt.Errorf("failed to save .env file: %w", err)
+	if err := os.MkdirAll(cfgDir, 0o750); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	path := configPath(cfgDir)
+	if err := os.WriteFile(path, []byte(b.String()), 0o600); err != nil {
+		return fmt.Errorf("failed to write %s: %w", path, err)
 	}
 
-	fmt.Printf("Configuration saved to %s/.env\n", dataDir)
-	fmt.Println("You can edit this file later to change your settings.")
+	fmt.Printf("\nConfiguration saved to %s\n", path)
+	fmt.Println("You can edit this file later to change your settings; see contrib/config.toml.")
 	fmt.Println("")
 
 	return nil

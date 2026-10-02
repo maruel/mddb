@@ -26,6 +26,7 @@ func TestRootRepo(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
+		// A stray settings file in the data directory stays untracked.
 		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -41,13 +42,10 @@ func TestRootRepo(t *testing.T) {
 			t.Error(".git directory not created")
 		}
 
-		// Verify .gitignore
-		data, err := os.ReadFile(filepath.Join(dir, ".gitignore")) //nolint:gosec // G304: test path
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(data), ".env") {
-			t.Error(".gitignore should contain .env")
+		// Verify the embedded root .gitignore was written. It ships empty and is a
+		// placeholder for helpers added to the data root later.
+		if _, err := os.Stat(filepath.Join(dir, ".gitignore")); err != nil {
+			t.Fatalf("root .gitignore not written: %v", err)
 		}
 
 		// Verify initial commit
@@ -66,13 +64,13 @@ func TestRootRepo(t *testing.T) {
 		}
 		tracked := string(out)
 		if !strings.Contains(tracked, ".gitignore") {
-			t.Error(".gitignore should be tracked")
+			t.Error("root .gitignore should be tracked")
 		}
 		if !strings.Contains(tracked, "db/users.jsonl") {
 			t.Error("db/users.jsonl should be tracked")
 		}
-		if !strings.Contains(tracked, "server_config.json") {
-			t.Error("server_config.json should be tracked")
+		if strings.Contains(tracked, "server_config.json") {
+			t.Errorf("server_config.json should not be tracked, got: %s", tracked)
 		}
 	})
 
@@ -113,9 +111,6 @@ func TestRootRepo(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{}\n"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -161,10 +156,6 @@ func TestRootRepo(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "db"), 0o755); err != nil { //nolint:gosec // G301: test data
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
 		rr, err := NewRootRepo(ctx, dir, "Test", "test@example.com")
 		if err != nil {
 			t.Fatal(err)
@@ -193,10 +184,6 @@ func TestRootRepo(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "db"), 0o755); err != nil { //nolint:gosec // G301: test data
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
 		rr, err := NewRootRepo(ctx, dir, "Test", "test@example.com")
 		if err != nil {
 			t.Fatal(err)
@@ -254,10 +241,6 @@ func TestRootRepo(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "db"), 0o755); err != nil { //nolint:gosec // G301: test data
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
 		// Create a workspace git repo BEFORE initializing root repo
 		wsID := "ws-migrate"
 		wsDir := filepath.Join(dir, wsID)
@@ -294,10 +277,6 @@ func TestRootRepo(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, "db", "sessions.jsonl"), []byte("{}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{}"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
 		rr, err := NewRootRepo(ctx, dir, "", "")
 		if err != nil {
 			t.Fatal(err)
@@ -319,6 +298,59 @@ func TestRootRepo(t *testing.T) {
 		}
 		if strings.TrimSpace(string(out)) != "mddb <mddb@localhost>" {
 			t.Errorf("expected default author, got: %s", string(out))
+		}
+	})
+
+	t.Run("CommitDBChangesIgnoresServerConfig", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		ctx := t.Context()
+
+		dbDir := filepath.Join(dir, "db")
+		if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: test data
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		rr, err := NewRootRepo(ctx, dir, "Test", "test@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// A settings file that predates the move out of the data directory must
+		// not be staged along with the db changes.
+		if err := os.WriteFile(filepath.Join(dir, "server_config.json"), []byte("{\"jwt_secret\":\"changed\"}"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{\"id\":1}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := rr.CommitDBChanges(ctx, Author{}, "POST /api/v1/server/config"); err != nil {
+			t.Fatalf("CommitDBChanges() failed: %v", err)
+		}
+
+		out, err := gitOutput(dir, "ls-files")
+		if err != nil {
+			t.Fatal(err)
+		}
+		tracked := string(out)
+		if !strings.Contains(tracked, "db/users.jsonl") {
+			t.Errorf("db/users.jsonl should be tracked, got: %s", tracked)
+		}
+		if strings.Contains(tracked, "server_config.json") {
+			t.Errorf("server_config.json should not be tracked, got: %s", tracked)
+		}
+
+		// The settings file stays in the working tree as an untracked file.
+		out, err = gitOutput(dir, "status", "--porcelain")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(out), "?? server_config.json") {
+			t.Errorf("expected untracked server_config.json, got: %s", string(out))
 		}
 	})
 }

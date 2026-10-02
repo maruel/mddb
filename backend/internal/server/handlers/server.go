@@ -16,7 +16,7 @@ import (
 // ServerHandler handles server configuration endpoints.
 type ServerHandler struct {
 	Cfg              *storage.ServerConfig
-	DataDir          string
+	ConfigDir        string                    // holds settings.json
 	FileStore        *content.FileStoreService // for cache invalidation on quota changes
 	BandwidthLimiter BandwidthUpdater          // for hot-reload of bandwidth limit
 	RateLimiters     RateLimitsUpdater         // for hot-reload of rate limits
@@ -128,7 +128,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	}
 
 	// Save to disk
-	if err := h.Cfg.Save(h.DataDir); err != nil {
+	if err := h.Cfg.Save(h.ConfigDir); err != nil {
 		return nil, dto.Internal(fmt.Sprintf("failed to save config: %v", err))
 	}
 

@@ -1,4 +1,4 @@
-// Manages server configuration stored in server_config.json.
+// Manages server settings stored in settings.json in the config directory.
 
 package storage
 
@@ -22,8 +22,9 @@ type VAPIDConfig struct {
 	PrivateKey string `json:"vapid_private_key"`
 }
 
-// ServerConfig stores all server-wide configuration.
-// Loaded from server_config.json, created with defaults if missing.
+// ServerConfig stores all server-wide settings.
+// Loaded from settings.json in the config directory, created with defaults if
+// missing.
 type ServerConfig struct {
 	// JWTSecret is the secret used to sign JWT tokens.
 	// Auto-generated if empty on first load.
@@ -42,23 +43,25 @@ type ServerConfig struct {
 	RateLimits RateLimits `json:"rate_limits"`
 }
 
-// LoadServerConfig loads configuration from dataDir/server_config.json.
+// LoadServerConfig loads configuration from cfgDir/settings.json.
 // Creates the file with defaults if it doesn't exist.
 // Auto-generates JWTSecret if empty.
-func LoadServerConfig(dataDir string) (*ServerConfig, error) {
-	path := filepath.Join(dataDir, "server_config.json")
+//
+// e2e selects the raised user quota that DefaultServerQuotas returns.
+func LoadServerConfig(cfgDir string, e2e bool) (*ServerConfig, error) {
+	path := filepath.Join(cfgDir, "settings.json")
 
-	cfg := ServerConfig{Quotas: DefaultServerQuotas(), RateLimits: DefaultRateLimits()}
+	cfg := ServerConfig{Quotas: DefaultServerQuotas(e2e), RateLimits: DefaultRateLimits()}
 
-	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir, not user input
+	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from cfgDir, not user input
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to read config.json: %w", err)
+			return nil, fmt.Errorf("failed to read settings.json: %w", err)
 		}
 		// File doesn't exist, will create with defaults
 	} else {
 		if err := json.Unmarshal(data, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to parse config.json: %w", err)
+			return nil, fmt.Errorf("failed to parse settings.json: %w", err)
 		}
 	}
 
@@ -85,14 +88,14 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 
 	// Save if we created defaults or generated a secret
 	if modified || errors.Is(err, os.ErrNotExist) {
-		if err := cfg.Save(dataDir); err != nil {
+		if err := cfg.Save(cfgDir); err != nil {
 			return nil, err
 		}
 	}
 
 	// Validate the loaded configuration
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid server_config.json: %w", err)
+		return nil, fmt.Errorf("invalid settings.json: %w", err)
 	}
 
 	return &cfg, nil
@@ -118,8 +121,11 @@ func (c *ServerConfig) Validate() error {
 	return nil
 }
 
-// Save saves configuration to dataDir/server_config.json.
-func (c *ServerConfig) Save(dataDir string) error {
+// Save saves configuration to cfgDir/settings.json.
+//
+// The file holds the JWT secret and the VAPID key pair, so it is written mode
+// 0600, like the onboarding wizard does for config.toml.
+func (c *ServerConfig) Save(cfgDir string) error {
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -129,8 +135,13 @@ func (c *ServerConfig) Save(dataDir string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(filepath.Join(dataDir, "server_config.json"), data, 0o600); err != nil {
-		return fmt.Errorf("failed to write config.json: %w", err)
+	// The config directory holds secrets and may not exist on a fresh instance.
+	// Match the mode the onboarding wizard creates it with.
+	if err := os.MkdirAll(cfgDir, 0o750); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgDir, "settings.json"), data, 0o600); err != nil {
+		return fmt.Errorf("failed to write settings.json: %w", err)
 	}
 	return nil
 }
@@ -219,10 +230,12 @@ type ServerQuotas struct {
 }
 
 // DefaultServerQuotas returns the default server-wide quotas.
-func DefaultServerQuotas() ServerQuotas {
+//
+// e2e raises the user quota to 200 for the e2e suite, which registers a user
+// per test.
+func DefaultServerQuotas(e2e bool) ServerQuotas {
 	maxUsers := 50 // 50 users
-	// Increase quota for e2e tests (TEST_OAUTH=1 indicates test mode)
-	if os.Getenv("TEST_OAUTH") == "1" {
+	if e2e {
 		maxUsers = 200
 	}
 	return ServerQuotas{

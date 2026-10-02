@@ -10,13 +10,37 @@ go install github.com/maruel/mddb/backend/cmd/mddb@latest
 
 ## Configuration
 
-Run `mddb -help` for a full list of configuration options.
+Every startup setting lives in `~/.config/mddb/config.toml`, which mddb reads
+once at startup. Pass `-config-dir DIR` to read the file from elsewhere; run
+`mddb -help` for the flags. `contrib/config.toml` is the documented example and
+lists every key with its default value. A malformed file or an unknown key stops
+startup with the offending path.
+
+Relative paths use one of two bases:
+
+- `server.data_dir` resolves against the working directory, so the bundled
+  systemd unit's `WorkingDirectory=%h/mddb` puts content in `~/mddb/data`.
+- `server.geo_db` and `github.app.private_key_file` are configuration-side files
+  and resolve against the config directory.
+
+The file holds OAuth client secrets, the GitHub App webhook secret, and the
+voice API key, so keep it readable only by the server account:
+
+```bash
+mkdir -p ~/.config/mddb
+install -m 600 contrib/config.toml ~/.config/mddb/config.toml
+nano ~/.config/mddb/config.toml
+```
+
+mddb writes its own `settings.json` in the same directory. It holds the
+mutable settings you edit in the web UI (SMTP, quotas, rate limits) plus the
+generated JWT secret and Web Push key pair, so mddb creates it mode 0600. The
+data directory holds content only.
 
 ### Voice overlay
 
-Set `GEMINI_API_KEY` in the process environment, the data directory's `.env`
-file, or `~/.config/mddb/mddb.env` (loaded by the bundled systemd unit) to
-enable the embedded Gemini Live voice gateway. The discovery manifest
+Set `voice-gateway.api_key` in `~/.config/mddb/config.toml` to a Gemini API key
+to enable the embedded Gemini Live voice gateway. The discovery manifest
 advertises the gateway only after it starts successfully, and the browser shows
 the voice bar only when the manifest advertises one. If it stays hidden, check
 `curl <base-url>/.well-known/gomode.json` (expect a non-empty
@@ -34,19 +58,19 @@ directory outside the git-backed data directory and removed on normal shutdown.
 Enabling voice accepts sending speech off the device. The embedded backend is
 Google Gemini Live: while a session is connected, microphone audio, the session
 instructions, and the results of client-executed MCP tools are sent to Google,
-and assistant audio is returned from Google. Without `GEMINI_API_KEY` the
-discovery manifest does not advertise a gateway and no audio leaves the device.
-mddb does not store voice audio.
+and assistant audio is returned from Google. Without an API key the discovery
+manifest does not advertise a gateway and no audio leaves the device. mddb does
+not store voice audio.
 
 Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, scoped to the
 user's active workspace. Every member can list and read nodes and node
 resources; editors additionally get `node_create`, `node_update`, and
 `node_append`, and each edit is committed to the workspace git history.
 
-To validate the live path (requires `GEMINI_API_KEY` and a reachable WebRTC UDP
-port), run `make test-smoke-voice`: it completes one Gemini voice turn, calls
-`nodes_list` through the workspace MCP endpoint, and checks that hang-up
-releases session capacity.
+To validate the live path (requires a voice API key and a reachable WebRTC UDP
+port), run `make test-smoke-voice` with `GEMINI_API_KEY` in the environment: it
+completes one Gemini voice turn, calls `nodes_list` through the workspace MCP
+endpoint, and checks that hang-up releases session capacity.
 
 ### GeoLite
 
@@ -55,6 +79,9 @@ Get a .mmdb for free. You need to create af free account at https://www.maxmind.
 Select "GeoLite Country"
 
 See the documentation at https://dev.maxmind.com/geoip/updating-databases
+
+Set `server.geo_db` to the file path, relative to the config directory or
+absolute. Leaving it empty disables IP geolocation.
 
 ## Authentication
 
@@ -67,7 +94,7 @@ Google OAuth works even if you only expose the server on localhost!
 1. Configure the OAuth interstitial branding at https://console.cloud.google.com/auth/branding
 1. Create a OAuth Google Client ID and Google Client Secret for a web application at https://console.cloud.google.com/auth/clients
 1. The callback URL (for tailscale) is `https://<hostname>.<tailnet>.ts.net/api/v1/auth/oauth/google/callback`
-1. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+1. Set `oauth.google.client_id` and `oauth.google.client_secret` in `~/.config/mddb/config.toml`
 
 ### GitHub OAuth
 
@@ -75,7 +102,7 @@ GitHub OAuth requires an HTTPS URL, so you need to server over Tailscale or a re
 
 1. Go to OAuth Apps at https://github.com/settings/developers
 1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/api/v1/auth/oauth/github/callback`
-1. Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+1. Set `oauth.github.client_id` and `oauth.github.client_secret` in `~/.config/mddb/config.toml`
 
 ### Microsoft OAuth
 
@@ -89,9 +116,10 @@ Microsoft OAuth is Microsoft Entra
 1. Click "Add a certificate or secret"
 1. New client secret
 1. Duration: 730 days
-1. `MICROSOFT_CLIENT_ID`: "Application (client) ID" — a UUID on the overview page
-1. `MICROSOFT_CLIENT_SECRET`: Client Secret = Certificates & secrets → Client secrets → the Value column (only
+1. `oauth.microsoft.client_id`: "Application (client) ID" — a UUID on the overview page
+1. `oauth.microsoft.client_secret`: Client Secret = Certificates & secrets → Client secrets → the Value column (only
    visible right after creation, not the "Secret ID" column)
+   Set both in `~/.config/mddb/config.toml`
 1. Set branding
    1. https://<host>/terms
    1. https://<host>/privacy
@@ -126,16 +154,17 @@ It requires your webserver to be accessible from the internet over HTTPS.
 1. App name: e.g. "mddb-sync"
 1. Homepage URL: your mddb instance URL
 1. Webhook URL: `https://<host>/api/v1/webhooks/github`
-1. `GITHUB_APP_WEBHOOK_SECRET`: Webhook secret: generate a random string (e.g. `openssl rand -hex 32`)
+1. `github.app.webhook_secret`: Webhook secret: generate a random string (e.g. `openssl rand -hex 32`)
 1. Repository permissions:
    - Contents: Read & write
    - Metadata: Read-only
 1. Subscribe to events: Push
 1. Where can this GitHub App be installed?: "Only on this account" (or "Any account" for multi-org)
 1. Click "Create GitHub App"
-1. `GITHUB_APP_ID`: The App ID shown on the app settings page
+1. `github.app.id`: The App ID shown on the app settings page
 1. On the App settings page, scroll to "Private keys"
-1. `GITHUB_APP_PRIVATE_KEY_FILE`: Click "Generate a private key", save the `.pem` file, and set this to the file path
+1. `github.app.private_key_file`: Click "Generate a private key", save the `.pem` file, and set this to its path
+   relative to the config directory (or an absolute path)
 
 ### Installing the GitHub App
 
@@ -159,11 +188,13 @@ A hardened systemd user service file is provided in [contrib//mddb.service](cont
 
 ```bash
 # Install
-mkdir -p ~/.config/systemd/user
+mkdir -p ~/.config/systemd/user ~/.config/mddb
+install -m 600 contrib/config.toml ~/.config/mddb/config.toml
 cp contrib/mddb.service ~/.config/systemd/user/
 
-# Edit as needed. In particular, add the tailscale hostname and change the port if it conflicts on your system.
-nano ~/.config/systemd/user/mddb.service
+# Edit the config: set server.http, server.base_url to the tailscale hostname,
+# and the OAuth or GitHub App credentials you use.
+nano ~/.config/mddb/config.toml
 
 # Configure data directory (edit paths if needed)
 mkdir -p ~/mddb/data
@@ -186,7 +217,7 @@ To describe later. Ask "how to run a service on windows"
 
 ## Serving over the web
 
-By default, mddb listens to localhost on port 8080. Use the `-http` flag to change this, e.g., `-http 0.0.0.0:8080` to listen on all interfaces.
+By default, mddb listens to localhost on port 8080. Set `server.http` in `~/.config/mddb/config.toml` to change this, e.g. `"0.0.0.0:8080"` to listen on all interfaces.
 
 ## Serving over Tailscale
 

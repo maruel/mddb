@@ -2,10 +2,15 @@
 
 ## Running
 
-`make test-e2e` builds the binary, cleans `data-e2e/`, starts a server with `TEST_FAST_RATE_LIMIT=1`, and runs
-every spec in parallel. `make test-e2e-slow` keeps normal rate limits and runs one worker. Tests have zero
-retries, so they must be deterministic. Iterate on one test with
+`make test-e2e` builds the server with the `e2e` build tag, cleans `data-e2e/`, starts it with the e2e-only
+`-fast-rate-limit` flag, and runs every spec in parallel. `make test-e2e-slow` uses its own Playwright config,
+which starts the server without that flag and runs one worker, so rate limits stay at production values. Tests
+have zero retries, so they must be deterministic. Iterate on one test with
 `pnpm exec playwright test e2e/file.spec.ts:LINE`, and add `--trace on` to record a trace.
+
+The `e2e` build tag also swaps the OAuth providers for fakes that log in deterministic accounts, and raises the
+server user quota so every spec can register its own user. A binary built without the tag has neither, so
+`make build` and `make test` keep production behavior.
 
 ## Helpers
 

@@ -3,10 +3,13 @@
 package ratelimit
 
 import (
-	"os"
 	"strings"
 	"time"
 )
+
+// fastRateMultiplier multiplies every rate limit for an e2e server, whose
+// tests would otherwise trip the production limits.
+const fastRateMultiplier = 10000
 
 // Scope defines how rate limit keys are determined.
 type Scope int
@@ -36,10 +39,12 @@ type Config struct {
 }
 
 // ConfigFromStorage creates a rate limit Config from storage.RateLimits values.
-func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int) *Config {
+// fastLimits multiplies every rate by fastRateMultiplier; it is set only for an
+// e2e server that runs without the production limits the suite would trip.
+func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int, fastLimits bool) *Config {
 	m := 1 // multiplier
-	if os.Getenv("TEST_FAST_RATE_LIMIT") == "1" {
-		m = 10000
+	if fastLimits {
+		m = fastRateMultiplier
 	}
 	return &Config{
 		Auth:       TierConfig{Name: "auth", Rate: authRate * m, Window: time.Minute, Burst: max(authRate*m, 1), Scope: ScopeIP},
@@ -55,11 +60,11 @@ func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int) *C
 //   - Read (auth): 30,000 req/min, User scope
 //   - Read (unauth): 6,000 req/min, IP scope.
 //
-// Set TEST_FAST_RATE_LIMIT=1 to increase rate limits 10000x (for e2e tests).
-func DefaultConfig() *Config {
+// fastLimits multiplies every rate by fastRateMultiplier.
+func DefaultConfig(fastLimits bool) *Config {
 	m := 1 // multiplier
-	if os.Getenv("TEST_FAST_RATE_LIMIT") == "1" {
-		m = 10000
+	if fastLimits {
+		m = fastRateMultiplier
 	}
 	return &Config{
 		Auth:       TierConfig{Name: "auth", Rate: 5 * m, Window: time.Minute, Burst: 5 * m, Scope: ScopeIP},

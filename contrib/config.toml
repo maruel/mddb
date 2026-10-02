@@ -1,0 +1,83 @@
+# mddb instance configuration.
+#
+# Copy to ~/.config/mddb/config.toml, or pass -config-dir DIR to read it from
+# elsewhere. Every key below is commented out with its default value; uncomment
+# a line to override it. Uncommenting every directive reproduces the built-in
+# defaults. A malformed file or an unknown key stops startup with the offending
+# path.
+#
+# The file holds client secrets, so keep it readable by the server account only:
+#   install -m 600 contrib/config.toml ~/.config/mddb/config.toml
+
+# ── Server ───────────────────────────────────────────────────────────────────
+
+[server]
+# Address to listen on (e.g., localhost:8080, :8080, 0.0.0.0:8080). Use
+# 0.0.0.0:port to listen on all interfaces.
+#http = "localhost:8080"
+
+# Directory holding the content repositories and db/. A relative path resolves
+# against the working directory, not the config directory; the bundled systemd
+# unit sets WorkingDirectory=%h/mddb, so the default puts content in
+# ~/mddb/data.
+#data_dir = "data"
+
+# Public base URL for OAuth callbacks (e.g., https://example.com). A localhost
+# URL without a port uses the port from http.
+#base_url = "http://localhost"
+
+# MaxMind MMDB file for IP geolocation. A relative path resolves against the
+# config directory. Empty disables IP geolocation.
+# https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
+#geo_db = ""  # e.g. "GeoLite2-Country.mmdb"
+
+# ── OAuth ────────────────────────────────────────────────────────────────────
+# Each provider takes a client ID and its client secret. Set both or neither;
+# an incomplete pair stops startup. Providers with no credentials stay hidden.
+
+[oauth.google]
+# Create an OAuth 2.0 Client ID at https://console.cloud.google.com/apis/credentials
+# Redirect URI: <base_url>/api/v1/auth/oauth/google/callback
+#client_id = ""
+#client_secret = ""
+
+[oauth.microsoft]
+# Register an application at https://portal.azure.com/
+# Redirect URI: <base_url>/api/v1/auth/oauth/microsoft/callback
+#client_id = ""
+#client_secret = ""
+
+[oauth.github]
+# Create an OAuth App at https://github.com/settings/developers
+# Redirect URI: <base_url>/api/v1/auth/oauth/github/callback
+#client_id = ""
+#client_secret = ""
+
+# ── GitHub App ───────────────────────────────────────────────────────────────
+# Enables bidirectional sync between workspaces and GitHub repositories: edits
+# auto-push and GitHub pushes trigger a pull. Set both id and private_key_file
+# or neither.
+
+[github.app]
+# App ID shown on the app settings page, created at https://github.com/settings/apps/new
+#id = 0
+# PEM private key file. A relative path resolves against the config directory.
+#private_key_file = ""  # e.g. "github-app.pem"
+# Webhook secret for <base_url>/api/v1/webhooks/github; generate with
+# openssl rand -hex 32. Empty accepts unverified webhook deliveries.
+#webhook_secret = ""
+
+# ── Voice Gateway ────────────────────────────────────────────────────────────
+
+[voice-gateway]
+# Gemini API key for the embedded voice gateway, created at
+# https://aistudio.google.com/app/apikey. Empty leaves the overlay hidden and no
+# audio leaves the device. While a session is connected, microphone audio, the
+# session instructions, and MCP tool results are sent to Google.
+#api_key = ""
+
+# ── Debug ────────────────────────────────────────────────────────────────────
+
+[debug]
+# Log level: debug, info, warn, error.
+#log_level = "info"

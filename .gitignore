@@ -11,9 +11,6 @@
 /playwright-report/
 /test-results/
 /tmp/
-.env
-.env.*.local
-.env.local
 .npmrc
 bundle-stats.html
 coverage.out

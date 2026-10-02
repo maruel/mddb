@@ -15,8 +15,8 @@ import (
 
 // RootRepo manages the root data directory as a git repository.
 //
-// It tracks db/*.jsonl and server_config.json, and manages workspace
-// directories as git submodules.
+// It tracks db/*.jsonl and manages workspace directories as git submodules.
+// Server settings live in the config directory, outside the data directory.
 type RootRepo struct {
 	repo    *ExecRepo
 	dataDir string
@@ -24,9 +24,8 @@ type RootRepo struct {
 
 // NewRootRepo initializes the root data directory as a git repository.
 //
-// On first run it writes embedded static files, commits existing db/ and
-// server_config.json, and registers any pre-existing workspace git repos
-// as submodules (migration).
+// On first run it writes embedded static files, commits existing db/, and
+// registers any pre-existing workspace git repos as submodules (migration).
 func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string) (*RootRepo, error) {
 	if defaultName == "" {
 		defaultName = "mddb"
@@ -57,13 +56,13 @@ func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string)
 	return rr, nil
 }
 
-// CommitDBChanges stages db/ and server_config.json and commits if dirty.
+// CommitDBChanges stages db/ and commits if dirty.
 func (rr *RootRepo) CommitDBChanges(ctx context.Context, author Author, msg string) error {
 	rr.repo.mu.Lock()
 	defer rr.repo.mu.Unlock()
 
-	// Stage db/ and server_config.json
-	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/", "server_config.json"); err != nil {
+	// Stage db/
+	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/"); err != nil {
 		return fmt.Errorf("failed to stage db changes: %w\nOutput: %s", err, string(out))
 	}
 
@@ -146,9 +145,9 @@ func (rr *RootRepo) RemoveWorkspaceSubmodule(ctx context.Context, wsID string) e
 	return nil
 }
 
-// initialCommit commits static files, db/ and server_config.json if no
-// commits exist yet. staticFiles are the paths returned by
-// WriteRootStaticFiles.
+// initialCommit commits the embedded root static files and db/ if no commits
+// exist yet. staticFiles are the paths returned by WriteRootStaticFiles.
+// An empty data directory still gets a root commit.
 func (rr *RootRepo) initialCommit(ctx context.Context, staticFiles []string) error {
 	// Check if there are any commits
 	if _, err := rr.repo.gitCombinedOutput(ctx, "rev-parse", "HEAD"); err == nil {
@@ -156,19 +155,15 @@ func (rr *RootRepo) initialCommit(ctx context.Context, staticFiles []string) err
 	}
 
 	// Collect everything trackable
+	paths := staticFiles
 	if fi, err := os.Stat(filepath.Join(rr.dataDir, "db")); err == nil && fi.IsDir() {
-		staticFiles = append(staticFiles, "db/")
+		paths = append(paths, "db/")
 	}
-	if _, err := os.Stat(filepath.Join(rr.dataDir, "server_config.json")); err == nil {
-		staticFiles = append(staticFiles, "server_config.json")
-	}
-	if len(staticFiles) == 0 {
-		return nil
-	}
-
-	args := append([]string{"add", "--"}, staticFiles...)
-	if out, err := rr.repo.gitCombinedOutput(ctx, args...); err != nil {
-		return fmt.Errorf("failed to stage initial files: %w\nOutput: %s", err, string(out))
+	if len(paths) != 0 {
+		args := append([]string{"add", "--"}, paths...)
+		if out, err := rr.repo.gitCombinedOutput(ctx, args...); err != nil {
+			return fmt.Errorf("failed to stage initial files: %w\nOutput: %s", err, string(out))
+		}
 	}
 
 	authorStr := fmt.Sprintf("%s <%s>", rr.repo.defaultName, rr.repo.defaultEmail)

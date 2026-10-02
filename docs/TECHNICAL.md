@@ -9,6 +9,9 @@ mddb uses a multi-tenant directory structure where each organization owns its ow
 - **Root Repository**: `data/`
   - The `data/` directory is itself a Git repository that tracks workspace directories.
   - `data/db/`: System-wide information (Users, Organizations, Workspaces, Memberships) stored in JSON.
+- **Configuration Directory**: `~/.config/mddb/`, selected with `-config-dir`
+  - `config.toml`: Hand-written startup settings, read once at startup.
+  - `settings.json`: Server-written mutable settings (JWT secret, VAPID key pair, SMTP, quotas, rate limits), created mode 0600 on first boot, so the secrets it holds stay out of the content repositories.
 - **Workspace Repositories**: `data/{wsID}/`
   - Each workspace directory is an independent Git repository.
   - Changes in a workspace directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git.
@@ -32,7 +35,7 @@ data/                     # Root Git Repository
 mddb employs a hierarchical versioning strategy:
 
 1. **Workspace Level**: Changes within `data/{wsID}/` trigger commits to that workspace's independent repository.
-2. **Root Level**: The `data/` repository tracks the state of all workspaces by staging and committing the workspace directory changes. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
+2. **Root Level**: The `data/` repository tracks the state of all workspaces by staging and committing the workspace directory changes and `data/db/`. Server settings live in the configuration directory, so they stay out of the content history. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
 
 ## Embedded Build Process
 
@@ -224,7 +227,7 @@ Supports Google and Microsoft OIDC flows.
 - **Explicit linking**: `POST /api/v1/auth/oauth/link` starts a flow bound to the signed-in user
 - **CSRF protection**: The flow start sets an HttpOnly, SameSite=Lax cookie with the HMAC-signed state. The
   callback rejects a state that differs from the cookie, so a crafted state can neither log a browser in nor
-  name another user to link. The browser must use the `-base-url` host, which receives the callback.
+  name another user to link. The browser must use the `server.base_url` host, which receives the callback.
 - **Implementation**: `backend/internal/server/handlers/oauth.go`
 
 ### Workspace Isolation

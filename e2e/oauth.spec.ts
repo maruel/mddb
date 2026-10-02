@@ -20,7 +20,7 @@ test.describe("OAuth Login", () => {
     // Should show login form
     await expect(page.getByRole("heading", { name: /login|sign in/i })).toBeVisible();
 
-    // In test mode (TEST_OAUTH=1), OAuth buttons should be visible
+    // The e2e build swaps in fake providers, so OAuth buttons should be visible
     const googleButton = page.getByRole("link", { name: /google/i });
     await expect(googleButton).toBeVisible();
     await expect(googleButton).toHaveAttribute("href", "/api/v1/auth/oauth/google");
@@ -46,19 +46,19 @@ test.describe("OAuth Login", () => {
     await expect(googleButton).toHaveAttribute("href", "/api/v1/auth/oauth/google");
   });
 
-  test("TEST_OAUTH: clicking Microsoft logs in with fake account", async ({ page }) => {
+  test("clicking Microsoft logs in with the fake account", async ({ page }) => {
     await page.goto("/");
 
     const msButton = page.getByRole("link", { name: /microsoft/i });
     await expect(msButton).toBeVisible({ timeout: 5000 });
 
-    // In TEST_OAUTH=1 mode, clicking the button should bypass real OAuth
-    // and log in with a fake account, landing on onboarding.
+    // The e2e build fakes the provider, so clicking the button should bypass
+    // real OAuth and log in with a fake account, landing on onboarding.
     await msButton.click();
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   });
 
-  test("TEST_OAUTH: clicking Google logs in with fake account", async ({ page }) => {
+  test("clicking Google logs in with the fake account", async ({ page }) => {
     await page.goto("/");
 
     const googleButton = page.getByRole("link", { name: /google/i });

@@ -7,25 +7,50 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
+	t.Run("production limits", func(t *testing.T) {
+		cfg := DefaultConfig(false)
 
-	// Verify scopes
-	if cfg.Auth.Scope != ScopeIP {
-		t.Error("Auth tier should have IP scope")
-	}
-	if cfg.Write.Scope != ScopeUser {
-		t.Error("Write tier should have User scope")
-	}
-	if cfg.ReadAuth.Scope != ScopeUser {
-		t.Error("ReadAuth tier should have User scope")
-	}
-	if cfg.ReadUnauth.Scope != ScopeIP {
-		t.Error("ReadUnauth tier should have IP scope")
-	}
+		// Verify scopes
+		if cfg.Auth.Scope != ScopeIP {
+			t.Error("Auth tier should have IP scope")
+		}
+		if cfg.Write.Scope != ScopeUser {
+			t.Error("Write tier should have User scope")
+		}
+		if cfg.ReadAuth.Scope != ScopeUser {
+			t.Error("ReadAuth tier should have User scope")
+		}
+		if cfg.ReadUnauth.Scope != ScopeIP {
+			t.Error("ReadUnauth tier should have IP scope")
+		}
+	})
+
+	t.Run("fast limits scale the defaults 10000x", func(t *testing.T) {
+		cfg := DefaultConfig(true)
+		if cfg.Auth.Rate != 50000 || cfg.Write.Rate != 600000 || cfg.ReadAuth.Rate != 300000000 || cfg.ReadUnauth.Rate != 60000000 {
+			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+		}
+	})
+}
+
+func TestConfigFromStorage(t *testing.T) {
+	t.Run("production limits keep the stored rates", func(t *testing.T) {
+		cfg := ConfigFromStorage(5, 60, 30000, 6000, false)
+		if cfg.Auth.Rate != 5 || cfg.Write.Rate != 60 || cfg.ReadAuth.Rate != 30000 || cfg.ReadUnauth.Rate != 6000 {
+			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+		}
+	})
+
+	t.Run("fast limits scale the stored rates 10000x", func(t *testing.T) {
+		cfg := ConfigFromStorage(1, 2, 3, 4, true)
+		if cfg.Auth.Rate != 10000 || cfg.Write.Rate != 20000 || cfg.ReadAuth.Rate != 30000 || cfg.ReadUnauth.Rate != 40000 {
+			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+		}
+	})
 }
 
 func TestNewLimiters(t *testing.T) {
-	cfg := DefaultConfig()
+	cfg := DefaultConfig(false)
 	limiters := NewLimiters(cfg)
 	defer limiters.Close()
 
@@ -53,7 +78,7 @@ func TestNewLimiters(t *testing.T) {
 }
 
 func TestLimiters_MatchUnauth(t *testing.T) {
-	limiters := NewLimiters(DefaultConfig())
+	limiters := NewLimiters(DefaultConfig(false))
 	defer limiters.Close()
 
 	tests := []struct {
@@ -88,7 +113,7 @@ func TestLimiters_MatchUnauth(t *testing.T) {
 }
 
 func TestLimiters_MatchAuth(t *testing.T) {
-	limiters := NewLimiters(DefaultConfig())
+	limiters := NewLimiters(DefaultConfig(false))
 	defer limiters.Close()
 
 	tests := []struct {

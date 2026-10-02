@@ -109,12 +109,12 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 	serverCfg := &storage.ServerConfig{
 		JWTSecret:  testJWTSecret,
-		Quotas:     storage.DefaultServerQuotas(),
+		Quotas:     storage.DefaultServerQuotas(false),
 		RateLimits: storage.DefaultRateLimits(),
 	}
 	cfg := &Config{
 		ServerConfig: serverCfg,
-		DataDir:      t.TempDir(),
+		ConfigDir:    t.TempDir(),
 		BaseURL:      "http://localhost:8080",
 		Version:      "test",
 		GoVersion:    "go1.24.0",

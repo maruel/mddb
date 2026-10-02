@@ -77,7 +77,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	}, &auth, ""); status != http.StatusOK {
 		t.Fatalf("register status = %d", status)
 	}
-	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(), RateLimits: storage.DefaultRateLimits()}
+	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	bridge := &testVoiceBridge{}
 	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge}))
 	t.Cleanup(server.Close)
@@ -353,7 +353,7 @@ func TestGoModeMCP(t *testing.T) {
 
 	// A client can declare any content type, including multipart, for the MCP
 	// transport. That declaration must not bypass the read-only body limit.
-	bodyLimit := storage.DefaultServerQuotas().MaxRequestBodyBytes
+	bodyLimit := storage.DefaultServerQuotas(false).MaxRequestBodyBytes
 	params := map[string]any{"_meta": map[string]any{
 		"io.modelcontextprotocol/protocolVersion":    mcp.ProtocolVersion,
 		"io.modelcontextprotocol/clientInfo":         map[string]string{"name": "mddb-test", "version": "1"},

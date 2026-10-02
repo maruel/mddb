@@ -156,7 +156,7 @@ func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	serverCfg, err := storage.LoadServerConfig(dir)
+	serverCfg, err := storage.LoadServerConfig(t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

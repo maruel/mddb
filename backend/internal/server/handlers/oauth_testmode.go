@@ -1,5 +1,5 @@
-// Provides a fake OAuth login handler for TEST_OAUTH=1 mode.
-// Bypasses real OAuth providers and logs in with deterministic fake accounts.
+// Provides the fake OAuth login handler an e2e build selects.
+// It bypasses real OAuth providers and logs in with deterministic fake accounts.
 
 package handlers
 
@@ -34,11 +34,11 @@ func (h *TestOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request)
 		writeErrorResponse(w, dto.InvalidProvider())
 		return
 	}
-	slog.InfoContext(r.Context(), "TEST_OAUTH: bypassing real OAuth, using fake account", "provider", provider)
+	slog.InfoContext(r.Context(), "e2e build: bypassing real OAuth, using fake account", "provider", provider)
 	finishOAuthLogin(h.svc, h.cfg, w, r, provider, testUserInfo(provider))
 }
 
-// testUserInfo returns deterministic fake user info for test mode.
+// testUserInfo returns deterministic fake user info for an e2e build.
 //
 // Every fake account has a provider-verified email, as a Microsoft app
 // registration with the email and xms_edov optional claims provides.
