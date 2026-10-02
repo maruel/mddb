@@ -17,10 +17,10 @@ Type=simple
 # a documented example. Secrets are read from that file, so keep it mode 0600.
 # Don't forget to run:
 #  tailscale serve -bg 8080
-ExecStart=%h/go/bin/mddb -config-dir %h/.config/mddb
+ExecStart=%h/go/bin/mddb
 WorkingDirectory=%h/mddb
 Restart=always
-RestartSec=5s
+RestartSec=1s
 
 # --- Security Hardening ---
 
