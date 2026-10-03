@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go test-e2e-slow types verify tools custom-gcl benchmark
+.PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify tools custom-gcl benchmark
 
 # Ruff is installed separately; Go tool versions are declared in go.mod.
 RUFF_VERSION=0.16.8
@@ -34,7 +34,7 @@ FRONTEND_STAMP=node_modules/.modules.yaml
 VERIFY_GO = ./custom-gcl run --show-stats=false ./...
 VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && node scripts/lint_frontend_styles.mjs
 VERIFY_TS = pnpm --silent typecheck
-VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts playwright.slow.config.ts
+VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts
 VERIFY_PY = ruff format --check --quiet . && ruff check --quiet .
 VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -l $$files
 VERIFY_MISC = python3 scripts/lint_binaries.py && python3 scripts/update_agents_file_index.py --check
@@ -62,8 +62,7 @@ help:
 	@printf '  %-18s - %s\n' 'make test' 'Run unit tests (Go, frontend)'
 	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
-	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, fast rate limits, parallel)'
-	@printf '  %-18s - %s\n' 'make test-e2e-slow' 'Run e2e tests with normal rate limits (sequential)'
+	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel)'
 	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
 	@printf '  %-18s - %s\n' 'make dev' 'Run the server in development mode (scripts/run-dev.py)'
 	@printf '  %-18s - %s\n' 'make frontend-dev' 'Run frontend dev server (http://localhost:5173)'
@@ -88,8 +87,7 @@ build: types
 	@go install -trimpath -ldflags="-s -w -buildid=" ./backend/cmd/...
 
 # Run the server in development mode. scripts/run-dev.py writes a temporary
-# config.toml and runs `go run`, passing the e2e-only -fast-rate-limit flag with
-# --fake. See the script for the flags.
+# config.toml and runs `go run`. See the script for the flags.
 dev:
 	@./scripts/run-dev.py
 
@@ -124,21 +122,6 @@ test-e2e: test-e2e-go
 	@./scripts/verify_e2e_data.py
 	@node e2e/inject-tag-colors.cjs
 
-# Same as test-e2e but with production rate limits and a single worker, for
-# verifying behavior that the 10000x rate-limit multiplier hides.
-test-e2e-slow: test-e2e-go
-	@python3 scripts/clean_data_e2e.py
-	@echo "Running e2e tests with normal rate limits (single worker)..."
-	@pnpm --silent exec playwright test --config playwright.slow.config.ts --workers=1; \
-	e2e_exit=$$?; \
-	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
-	if [ $$e2e_exit -ne 0 ]; then \
-	  echo ""; echo "=== Server Log ==="; cat ./data-e2e/server.log 2>/dev/null || true; \
-	  exit $$e2e_exit; \
-	fi
-	@./scripts/verify_e2e_data.py
-	@node e2e/inject-tag-colors.cjs
-
 # The e2e build tag also switches on the Go tests that only exist in that build,
 # which assert what a production binary must not do. Running the whole tagged
 # suite keeps every package honest about the tag: make test stays untagged.
@@ -162,7 +145,7 @@ verify: tools custom-gcl $(FRONTEND_STAMP)
 fix: tools custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
-	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts playwright.slow.config.ts --fix
+	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts --fix
 	@pnpm exec prettier --write --log-level warn .
 	@ruff check --quiet --fix .
 	@ruff format --quiet .

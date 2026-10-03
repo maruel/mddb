@@ -1,28 +1,22 @@
-// Verifies the e2e-only flag, the fake OAuth credentials, and the raised quota.
+// Verifies the e2e build selects the fakes, the raised quota, and the limits.
 
 //go:build e2e
 
 package main
 
 import (
-	"flag"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
-func TestRegisterFastRateLimitFlag(t *testing.T) {
-	fs := flag.NewFlagSet("mddb", flag.ContinueOnError)
-	registerFastRateLimitFlag(fs)
-	t.Cleanup(func() { fastRateLimit = false })
-	if fastRateLimit {
-		t.Error("fast rate limits must be off until -fast-rate-limit is given")
+func TestE2ERateLimits(t *testing.T) {
+	if !e2eBuild {
+		t.Error("an e2e build must select the e2e behavior")
 	}
-	if err := fs.Parse([]string{"-fast-rate-limit"}); err != nil {
-		t.Fatal(err)
-	}
-	if !fastRateLimit {
-		t.Error("-fast-rate-limit must enable the fast rate limits")
+	if got := ratelimit.DefaultConfig(e2eBuild).Auth.Rate; got != 50000 {
+		t.Errorf("got auth rate %d, want the e2e 50000", got)
 	}
 }
 

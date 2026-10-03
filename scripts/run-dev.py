@@ -3,9 +3,8 @@
 
 Uses 'go run' to build and run the server, writing a temporary config.toml that
 holds the listen address and data directory. --fake builds with the e2e build
-tag, which selects the fake OAuth providers and the raised user quota the e2e
-suite needs. The e2e-only -fast-rate-limit flag is passed with --fake unless
---production-rate-limits keeps the production rate limits.
+tag, which selects the fake OAuth providers, the raised user quota, and the
+10000x rate-limit multiplier the e2e suite needs.
 """
 
 import argparse
@@ -26,12 +25,7 @@ def main():
     parser.add_argument(
         "--fake",
         action="store_true",
-        help="Build with the e2e tag: fake OAuth providers and a raised user quota",
-    )
-    parser.add_argument(
-        "--production-rate-limits",
-        action="store_true",
-        help="Keep production rate limits instead of the e2e-only fast multiplier (with --fake)",
+        help="Build with the e2e tag: fake OAuth providers, a raised user quota, and a 10000x rate-limit multiplier",
     )
     args = parser.parse_args()
 
@@ -45,8 +39,6 @@ def main():
         if args.fake:
             cmd.extend(["-tags", "e2e"])
         cmd.extend(["./backend/cmd/mddb", "-config-dir", tmp_dir])
-        if args.fake and not args.production_rate_limits:
-            cmd.append("-fast-rate-limit")
 
         proc = subprocess.Popen(cmd, cwd=ROOT_DIR)
 

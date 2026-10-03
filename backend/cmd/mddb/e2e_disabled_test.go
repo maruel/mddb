@@ -1,27 +1,22 @@
-// Verifies a production build rejects the flag, fills no fakes, and keeps quota.
+// Verifies a production build keeps production limits, no fakes, and the quota.
 
 //go:build !e2e
 
 package main
 
 import (
-	"flag"
-	"io"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
-func TestRegisterFastRateLimitFlag(t *testing.T) {
-	fs := flag.NewFlagSet("mddb", flag.ContinueOnError)
-	registerFastRateLimitFlag(fs)
-	if fastRateLimit {
-		t.Error("a production build must not run with fast rate limits")
+func TestProductionRateLimits(t *testing.T) {
+	if e2eBuild {
+		t.Error("a production build must not select the e2e behavior")
 	}
-	// A production binary must reject -fast-rate-limit instead of ignoring it.
-	fs.SetOutput(io.Discard)
-	if err := fs.Parse([]string{"-fast-rate-limit"}); err == nil {
-		t.Error("a production build must reject -fast-rate-limit")
+	if got := ratelimit.DefaultConfig(e2eBuild).Auth.Rate; got != 5 {
+		t.Errorf("got auth rate %d, want the production 5", got)
 	}
 }
 

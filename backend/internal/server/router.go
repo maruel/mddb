@@ -31,17 +31,17 @@ import (
 // Config holds configuration for the router.
 type Config struct {
 	*storage.ServerConfig
-	ConfigDir     string
-	BaseURL       string
-	Version       string
-	GoVersion     string
-	Revision      string
-	Dirty         bool
-	FastRateLimit bool // Multiply every rate limit for the e2e suite.
-	OAuth         OAuthConfig
-	GitHubApp     GitHubAppConfig
-	IPGeo         *ipgeo.Checker
-	VoiceBridge   voicegateway.MediaBridge
+	ConfigDir      string
+	BaseURL        string
+	Version        string
+	GoVersion      string
+	Revision       string
+	Dirty          bool
+	FastRateLimits bool // Multiply every rate limit for the e2e suite.
+	OAuth          OAuthConfig
+	GitHubApp      GitHubAppConfig
+	IPGeo          *ipgeo.Checker
+	VoiceBridge    voicegateway.MediaBridge
 }
 
 // GitHubAppConfig holds GitHub App credentials for installation-based auth.
@@ -81,7 +81,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		cfg.RateLimits.WriteRatePerMin,
 		cfg.RateLimits.ReadAuthRatePerMin,
 		cfg.RateLimits.ReadUnauthRatePerMin,
-		cfg.FastRateLimit,
+		cfg.FastRateLimits,
 	)
 	limiters := ratelimit.NewLimiters(rlCfg)
 

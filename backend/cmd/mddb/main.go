@@ -69,7 +69,6 @@ Flags:
 	}
 	configDirFlag := flag.String("config-dir", "", "Config directory (default: ~/.config/mddb)")
 	version := flag.Bool("version", false, "Print version and exit")
-	registerFastRateLimitFlag(flag.CommandLine)
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -366,16 +365,16 @@ Flags:
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	routerCfg := &server.Config{
-		ServerConfig:  serverCfg,
-		ConfigDir:     cfg.ConfigDir,
-		BaseURL:       cfg.BaseURL,
-		Version:       buildVersion,
-		GoVersion:     buildGoVersion,
-		Revision:      buildRevision,
-		Dirty:         buildDirty,
-		FastRateLimit: fastRateLimit,
-		IPGeo:         geoChecker,
-		VoiceBridge:   voiceBridge,
+		ServerConfig:   serverCfg,
+		ConfigDir:      cfg.ConfigDir,
+		BaseURL:        cfg.BaseURL,
+		Version:        buildVersion,
+		GoVersion:      buildGoVersion,
+		Revision:       buildRevision,
+		Dirty:          buildDirty,
+		FastRateLimits: e2eBuild,
+		IPGeo:          geoChecker,
+		VoiceBridge:    voiceBridge,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     cfg.OAuth.Google.ClientID,
 			GoogleClientSecret: cfg.OAuth.Google.ClientSecret,

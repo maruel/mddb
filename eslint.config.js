@@ -80,7 +80,7 @@ export default tseslint.config(
   },
   // E2E tests (Playwright)
   {
-    files: ["e2e/**/*.ts", "playwright.config.ts", "playwright.slow.config.ts"],
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
     languageOptions: {
       globals: {
         ...globals.node,
