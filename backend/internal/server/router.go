@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ type Config struct {
 	OAuth          OAuthConfig
 	GitHubApp      GitHubAppConfig
 	IPGeo          *ipgeo.Checker
+	TrustedProxies []netip.Prefix // Direct peers whose X-Forwarded-For and X-Real-IP are honored.
 	VoiceBridge    voicegateway.MediaBridge
 }
 
@@ -330,12 +332,14 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	inner = decompressMiddleware(inner)
 
 	f := func(w http.ResponseWriter, r *http.Request) {
-		clientIP := reqctx.GetClientIP(r)
+		clientIP := reqctx.ResolveClientIP(r, cfg.TrustedProxies)
+		ctx := reqctx.WithClientIP(r.Context(), clientIP)
 		var cc string
 		if cfg.IPGeo != nil {
 			cc = cfg.IPGeo.CountryCode(clientIP)
-			r = r.WithContext(reqctx.WithCountryCode(r.Context(), cc))
+			ctx = reqctx.WithCountryCode(ctx, cc)
 		}
+		r = r.WithContext(ctx)
 		start := time.Now()
 		rw := &responseWriter{
 			ResponseWriter:   w,
@@ -343,7 +347,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 			bandwidthLimiter: bandwidthLim,
 		}
 		inner.ServeHTTP(rw, r)
-		slog.InfoContext(r.Context(), "http",
+		slog.InfoContext(ctx, "http",
 			"m", r.Method,
 			"p", r.URL.Path,
 			"s", rw.status,
@@ -383,11 +387,14 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// Flush implements http.Flusher for SSE support through the middleware chain.
+// Flush implements http.Flusher, which streaming handlers assert.
 func (rw *responseWriter) Flush() {
-	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
+	_ = rw.FlushError()
+}
+
+// FlushError flushes the underlying writer and returns its flush error.
+func (rw *responseWriter) FlushError() error {
+	return http.NewResponseController(rw.ResponseWriter).Flush()
 }
 
 // Unwrap returns the underlying ResponseWriter for http.ResponseController.

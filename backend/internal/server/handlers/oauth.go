@@ -565,7 +565,7 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	}
 
 	// Generate JWT token with session tracking
-	clientIP := reqctx.GetClientIP(r)
+	clientIP := reqctx.ClientIP(ctx)
 	userAgent := r.Header.Get("User-Agent")
 	countryCode := reqctx.CountryCode(r.Context())
 	jwtToken, err := cfg.GenerateTokenWithSession(svc.Session, user, clientIP, userAgent, countryCode)

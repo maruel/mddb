@@ -6,43 +6,78 @@ package reqctx
 import (
 	"context"
 	"net/http"
+	"net/netip"
+	"slices"
 	"strings"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// GetClientIP extracts the client IP from an HTTP request,
-// checking X-Forwarded-For and X-Real-IP headers for proxied requests.
-func GetClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (for proxies)
-	// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-	// The leftmost IP is the original client.
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if first, _, found := strings.Cut(xff, ","); found {
-			return strings.TrimSpace(first)
+// ResolveClientIP returns the client address for r. It accepts forwarding
+// headers only when r's direct peer is in trustedProxies. For an
+// X-Forwarded-For chain, it returns the rightmost address outside
+// trustedProxies. A malformed header or an all-trusted chain yields the direct
+// peer.
+func ResolveClientIP(r *http.Request, trustedProxies []netip.Prefix) string {
+	direct := directClientIP(r.RemoteAddr)
+	peer, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil || !trusts(peer.Addr(), trustedProxies) {
+		return direct
+	}
+	if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+		return clientIPFromXForwardedFor(xff, trustedProxies, direct)
+	}
+	if xri := r.Header.Values("X-Real-IP"); len(xri) > 0 {
+		return clientIPFromRealIP(xri, direct)
+	}
+	return direct
+}
+
+func clientIPFromXForwardedFor(values []string, trustedProxies []netip.Prefix, direct string) string {
+	var chain []netip.Addr
+	for _, value := range values {
+		for part := range strings.SplitSeq(value, ",") {
+			addr, err := netip.ParseAddr(strings.TrimSpace(part))
+			if err != nil {
+				return direct
+			}
+			chain = append(chain, addr)
 		}
-		return strings.TrimSpace(xff)
 	}
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	// Fall back to RemoteAddr, stripping port if present
-	addr := r.RemoteAddr
-	// Handle IPv6 addresses like [::1]:8080
-	if strings.HasPrefix(addr, "[") {
-		if host, _, found := strings.Cut(addr, "]:"); found {
-			return host[1:] // Strip leading "["
+	for _, addr := range slices.Backward(chain) {
+		if !trusts(addr, trustedProxies) {
+			return addr.String()
 		}
-		// Malformed but try to be lenient
-		return strings.Trim(addr, "[]")
 	}
-	// IPv4 or hostname with port
-	if host, _, found := strings.Cut(addr, ":"); found {
-		return host
+	return direct
+}
+
+func clientIPFromRealIP(values []string, direct string) string {
+	if len(values) != 1 {
+		return direct
 	}
-	return addr
+	addr, err := netip.ParseAddr(strings.TrimSpace(values[0]))
+	if err != nil {
+		return direct
+	}
+	return addr.String()
+}
+
+func directClientIP(remoteAddr string) string {
+	if addr, err := netip.ParseAddrPort(remoteAddr); err == nil {
+		return addr.Addr().String()
+	}
+	if addr, err := netip.ParseAddr(remoteAddr); err == nil {
+		return addr.String()
+	}
+	return ""
+}
+
+// trusts reports whether addr belongs to one of trustedProxies.
+func trusts(addr netip.Addr, trustedProxies []netip.Prefix) bool {
+	addr = addr.Unmap()
+	return slices.ContainsFunc(trustedProxies, func(p netip.Prefix) bool { return p.Contains(addr) })
 }
 
 // Context keys for request metadata.

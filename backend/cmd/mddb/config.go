@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,6 +51,8 @@ type tomlServer struct {
 	DataDir string `toml:"data_dir"`
 	BaseURL string `toml:"base_url"`
 	GeoDB   string `toml:"geo_db"`
+
+	TrustedProxies []string `toml:"trusted_proxies"`
 }
 
 type tomlOAuth struct {
@@ -90,6 +93,8 @@ func defaultConfig() tomlConfig {
 			HTTP:    "localhost:8080",
 			DataDir: "data",
 			BaseURL: "http://localhost",
+
+			TrustedProxies: []string{},
 		},
 		Debug: tomlDebug{LogLevel: "info"},
 	}
@@ -155,16 +160,17 @@ type githubAppSettings struct {
 // resolvedConfig is the startup configuration after defaults, path resolution,
 // and validation.
 type resolvedConfig struct {
-	ConfigDir   string
-	HTTP        string
-	DataDir     string // relative to the working directory, or absolute
-	BaseURL     string
-	LogLevel    slog.Level
-	GeoDB       string // absolute, or empty when IP geolocation is disabled
-	TestOAuth   bool   // set only in an e2e build, which fakes the OAuth providers
-	OAuth       oauthCredentialsSet
-	GitHubApp   githubAppSettings
-	VoiceAPIKey string
+	ConfigDir      string
+	HTTP           string
+	DataDir        string // relative to the working directory, or absolute
+	BaseURL        string
+	LogLevel       slog.Level
+	GeoDB          string // absolute, or empty when IP geolocation is disabled
+	TrustedProxies []netip.Prefix
+	TestOAuth      bool // set only in an e2e build, which fakes the OAuth providers
+	OAuth          oauthCredentialsSet
+	GitHubApp      githubAppSettings
+	VoiceAPIKey    string
 }
 
 // resolveConfig validates tc and resolves its paths.
@@ -203,17 +209,22 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	if tc.Server.GeoDB != "" {
 		geoDB = resolveConfigPath(tc.Server.GeoDB, cfgDir)
 	}
+	trustedProxies, err := parseTrustedProxies(tc.Server.TrustedProxies)
+	if err != nil {
+		return nil, fmt.Errorf("server.trusted_proxies: %w", err)
+	}
 	return &resolvedConfig{
-		ConfigDir:   cfgDir,
-		HTTP:        tc.Server.HTTP,
-		DataDir:     tc.Server.DataDir,
-		BaseURL:     tc.Server.BaseURL,
-		LogLevel:    logLevel,
-		GeoDB:       geoDB,
-		TestOAuth:   testOAuth,
-		OAuth:       oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
-		GitHubApp:   ghApp,
-		VoiceAPIKey: tc.VoiceGateway.APIKey,
+		ConfigDir:      cfgDir,
+		HTTP:           tc.Server.HTTP,
+		DataDir:        tc.Server.DataDir,
+		BaseURL:        tc.Server.BaseURL,
+		LogLevel:       logLevel,
+		GeoDB:          geoDB,
+		TrustedProxies: trustedProxies,
+		TestOAuth:      testOAuth,
+		OAuth:          oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
+		GitHubApp:      ghApp,
+		VoiceAPIKey:    tc.VoiceGateway.APIKey,
 	}, nil
 }
 
@@ -258,6 +269,19 @@ func resolveConfigPath(path, cfgDir string) string {
 		return path
 	}
 	return filepath.Join(cfgDir, path)
+}
+
+// parseTrustedProxies parses CIDR prefixes such as "127.0.0.1/32".
+func parseTrustedProxies(raw []string) ([]netip.Prefix, error) {
+	prefixes := make([]netip.Prefix, 0, len(raw))
+	for _, r := range raw {
+		p, err := netip.ParsePrefix(r)
+		if err != nil {
+			return nil, fmt.Errorf("invalid prefix %q: %w", r, err)
+		}
+		prefixes = append(prefixes, p.Masked())
+	}
+	return prefixes, nil
 }
 
 // parseLogLevel maps a configured log level to a slog level.

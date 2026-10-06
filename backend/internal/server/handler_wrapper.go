@@ -26,9 +26,9 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// addRequestMetadataToContext adds client IP and User-Agent to the context.
+// addRequestMetadataToContext adds the User-Agent to the context. NewRouter
+// already put the client IP there.
 func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.Context {
-	ctx = reqctx.WithClientIP(ctx, reqctx.GetClientIP(r))
 	ctx = reqctx.WithUserAgent(ctx, r.Header.Get("User-Agent"))
 	return ctx
 }
@@ -144,7 +144,7 @@ func getRateLimitIdentifier(tier *ratelimit.Tier, user *identity.User, r *http.R
 	if tier.Scope == ratelimit.ScopeUser && user != nil {
 		return user.ID.String()
 	}
-	return reqctx.GetClientIP(r)
+	return reqctx.ClientIP(r.Context())
 }
 
 // validateAuthWithContext validates JWT and session, updating context with session info.
@@ -227,7 +227,7 @@ func Wrap[In any, PtrIn interface {
 		// Rate limit check for unauthenticated endpoints
 		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, reqctx.GetClientIP(r))
+			w, ok = checkRateLimit(w, tier, reqctx.ClientIP(ctx))
 			if !ok {
 				return
 			}
@@ -262,7 +262,7 @@ func WrapWithSvc[In any, PtrIn interface {
 		// Rate limit check for unauthenticated endpoints
 		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, reqctx.GetClientIP(r))
+			w, ok = checkRateLimit(w, tier, reqctx.ClientIP(ctx))
 			if !ok {
 				return
 			}

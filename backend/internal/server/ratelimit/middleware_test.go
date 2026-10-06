@@ -157,3 +157,17 @@ func TestRateLimitResponseWriter_HeadersOnlyOnce(t *testing.T) {
 		t.Errorf("X-RateLimit-Limit = %s, want 100", got)
 	}
 }
+
+func TestRateLimitResponseWriter_Flush(t *testing.T) {
+	underlying := httptest.NewRecorder()
+	rw := NewResponseWriter(underlying, Result{Allowed: true})
+
+	var flusher http.Flusher = rw
+	flusher.Flush()
+	if !underlying.Flushed {
+		t.Error("Flush did not reach the underlying writer")
+	}
+	if err := http.NewResponseController(rw).Flush(); err != nil {
+		t.Errorf("Flush() = %v", err)
+	}
+}

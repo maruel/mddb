@@ -116,6 +116,66 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 	}
 }
 
+// deadlineRecorder records the write deadlines the handler sets.
+type deadlineRecorder struct {
+	*flushRecorder
+
+	deadlines []time.Time
+}
+
+func (d *deadlineRecorder) SetWriteDeadline(t time.Time) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.deadlines = append(d.deadlines, t)
+	return nil
+}
+
+func (d *deadlineRecorder) Deadlines() []time.Time {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return append([]time.Time(nil), d.deadlines...)
+}
+
+func TestSSEHandler_BoundsWrites(t *testing.T) {
+	broker := sse.NewBroker()
+	h := &SSEHandler{
+		Svc: &Services{Broker: broker},
+		Cfg: &Config{Revision: "test-revision"},
+	}
+	wsID := ksid.NewID()
+	user := &identity.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/"+wsID.String()+"/events", http.NoBody)
+	r.SetPathValue("wsID", wsID.String())
+	r = r.WithContext(reqctx.WithUser(ctx, user))
+	w := &deadlineRecorder{flushRecorder: newFlushRecorder()}
+
+	done := make(chan struct{})
+	go func() {
+		h.ServeHTTP(w, r)
+		close(done)
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for !strings.Contains(w.Body(), "event: server") && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	got := w.Deadlines()
+	if len(got) < 2 {
+		t.Fatalf("got %d write deadlines, want a bounded write followed by a clear", len(got))
+	}
+	if got[0].IsZero() {
+		t.Error("the revision write has no deadline")
+	}
+	if !got[len(got)-1].IsZero() {
+		t.Error("the write deadline is not cleared after the flush")
+	}
+}
+
 // flushRecorder implements http.ResponseWriter and http.Flusher for testing SSE.
 type flushRecorder struct {
 	*httptest.ResponseRecorder

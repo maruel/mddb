@@ -31,6 +31,13 @@
 # https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
 #geo_db = ""  # e.g. "GeoLite2-Country.mmdb"
 
+# Address prefixes of the reverse proxies directly in front of mddb. Only a
+# request from one of them may set the client IP through X-Forwarded-For or
+# X-Real-IP. The client IP keys per-IP rate limits, sessions, and logs. Leave
+# empty when clients connect directly. Behind a proxy on the same host, set
+# ["127.0.0.1/32", "::1/128"]; otherwise every client shares the proxy's address.
+#trusted_proxies = []
+
 # ── OAuth ────────────────────────────────────────────────────────────────────
 # Each provider takes a client ID and its client secret. Set both or neither;
 # an incomplete pair stops startup. Providers with no credentials stay hidden.

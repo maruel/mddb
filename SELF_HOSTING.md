@@ -244,3 +244,6 @@ A sample Caddyfile is provided in [contrib/mddb.caddyfile](contrib/mddb.caddyfil
 [Caddy](https://caddyserver.com/).
 
 **HTTPS**: Caddy provides HTTPS automatically via Let's Encrypt TLS certificates.
+
+**Client IP**: Set `server.trusted_proxies = ["127.0.0.1/32", "::1/128"]` in `config.toml`. Without it, mddb
+ignores `X-Forwarded-For` and `X-Real-IP`, and every client shares Caddy's address for rate limits.

@@ -5,6 +5,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -213,6 +214,33 @@ func TestIntegration(t *testing.T) {
 		}
 		if health.Dirty {
 			t.Error("Health dirty: got true, want false")
+		}
+	})
+
+	t.Run("RateLimitIgnoresSpoofedForwardedFor", func(t *testing.T) {
+		t.Parallel()
+		env := setupTestEnv(t)
+
+		// The test client is not a trusted proxy, so rotating X-Forwarded-For
+		// must not move the login attempts into fresh rate limit buckets.
+		var limited bool
+		for i := range 20 {
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, env.server.URL+"/api/v1/auth/login", strings.NewReader(`{"email":"a@example.com","password":"wrong"}`))
+			if err != nil {
+				t.Fatalf("NewRequest: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Forwarded-For", fmt.Sprintf("203.0.113.%d", i+1))
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Do: %v", err)
+			}
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+			limited = limited || resp.StatusCode == http.StatusTooManyRequests
+		}
+		if !limited {
+			t.Error("20 login attempts with rotating X-Forwarded-For were never rate limited")
 		}
 	})
 

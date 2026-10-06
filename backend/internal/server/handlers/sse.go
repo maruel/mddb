@@ -3,11 +3,11 @@
 package handlers
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/maruel/gomode/sse"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
@@ -49,32 +49,25 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
-		return
-	}
-
 	sub, cleanup, err := h.Svc.Broker.Subscribe(wsID, user.ID)
 	if err != nil {
-		slog.Warn("SSE subscribe failed", "ws", wsID, "user", user.ID, "error", err)
+		slog.WarnContext(r.Context(), "SSE subscribe failed", "ws", wsID, "user", user.ID, "err", err)
 		http.Error(w, err.Error(), http.StatusTooManyRequests)
 		return
 	}
 	defer cleanup()
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
-	flusher.Flush()
+	// Every write is deadline-bounded so a client that stops reading cannot pin
+	// this handler and its subscription.
+	stream := sse.New(w)
 
 	// Send server revision on connect so clients can detect binary upgrades.
-	revMsg := fmt.Appendf(nil, "event: server\ndata: {\"revision\":%q}\n\n", h.Cfg.Revision)
-	if _, err := w.Write(revMsg); err != nil {
+	if err := stream.Writef("event: server\ndata: {\"revision\":%q}\n\n", h.Cfg.Revision); err != nil {
 		return
 	}
-	flusher.Flush()
+	if err := stream.Flush(); err != nil {
+		return
+	}
 
 	ticker := time.NewTicker(sseKeepAliveInterval)
 	defer ticker.Stop()
@@ -88,15 +81,16 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if _, err := w.Write(msg); err != nil {
+			if err := stream.Writef("%s", msg); err != nil {
 				return
 			}
-			flusher.Flush()
+			if err := stream.Flush(); err != nil {
+				return
+			}
 		case <-ticker.C:
-			if _, err := w.Write([]byte(": keepalive\n\n")); err != nil {
+			if err := stream.KeepAlive(); err != nil {
 				return
 			}
-			flusher.Flush()
 		}
 	}
 }

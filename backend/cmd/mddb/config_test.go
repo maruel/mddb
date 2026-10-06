@@ -3,10 +3,12 @@ package main
 
 import (
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -120,6 +122,7 @@ http = ":9090"
 data_dir = "/srv/mddb"
 base_url = "https://mddb.example.com"
 geo_db = "GeoLite2-Country.mmdb"
+trusted_proxies = ["127.0.0.1/32", "::1/128"]
 
 [oauth.google]
 client_id = "google-id"
@@ -154,6 +157,8 @@ log_level = "debug"
 				DataDir: "/srv/mddb",
 				BaseURL: "https://mddb.example.com",
 				GeoDB:   "GeoLite2-Country.mmdb",
+
+				TrustedProxies: []string{"127.0.0.1/32", "::1/128"},
 			},
 			OAuth: tomlOAuth{
 				Google:    tomlOAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"},
@@ -249,6 +254,36 @@ func TestResolveConfig(t *testing.T) {
 		}
 		if got.GitHubApp != (githubAppSettings{}) {
 			t.Errorf("expected no GitHub App: %+v", got)
+		}
+		if len(got.TrustedProxies) != 0 {
+			t.Errorf("expected no trusted proxies: %v", got.TrustedProxies)
+		}
+	})
+
+	t.Run("trusted proxies", func(t *testing.T) {
+		tc := defaultConfig()
+		tc.Server.TrustedProxies = []string{"127.0.0.1/32", "10.1.2.3/8"}
+		got, err := resolveConfig(&tc, cfgDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32"), netip.MustParsePrefix("10.0.0.0/8")}
+		if !slices.Equal(got.TrustedProxies, want) {
+			t.Errorf("got %v, want %v", got.TrustedProxies, want)
+		}
+	})
+
+	t.Run("invalid trusted proxy fails with the path", func(t *testing.T) {
+		for _, raw := range []string{"127.0.0.1", "proxy.example.com/24", ""} {
+			tc := defaultConfig()
+			tc.Server.TrustedProxies = []string{raw}
+			_, err := resolveConfig(&tc, cfgDir)
+			if err == nil {
+				t.Fatalf("expected an error for %q", raw)
+			}
+			if !strings.Contains(err.Error(), "server.trusted_proxies") {
+				t.Errorf("error %q does not name server.trusted_proxies", err)
+			}
 		}
 	})
 

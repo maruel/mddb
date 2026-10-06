@@ -8,7 +8,9 @@
 package server
 
 import (
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/andybalholm/brotli"
@@ -31,7 +33,14 @@ func compressMiddleware(next http.Handler) http.Handler {
 			ResponseWriter: w,
 			encoding:       enc,
 		}
-		defer cw.finish()
+		ctx := r.Context()
+		defer func() {
+			if err := cw.finish(); err != nil {
+				// The status may already be committed; report the transport
+				// failure without rewriting it.
+				slog.ErrorContext(ctx, "response compression finalization failed", "m", r.Method, "p", r.URL.Path, "encoding", cw.encoding, "err", err)
+			}
+		}()
 		next.ServeHTTP(cw, r)
 	})
 }
@@ -113,26 +122,34 @@ func (cw *compressWriter) initOnce() {
 	}
 }
 
-// finish flushes and closes the compressor.
-func (cw *compressWriter) finish() {
+// finish flushes and closes the compressor, returning its final write error.
+func (cw *compressWriter) finish() error {
 	if cw.writer == nil {
-		return
+		return nil
 	}
-	_ = cw.writer.Close()
+	return cw.writer.Close()
 }
 
 // Flush flushes compressed data to the wire. Calls initOnce so that
 // Content-Encoding is set before the first flush sends headers.
 func (cw *compressWriter) Flush() {
+	_ = cw.FlushError()
+}
+
+// FlushError flushes compressed data to the wire and returns the compressor's
+// or the connection's flush error.
+func (cw *compressWriter) FlushError() error {
 	cw.initOnce()
+	var err error
 	if cw.writer != nil {
 		if f, ok := cw.writer.(interface{ Flush() error }); ok {
-			_ = f.Flush()
+			err = f.Flush()
 		}
 	}
-	if f, ok := cw.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
+	if flushErr := http.NewResponseController(cw.ResponseWriter).Flush(); flushErr != nil && !errors.Is(flushErr, http.ErrNotSupported) {
+		err = errors.Join(err, flushErr)
 	}
+	return err
 }
 
 // Unwrap returns the underlying ResponseWriter for http.ResponseController.

@@ -91,7 +91,7 @@ Flags:
 	}
 	// Run onboarding when no config file exists yet and stdin is a TTY.
 	if _, err := os.Stat(configPath(cfgDir)); os.IsNotExist(err) && isatty.IsTerminal(os.Stdin.Fd()) {
-		if err := runOnboarding(cfgDir, tc.Server); err != nil {
+		if err := runOnboarding(cfgDir, &tc.Server); err != nil {
 			return fmt.Errorf("onboarding failed: %w", err)
 		}
 		if tc, err = loadTOMLConfig(cfgDir); err != nil {
@@ -374,6 +374,7 @@ Flags:
 		Dirty:          buildDirty,
 		FastRateLimits: e2eBuild,
 		IPGeo:          geoChecker,
+		TrustedProxies: cfg.TrustedProxies,
 		VoiceBridge:    voiceBridge,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     cfg.OAuth.Google.ClientID,
@@ -492,7 +493,7 @@ func promptCredentials(reader *bufio.Reader, provider string) (oauthCredentials,
 // cfgDir/config.toml. The file holds client secrets, so it is created with mode
 // 0600. defaults supplies the base URL default and the port shown in the
 // callback URLs.
-func runOnboarding(cfgDir string, defaults tomlServer) error {
+func runOnboarding(cfgDir string, defaults *tomlServer) error {
 	fmt.Println("Welcome to mddb! Let's set up your configuration.")
 	fmt.Println("This wizard writes " + configPath(cfgDir) + ", which holds client secrets.")
 	fmt.Println("")
