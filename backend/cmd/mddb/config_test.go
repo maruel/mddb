@@ -234,6 +234,25 @@ log_level = "debug"
 	})
 }
 
+func TestLoadTOMLConfigTilde(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	cfgSubdir := filepath.Join(home, "custom")
+	if err := os.MkdirAll(cfgSubdir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgSubdir, "config.toml"), []byte("[server]\nhttp = \":9999\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadTOMLConfig("~/custom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Server.HTTP != ":9999" {
+		t.Errorf("got http %q, want :9999", got.Server.HTTP)
+	}
+}
+
 func TestResolveConfig(t *testing.T) {
 	cfgDir := t.TempDir()
 
@@ -372,14 +391,121 @@ func TestResolveConfig(t *testing.T) {
 
 	t.Run("absolute paths pass through", func(t *testing.T) {
 		tc := defaultConfig()
+		tc.Server.DataDir = "/srv/mddb"
 		tc.Server.GeoDB = "/var/lib/mddb/GeoLite2-Country.mmdb"
 		tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "/etc/mddb/github-app.pem"}
 		got, err := resolveConfig(&tc, cfgDir)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.GeoDB != tc.Server.GeoDB || got.GitHubApp.PrivateKeyFile != "/etc/mddb/github-app.pem" {
+		if got.DataDir != "/srv/mddb" || got.GeoDB != tc.Server.GeoDB || got.GitHubApp.PrivateKeyFile != "/etc/mddb/github-app.pem" {
 			t.Errorf("got %+v", got)
+		}
+	})
+
+	t.Run("tilde expands to home directory", func(t *testing.T) {
+		home := "/home/tester"
+		t.Setenv("HOME", home)
+
+		tc := defaultConfig()
+		tc.Server.DataDir = "~/content"
+		tc.Server.GeoDB = "~/GeoLite2-Country.mmdb"
+		tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "~/github-app.pem"}
+		got, err := resolveConfig(&tc, "~/custom-cfg")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := filepath.Join(home, "custom-cfg"); got.ConfigDir != want {
+			t.Errorf("got ConfigDir %q, want %q", got.ConfigDir, want)
+		}
+		if want := filepath.Join(home, "content"); got.DataDir != want {
+			t.Errorf("got data_dir %q, want %q", got.DataDir, want)
+		}
+		if want := filepath.Join(home, "GeoLite2-Country.mmdb"); got.GeoDB != want {
+			t.Errorf("got geo_db %q, want %q", got.GeoDB, want)
+		}
+		if want := filepath.Join(home, "github-app.pem"); got.GitHubApp.PrivateKeyFile != want {
+			t.Errorf("got private_key_file %q, want %q", got.GitHubApp.PrivateKeyFile, want)
+		}
+	})
+
+	t.Run("tilde alone expands to home directory", func(t *testing.T) {
+		home := "/home/tester"
+		t.Setenv("HOME", home)
+
+		tc := defaultConfig()
+		tc.Server.DataDir = "~"
+		tc.Server.GeoDB = "~"
+		tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "~"}
+		got, err := resolveConfig(&tc, "~")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.ConfigDir != home {
+			t.Errorf("got ConfigDir %q, want %q", got.ConfigDir, home)
+		}
+		if got.DataDir != home {
+			t.Errorf("got data_dir %q, want %q", got.DataDir, home)
+		}
+		if got.GeoDB != home {
+			t.Errorf("got geo_db %q, want %q", got.GeoDB, home)
+		}
+		if got.GitHubApp.PrivateKeyFile != home {
+			t.Errorf("got private_key_file %q, want %q", got.GitHubApp.PrivateKeyFile, home)
+		}
+	})
+
+	t.Run("home resolution error fails with the path", func(t *testing.T) {
+		t.Setenv("HOME", "")
+
+		for _, tc := range []struct {
+			name    string
+			mutate  func(*tomlConfig)
+			cfgDir  string
+			wantErr string
+		}{
+			{
+				name: "data_dir with tilde",
+				mutate: func(tc *tomlConfig) {
+					tc.Server.DataDir = "~/data"
+				},
+				cfgDir:  cfgDir,
+				wantErr: "server.data_dir",
+			},
+			{
+				name: "geo_db with tilde",
+				mutate: func(tc *tomlConfig) {
+					tc.Server.GeoDB = "~/geo.mmdb"
+				},
+				cfgDir:  cfgDir,
+				wantErr: "server.geo_db",
+			},
+			{
+				name: "github app private key with tilde",
+				mutate: func(tc *tomlConfig) {
+					tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "~/key.pem"}
+				},
+				cfgDir:  cfgDir,
+				wantErr: "github.app.private_key_file",
+			},
+			{
+				name:    "cfgDir with tilde",
+				mutate:  func(tc *tomlConfig) {},
+				cfgDir:  "~/config",
+				wantErr: "config_dir",
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				cfg := defaultConfig()
+				tc.mutate(&cfg)
+				_, err := resolveConfig(&cfg, tc.cfgDir)
+				if err == nil {
+					t.Fatal("expected an error")
+				}
+				if !strings.Contains(err.Error(), tc.wantErr) {
+					t.Errorf("error %q does not name %q", err, tc.wantErr)
+				}
+			})
 		}
 	})
 
@@ -433,6 +559,85 @@ func TestDefaultConfigDir(t *testing.T) {
 		t.Setenv("HOME", "/home/example")
 		if got, want := defaultConfigDir(), "/home/example/.config/mddb"; got != want {
 			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestPathResolutionHelpers(t *testing.T) {
+	home := "/home/tester"
+	t.Setenv("HOME", home)
+
+	t.Run("expandHome", func(t *testing.T) {
+		got, err := expandHome("")
+		if err != nil || got != "" {
+			t.Fatalf("expandHome(\"\") = (%q, %v), want (\"\", nil)", got, err)
+		}
+		got, err = expandHome("~")
+		if err != nil || got != home {
+			t.Fatalf("expandHome(\"~\") = (%q, %v), want (%q, nil)", got, err, home)
+		}
+		got, err = expandHome("~/abc/def")
+		if err != nil || got != filepath.Join(home, "abc", "def") {
+			t.Fatalf("expandHome(\"~/abc/def\") = (%q, %v)", got, err)
+		}
+		got, err = expandHome(`~\abc\def`)
+		if err != nil || got != filepath.Join(home, "abc", "def") {
+			t.Fatalf("expandHome(`~\\abc\\def`) = (%q, %v)", got, err)
+		}
+		got, err = expandHome("relative/path")
+		if err != nil || got != "relative/path" {
+			t.Fatalf("expandHome(\"relative/path\") = (%q, %v)", got, err)
+		}
+		got, err = expandHome("/absolute/path")
+		if err != nil || got != "/absolute/path" {
+			t.Fatalf("expandHome(\"/absolute/path\") = (%q, %v)", got, err)
+		}
+	})
+
+	t.Run("resolveDataDir", func(t *testing.T) {
+		got, err := resolveDataDir("")
+		if err != nil || got != "" {
+			t.Fatalf("resolveDataDir(\"\") = (%q, %v)", got, err)
+		}
+		got, err = resolveDataDir("data")
+		if err != nil || got != "data" {
+			t.Fatalf("resolveDataDir(\"data\") = (%q, %v)", got, err)
+		}
+		got, err = resolveDataDir("/srv/data")
+		if err != nil || got != "/srv/data" {
+			t.Fatalf("resolveDataDir(\"/srv/data\") = (%q, %v)", got, err)
+		}
+		got, err = resolveDataDir("~/data")
+		if err != nil || got != filepath.Join(home, "data") {
+			t.Fatalf("resolveDataDir(\"~/data\") = (%q, %v)", got, err)
+		}
+		got, err = resolveDataDir("~")
+		if err != nil || got != home {
+			t.Fatalf("resolveDataDir(\"~\") = (%q, %v)", got, err)
+		}
+	})
+
+	t.Run("resolveConfigPath", func(t *testing.T) {
+		cfgDir := "/etc/mddb"
+		got, err := resolveConfigPath("", cfgDir)
+		if err != nil || got != "" {
+			t.Fatalf("resolveConfigPath(\"\") = (%q, %v)", got, err)
+		}
+		got, err = resolveConfigPath("geo.mmdb", cfgDir)
+		if err != nil || got != filepath.Join(cfgDir, "geo.mmdb") {
+			t.Fatalf("resolveConfigPath(\"geo.mmdb\") = (%q, %v)", got, err)
+		}
+		got, err = resolveConfigPath("/var/geo.mmdb", cfgDir)
+		if err != nil || got != "/var/geo.mmdb" {
+			t.Fatalf("resolveConfigPath(\"/var/geo.mmdb\") = (%q, %v)", got, err)
+		}
+		got, err = resolveConfigPath("~/geo.mmdb", cfgDir)
+		if err != nil || got != filepath.Join(home, "geo.mmdb") {
+			t.Fatalf("resolveConfigPath(\"~/geo.mmdb\") = (%q, %v)", got, err)
+		}
+		got, err = resolveConfigPath("~", cfgDir)
+		if err != nil || got != home {
+			t.Fatalf("resolveConfigPath(\"~\") = (%q, %v)", got, err)
 		}
 	})
 }

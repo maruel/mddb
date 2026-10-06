@@ -85,6 +85,11 @@ Flags:
 	if *configDirFlag != "" {
 		cfgDir = *configDirFlag
 	}
+	var err error
+	cfgDir, err = expandHome(cfgDir)
+	if err != nil {
+		return fmt.Errorf("config-dir: %w", err)
+	}
 	tc, err := loadTOMLConfig(cfgDir)
 	if err != nil {
 		return err

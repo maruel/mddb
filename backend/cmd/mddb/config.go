@@ -103,6 +103,11 @@ func defaultConfig() tomlConfig {
 // loadTOMLConfig reads cfgDir/config.toml over the defaults. An absent file is
 // not an error; a malformed file or an unknown key fails with the file path.
 func loadTOMLConfig(cfgDir string) (tomlConfig, error) {
+	var err error
+	cfgDir, err = expandHome(cfgDir)
+	if err != nil {
+		return tomlConfig{}, fmt.Errorf("config_dir: %w", err)
+	}
 	path := configPath(cfgDir)
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is the operator's config directory
 	if err != nil {
@@ -178,10 +183,22 @@ type resolvedConfig struct {
 // data_dir is relative to the working directory, like the flag it replaces.
 // geo_db and github.app.private_key_file are configuration-side files, so they
 // are relative to cfgDir.
+//
+// Path values process ~ as the home directory, accept absolute paths, and
+// process relative paths.
 func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
+	var err error
+	cfgDir, err = expandHome(cfgDir)
+	if err != nil {
+		return nil, fmt.Errorf("config_dir: %w", err)
+	}
 	logLevel, err := parseLogLevel(tc.Debug.LogLevel)
 	if err != nil {
 		return nil, fmt.Errorf("debug.log_level: %w", err)
+	}
+	dataDir, err := resolveDataDir(tc.Server.DataDir)
+	if err != nil {
+		return nil, fmt.Errorf("server.data_dir: %w", err)
 	}
 	google, err := resolveOAuthProvider("oauth.google", tc.OAuth.Google)
 	if err != nil {
@@ -207,7 +224,10 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	}
 	geoDB := ""
 	if tc.Server.GeoDB != "" {
-		geoDB = resolveConfigPath(tc.Server.GeoDB, cfgDir)
+		geoDB, err = resolveConfigPath(tc.Server.GeoDB, cfgDir)
+		if err != nil {
+			return nil, fmt.Errorf("server.geo_db: %w", err)
+		}
 	}
 	trustedProxies, err := parseTrustedProxies(tc.Server.TrustedProxies)
 	if err != nil {
@@ -216,7 +236,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	return &resolvedConfig{
 		ConfigDir:      cfgDir,
 		HTTP:           tc.Server.HTTP,
-		DataDir:        tc.Server.DataDir,
+		DataDir:        dataDir,
 		BaseURL:        tc.Server.BaseURL,
 		LogLevel:       logLevel,
 		GeoDB:          geoDB,
@@ -255,20 +275,65 @@ func resolveGitHubApp(app tomlGitHubApp, cfgDir string) (githubAppSettings, erro
 	if app.ID == 0 {
 		return githubAppSettings{}, nil
 	}
+	keyPath, err := resolveConfigPath(app.PrivateKeyFile, cfgDir)
+	if err != nil {
+		return githubAppSettings{}, fmt.Errorf("github.app.private_key_file: %w", err)
+	}
 	return githubAppSettings{
 		ID:             app.ID,
-		PrivateKeyFile: resolveConfigPath(app.PrivateKeyFile, cfgDir),
+		PrivateKeyFile: keyPath,
 		WebhookSecret:  app.WebhookSecret,
 	}, nil
 }
 
-// resolveConfigPath resolves a configuration-side file path against cfgDir.
-// An empty path stays empty.
-func resolveConfigPath(path, cfgDir string) string {
-	if path == "" || filepath.IsAbs(path) {
-		return path
+// expandHome replaces a leading ~ with the user's home directory.
+func expandHome(path string) (string, error) {
+	if path == "" {
+		return "", nil
 	}
-	return filepath.Join(cfgDir, path)
+	if path == "~" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve ~: %w", err)
+		}
+		return home, nil
+	}
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve ~: %w", err)
+		}
+		sub := strings.ReplaceAll(path[2:], `\`, "/")
+		return filepath.Join(home, filepath.FromSlash(sub)), nil
+	}
+	return path, nil
+}
+
+// resolveDataDir resolves tc.Server.DataDir. It expands ~ to the home
+// directory, accepts absolute paths, and keeps relative paths relative
+// to the working directory.
+func resolveDataDir(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	return expandHome(path)
+}
+
+// resolveConfigPath resolves a configuration-side file path against cfgDir.
+// It expands ~ to the home directory, accepts absolute paths, and resolves
+// relative paths against cfgDir. An empty path stays empty.
+func resolveConfigPath(path, cfgDir string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	expanded, err := expandHome(path)
+	if err != nil {
+		return "", err
+	}
+	if filepath.IsAbs(expanded) {
+		return expanded, nil
+	}
+	return filepath.Join(cfgDir, expanded), nil
 }
 
 // parseTrustedProxies parses CIDR prefixes such as "127.0.0.1/32".
