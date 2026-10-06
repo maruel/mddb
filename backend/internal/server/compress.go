@@ -3,7 +3,7 @@
 // Compresses responses using zstd, brotli, or gzip at fast compression
 // levels. SSE streams are compressed with per-event flushing to preserve
 // real-time delivery. Skips responses that already have a Content-Encoding
-// (precompressed static files).
+// (precompressed static files), HEAD requests, and bodyless statuses.
 
 package server
 
@@ -22,7 +22,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accepted := parseAcceptEncoding(r.Header.Get("Accept-Encoding"))
 		enc := negotiateEncoding(accepted)
-		if enc == "" {
+		if enc == "" || r.Method == http.MethodHead {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -56,6 +56,18 @@ type compressWriter struct {
 }
 
 func (cw *compressWriter) WriteHeader(code int) {
+	// Informational statuses precede the final response, or hand the
+	// connection over for 101. Pass them through without Content-Encoding.
+	if code >= 100 && code < 200 {
+		cw.ResponseWriter.WriteHeader(code)
+		return
+	}
+	// The compressor's framing bytes are not permitted on 204 and 304; closing
+	// it fails with http.ErrBodyNotAllowed.
+	if code == http.StatusNoContent || code == http.StatusNotModified {
+		cw.skipCompress = true
+		cw.headerSent = true
+	}
 	cw.initOnce()
 	cw.ResponseWriter.WriteHeader(code)
 }
