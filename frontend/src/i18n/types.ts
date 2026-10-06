@@ -635,5 +635,19 @@ export interface Dictionary {
     settingUpWebRTC: string;
     you: string;
     setupFailed: string;
+    browserSpeech: string;
+    browserSpeechPrivacy: string;
+    browserSpeechUnavailable: string;
+    closeVoiceSettings: string;
+    cloudVoice: string;
+    cloudVoiceDescription: string;
+    endSessionToChange: string;
+    settingUpBrowserSpeech: string;
+    systemAudioSettings: string;
+    systemDefault: string;
+    unavailableDevice: string;
+    voiceLanguage: string;
+    voiceMode: string;
+    voiceSettings: string;
   };
 }

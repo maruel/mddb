@@ -27,7 +27,7 @@
     "benchmark": "tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'"
   },
   "dependencies": {
-    "@maruel/gomode": "git+https://github.com/maruel/gomode.git#5b91f591891662266bfc9e0a42201aedcaaf7b99",
+    "@maruel/gomode": "git+https://github.com/maruel/gomode.git#8a6c776817f3463f79085ea82faf2c60fad5573b",
     "@solid-primitives/i18n": "2.2.1",
     "@solidjs/router": "1.0.0",
     "dompurify": "3.4.15",

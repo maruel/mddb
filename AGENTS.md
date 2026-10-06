@@ -16,6 +16,25 @@ data as Markdown, JSONL, and assets in git repositories. Read [backend/AGENTS.md
 - The first-line comment of each file feeds the file index below; update it when the file's purpose changes.
 - Plans are `docs/PLAN_*.md` files in the owning module.
 
+## Roll Go Mode
+
+`github.com/maruel/gomode` ships as a Go module and as the `@maruel/gomode` npm package. Roll both in one
+commit; rolling only the Go module leaves the frontend on old code.
+
+1. Pick a published tag. Find its commit: `git ls-remote https://github.com/maruel/gomode 'refs/tags/vX.Y.Z*'`.
+2. Run `go get github.com/maruel/gomode@vX.Y.Z`, then `go mod tidy`. Use a tag, not a pseudo-version.
+3. Set `@maruel/gomode` in `package.json` to `git+https://github.com/maruel/gomode.git#<commit>`, then run
+   `pnpm install` to update `pnpm-lock.yaml`.
+4. Run `make build`. It rebuilds the tracked `backend/frontend/dist/*.br`; commit them, because CI fails on a
+   dirty tree.
+5. Run `make fix`, `make verify`, `make test`, and `make test-e2e`. Adapt mddb to the new version; do not pin
+   an older one. A roll usually needs:
+   - a key in `voice` of `frontend/src/i18n/types.ts` and in all four dictionaries for each new overlay label
+     (`frontend/src/gomode/VoicePanel.test.ts` lists the missing ones);
+   - a DOM global in `frontend/tests/setup-dom.ts` for each browser API the new code uses;
+   - a newer `target` and `lib` in `tsconfig.json` when gomode uses newer JavaScript APIs.
+6. Commit `go.mod`, `go.sum`, `package.json`, `pnpm-lock.yaml`, `dist/`, and the adaptations together.
+
 <!-- BEGIN FILE INDEX -->
 ## File Index
 

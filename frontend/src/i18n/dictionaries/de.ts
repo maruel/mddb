@@ -631,5 +631,21 @@ export const dict: Dictionary = {
     settingUpWebRTC: "WebRTC wird eingerichtet…",
     you: "Sie:",
     setupFailed: "Sprachassistent nicht verfügbar. Laden Sie die Seite erneut.",
+    browserSpeech: "Browser-Sprache",
+    browserSpeechPrivacy:
+      "Ihr Browser wandelt Ihre Sprache in Text um und liest Antworten vor. Nur Text erreicht das Sprach-Gateway. Die Spracherkennung kann den Cloud-Dienst Ihres Browser-Anbieters nutzen.",
+    browserSpeechUnavailable: "Browser-Sprache ist in diesem Browser nicht verfügbar. Verwenden Sie Cloud-Sprache.",
+    closeVoiceSettings: "Spracheinstellungen schließen",
+    cloudVoice: "Cloud-Sprache",
+    cloudVoiceDescription:
+      "Das Sprach-Gateway empfängt das Audio Ihres Mikrofons und sendet gesprochene Antworten zurück.",
+    endSessionToChange: "Beenden Sie die Sprachsitzung, bevor Sie die Spracheinstellungen ändern.",
+    settingUpBrowserSpeech: "Browser-Sprache wird eingerichtet…",
+    systemAudioSettings: "Ändern Sie den Lautsprecher in den Soundeinstellungen Ihres Geräts.",
+    systemDefault: "Systemstandard",
+    unavailableDevice: "Gerät nicht verfügbar",
+    voiceLanguage: "Sprache (z. B. de-DE)",
+    voiceMode: "Sprachmodus",
+    voiceSettings: "Spracheinstellungen",
   },
 };
