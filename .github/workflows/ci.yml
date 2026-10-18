@@ -26,28 +26,12 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.x"
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - uses: pnpm/setup@v3
         with:
           runtime: node@26
           cache: true
           require-lockfile: true
-      - name: Configure Python for Windows
-        run: |
-          $pythonPath = (Get-Command python).Source
-          $pythonDir = Split-Path $pythonPath
-          $python3Path = Join-Path $pythonDir "python3.exe"
-          if (!(Test-Path $python3Path)) {
-            New-Item -ItemType HardLink -Path $python3Path -Value $pythonPath
-            Write-Host "Created python3.exe hardlink"
-          }
-          & pnpm config set python "$pythonPath"
-          Write-Host "Configured pnpm python to $pythonPath"
-        if: runner.os == 'Windows'
-        shell: pwsh
       # Lint
       - name: Verify (format check and lint)
         if: runner.os == 'Linux'

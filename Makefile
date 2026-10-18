@@ -3,16 +3,9 @@
 .DEFAULT_GOAL := help
 .PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify tools custom-gcl benchmark
 
-# Ruff is installed separately; Go tool versions are declared in go.mod.
-RUFF_VERSION=0.16.8
-
-# Prepend uv's tool directory so a recipe can run Ruff after installing it.
-UV_BIN := $(if $(shell command -v uv 2>/dev/null),$(shell uv tool dir --bin 2>/dev/null))
-export PATH := $(if $(UV_BIN),$(UV_BIN):)$(PATH)
-
 tools:
-	@command -v uv > /dev/null 2>&1 || { echo 'uv is required to install the Python tools; see https://docs.astral.sh/uv/' >&2; exit 1; }
-	@ruff --version 2>/dev/null | grep -Fqw "$(RUFF_VERSION)" || uv tool install --force --quiet ruff==$(RUFF_VERSION)
+	@command -v uv > /dev/null 2>&1 || { echo 'uv is required for Python development tools; see https://docs.astral.sh/uv/' >&2; exit 1; }
+	@uv sync --locked --quiet
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
@@ -35,9 +28,9 @@ VERIFY_GO = ./custom-gcl run --show-stats=false ./...
 VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && node scripts/lint_frontend_styles.mjs
 VERIFY_TS = pnpm --silent typecheck
 VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts
-VERIFY_PY = ruff format --check --quiet . && ruff check --quiet .
-VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -l $$files
-VERIFY_MISC = python3 scripts/lint_binaries.py && python3 scripts/update_agents_file_index.py --check
+VERIFY_PY = uv run --locked ruff format --check --quiet . && uv run --locked ruff check --quiet .
+VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -d $$files
+VERIFY_MISC = uv run --locked python scripts/lint_binaries.py && uv run --locked python scripts/update_agents_file_index.py --check
 
 # The custom-gcl binary is not byte-reproducible (golangci-lint custom builds
 # in a random temp directory and stamps VCS metadata), so staleness is tracked
@@ -69,6 +62,7 @@ help:
 	@printf '  %-18s - %s\n' 'make coverage' 'Run tests with coverage'
 	@printf '  %-18s - %s\n' 'make types' 'Generate TypeScript DTOs, client, and API reference'
 	@printf '  %-18s - %s\n' 'make git-hooks' 'Install git pre-commit hooks'
+	@printf '  %-18s - %s\n' 'make tools' 'Sync pinned Python development tools with uv'
 	@echo ''
 	@echo 'make dev runs scripts/run-dev.py; pass --help to see its flags.'
 
@@ -89,7 +83,7 @@ build: types
 # Run the server in development mode. scripts/run-dev.py writes a temporary
 # config.toml and runs `go run`. See the script for the flags.
 dev:
-	@./scripts/run-dev.py
+	@uv run --locked python scripts/run-dev.py
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
@@ -111,7 +105,7 @@ benchmark:
 # data-e2e/server.log; HTML report: playwright-report/. CI runs these; verify
 # and test do not.
 test-e2e: test-e2e-go
-	@python3 scripts/clean_data_e2e.py
+	@uv run --locked python scripts/clean_data_e2e.py
 	@pnpm --silent test:e2e; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
@@ -119,7 +113,7 @@ test-e2e: test-e2e-go
 	  echo ""; echo "Server Log: ./data-e2e/server.log"; \
 	  exit $$e2e_exit; \
 	fi
-	@./scripts/verify_e2e_data.py
+	@uv run --locked python scripts/verify_e2e_data.py
 	@node e2e/inject-tag-colors.cjs
 
 # The e2e build tag also switches on the Go tests that only exist in that build,
@@ -147,11 +141,11 @@ fix: tools custom-gcl $(FRONTEND_STAMP)
 	@go tool golangci-lint fmt
 	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts --fix
 	@pnpm exec prettier --write --log-level warn .
-	@ruff check --quiet --fix .
-	@ruff format --quiet .
+	@uv run --locked ruff check --quiet --fix .
+	@uv run --locked ruff format --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || go tool shfmt -w $$files
 	@pnpm exec stylelint --fix "frontend/src/**/*.css"
-	@./scripts/update_agents_file_index.py
+	@uv run --locked python scripts/update_agents_file_index.py
 
 git-hooks:
 	@./scripts/install-git-hooks.sh

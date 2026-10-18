@@ -26,7 +26,7 @@ export default defineConfig({
   // temporary config, never an environment variable. Server logs are captured
   // to data-e2e/server.log (copied to report by make e2e).
   webServer: {
-    command: `python3 scripts/clean_data_e2e.py && ./scripts/run-dev.py --data-dir ./data-e2e --fake > ./data-e2e/server.log 2>&1`,
+    command: `uv run --locked python scripts/clean_data_e2e.py && uv run --locked python scripts/run-dev.py --data-dir ./data-e2e --fake > ./data-e2e/server.log 2>&1`,
     url: "http://localhost:8080/api/v1/health",
     reuseExistingServer: false, // Always start fresh so the server uses this config's settings
     timeout: 30000,

@@ -1,4 +1,4 @@
-//go:generate python3 ../../scripts/build_frontend.py
+//go:generate uv run --locked python ../../scripts/build_frontend.py
 
 // Package frontend embeds the compiled SolidJS web UI assets.
 //

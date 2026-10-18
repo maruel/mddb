@@ -15,3 +15,5 @@ AGENTS.md
 CLAUDE.md
 # Playwright failure artifacts written by the e2e targets.
 test-results
+# uv-managed Python development environment.
+/.venv/
