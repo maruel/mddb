@@ -1,11 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify tools custom-gcl benchmark
-
-tools:
-	@command -v uv > /dev/null 2>&1 || { echo 'uv is required for Python development tools; see https://docs.astral.sh/uv/' >&2; exit 1; }
-	@uv sync --locked --quiet
+.PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
@@ -62,7 +58,6 @@ help:
 	@printf '  %-18s - %s\n' 'make coverage' 'Run tests with coverage'
 	@printf '  %-18s - %s\n' 'make types' 'Generate TypeScript DTOs, client, and API reference'
 	@printf '  %-18s - %s\n' 'make git-hooks' 'Install git pre-commit hooks'
-	@printf '  %-18s - %s\n' 'make tools' 'Sync pinned Python development tools with uv'
 	@echo ''
 	@echo 'make dev runs scripts/run-dev.py; pass --help to see its flags.'
 
@@ -128,7 +123,7 @@ coverage: $(FRONTEND_STAMP)
 
 # The one static gate. Runs every check-only lane concurrently; the read-only
 # counterpart of fix and the pre-push gate. Independent of test.
-verify: tools custom-gcl $(FRONTEND_STAMP)
+verify: custom-gcl $(FRONTEND_STAMP)
 	@go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 	@./scripts/run-concurrently.sh go,js,ts,eslint,python,shell,misc '$(VERIFY_GO)' '$(VERIFY_JS)' '$(VERIFY_TS)' '$(VERIFY_ESLINT)' '$(VERIFY_PY)' '$(VERIFY_SH)' '$(VERIFY_MISC)'
 
@@ -136,7 +131,7 @@ verify: tools custom-gcl $(FRONTEND_STAMP)
 # the stylelint fixer runs last because its cascade-sensitive rewrites must not
 # be undone by another formatter, and the index refresh runs after fixes so the
 # index matches the fixed tree. Does not re-check; run verify for that.
-fix: tools custom-gcl $(FRONTEND_STAMP)
+fix: custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
 	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts --fix

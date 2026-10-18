@@ -27,7 +27,7 @@ commit; rolling only the Go module leaves the frontend on old code.
    `pnpm install` to update `pnpm-lock.yaml`.
 4. Run `make build`. It rebuilds the tracked `backend/frontend/dist/*.br`; commit them, because CI fails on a
    dirty tree.
-5. Run `make fix`, `make verify`, `make test`, and `make test-e2e`. Adapt mddb to the new version; do not pin
+5. Follow the validation workflow above, including `make test-e2e`. Adapt mddb to the new version; do not pin
    an older one. A roll usually needs:
    - a key in `voice` of `frontend/src/i18n/types.ts` and in all four dictionaries for each new overlay label
      (`frontend/src/gomode/VoicePanel.test.ts` lists the missing ones);
@@ -37,10 +37,8 @@ commit; rolling only the Go module leaves the frontend on old code.
 
 ## Python tools
 
-Run `make tools` to sync the development environment from `uv.lock`. Python tools
-and repository scripts use `uv run --locked`; pinned tool versions live in the
-`dev` dependency group in `pyproject.toml`. Refresh the lock with `uv lock` after
-changing dependencies.
+Run Python tools and repository scripts with `uv run --locked`.
+Run `uv lock` after changing Python dependencies.
 
 <!-- BEGIN FILE INDEX -->
 ## File Index
