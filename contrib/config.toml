@@ -77,11 +77,69 @@
 # ── Voice Gateway ────────────────────────────────────────────────────────────
 
 [voice-gateway]
-# Gemini API key for the embedded voice gateway, created at
-# https://aistudio.google.com/app/apikey. Empty leaves the overlay hidden and no
-# audio leaves the device. While a session is connected, microphone audio, the
-# session instructions, and MCP tool results are sent to Google.
+# Gemini API key for embedded Gemini choices. No environment fallback.
+# Gemini sessions send microphone audio, session instructions and MCP tool
+# results to Google. Local-stack sessions send their content to the configured
+# ASR/LLM/TTS endpoints (or run the corresponding managed local models).
 #api_key = ""
+# External gateways override embedded configuration. HTTPS is required except
+# on loopback; both URL and server.base_url must be origins without paths.
+#url = ""
+# Stable identity required for an external gateway.
+#instance_id = ""
+# "scoped" or "oauth". Tokens last five minutes and identify the logged-in user.
+#token_mode = "scoped"
+# Scoped mode: PKCS#8 Ed25519 key file, relative to the config directory.
+# Generate with openssl genpkey -algorithm Ed25519 -out voice-signing-key.pem.
+# Configure the gateway's trusted_issuers with service="mddb", issuer=base_url,
+# and the public_key printed at startup. OAuth mode needs no supplied key:
+# mddb stores voice-oauth-key.pem privately in its config directory. Configure
+# trusted_issuers with service="mddb", issuer=base_url and oauth=true; discovery
+# and JWKS are served at /.well-known/oauth-authorization-server and /oauth/jwks.
+#signing_private_key_pem = ""
+
+# Embedded runtime settings use gomode's complete voicegateway.Config schema.
+# Local-stack choices work without a Gemini API key. Named choices can mix
+# backends. Example: [[voice-gateway.config.choices]] with id="local",
+# label="Local", backend="local-stack" and [voice-gateway.config.choices.local_stack].
+[voice-gateway.config]
+#choices = []
+#default_choice_id = ""
+#model = "gemini-3.8-live"
+#backend = "gemini-live"
+# Embedded authentication is owned by mddb; trusted_issuers applies to standalone gateways.
+#trusted_issuers = []
+
+[voice-gateway.config.server]
+# HTTP listener is controlled by server.http; leave this empty.
+#http = ""
+# UDP ICE mux: -1 disables embedded voice entirely, including text sessions;
+# 0 assigns an ephemeral port, 1..65535 fixes the port.
+#webrtc_udp_port = 0
+
+[voice-gateway.config.local_stack]
+#text_only = false
+
+[voice-gateway.config.local_stack.asr]
+# Engine: genai (default), openai-audio, whispercpp or whistle.
+#engine = ""
+#provider = ""
+#remote = ""
+#model = ""
+
+[voice-gateway.config.local_stack.llm]
+#provider = ""
+#remote = ""
+#model = ""
+# Explicit credential environment-variable name for openaicompatible providers.
+#api_key_name = ""
+
+[voice-gateway.config.local_stack.tts]
+# Engine: kittentts (default) or openai-audio.
+#engine = ""
+#remote = ""
+#model = ""
+#voice = ""
 
 # ── Debug ────────────────────────────────────────────────────────────────────
 

@@ -3,9 +3,10 @@
 import { createSignal, onCleanup, onMount, Show, type Component } from "solid-js";
 import { useI18n } from "../i18n";
 import { isGoModeHost } from "./host";
+import { mddbEndpoint, voiceOrigin } from "./voiceAuthorization";
 import styles from "./BrowserVoiceShell.module.css";
 
-export type VoiceEndpoints = { gatewayURL: string; mcpEndpoint: string };
+export type VoiceEndpoints = { gatewayURL: string; mcpEndpoint: string; tokenEndpoint: string | null };
 type LoadedPanel = {
   component: Component<{ endpoints: VoiceEndpoints; resourceSubscriptions?: string[] }>;
   endpoints: VoiceEndpoints;
@@ -25,20 +26,23 @@ export function resolveVoiceEndpoints(value: unknown, origin: string): VoiceEndp
   if (typeof gateway?.url !== "string" || gateway.url === "") return null;
   if (manifest?.service !== "mddb") throw new Error("Unexpected Go Mode service");
 
-  const gatewayURL = new URL(gateway.url, origin);
-  if (gatewayURL.origin !== origin || !["http:", "https:"].includes(gatewayURL.protocol)) {
-    throw new Error("Voice gateway must be same-origin");
+  const gatewayURL = voiceOrigin(gateway.url, origin);
+  let tokenEndpoint: string | null = null;
+  if (gateway.tokenEndpoint !== undefined && gateway.tokenEndpoint !== null) {
+    if (typeof gateway.tokenEndpoint !== "string" || !gateway.tokenEndpoint)
+      throw new Error("Invalid voice token endpoint");
+    tokenEndpoint = mddbEndpoint(gateway.tokenEndpoint, origin);
+  }
+  if (gatewayURL.origin !== origin && tokenEndpoint === null) {
+    throw new Error("External voice gateway requires a same-origin token endpoint");
   }
 
   const groups = shell?.toolGroups;
   if (!Array.isArray(groups)) throw new Error("Go Mode manifest has no MCP groups");
   const workspace = groups.map(record).find((group) => group?.name === "workspace");
   if (typeof workspace?.endpoint !== "string") throw new Error("Go Mode manifest has no workspace MCP endpoint");
-  const mcpEndpoint = new URL(workspace.endpoint, origin);
-  if (mcpEndpoint.origin !== origin || !["http:", "https:"].includes(mcpEndpoint.protocol)) {
-    throw new Error("Workspace MCP endpoint must be same-origin");
-  }
-  return { gatewayURL: gatewayURL.href, mcpEndpoint: mcpEndpoint.href };
+  const mcpEndpoint = mddbEndpoint(workspace.endpoint, origin);
+  return { gatewayURL: gatewayURL.href, mcpEndpoint, tokenEndpoint };
 }
 
 /** Ignore missing manifests and HTML SPA fallbacks; only advertised voice is actionable. */

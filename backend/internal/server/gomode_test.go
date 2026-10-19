@@ -17,11 +17,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/mcp"
 	voiceapi "github.com/maruel/gomode/voicegateway/api"
+	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -47,6 +50,24 @@ func (b *testVoiceBridge) Close(id string) {
 	b.mu.Lock()
 	b.closed = append(b.closed, id)
 	b.mu.Unlock()
+}
+
+type testVoiceChoiceBridge struct {
+	testVoiceBridge
+}
+
+func (b *testVoiceChoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
+	return voicev1.VoiceChoicesResp{
+		DefaultChoiceID: "live",
+		Choices:         []voicev1.VoiceChoice{{ID: "live", Label: "Live", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportWebRTC}}},
+	}
+}
+
+func (b *testVoiceChoiceBridge) HandleChoiceOffer(ctx context.Context, sdp, choiceID string) (answer, sessionID string, err error) {
+	if choiceID != "live" {
+		return "", "", fmt.Errorf("unexpected voice choice %q", choiceID)
+	}
+	return b.HandleOffer(ctx, sdp)
 }
 
 func TestWorkspaceRegistryInstructions(t *testing.T) {
@@ -78,7 +99,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		t.Fatalf("register status = %d", status)
 	}
 	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	bridge := &testVoiceBridge{}
+	bridge := &testVoiceChoiceBridge{}
 	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge}))
 	t.Cleanup(server.Close)
 
@@ -102,12 +123,13 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name, path, body string
-		want             int
+		name, method, path, body string
+		want                     int
 	}{
-		{name: "offer", path: "/api/voicegateway/v1/voice/rtc/offer", body: `{}`, want: http.StatusBadRequest},
-		{name: "diagnostics", path: "/api/voicegateway/v1/voice/rtc/session/diagnostics", body: `{}`, want: http.StatusNotFound},
-		{name: "close", path: "/api/voicegateway/v1/voice/rtc/session", want: http.StatusNotFound},
+		{name: "choices", method: http.MethodGet, path: "/api/voicegateway/v1/voice/choices", want: http.StatusOK},
+		{name: "offer", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/offer", body: `{}`, want: http.StatusBadRequest},
+		{name: "diagnostics", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/session/diagnostics", body: `{}`, want: http.StatusNotFound},
+		{name: "close", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/session", want: http.StatusNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, authCase := range []struct {
@@ -118,7 +140,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 				{name: "authenticated", token: auth.Token, want: tc.want},
 			} {
 				t.Run(authCase.name, func(t *testing.T) {
-					req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+tc.path, strings.NewReader(tc.body))
+					req, err := http.NewRequestWithContext(t.Context(), tc.method, server.URL+tc.path, strings.NewReader(tc.body))
 					if err != nil {
 						t.Fatalf("new request: %v", err)
 					}
@@ -128,6 +150,14 @@ func TestGoModeVoiceGateway(t *testing.T) {
 					resp, err := http.DefaultClient.Do(req)
 					if err != nil {
 						t.Fatalf("voice request: %v", err)
+					}
+					if tc.name == "choices" && authCase.token != "" {
+						var choices voicev1.VoiceChoicesResp
+						if err := json.NewDecoder(resp.Body).Decode(&choices); err != nil {
+							t.Errorf("decode voice choices: %v", err)
+						} else if choices.DefaultChoiceID != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
+							t.Errorf("voice choices = %+v", choices)
+						}
 					}
 					if err := resp.Body.Close(); err != nil {
 						t.Fatalf("close voice response: %v", err)
@@ -707,4 +737,118 @@ func callMCPNamed(t *testing.T, e *testEnv, token, method string, params map[str
 		t.Fatalf("MCP error: %s", result.Error)
 	}
 	return result.Result
+}
+
+// websocketVoiceBridge exercises upgrades and messages through the real router.
+type websocketVoiceBridge struct {
+	testTextVoiceBridge
+}
+
+func (b *websocketVoiceBridge) ServeTextChoice(ctx context.Context, w http.ResponseWriter, r *http.Request, choice string) error {
+	if r.Header.Get("Authorization") != "" {
+		return errors.New("browser upgrade unexpectedly forwarded a login bearer")
+	}
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"gomode.text.v1"}})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.CloseNow() }()
+	kind, msg, err := conn.Read(ctx)
+	if err != nil {
+		return err
+	}
+	return conn.Write(ctx, kind, []byte(reqctx.User(ctx).ID.String()+":"+choice+":"+string(msg)))
+}
+
+func TestGoModeTextVoiceBrowser(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	var auth dto.AuthResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "browser-voice@example.com", Password: "Pass1234", Name: "Browser voice"}, &auth, ""); status != http.StatusOK {
+		t.Fatalf("register: %d", status)
+	}
+	cfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
+	ts := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", VoiceBridge: &websocketVoiceBridge{}}))
+	t.Cleanup(ts.Close)
+	ticketRequest := func(token string) *http.Response {
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/api/voicegateway/v1/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Header.Set("Origin", ts.URL)
+		r.Header.Set("Content-Type", "application/json")
+		if token != "" {
+			r.Header.Set("Authorization", "Bearer "+token)
+		}
+		res, err := http.DefaultClient.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	anonymous := ticketRequest("")
+	defer func() {
+		if err := anonymous.Body.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if anonymous.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("anonymous ticket status: %d", anonymous.StatusCode)
+	}
+	authorized := ticketRequest(auth.Token)
+	defer func() {
+		if err := authorized.Body.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if authorized.StatusCode != http.StatusOK {
+		t.Fatalf("authenticated ticket status: %d", authorized.StatusCode)
+	}
+	var out voicev1.VoiceTextTicketResp
+	if err := json.NewDecoder(authorized.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	dial := func(ticket string) (*websocket.Conn, *http.Response, error) {
+		return websocket.Dial(t.Context(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/api/voicegateway/v1/voice/text/browser", &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{ts.URL}, "Accept-Encoding": []string{"gzip"}}, Subprotocols: []string{"gomode.text.v1", "gomode.ticket." + ticket}})
+	}
+	conn, res, err := dial(out.Ticket)
+	if res != nil && res.Body != nil {
+		defer func() {
+			if err := res.Body.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	if err != nil {
+		t.Fatalf("ticket-authenticated WebSocket upgrade without login header: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.CloseNow() })
+	if conn.Subprotocol() != "gomode.text.v1" {
+		t.Fatalf("selected protocol: %s", conn.Subprotocol())
+	}
+	if err := conn.Write(t.Context(), websocket.MessageText, []byte("ping")); err != nil {
+		t.Fatal(err)
+	}
+	_, msg, err := conn.Read(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := auth.User.ID.String() + ":text:ping"; string(msg) != want {
+		t.Fatalf("voice message %q, want %q", msg, want)
+	}
+	for _, ticket := range []string{out.Ticket, "invalid-ticket"} {
+		bad, res, err := dial(ticket)
+		if bad != nil {
+			_ = bad.CloseNow()
+			t.Fatal("invalid/replayed ticket upgraded")
+		}
+		if res != nil && res.Body != nil {
+			if err := res.Body.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+		if err == nil || res == nil || res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("invalid/replayed ticket: response=%v err=%v", res, err)
+		}
+	}
 }

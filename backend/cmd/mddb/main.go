@@ -3,8 +3,8 @@
 // mddb is a local-first markdown database that stores content as files,
 // provides OAuth authentication (Google/Microsoft), and exposes a RESTful
 // HTTP API. Startup configuration is read from config.toml and mutable server
-// settings from settings.json, both in the config directory. A configured
-// voice API key enables the embedded voice gateway.
+// settings from settings.json, both in the config directory. Voice settings
+// select an embedded Gemini/local-stack bridge or an external voice gateway.
 package main
 
 import (
@@ -318,32 +318,35 @@ Flags:
 	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
 	geminiAPIKey := cfg.VoiceAPIKey
 	var voiceBridge voicegateway.MediaBridge
-	if geminiAPIKey != "" {
-		voiceCfg := voicegateway.DefaultConfig()
-		if err := voiceCfg.ValidateEmbedded(); err != nil {
-			slog.WarnContext(ctx, "embedded voice gateway disabled: invalid configuration", "err", err)
+	voiceCfg := cfg.VoiceConfig
+	if cfg.ExternalVoice != nil {
+		if key, err := cfg.ExternalVoice.SigningPublicKey(); err != nil {
+			return err
+		} else if key != "" {
+			slog.InfoContext(ctx, "voice gateway trusted issuer", "service", "mddb", "issuer", cfg.ExternalVoice.Issuer, "public_key", key)
+		}
+	}
+	if cfg.VoiceEmbedded {
+		// Activity logs contain transcripts. Keep them outside the git-backed
+		// data directory and remove them after the bridge has closed.
+		activityDir, dirErr := os.MkdirTemp("", "mddb-voice-")
+		if dirErr != nil {
+			slog.WarnContext(ctx, "embedded voice gateway disabled: create activity directory", "err", dirErr)
 		} else {
-			// Activity logs contain transcripts. Keep them outside the git-backed
-			// data directory and remove them after the bridge has closed.
-			activityDir, dirErr := os.MkdirTemp("", "mddb-voice-")
-			if dirErr != nil {
-				slog.WarnContext(ctx, "embedded voice gateway disabled: create activity directory", "err", dirErr)
-			} else {
-				bridge, err := voicertc.NewBridge(ctx, &voiceCfg, geminiAPIKey, voiceCfg.Server.WebRTCUDPPort, activityDir)
-				if err != nil {
-					slog.WarnContext(ctx, "embedded voice gateway disabled: startup failed", "err", err)
-					if removeErr := os.RemoveAll(activityDir); removeErr != nil {
-						slog.WarnContext(ctx, "remove voice activity directory", "err", removeErr)
-					}
-				} else {
-					voiceBridge = bridge
-					defer func() {
-						bridge.CloseAll(context.WithoutCancel(ctx))
-						if removeErr := os.RemoveAll(activityDir); removeErr != nil {
-							slog.Warn("remove voice activity directory", "err", removeErr)
-						}
-					}()
+			bridge, err := voicertc.NewBridge(ctx, &voiceCfg, geminiAPIKey, voiceCfg.Server.WebRTCUDPPort, activityDir)
+			if err != nil {
+				slog.WarnContext(ctx, "embedded voice gateway disabled: startup failed", "err", err)
+				if removeErr := os.RemoveAll(activityDir); removeErr != nil {
+					slog.WarnContext(ctx, "remove voice activity directory", "err", removeErr)
 				}
+			} else {
+				voiceBridge = bridge
+				defer func() {
+					bridge.CloseAll(context.WithoutCancel(ctx))
+					if removeErr := os.RemoveAll(activityDir); removeErr != nil {
+						slog.Warn("remove voice activity directory", "err", removeErr)
+					}
+				}()
 			}
 		}
 	}
@@ -381,6 +384,7 @@ Flags:
 		IPGeo:          geoChecker,
 		TrustedProxies: cfg.TrustedProxies,
 		VoiceBridge:    voiceBridge,
+		ExternalVoice:  cfg.ExternalVoice,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     cfg.OAuth.Google.ClientID,
 			GoogleClientSecret: cfg.OAuth.Google.ClientSecret,

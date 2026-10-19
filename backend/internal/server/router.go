@@ -44,6 +44,7 @@ type Config struct {
 	IPGeo          *ipgeo.Checker
 	TrustedProxies []netip.Prefix // Direct peers whose X-Forwarded-For and X-Real-IP are honored.
 	VoiceBridge    voicegateway.MediaBridge
+	ExternalVoice  *ExternalVoiceGateway
 }
 
 // GitHubAppConfig holds GitHub App credentials for installation-based auth.
@@ -70,6 +71,9 @@ type OAuthConfig struct {
 func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux := &http.ServeMux{}
 	settings := goModeSettings(cfg.Version, cfg.VoiceBridge != nil)
+	if cfg.ExternalVoice != nil {
+		settings.WebShell.VoiceGateway = gomode.VoiceGatewaySettings{URL: cfg.ExternalVoice.URL, AuthRequired: true, TokenEndpoint: voiceTokenEndpoint}
+	}
 	goModeHandler, err := gomode.NewHandler(&settings)
 	if err != nil {
 		slog.Error("Go Mode discovery disabled", "err", err)
@@ -102,9 +106,19 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
-	if cfg.VoiceBridge != nil {
+	if cfg.ExternalVoice != nil {
+		mux.Handle("POST "+voiceTokenEndpoint, WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identity.WSRoleViewer, limiters))
+		if cfg.ExternalVoice.tokens != nil {
+			mux.HandleFunc("GET /.well-known/oauth-authorization-server", cfg.ExternalVoice.serveMetadata)
+			mux.HandleFunc("GET /oauth/jwks", cfg.ExternalVoice.serveJWKS)
+		}
+	} else if cfg.VoiceBridge != nil {
 		voice := newVoiceGateway(cfg.VoiceBridge)
+		mux.HandleFunc("GET /api/voicegateway/v1/voice/text/browser", voice.serveBrowserText)
 		for _, path := range []string{
+			"GET /api/voicegateway/v1/voice/choices",
+			"GET /api/voicegateway/v1/voice/text",
+			"POST /api/voicegateway/v1/voice/text/ticket",
 			"POST /api/voicegateway/v1/voice/rtc/offer",
 			"POST /api/voicegateway/v1/voice/rtc/{sessionID}/diagnostics",
 			"POST /api/voicegateway/v1/voice/rtc/{sessionID}",

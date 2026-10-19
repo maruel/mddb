@@ -20,7 +20,8 @@ Relative paths use one of two bases:
 
 - `server.data_dir` resolves against the working directory, so the bundled
   systemd unit's `WorkingDirectory=%h/mddb` puts content in `~/mddb/data`.
-- `server.geo_db` and `github.app.private_key_file` are configuration-side files
+- `server.geo_db`, `github.app.private_key_file`, and
+  `voice-gateway.signing_private_key_pem` are configuration-side files
   and resolve against the config directory.
 
 The file holds OAuth client secrets, the GitHub App webhook secret, and the
@@ -39,38 +40,177 @@ data directory holds content only.
 
 ### Voice overlay
 
-Set `voice-gateway.api_key` in `~/.config/mddb/config.toml` to a Gemini API key
-to enable the embedded Gemini Live voice gateway. The discovery manifest
-advertises the gateway only after it starts successfully, and the browser shows
-the voice bar only when the manifest advertises one. If it stays hidden, check
-`curl <base-url>/.well-known/gomode.json` (expect a non-empty
-`webShell.voiceGateway.url`) and make sure any reverse proxy forwards
-`/.well-known/` to mddb. Signaling uses the
-mddb HTTP origin and requires a valid mddb bearer token. WebRTC media also
-needs a reachable UDP port; the embedded gateway selects a free port at startup.
-Voice startup failures leave the main server running without the overlay. The
-gateway allows one active session per user, eight globally, and at most three
-new offers per minute per user and twenty globally. When capacity is available,
-a new offer replaces an existing session from the same user; sessions expire
-after two hours. Transcript activity logs are stored in a private temporary
-directory outside the git-backed data directory and removed on normal shutdown.
+Voice can run in mddb or on a standalone Go Mode gateway. All settings come
+from `config.toml`; mddb does not fall back to environment variables for the
+Gemini key. An external `url` takes precedence over embedded settings.
 
-Enabling voice accepts sending speech off the device. The embedded backend is
-Google Gemini Live: while a session is connected, microphone audio, the session
-instructions, and the results of client-executed MCP tools are sent to Google,
-and assistant audio is returned from Google. Without an API key the discovery
-manifest does not advertise a gateway and no audio leaves the device. mddb does
-not store voice audio.
+#### Embedded gateway
+
+For Gemini Live, add:
+
+```toml
+[voice-gateway]
+api_key = "YOUR_GEMINI_API_KEY"
+
+[voice-gateway.config]
+model = "gemini-3.8-live"
+
+[voice-gateway.config.server]
+webrtc_udp_port = 9000
+```
+
+The HTTP listener is mddb's `server.http`; leave
+`voice-gateway.config.server.http` empty. WebRTC media requires a reachable UDP
+port. `webrtc_udp_port = 0` selects an ephemeral port, a positive value fixes the
+port for firewall rules, and `-1` disables the embedded gateway entirely.
+Use `0` or a positive port for text-only gateways too. Text sessions use
+WebSockets on the HTTP listener. The browser's voice settings select the transport.
+
+`[voice-gateway.config]` accepts Go Mode's complete embedded runtime config,
+including `backend`, `model`, `local_stack`, `choices`, and `default_choice_id`.
+A local stack needs no Gemini key. For example, a text-only local model:
+
+```toml
+[voice-gateway.config]
+backend = "local-stack"
+
+[voice-gateway.config.local_stack]
+text_only = true
+
+[voice-gateway.config.local_stack.llm]
+provider = "llamacpp"
+remote = "http://127.0.0.1:8081"
+model = "unsloth/gemma-4-E2B-it-GGUF:UD-Q4_K_XL"
+```
+
+Set `text_only = false` to use local ASR and TTS too. The `asr`, `llm`, and
+`tts` sections accept the engines, remote servers, and models shown in
+[contrib/config.toml](contrib/config.toml). Omitting remote servers lets Go Mode
+manage local models, which can require downloads and substantial memory.
+To offer named choices instead of a single backend:
+
+```toml
+[voice-gateway]
+api_key = "YOUR_GEMINI_API_KEY"
+
+[voice-gateway.config]
+default_choice_id = "local"
+
+[[voice-gateway.config.choices]]
+id = "local"
+label = "Local text"
+backend = "local-stack"
+[voice-gateway.config.choices.local_stack]
+text_only = true
+[voice-gateway.config.choices.local_stack.llm]
+provider = "llamacpp"
+remote = "http://127.0.0.1:8081"
+model = "unsloth/gemma-4-E2B-it-GGUF:UD-Q4_K_XL"
+
+[[voice-gateway.config.choices]]
+id = "gemini"
+label = "Gemini Live"
+backend = "gemini-live"
+model = "gemini-3.8-live"
+```
+
+These examples are alternatives; do not repeat table declarations in one file.
+Embedded authentication is owned by mddb. Standalone `trusted_issuers` settings
+do not change embedded authentication. The gateway allows one active session
+per user, eight globally, and at most three new offers per minute per user and
+twenty globally. When capacity is available, a new offer replaces an existing
+session from the same user; sessions expire after two hours. Transcript activity
+logs live in a private temporary directory outside the git-backed data directory
+and are removed on normal shutdown.
+
+#### Standalone gateway
+
+Use a stable public mddb origin and a stable instance ID. Both URLs must be
+origins without paths, queries, fragments, or credentials. HTTPS is required
+except for loopback development. In mddb's config:
+
+```toml
+[server]
+base_url = "https://mddb.example.com"
+
+[voice-gateway]
+url = "https://voice.example.com"
+instance_id = "mddb-main"
+token_mode = "scoped"
+signing_private_key_pem = "voice-signing-key.pem"
+```
+
+Generate the scoped signing key in the config directory:
+
+```bash
+umask 077
+openssl genpkey -algorithm Ed25519 -out ~/.config/mddb/voice-signing-key.pem
+```
+
+The path is relative to mddb's config directory; it must contain a PKCS#8
+Ed25519 private key. Startup logs print the public key. Copy that public key
+into the standalone gateway's own config:
+
+```toml
+[[trusted_issuers]]
+service = "mddb"
+issuer = "https://mddb.example.com"
+public_key = "ed25519:PUBLIC_KEY_FROM_MDDB_STARTUP"
+```
+
+Alternatively, set `token_mode = "oauth"` in mddb and omit
+`signing_private_key_pem`. Configure the standalone gateway with:
+
+```toml
+[[trusted_issuers]]
+service = "mddb"
+issuer = "https://mddb.example.com"
+oauth = true
+```
+
+mddb creates `voice-oauth-key.pem` with mode 0600 in its config directory.
+Persist that file across restarts and deployments to retain signing identity.
+The gateway discovers verification keys through
+`https://mddb.example.com/.well-known/oauth-authorization-server` and
+`https://mddb.example.com/oauth/jwks`; forward both routes through the reverse
+proxy. The issuer must exactly match `server.base_url`.
+
+In both token modes, authenticated browsers POST to mddb's advertised
+`/api/v1/gomode/voice/token` and receive a five-minute token for the voice
+gateway. The browser sends this service authorization to the gateway; the mddb
+login bearer stays on the mddb origin. The standalone gateway automatically
+allows CORS for each configured `trusted_issuers.issuer` origin. Any proxy in
+front of the gateway must pass `OPTIONS` requests and the `Authorization` and
+`Content-Type` headers. Offers carry service authorization in their bodies;
+close and diagnostics requests use the service token as a bearer header.
+Gateway requests do not need cross-origin cookies.
+The standalone gateway owns its model credentials, media ports, session limits,
+and transcript storage.
+
+#### Discovery and privacy
+
+The browser shows the voice bar only when `/.well-known/gomode.json` advertises
+a non-empty `webShell.voiceGateway.url`. External gateways also advertise a
+same-origin `tokenEndpoint`. If the bar stays hidden, check the manifest and
+ensure the reverse proxy forwards `/.well-known/` to mddb. Embedded voice startup
+failures leave the main server running without the overlay.
+
+Connected Gemini sessions send microphone audio, session instructions, and
+client-executed MCP tool results to Google. Local-stack sessions send content to
+the configured ASR/LLM/TTS endpoints or run managed models locally. An external
+gateway receives the session content and applies its own model and storage
+configuration. mddb does not store voice audio.
 
 Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, scoped to the
 user's active workspace. Every member can list and read nodes and node
 resources; editors additionally get `node_create`, `node_update`, and
 `node_append`, and each edit is committed to the workspace git history.
 
-To validate the live path (requires a voice API key and a reachable WebRTC UDP
-port), run `make test-smoke-voice` with `GEMINI_API_KEY` in the environment: it
-completes one Gemini voice turn, calls `nodes_list` through the workspace MCP
-endpoint, and checks that hang-up releases session capacity.
+To validate the live Gemini path (requires a voice API key and a reachable
+WebRTC UDP port), run `make test-smoke-voice` with `GEMINI_API_KEY` in the test
+environment. The smoke test supplies its own configuration, completes one
+Gemini voice turn, calls `nodes_list` through the workspace MCP endpoint, and
+checks that hang-up releases session capacity.
 
 ### GeoLite
 

@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/andybalholm/brotli v1.2.6
+	github.com/coder/websocket v1.8.15
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -12,7 +13,7 @@ require (
 	github.com/klauspost/compress v1.20.1
 	github.com/lmittmann/tint v1.2.0
 	github.com/maruel/apisdkgen v0.1.2
-	github.com/maruel/gomode v0.1.2
+	github.com/maruel/gomode v0.1.3-0.20261019112218-ab6482cde634
 	github.com/maruel/ksid v0.1.1
 	github.com/mattn/go-colorable v0.1.15
 	github.com/mattn/go-isatty v0.0.24
@@ -85,7 +86,6 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
-	github.com/coder/websocket v1.8.15 // indirect
 	github.com/curioswitch/go-reassign v0.3.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/daixiang0/gci v0.13.7 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/manuelarte/funcorder v0.6.0 // indirect
 	github.com/maratori/testableexamples v1.0.1 // indirect
 	github.com/maratori/testpackage v1.1.2 // indirect
-	github.com/maruel/genai v0.10.1 // indirect
+	github.com/maruel/genai v0.10.2 // indirect
 	github.com/maruel/genaipy v0.1.2 // indirect
 	github.com/maruel/gopus v0.1.0 // indirect
 	github.com/maruel/httpjson v0.5.3 // indirect

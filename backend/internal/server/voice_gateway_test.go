@@ -4,13 +4,20 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
 	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 type blockingVoiceBridge struct {
@@ -320,4 +327,141 @@ func TestVoiceGatewayCapacityAfterHangup(t *testing.T) {
 		t.Fatal("offer denied after media hangup freed capacity")
 	}
 	g.release(ksid.ID(voiceMaxGlobal + 1))
+}
+
+type testTextVoiceBridge struct {
+	testVoiceBridge
+	started chan ksid.ID
+}
+
+func (b *testTextVoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
+	return voicev1.VoiceChoicesResp{DefaultChoiceID: "text", Choices: []voicev1.VoiceChoice{{ID: "text", Label: "Local text", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportText}}}}
+}
+
+func (b *testTextVoiceBridge) HandleChoiceOffer(ctx context.Context, sdp, id string) (answer, sessionID string, err error) {
+	return b.HandleOffer(ctx, sdp)
+}
+
+func (b *testTextVoiceBridge) ServeTextSession(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	return b.ServeTextChoice(ctx, w, r, "text")
+}
+
+func (b *testTextVoiceBridge) ServeTextChoice(ctx context.Context, w http.ResponseWriter, r *http.Request, id string) error {
+	if id != "text" {
+		return fmt.Errorf("unexpected choice %s", id)
+	}
+	b.started <- reqctx.User(ctx).ID
+	<-ctx.Done()
+	return nil
+}
+
+func TestVoiceGatewayTextSessions(t *testing.T) {
+	t.Parallel()
+	b := &testTextVoiceBridge{started: make(chan ksid.ID, 2)}
+	g := newVoiceGateway(b)
+	owner := &identity.User{ID: ksid.NewID()}
+	ticket := func() string {
+		r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), owner), http.MethodPost, "/api/voicegateway/v1/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
+		r.Header.Set("Origin", "https://mddb.example.com")
+		w := httptest.NewRecorder()
+		g.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("ticket: %d %s", w.Code, w.Body.String())
+		}
+		var out voicev1.VoiceTextTicketResp
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.Ticket
+	}
+	browser := func(token, origin string) *http.Request {
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/voicegateway/v1/voice/text/browser", http.NoBody)
+		r.Header.Set("Connection", "Upgrade")
+		r.Header.Set("Upgrade", "websocket")
+		r.Header.Set("Sec-WebSocket-Version", "13")
+		r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+		r.Header.Set("Sec-WebSocket-Protocol", "gomode.text.v1, gomode.ticket."+token)
+		r.Header.Set("Origin", origin)
+		return r
+	}
+	wrong := ticket()
+	w := httptest.NewRecorder()
+	g.serveBrowserText(w, browser(wrong, "https://evil.example.com"))
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong origin accepted: %d", w.Code)
+	}
+	first := ticket()
+	done := make(chan struct{})
+	go func() {
+		g.serveBrowserText(httptest.NewRecorder(), browser(first, "https://mddb.example.com"))
+		close(done)
+	}()
+	select {
+	case id := <-b.started:
+		if id != owner.ID {
+			t.Fatal("ticket owner lost")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("text session did not start")
+	}
+	g.mu.Lock()
+	active := g.active
+	var id string
+	for sid := range g.sessions {
+		id = sid
+	}
+	g.mu.Unlock()
+	if active != 1 {
+		t.Fatalf("active sessions: %d", active)
+	}
+	w = httptest.NewRecorder()
+	g.serveBrowserText(w, browser(first, "https://mddb.example.com"))
+	if w.Code != http.StatusUnauthorized {
+		t.Fatal("ticket replay accepted")
+	}
+	stranger := &identity.User{ID: ksid.NewID()}
+	r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), stranger), http.MethodPost, "/api/voicegateway/v1/voice/rtc/"+id, http.NoBody)
+	r.SetPathValue("sessionID", id)
+	w = httptest.NewRecorder()
+	g.ServeHTTP(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Fatal("another user accessed text session")
+	}
+
+	for _, protocol := range []string{"", "unexpected.protocol"} {
+		badCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+		malformed := browser("unused", "")
+		malformed = malformed.WithContext(reqctx.WithUser(badCtx, owner))
+		malformed.URL.Path = "/api/voicegateway/v1/voice/text"
+		malformed.URL.RawQuery = "choiceID=text"
+		if protocol == "" {
+			malformed.Header.Del("Upgrade")
+		} else {
+			malformed.Header.Set("Sec-WebSocket-Protocol", protocol)
+		}
+		w = httptest.NewRecorder()
+		g.ServeHTTP(w, malformed)
+		cancel()
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("malformed upgrade accepted: %d", w.Code)
+		}
+		g.mu.Lock()
+		_, stillActive := g.sessions[id]
+		g.mu.Unlock()
+		if !stillActive {
+			t.Fatal("malformed upgrade evicted the live session")
+		}
+	}
+
+	g.Close(id)
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("text session did not close")
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.active != 0 || g.inFlight != 0 || g.activeByUser[owner.ID] != 0 {
+		t.Fatal("text session reservation leaked")
+	}
 }

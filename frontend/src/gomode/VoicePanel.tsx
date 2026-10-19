@@ -8,6 +8,7 @@ import { notifications } from "@maruel/gomode/web/notifications";
 import { useAuth } from "../contexts/AuthContext";
 import { useI18n } from "../i18n";
 import type { VoiceEndpoints } from "./BrowserVoiceShell";
+import { voiceAuthorization } from "./voiceAuthorization";
 import { voiceResourceNotice } from "./voiceResources";
 import styles from "./VoicePanel.module.css";
 
@@ -26,7 +27,14 @@ export default function VoicePanel(props: { endpoints: VoiceEndpoints; resourceS
 
   onMount(() => {
     configureMcpClient(props.endpoints.mcpEndpoint, "mddb-frontend", token);
-    configureVoiceGateway(props.endpoints.gatewayURL, null, token);
+    const endpoint = props.endpoints.tokenEndpoint;
+    if (endpoint === null) {
+      configureVoiceGateway(props.endpoints.gatewayURL, null, token);
+    } else {
+      configureVoiceGateway(props.endpoints.gatewayURL, () =>
+        voiceAuthorization(endpoint, token(), t("voice.authorizationFailed")),
+      );
+    }
   });
 
   // Follow the host's watched resources so the model is told when a document it

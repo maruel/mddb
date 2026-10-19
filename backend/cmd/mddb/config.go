@@ -2,6 +2,11 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/maruel/gomode/voicegateway"
+	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -78,7 +85,28 @@ type tomlGitHubApp struct {
 }
 
 type tomlVoiceGateway struct {
-	APIKey string `toml:"api_key"`
+	APIKey               string                `toml:"api_key"`
+	URL                  string                `toml:"url"`
+	InstanceID           string                `toml:"instance_id"`
+	TokenMode            server.VoiceTokenMode `toml:"token_mode"`
+	SigningPrivateKeyPEM string                `toml:"signing_private_key_pem"`
+	Config               voicegateway.Config   `toml:"config"`
+}
+
+func (c *tomlVoiceGateway) embeddedEnabled() bool {
+	if c.URL != "" || c.Config.Server.WebRTCUDPPort < 0 {
+		return false
+	}
+	if c.APIKey != "" {
+		return true
+	}
+	choices, _ := c.Config.VoiceChoices()
+	for i := range choices {
+		if choices[i].Backend == voicegateway.BackendLocalStack {
+			return true
+		}
+	}
+	return false
 }
 
 type tomlDebug struct {
@@ -96,7 +124,8 @@ func defaultConfig() tomlConfig {
 
 			TrustedProxies: []string{},
 		},
-		Debug: tomlDebug{LogLevel: "info"},
+		VoiceGateway: tomlVoiceGateway{TokenMode: server.VoiceTokenModeScoped, Config: embeddedVoiceDefaults()},
+		Debug:        tomlDebug{LogLevel: "info"},
 	}
 }
 
@@ -176,6 +205,9 @@ type resolvedConfig struct {
 	OAuth          oauthCredentialsSet
 	GitHubApp      githubAppSettings
 	VoiceAPIKey    string
+	VoiceConfig    voicegateway.Config
+	VoiceEmbedded  bool
+	ExternalVoice  *server.ExternalVoiceGateway
 }
 
 // resolveConfig validates tc and resolves its paths.
@@ -233,6 +265,10 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("server.trusted_proxies: %w", err)
 	}
+	voice, err := resolveVoiceGateway(&tc.VoiceGateway, tc.Server.BaseURL, cfgDir)
+	if err != nil {
+		return nil, err
+	}
 	return &resolvedConfig{
 		ConfigDir:      cfgDir,
 		HTTP:           tc.Server.HTTP,
@@ -245,6 +281,9 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		OAuth:          oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
 		GitHubApp:      ghApp,
 		VoiceAPIKey:    tc.VoiceGateway.APIKey,
+		VoiceConfig:    tc.VoiceGateway.Config,
+		VoiceEmbedded:  tc.VoiceGateway.embeddedEnabled(),
+		ExternalVoice:  voice,
 	}, nil
 }
 
@@ -363,4 +402,114 @@ func parseLogLevel(level string) (slog.Level, error) {
 	default:
 		return 0, fmt.Errorf("unknown log level %q", level)
 	}
+}
+
+// embeddedVoiceDefaults leaves the HTTP listener under mddb's ownership.
+func embeddedVoiceDefaults() voicegateway.Config {
+	c := voicegateway.DefaultConfig()
+	c.Server.HTTP = ""
+	c.Choices = []voicegateway.ChoiceConfig{}
+	c.TrustedIssuers = []voicegateway.TrustedIssuerConfig{}
+	return c
+}
+
+// resolveVoiceGateway validates embedded options and loads external signing material.
+func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.ExternalVoiceGateway, error) {
+	if c.Config.Server.HTTP != "" {
+		return nil, errors.New("voice-gateway.config.server.http is controlled by server.http")
+	}
+	if c.URL == "" {
+		if err := c.TokenMode.Validate(); err != nil {
+			return nil, err
+		}
+		if c.InstanceID != "" || c.SigningPrivateKeyPEM != "" {
+			return nil, errors.New("voice-gateway.url is required for instance_id and signing_private_key_pem")
+		}
+		if err := c.Config.ValidateEmbedded(); err != nil {
+			return nil, fmt.Errorf("voice-gateway.config: %w", err)
+		}
+
+		choices, _ := c.Config.VoiceChoices()
+		if c.embeddedEnabled() && c.APIKey == "" {
+			for i := range choices {
+				if choices[i].Backend == voicegateway.BackendGeminiLive {
+					return nil, errors.New("voice-gateway.api_key is required for Gemini choices in an enabled embedded gateway")
+				}
+			}
+		}
+		return nil, nil //nolint:nilnil // Absence selects the embedded or disabled gateway.
+	}
+	var key []byte
+	if c.TokenMode == server.VoiceTokenModeScoped {
+		if c.SigningPrivateKeyPEM == "" {
+			return nil, errors.New("voice-gateway.signing_private_key_pem is required for scoped tokens")
+		}
+		path, err := resolveConfigPath(c.SigningPrivateKeyPEM, dir)
+		if err != nil {
+			return nil, err
+		}
+		key, err = os.ReadFile(path) //nolint:gosec // Operator-configured signing key.
+		if err != nil {
+			return nil, fmt.Errorf("read voice signing key: %w", err)
+		}
+	} else {
+		if c.SigningPrivateKeyPEM != "" {
+			return nil, errors.New("voice-gateway.signing_private_key_pem only applies to scoped tokens")
+		}
+		var err error
+		key, err = voiceOAuthKey(dir)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return server.NewExternalVoiceGateway(c.URL, issuer, c.InstanceID, c.TokenMode, key)
+}
+
+// voiceOAuthKey keeps the OAuth signing identity stable across restarts.
+func voiceOAuthKey(dir string) ([]byte, error) {
+	path := filepath.Join(dir, "voice-oauth-key.pem")
+	b, err := os.ReadFile(path) //nolint:gosec // Key lives in the operator's config directory.
+	if err == nil {
+		return b, nil
+	}
+	if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("read voice OAuth key: %w", err)
+	}
+	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("generate voice OAuth key: %w", err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(k)
+	if err != nil {
+		return nil, fmt.Errorf("marshal voice OAuth key: %w", err)
+	}
+	b = pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, fmt.Errorf("create config directory: %w", err)
+	}
+
+	f, err := os.CreateTemp(dir, ".voice-oauth-key-*.pem")
+	if err != nil {
+		return nil, fmt.Errorf("create voice OAuth key: %w", err)
+	}
+	name := f.Name()
+	_, writeErr := f.Write(b)
+	writeErr = errors.Join(writeErr, f.Close())
+	if writeErr != nil {
+		return nil, errors.Join(fmt.Errorf("write voice OAuth key: %w", writeErr), os.Remove(name))
+	}
+	// Publish the complete private key exclusively, so parallel starts cannot
+	// overwrite an identity or observe a partially written PEM.
+	linkErr := os.Link(name, path)
+	removeErr := os.Remove(name)
+	if linkErr != nil && !os.IsExist(linkErr) {
+		return nil, errors.Join(fmt.Errorf("publish voice OAuth key: %w", linkErr), removeErr)
+	}
+	if removeErr != nil {
+		return nil, fmt.Errorf("remove temporary OAuth key: %w", removeErr)
+	}
+	if os.IsExist(linkErr) {
+		return os.ReadFile(path) //nolint:gosec // Concurrent initializer's complete key.
+	}
+	return b, nil
 }

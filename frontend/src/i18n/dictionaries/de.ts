@@ -605,6 +605,13 @@ export const dict: Dictionary = {
     reconnecting: "Verbindung wird wiederhergestellt",
   },
   voice: {
+    authorizationFailed: "Sprachzugriff nicht autorisiert. Erneut versuchen.",
+    choiceUnavailable: "Wählen Sie eine verfügbare Stimme",
+    choicesLoading: "Stimmen werden geladen…",
+    choicesRetry: "Stimmen erneut laden",
+    speakingVoice: "Sprechstimme",
+    speakingVoiceUnavailable: "Wählen Sie eine verfügbare Sprechstimme",
+    voiceChoice: "Stimmauswahl",
     assistant: "Assistent:",
     cancel: "Abbrechen",
     cancelConnection: "Verbindung abbrechen",

@@ -31,25 +31,23 @@ the Go Mode Android shell, the hosted
 frontend hands its validated bearer token to the native MCP client and clears
 it on logout.
 
-The frontend can also host Go Mode's voice overlay. Set `voice-gateway.api_key`
-in `~/.config/mddb/config.toml` to enable the embedded voice gateway. Its
-signaling routes require the same mddb bearer token as the
-web API. Each user can have one active voice session; the server allows eight
-active sessions and limits new offers to three per minute per user and twenty
-per minute overall. When capacity is available, a new offer replaces that
-user's previous session so a dropped connection can reconnect. Voice media
-uses WebRTC over UDP. The gateway keeps transcripts in a private temporary
-directory while mddb runs and removes them on shutdown.
+The frontend also hosts Go Mode's voice overlay. Configure an embedded Gemini
+Live gateway with `voice-gateway.api_key`, a keyless local stack under
+`[voice-gateway.config]`, or a standalone gateway with `url`, `instance_id`, and
+`token_mode = "scoped"` or `"oauth"`. Embedded configuration accepts models,
+WebRTC UDP settings, local ASR/LLM/TTS, text-only sessions, and named backend
+choices. See [voice setup](SELF_HOSTING.md#voice-overlay) for complete examples.
 
-The embedded backend is Google Gemini Live, so enable voice only when you accept
-sending microphone audio and voice turns off the device. While a voice session
-is connected, microphone audio, the session instructions, and the tool results
-the client executes are sent to Google; the assistant's audio comes back from
-Google. Without a voice API key the overlay is not advertised and no voice
-audio leaves the device. Speech recognition, model inference, and speech
-synthesis all run in Google's Gemini Live service; mddb itself does not store
-voice audio, but the gateway writes transcript activity logs to a private
-temporary directory for the life of the process.
+Embedded signaling uses the signed-in user's mddb bearer token. A standalone
+gateway receives a short-lived service token; the login bearer stays on mddb's
+origin. Embedded sessions allow one active session per user and eight globally,
+with offer rate limits and a two-hour lifetime. Transcript activity logs live in
+a private temporary directory until shutdown. WebRTC media requires UDP access.
+
+Connected Gemini sessions send microphone audio, session instructions, and MCP
+tool results to Google. Local-stack sessions use the configured ASR/LLM/TTS
+endpoints or managed local models. Standalone gateways apply their own model
+and storage configuration. mddb does not store voice audio.
 
 Voice can call the same workspace MCP tools that Go Mode clients use at
 `/api/v1/gomode/mcp`: `nodes_list` and `node_read`, plus node resources, and —
@@ -116,8 +114,8 @@ Organization membership is stored in the identity database, not in the file stru
 
 **Q: Is my data private?**
 A: Workspaces are stored locally. Git sync sends workspace data to a remote only
-if you configure one. Optional voice sends audio and tool results to Google
-Gemini Live while a voice session is connected.
+if you configure one. Optional voice sends session content to the configured gateway and model
+providers; a local stack can keep inference on your own machines.
 
 **Q: Can I sync across devices?**
 A: Configure a git remote in workspace settings—changes push automatically.
