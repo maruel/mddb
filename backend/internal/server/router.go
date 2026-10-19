@@ -107,7 +107,10 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
 	if cfg.ExternalVoice != nil {
-		mux.Handle("POST "+voiceTokenEndpoint, WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identity.WSRoleViewer, limiters))
+		// The Go Mode Android shell uses GET; browser clients use POST.
+		token := WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identity.WSRoleViewer, limiters)
+		mux.Handle("GET "+voiceTokenEndpoint, token)
+		mux.Handle("POST "+voiceTokenEndpoint, token)
 		if cfg.ExternalVoice.tokens != nil {
 			mux.HandleFunc("GET /.well-known/oauth-authorization-server", cfg.ExternalVoice.serveMetadata)
 			mux.HandleFunc("GET /oauth/jwks", cfg.ExternalVoice.serveJWKS)

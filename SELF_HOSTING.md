@@ -175,9 +175,10 @@ The gateway discovers verification keys through
 `https://mddb.example.com/oauth/jwks`; forward both routes through the reverse
 proxy. The issuer must exactly match `server.base_url`.
 
-In both token modes, authenticated browsers POST to mddb's advertised
-`/api/v1/gomode/voice/token` and receive a five-minute token for the voice
-gateway. The browser sends this service authorization to the gateway; the mddb
+In both token modes, authenticated clients request mddb's advertised
+`/api/v1/gomode/voice/token` using GET (Go Mode Android) or POST (browser) and
+receive a five-minute token for the voice gateway.
+The browser sends this service authorization to the gateway; the mddb
 login bearer stays on the mddb origin. The standalone gateway automatically
 allows CORS for each configured `trusted_issuers.issuer` origin. Any proxy in
 front of the gateway must pass `OPTIONS` requests and the `Authorization` and
