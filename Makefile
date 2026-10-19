@@ -137,7 +137,7 @@ fix: custom-gcl $(FRONTEND_STAMP)
 	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts --fix
 	@pnpm exec prettier --write --log-level warn .
 	@uv run --locked ruff check --quiet --fix .
-	@uv run --locked ruff format --quiet .
+	@uv run --locked ruff format . >/dev/null
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || go tool shfmt -w $$files
 	@pnpm exec stylelint --fix "frontend/src/**/*.css"
 	@uv run --locked python scripts/update_agents_file_index.py
