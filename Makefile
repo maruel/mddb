@@ -20,7 +20,7 @@ FRONTEND_STAMP=node_modules/.modules.yaml
 # methodfilecheck (see .golangci.yml) is a golangci-lint module plugin, so Go
 # linting must run through the custom binary built from the published plugin
 # module; the plain binary is fine for `fmt`.
-VERIFY_GO = ./custom-gcl run --show-stats=false ./...
+VERIFY_GO = ./custom-gcl run --show-stats=false ./... && go mod tidy -diff
 VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && node scripts/lint_frontend_styles.mjs
 VERIFY_TS = pnpm --silent typecheck
 VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts
