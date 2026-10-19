@@ -1,13 +1,13 @@
-// ProseMirror configuration for the flat block editor.
+// Configures flat block editing with plugins, keymaps, and code whitespace preservation.
 // Integrates schema, plugins, and keymaps for the new block-based architecture.
 
-import { EditorState, type Plugin } from "prosemirror-state";
+import { EditorState, Plugin } from "prosemirror-state";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { baseKeymap } from "prosemirror-commands";
 import { dropCursor } from "prosemirror-dropcursor";
 import { gapCursor } from "prosemirror-gapcursor";
-import type { Node as ProseMirrorNode } from "prosemirror-model";
+import { DOMParser, type ParseOptions, type TagParseRule, type Node as ProseMirrorNode } from "prosemirror-model";
 
 // Import flat block schema
 import { schema } from "./schema";
@@ -23,6 +23,36 @@ import { numberCounterPlugin } from "./numberCounterPlugin";
 export { schema };
 export { nodes, marks } from "./schema";
 
+// ProseMirror's DOM observer supplies ruleFromNode when reparsing NodeViews.
+// The runtime hook is omitted from prosemirror-model's public declarations.
+interface BlockParseOptions extends ParseOptions {
+  ruleFromNode?: (node: Node) => Omit<TagParseRule, "tag"> | null;
+}
+
+// Flat blocks share a node type, so ProseMirror cannot infer code whitespace
+// from the schema's node type. Preserve it when reparsing a browser code edit.
+class BlockDOMParser extends DOMParser {
+  override parse(dom: Node, options?: BlockParseOptions): ProseMirrorNode {
+    const ruleFromNode = options?.ruleFromNode;
+    return super.parse(dom, {
+      ...options,
+      ...(options?.topNode?.attrs.type === "code" ? { preserveWhitespace: "full" as const } : {}),
+      ...(ruleFromNode
+        ? {
+            ruleFromNode: (node: Node) => {
+              const rule = ruleFromNode(node);
+              return rule?.attrs?.type === "code" ? { ...rule, preserveWhitespace: "full" } : rule;
+            },
+          }
+        : {}),
+    });
+  }
+}
+
+const codeWhitespacePlugin = new Plugin({
+  props: { domParser: new BlockDOMParser(schema, DOMParser.fromSchema(schema).rules) },
+});
+
 /**
  * Create a new EditorState with all necessary plugins for the block editor.
  */
@@ -31,6 +61,7 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
     doc,
     schema,
     plugins: [
+      codeWhitespacePlugin,
       // Input rules for converting markdown syntax to blocks (e.g. "- " -> bullet block)
       buildBlockInputRules(),
 

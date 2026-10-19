@@ -21,6 +21,10 @@ const dom = new JSDOM('<!doctype html><html><body id="root"></body></html>', {
   pretendToBeVisual: true,
 });
 
+// Pele falls back to deterministic font metrics when no canvas is available.
+// jsdom's unimplemented getContext logs an error instead of quietly returning null.
+dom.window.HTMLCanvasElement.prototype.getContext = () => null;
+
 const globals = dom.window as unknown as Record<string, unknown>;
 const globalTarget = globalThis as unknown as Record<string, unknown>;
 for (const key of [

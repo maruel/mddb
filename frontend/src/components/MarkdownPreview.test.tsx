@@ -1,8 +1,19 @@
-// Tests for the MarkdownPreview component.
+// Tests sanitized Markdown, asset URLs, diagram disclosure, and asynchronous preview replacement.
 import { describe, it, beforeEach, afterEach } from "node:test";
 import { expect, vi } from "@tests/expect";
-import { render, cleanup } from "@solidjs/testing-library";
-import MarkdownPreview from "./MarkdownPreview";
+import { createSignal } from "solid-js";
+import { render, cleanup, waitFor } from "@solidjs/testing-library";
+import Preview from "./MarkdownPreview";
+import { I18nProvider } from "../i18n";
+import type { ComponentProps } from "solid-js";
+
+function MarkdownPreview(props: ComponentProps<typeof Preview>) {
+  return (
+    <I18nProvider>
+      <Preview {...props} />
+    </I18nProvider>
+  );
+}
 import type { AssetUrlMap } from "../contexts/EditorContext";
 
 // Mock CSS module
@@ -155,4 +166,38 @@ describe("MarkdownPreview", () => {
     expect(preview?.innerHTML).toContain("<blockquote>");
     expect(preview?.innerHTML).toContain("This is a quote");
   });
+});
+
+it("renders diagrams with keyboard accessible source disclosure and invalid-source fallback", async () => {
+  const [content, setContent] = createSignal("```mermaid title\nflowchart LR\nA --> B\n```");
+  const { container } = render(() => <MarkdownPreview content={content()} />);
+  await waitFor(() => expect(container.querySelector("svg")).not.toBeNull());
+  expect(container.querySelector("details")!.open).toBe(false);
+  container.querySelector("summary")!.click();
+  expect(container.querySelector("details")!.open).toBe(true);
+  expect(container.querySelector("code")!.textContent).toContain("A --> B");
+  setContent("```mermaid\ninvalid diagram syntax %%%\n```");
+  await waitFor(() => expect(container.querySelector("code")!.textContent).toContain("invalid diagram"));
+  expect(container.querySelector("details")!.open).toBe(true);
+  expect(container.querySelector("svg")).toBeNull();
+});
+
+it("does not insert an obsolete diagram after content is replaced", async () => {
+  const [content, setContent] = createSignal("```mermaid\nflowchart LR\nObsolete --> Diagram\n```");
+  const { container } = render(() => <MarkdownPreview content={content()} />);
+  const oldDiagram = container.querySelector("[data-mermaid-diagram]");
+  setContent("Replacement text");
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(oldDiagram?.innerHTML).toBe("");
+  expect(container.textContent).toBe("Replacement text\n");
+  expect(container.querySelector("svg")).toBeNull();
+});
+
+it("preserves sanitized inline SVG and MathML in history content", () => {
+  const { container } = render(() => (
+    <MarkdownPreview content={'<svg onload="alert(1)"><circle r="4" /></svg><math><mi>x</mi></math>'} />
+  ));
+  expect(container.querySelector("svg circle")).not.toBeNull();
+  expect(container.querySelector("math mi")?.textContent).toBe("x");
+  expect(container.querySelector("[onload]")).toBeNull();
 });

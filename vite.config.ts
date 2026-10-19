@@ -100,6 +100,9 @@ export default defineConfig({
         // Split chunks for better caching and lazy loading
         manualChunks: (id) => {
           if (id.includes("node_modules")) {
+            // Preserve Pele's per-diagram dynamic imports instead of putting
+            // the optional renderer in the eager shared vendor chunk.
+            if (id.includes("/pele/")) return;
             // ProseMirror and markdown-it are lazy-loaded with Editor
             if (
               id.includes("prosemirror") ||

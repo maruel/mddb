@@ -1,5 +1,8 @@
-// Component for rendering Markdown content with custom plugins.
+// Renders sanitized Markdown previews with lazy Pele diagrams and source disclosure.
 
+import { createEffect, onCleanup } from "solid-js";
+import { useI18n } from "../i18n";
+import { isMermaidFence, insertMermaidSvg, renderMermaidDiagram } from "../mermaid";
 import MarkdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 import type { AssetUrlMap } from "../contexts/EditorContext";
@@ -88,11 +91,47 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   return originalImageRenderer(tokens, idx, options, env, self);
 };
 
+// Preserve ordinary fences and keep diagram source readable until rendering succeeds.
+const originalFenceRenderer = md.renderer.rules.fence;
+if (!originalFenceRenderer) throw new Error("Markdown fence renderer is unavailable");
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const source = originalFenceRenderer(tokens, idx, options, env, self);
+  if (!isMermaidFence(tokens[idx]?.info)) return source;
+  const label = md.utils.escapeHtml(String(env?.codeLabel || ""));
+  return `<div data-mermaid-block><div data-mermaid-diagram></div><details open><summary>${label}</summary>${source}</details></div>`;
+};
+
 export default function MarkdownPreview(props: MarkdownPreviewProps) {
+  const { t } = useI18n();
+  let container: HTMLDivElement | undefined;
   const html = () => {
-    const rawHtml = md.render(props.content, { assetUrls: props.assetUrls });
+    const rawHtml = md.render(props.content, {
+      assetUrls: props.assetUrls,
+      codeLabel: t("editor.codeBlock") || "Code block",
+    });
     return DOMPurify.sanitize(rawHtml);
   };
+
+  createEffect(() => {
+    const content = html();
+    if (!container) return;
+    container.innerHTML = content;
+    let cancelled = false;
+    onCleanup(() => {
+      cancelled = true;
+    });
+    for (const block of container.querySelectorAll<HTMLElement>("[data-mermaid-block]")) {
+      const code = block.querySelector("code")?.textContent || "";
+      const diagram = block.querySelector<HTMLElement>("[data-mermaid-diagram]");
+      const source = block.querySelector("details");
+      if (!diagram || !source) continue;
+      void renderMermaidDiagram(code).then((svg) => {
+        if (cancelled || svg === null) return;
+        insertMermaidSvg(diagram, svg);
+        source.open = false;
+      });
+    }
+  });
 
   // Handle link clicks: internal links use client-side navigation, external links open in new tab
   const handleClick = (e: MouseEvent) => {
@@ -118,7 +157,14 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
   };
 
   return (
-    // eslint-disable-next-line solid/no-innerhtml -- sanitized via DOMPurify
-    <div class={styles.preview} innerHTML={html()} onClick={handleClick} role="region" aria-label="Markdown preview" />
+    <div
+      ref={(el) => {
+        container = el;
+      }}
+      class={styles.preview}
+      onClick={handleClick}
+      role="region"
+      aria-label="Markdown preview"
+    />
   );
 }

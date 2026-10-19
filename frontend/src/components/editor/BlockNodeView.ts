@@ -1,5 +1,7 @@
-// ProseMirror NodeView implementation for flat blocks with integrated drag handles.
+// ProseMirror flat block views with drag handles and live Pele previews for Mermaid code.
 
+import { isMermaidFence, insertMermaidSvg, renderMermaidDiagram } from "../../mermaid";
+import { debounce } from "../../utils/debounce";
 import { render } from "solid-js/web";
 import type { Node as ProseMirrorNode } from "prosemirror-model";
 import type { EditorView, NodeView, ViewMutationRecord } from "prosemirror-view";
@@ -27,6 +29,9 @@ export const BLOCK_CONTEXT_MENU_EVENT = "block-context-menu";
 export class BlockNodeView implements NodeView {
   dom: HTMLElement;
   contentDOM: HTMLElement;
+  private diagram: HTMLDivElement | null = null;
+  private diagramVersion = 0;
+  private renderDiagramLater = debounce(this.renderDiagram.bind(this), 150);
   private handleDispose: (() => void) | null = null;
   private handleContainer: HTMLElement;
 
@@ -49,6 +54,36 @@ export class BlockNodeView implements NodeView {
     const { contentDOM, wrapperDOM } = this.createContentElement();
     this.contentDOM = contentDOM;
     this.dom.appendChild(wrapperDOM || contentDOM);
+    this.updateDiagram();
+  }
+
+  private updateDiagram(): void {
+    const version = ++this.diagramVersion;
+    this.renderDiagramLater.cancel();
+    if (this.node.attrs.type !== "code" || !isMermaidFence(this.node.attrs.language as string | null)) {
+      this.diagram?.remove();
+      this.diagram = null;
+      return;
+    }
+    const initial = this.diagram === null;
+    if (initial) {
+      this.diagram = document.createElement("div");
+      this.diagram.className = "mermaid-diagram";
+      this.diagram.setAttribute("contenteditable", "false");
+      this.dom.appendChild(this.diagram);
+    }
+    if (initial) this.renderDiagram(version);
+    else this.renderDiagramLater(version);
+  }
+
+  private renderDiagram(version: number): void {
+    const diagram = this.diagram;
+    if (!diagram) return;
+    void renderMermaidDiagram(this.node.textContent).then((svg) => {
+      if (this.diagramVersion !== version) return;
+      if (svg === null) diagram.replaceChildren();
+      else insertMermaidSvg(diagram, svg);
+    });
   }
 
   private createContentElement(): { contentDOM: HTMLElement; wrapperDOM?: HTMLElement } {
@@ -207,7 +242,10 @@ export class BlockNodeView implements NodeView {
       return false;
     }
 
+    const diagramChanged =
+      node.textContent !== this.node.textContent || node.attrs.language !== this.node.attrs.language;
     this.node = node;
+    if (diagramChanged) this.updateDiagram();
     this.updateDOMAttributes();
 
     if (node.attrs.type === "task") {
@@ -232,6 +270,8 @@ export class BlockNodeView implements NodeView {
   }
 
   destroy(): void {
+    this.diagramVersion++;
+    this.renderDiagramLater.cancel();
     this.dom.classList.remove("dragging");
 
     if (this.handleDispose) {
@@ -257,6 +297,12 @@ export class BlockNodeView implements NodeView {
   ignoreMutation(mutation: ViewMutationRecord): boolean {
     if (mutation.type !== "selection" && this.handleContainer.contains(mutation.target as Node)) {
       return true;
+    }
+    if (this.diagram?.contains(mutation.target as Node)) return true;
+    if (mutation.type === "childList" && mutation.target === this.dom) {
+      return [...mutation.addedNodes, ...mutation.removedNodes].every(
+        (node) => node instanceof HTMLElement && node.classList.contains("mermaid-diagram"),
+      );
     }
     // Ignore class attribute changes on block-row (e.g., 'dragging', 'selected')
     if (mutation.type === "attributes" && mutation.target === this.dom) {
