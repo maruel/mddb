@@ -361,6 +361,8 @@ type WorkspaceEvent struct {
 	RecordID ksid.ID   `json:"record_id,omitempty"`
 	ActorID  ksid.ID   `json:"actor_id"`
 	Modified Time      `json:"modified"`
+	// RequestID correlates a change with an individual HTTP write, not authorization.
+	RequestID string `json:"request_id,omitempty"`
 }
 
 // --- Notification Types ---

@@ -2,6 +2,7 @@
 
 import { createSignal } from "solid-js";
 import type { UploadNodeAssetResponse } from "@sdk/types.gen";
+import { localWriteHeaders } from "../../useApi";
 
 // Client-side limits for quick feedback. Backend enforces these authoritatively.
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -72,9 +73,9 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
 
       const response = await fetch(`/api/v1/workspaces/${options.wsId}/nodes/${options.nodeId}/assets`, {
         method: "POST",
-        headers: {
+        headers: localWriteHeaders({
           Authorization: `Bearer ${token}`,
-        },
+        }),
         body: formData,
       });
 

@@ -7,6 +7,7 @@ import {
   createEffect,
   createMemo,
   batch,
+  on,
   type ParentComponent,
   type Accessor,
 } from "solid-js";
@@ -27,9 +28,14 @@ import {
   type NodeResponse,
 } from "@sdk/types.gen";
 import { workspaceUrl } from "../utils/urls";
-import { createApi } from "../useApi";
-import { reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
+import { APIError, createApi } from "../useApi";
+import { findNodePath, reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
 import { provisionFirstWorkspace } from "./firstLogin";
+
+interface NodeLoadOptions {
+  refresh: boolean;
+  canApply?: () => boolean;
+}
 
 interface WorkspaceContextValue {
   // Node tree
@@ -75,7 +81,7 @@ interface WorkspaceContextValue {
   createOrganization: (data: { name: string }) => Promise<void>;
   createWorkspace: (data: { name: string }) => Promise<void>;
   loadNodes: (force?: boolean) => Promise<void>;
-  loadNode: (id: string) => Promise<NodeResponse | undefined>;
+  loadNode: (id: string, options: NodeLoadOptions) => Promise<NodeResponse | undefined>;
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
@@ -367,10 +373,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  async function loadNode(id: string): Promise<NodeResponse | undefined> {
+  async function loadNode(id: string, options: NodeLoadOptions): Promise<NodeResponse | undefined> {
     const ws = wsApi();
     if (!ws) return undefined;
-    if (loadingNodeId() === id || loadedNodeId() === id) return undefined;
+    if (!options.refresh && (loadingNodeId() === id || loadedNodeId() === id)) return undefined;
 
     const identity = workspaceIdentity();
     const request = ++nodeRequest;
@@ -379,6 +385,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadingNodeId(id);
       const nodeData = await ws.getNode(id);
       if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
+      if (options.canApply && !options.canApply()) return undefined;
 
       batch(() => {
         setSelectedNodeId(nodeData.id);
@@ -478,20 +485,48 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   });
 
-  // React to SSE workspace events: refetch node tree on structural changes
-  const { lastEvent } = useEventSource();
-  createEffect(() => {
-    const evt = lastEvent();
-    if (!evt) return;
-    if (
-      evt.type === EventNodeCreated ||
-      evt.type === EventNodeDeleted ||
-      evt.type === EventNodeMoved ||
-      evt.type === EventNodeUpdated
-    ) {
-      loadNodes(true);
+  // Update metadata in place so page edits retain loaded descendants and focus.
+  async function refreshNodeMetadata(id: string) {
+    const ws = wsApi();
+    if (!ws || !findNodePath(nodes, id)) return;
+    const identity = workspaceIdentity();
+    try {
+      const data = await ws.getNode(id);
+      if (identity !== workspaceIdentity()) return;
+      setNodesStore(
+        produce((list) => {
+          const path = findNodePath(list, id);
+          const node = path?.[path.length - 1];
+          if (node && node.modified <= data.modified) {
+            // Cleared optional fields are omitted from JSON. Remove them while
+            // retaining the loaded children and this store object's identity.
+            for (const key of Object.keys(node)) {
+              if (key !== "children" && !(key in data)) Reflect.deleteProperty(node, key);
+            }
+            Object.assign(node, data, { children: node.children });
+          }
+        }),
+      );
+      setBreadcrumbPath((path) => path.map((node) => (node.id === id && node.modified <= data.modified ? data : node)));
+    } catch (err) {
+      // A subsequent deletion event owns removal of a concurrently deleted node.
+      if (err instanceof APIError && err.status === 404) return;
+      if (identity === workspaceIdentity()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     }
-  });
+  }
+
+  // React once per SSE event; request state must not retrigger the refresh.
+  const { lastEvent } = useEventSource();
+  createEffect(
+    on(lastEvent, (evt) => {
+      if (!evt) return;
+      if (evt.type === EventNodeUpdated) {
+        void refreshNodeMetadata(evt.node_id);
+      } else if (evt.type === EventNodeCreated || evt.type === EventNodeDeleted || evt.type === EventNodeMoved) {
+        loadNodes(true);
+      }
+    }),
+  );
 
   // Reset loadedNodeId when workspace changes
   createEffect(() => {

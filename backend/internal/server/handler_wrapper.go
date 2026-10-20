@@ -26,11 +26,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// addRequestMetadataToContext adds the User-Agent to the context. NewRouter
-// already put the client IP there.
+// addRequestMetadataToContext adds the User-Agent and request correlation ID to the
+// context. NewRouter already put the client IP there.
 func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.Context {
 	ctx = reqctx.WithUserAgent(ctx, r.Header.Get("User-Agent"))
-	return ctx
+	return reqctx.WithRequestID(ctx, r.Header.Get("X-Request-ID"))
 }
 
 // isMutating returns true for HTTP methods that modify state.
@@ -579,6 +579,7 @@ func wrapAuthRaw(
 
 		// Store user in context for raw handlers
 		ctx := reqctx.WithUser(r.Context(), user)
+		ctx = addRequestMetadataToContext(ctx, r)
 		fn(w, r.WithContext(ctx))
 		if mutating {
 			// Commit DB changes for mutating raw handlers (e.g., asset upload).

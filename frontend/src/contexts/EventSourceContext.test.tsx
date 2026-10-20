@@ -1,4 +1,4 @@
-// Tests SSE connection status across failure and recovery transitions.
+// Tests workspace event delivery and SSE connection recovery.
 
 import { afterEach, describe, it } from "node:test";
 import { expect, vi } from "@tests/expect";
@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@solidjs/testing-library";
 import { AuthContext, type AuthContextValue } from "./AuthContext";
 import { EventSourceProvider, useEventSource } from "./EventSourceContext";
 import type { UserResponse } from "@sdk/types.gen";
+import { localWriteHeaders } from "../useApi";
 
 const testUser: UserResponse = {
   id: "user-1",
@@ -41,12 +42,29 @@ class MockEventSource {
   onopen: ((event: Event) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   readonly close = vi.fn();
+  readonly listeners = new Map<string, (event: MessageEvent<string>) => void>();
 
   constructor(readonly url: string) {
     MockEventSource.instances.push(this);
   }
 
-  addEventListener(_type: string, _listener: unknown) {}
+  addEventListener(type: string, listener: (event: MessageEvent<string>) => void) {
+    this.listeners.set(type, listener);
+  }
+
+  workspace(actorId: string, source: string | null) {
+    this.listeners.get("workspace")?.(
+      new MessageEvent("workspace", {
+        data: JSON.stringify({
+          type: "node_updated",
+          node_id: "node-1",
+          actor_id: actorId,
+          modified: 123,
+          request_id: source ?? undefined,
+        }),
+      }),
+    );
+  }
 
   open() {
     this.onopen?.(new Event("open"));
@@ -62,6 +80,11 @@ function ConnectionStatus() {
   return <output data-testid="connection-status">{connected() ? "Connected" : "Reconnecting"}</output>;
 }
 
+function LatestEvent() {
+  const { lastEvent } = useEventSource();
+  return <output data-testid="latest-event">{lastEvent()?.actor_id}</output>;
+}
+
 afterEach(() => {
   cleanup();
   MockEventSource.instances = [];
@@ -69,6 +92,30 @@ afterEach(() => {
 });
 
 describe("EventSourceProvider", () => {
+  it("delivers edits from the same account as well as other users", () => {
+    vi.stubGlobal("EventSource", MockEventSource);
+    render(() => (
+      <AuthContext.Provider value={authValue}>
+        <EventSourceProvider>
+          <LatestEvent />
+        </EventSourceProvider>
+      </AuthContext.Provider>
+    ));
+    const source = MockEventSource.instances[0]!;
+    source.workspace("user-2", null);
+    expect(screen.getByTestId("latest-event")).toHaveTextContent("user-2");
+    source.workspace(testUser.id, null);
+    expect(screen.getByTestId("latest-event")).toHaveTextContent(testUser.id);
+    const requestID = localWriteHeaders(undefined).get("X-Request-ID");
+    expect(requestID).toBeTruthy();
+    source.workspace("user-2", requestID);
+    expect(screen.getByTestId("latest-event")).toHaveTextContent("user-2");
+    source.workspace(testUser.id, requestID);
+    expect(screen.getByTestId("latest-event")).toHaveTextContent("user-2");
+    source.workspace(testUser.id, "independent-mcp-request");
+    expect(screen.getByTestId("latest-event")).toHaveTextContent(testUser.id);
+  });
+
   it("reports reconnecting after a connection failure and connected after recovery", () => {
     vi.stubGlobal("EventSource", MockEventSource);
 

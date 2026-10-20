@@ -5,8 +5,23 @@ package reqctx
 import (
 	"net/http"
 	"net/netip"
+	"strings"
 	"testing"
 )
+
+func TestRequestID(t *testing.T) {
+	if got := RequestID(t.Context()); got != "" {
+		t.Fatalf("missing hint: got %q", got)
+	}
+	for _, id := range []string{"write-one", strings.Repeat("a", 64)} {
+		if got := RequestID(WithRequestID(t.Context(), id)); got != id {
+			t.Errorf("hint %q: got %q", id, got)
+		}
+	}
+	if got := RequestID(WithRequestID(t.Context(), strings.Repeat("a", 65))); got != "" {
+		t.Fatalf("oversized hint: got %q", got)
+	}
+}
 
 func TestResolveClientIP(t *testing.T) {
 	proxies := []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128"), netip.MustParsePrefix("10.0.0.0/8")}

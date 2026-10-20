@@ -144,7 +144,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	h.Svc.PublishEvent(wsID, dto.EventNodeUpdated, nodeID, user.ID)
+	h.Svc.PublishEvent(r.Context(), wsID, dto.EventNodeUpdated, nodeID, user.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

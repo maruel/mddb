@@ -122,8 +122,22 @@ export const EditorProvider: ParentComponent = (props) => {
   const refreshFromServer = () => {
     const nodeId = selectedNodeId();
     if (nodeId) {
-      setExternalChange(false);
-      loadNode(nodeId);
+      const node = selectedNodeData();
+      const draft = [title(), content(), icon(), cover(), hasUnsavedChanges()];
+      debouncedAutoSave.cancel();
+      loadNode(nodeId, {
+        refresh: true,
+        canApply: () => {
+          if (selectedNodeData() !== node) return false;
+          const current = [title(), content(), icon(), cover(), hasUnsavedChanges()];
+          if (current.some((entry, index) => entry !== draft[index])) {
+            setExternalChange(true);
+            return false;
+          }
+          setExternalChange(false);
+          return true;
+        },
+      });
     }
   };
 
@@ -142,8 +156,7 @@ export const EditorProvider: ParentComponent = (props) => {
         setExternalChange(true);
         return;
       }
-      setExternalChange(false);
-      loadNode(nodeId);
+      refreshFromServer();
     });
   });
 

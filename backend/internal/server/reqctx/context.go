@@ -90,7 +90,23 @@ const (
 	keySessionID   contextKey = "sessionID"
 	keyTokenString contextKey = "tokenString"
 	keyUser        contextKey = "user"
+	keyRequestID   contextKey = "requestID"
 )
+
+// WithRequestID adds an opaque write echo-correlation ID to the context.
+// Oversized hints are ignored; they never affect authentication or authorization.
+func WithRequestID(ctx context.Context, id string) context.Context {
+	if len(id) > 64 {
+		id = ""
+	}
+	return context.WithValue(ctx, keyRequestID, id)
+}
+
+// RequestID returns the originating HTTP request's echo-correlation ID, if supplied.
+func RequestID(ctx context.Context) string {
+	id, _ := ctx.Value(keyRequestID).(string)
+	return id
+}
 
 // WithClientIP adds the client IP to the context.
 func WithClientIP(ctx context.Context, ip string) context.Context {

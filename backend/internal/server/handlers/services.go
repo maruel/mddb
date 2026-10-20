@@ -19,6 +19,7 @@ import (
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -53,43 +54,46 @@ type Services struct {
 }
 
 // PublishEvent publishes a workspace SSE event if the broker is configured.
-func (s *Services) PublishEvent(wsID ksid.ID, eventType dto.EventType, nodeID, actorID ksid.ID) {
+func (s *Services) PublishEvent(ctx context.Context, wsID ksid.ID, eventType dto.EventType, nodeID, actorID ksid.ID) {
 	if s.Broker == nil {
 		return
 	}
 	s.Broker.Publish(wsID, dto.WorkspaceEvent{
-		Type:     eventType,
-		NodeID:   nodeID,
-		ActorID:  actorID,
-		Modified: storage.Now(),
+		Type:      eventType,
+		NodeID:    nodeID,
+		ActorID:   actorID,
+		Modified:  storage.Now(),
+		RequestID: reqctx.RequestID(ctx),
 	})
 }
 
 // PublishNodeEvent publishes a node change carrying the node's own revision, so
 // subscribers can tell their own write apart from a concurrent edit.
-func (s *Services) PublishNodeEvent(wsID ksid.ID, eventType dto.EventType, node *content.Node, actorID ksid.ID) {
+func (s *Services) PublishNodeEvent(ctx context.Context, wsID ksid.ID, eventType dto.EventType, node *content.Node, actorID ksid.ID) {
 	if s.Broker == nil {
 		return
 	}
 	s.Broker.Publish(wsID, dto.WorkspaceEvent{
-		Type:     eventType,
-		NodeID:   node.ID,
-		ActorID:  actorID,
-		Modified: node.Modified,
+		Type:      eventType,
+		NodeID:    node.ID,
+		ActorID:   actorID,
+		Modified:  node.Modified,
+		RequestID: reqctx.RequestID(ctx),
 	})
 }
 
 // PublishRecordEvent publishes a record-level workspace SSE event.
-func (s *Services) PublishRecordEvent(wsID, nodeID, recordID, actorID ksid.ID) {
+func (s *Services) PublishRecordEvent(ctx context.Context, wsID, nodeID, recordID, actorID ksid.ID) {
 	if s.Broker == nil {
 		return
 	}
 	s.Broker.Publish(wsID, dto.WorkspaceEvent{
-		Type:     dto.EventRecordsChanged,
-		NodeID:   nodeID,
-		RecordID: recordID,
-		ActorID:  actorID,
-		Modified: storage.Now(),
+		Type:      dto.EventRecordsChanged,
+		NodeID:    nodeID,
+		RecordID:  recordID,
+		ActorID:   actorID,
+		Modified:  storage.Now(),
+		RequestID: reqctx.RequestID(ctx),
 	})
 }
 

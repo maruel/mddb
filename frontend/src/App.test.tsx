@@ -192,9 +192,7 @@ describe("App", () => {
         workspace_name: "Other Workspace",
       };
       api("GET", "/api/v1/auth/me", (_url, init) =>
-        (init?.headers as Record<string, string> | undefined)?.Authorization === "Bearer new-token"
-          ? otherUser
-          : mockUser,
+        new Headers(init?.headers).get("Authorization") === "Bearer new-token" ? otherUser : mockUser,
       );
       stubWorkspace();
       renderWithI18n(() => <App />);
@@ -213,8 +211,7 @@ describe("App", () => {
       await waitFor(() => {
         const calls = fetchCalls.filter(
           ({ url, init }) =>
-            url === "/api/v1/auth/me" &&
-            (init?.headers as Record<string, string> | undefined)?.Authorization === "Bearer new-token",
+            url === "/api/v1/auth/me" && new Headers(init?.headers).get("Authorization") === "Bearer new-token",
         );
         expect(calls.length).toBeGreaterThan(0);
       });

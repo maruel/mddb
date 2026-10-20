@@ -151,7 +151,7 @@ export default function NodeView() {
     const nodeId = stripSlug(params.nodeId);
     if (nodeId && nodeId !== selectedNodeId()) {
       flushAutoSave();
-      loadNode(nodeId);
+      loadNode(nodeId, { refresh: false });
       setPreviewContent(null);
       setPreviewCommit(null);
     }
@@ -251,7 +251,7 @@ export default function NodeView() {
     }
     // Reload node to get updated asset URLs
     const nodeId = selectedNodeId();
-    if (nodeId) loadNode(nodeId);
+    if (nodeId) loadNode(nodeId, { refresh: false });
     return result.name;
   }
 
@@ -392,7 +392,7 @@ export default function NodeView() {
                     getToken={() => token()}
                     onAssetUploaded={() => {
                       const nodeId = selectedNodeId();
-                      if (nodeId) loadNode(nodeId);
+                      if (nodeId) loadNode(nodeId, { refresh: false });
                     }}
                     onError={setSaveError}
                     onNavigateToNode={handleNavigateToNode}

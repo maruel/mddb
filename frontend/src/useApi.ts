@@ -4,6 +4,31 @@ import { createApiClient, APIError, type FetchFn } from "@sdk/api.gen";
 
 export { APIError };
 
+// Keep recent UI writes so SSE echoes are recognized before and after their HTTP
+// responses. This is bounded per document and does not register MCP requests.
+const localWriteRequestIDs = new Set<string>();
+const MAX_LOCAL_WRITE_REQUESTS = 1024;
+
+/** Registers one UI write and attaches its echo-correlation ID to the headers. */
+export function localWriteHeaders(input: HeadersInit | undefined): Headers {
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
+  localWriteRequestIDs.add(id);
+  if (localWriteRequestIDs.size > MAX_LOCAL_WRITE_REQUESTS) {
+    const oldest = localWriteRequestIDs.values().next().value;
+    if (oldest !== undefined) localWriteRequestIDs.delete(oldest);
+  }
+  const headers = new Headers(input);
+  headers.set("X-Request-ID", id);
+  return headers;
+}
+
+/** Reports whether this document's UI owns the write identified by an event. */
+export function isLocalWriteRequest(id: string | undefined): boolean {
+  return id !== undefined && localWriteRequestIDs.has(id);
+}
+
 /** Type alias for the API client returned by createApi */
 export type Api = ReturnType<typeof createApi>;
 
@@ -73,11 +98,9 @@ export function createAuthFetch(
 ): FetchFn {
   const baseFetch: FetchFn = async (url: string, init?: RequestInit) => {
     const token = getToken();
-    const headers: HeadersInit = {
-      ...init?.headers,
-    };
+    const headers = new Headers(init?.headers);
     if (token) {
-      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+      headers.set("Authorization", `Bearer ${token}`);
     }
     const res = await fetch(url, { ...init, headers, cache: "no-store" });
     if (res.status === 401 && onUnauthorized) {
@@ -94,5 +117,13 @@ export function createAuthFetch(
  * @param onUnauthorized - Callback when a 401 response is received
  */
 export function createApi(getToken: () => string | null, onUnauthorized?: (token: string | null) => void) {
-  return createApiClient(createAuthFetch(getToken, onUnauthorized));
+  const authFetch = createAuthFetch(getToken, onUnauthorized);
+  return createApiClient((url, init) => {
+    // Only the generated UI mutation methods own optimistic updates. Generic
+    // authenticated fetches (including MCP transports) must remain observable.
+    if (init?.method && ["DELETE", "PATCH", "POST", "PUT"].includes(init.method.toUpperCase())) {
+      return authFetch(url, { ...init, headers: localWriteHeaders(init.headers) });
+    }
+    return authFetch(url, init);
+  });
 }

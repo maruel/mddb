@@ -11,6 +11,7 @@ import {
 } from "solid-js";
 import { useAuth } from "./AuthContext";
 import type { WorkspaceEvent } from "@sdk/types.gen";
+import { isLocalWriteRequest } from "../useApi";
 
 interface EventSourceContextValue {
   lastEvent: Accessor<WorkspaceEvent | null>;
@@ -46,11 +47,12 @@ export const EventSourceProvider: ParentComponent = (props) => {
     es.addEventListener("workspace", (e: MessageEvent) => {
       try {
         const evt = JSON.parse(e.data) as WorkspaceEvent;
-        // Self-filter: ignore events caused by the current user.
-        if (evt.actor_id === userId) return;
+        // Suppress only writes the UI explicitly owns, including uploads and
+        // frontmatter. MCP tool calls remain visible even from the same tab.
+        if (evt.actor_id === userId && isLocalWriteRequest(evt.request_id)) return;
         setLastEvent(evt);
-      } catch {
-        // Ignore malformed events.
+      } catch (err) {
+        console.error("Invalid workspace event", err);
       }
     });
 
@@ -62,8 +64,8 @@ export const EventSourceProvider: ParentComponent = (props) => {
         } else if (revision !== knownRevision) {
           window.location.reload();
         }
-      } catch {
-        // Ignore malformed events.
+      } catch (err) {
+        console.error("Invalid server event", err);
       }
     });
 

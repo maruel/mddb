@@ -107,7 +107,7 @@ func (h *NodeHandler) MoveNode(ctx context.Context, wsID ksid.ID, user *identity
 	if err := ws.MoveNode(ctx, req.ID, req.NewParentID, author); err != nil {
 		return nil, dto.InternalWithError("Failed to move node", err)
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeMoved, req.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeMoved, req.ID, user.ID)
 	return &dto.MoveNodeResponse{Ok: true}, nil
 }
 
@@ -121,7 +121,7 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID ksid.ID, user *identi
 	if err := ws.DeletePage(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("node")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
 	return &dto.DeleteNodeResponse{Ok: true}, nil
 }
 
@@ -224,7 +224,7 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
-	h.Svc.PublishNodeEvent(wsID, dto.EventNodeCreated, node, user.ID)
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeCreated, node, user.ID)
 	return &dto.CreatePageResponse{ID: node.ID}, nil
 }
 
@@ -260,7 +260,7 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishNodeEvent(wsID, dto.EventNodeUpdated, node, user.ID)
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, node, user.ID)
 	return &dto.UpdatePageResponse{ID: node.ID, Modified: node.Modified}, nil
 }
 
@@ -275,7 +275,7 @@ func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, u
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishNodeEvent(wsID, dto.EventNodeUpdated, node, user.ID)
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, node, user.ID)
 	return &dto.UpdatePageFrontmatterResponse{ID: node.ID, Modified: node.Modified}, nil
 }
 
@@ -290,7 +290,7 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identi
 	if err := ws.DeletePageFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 
@@ -324,7 +324,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *ident
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeCreated, node.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeCreated, node.ID, user.ID)
 	return &dto.CreateTableUnderParentResponse{ID: node.ID}, nil
 }
 
@@ -375,7 +375,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventTableUpdated, req.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventTableUpdated, req.ID, user.ID)
 	return &dto.UpdateTableResponse{ID: req.ID}, nil
 }
 
@@ -390,7 +390,7 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID ksid.ID, user *ident
 	if err := ws.DeleteTableFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
 	return &dto.DeleteTableResponse{Ok: true}, nil
 }
 
@@ -533,7 +533,7 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 	if err := ws.AppendRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
-	h.Svc.PublishRecordEvent(wsID, req.ID, id, user.ID)
+	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, id, user.ID)
 	return &dto.CreateRecordResponse{ID: id}, nil
 }
 
@@ -583,7 +583,7 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *iden
 	if err := ws.UpdateRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to update record", err)
 	}
-	h.Svc.PublishRecordEvent(wsID, req.ID, req.RID, user.ID)
+	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, req.RID, user.ID)
 	return &dto.UpdateRecordResponse{ID: req.RID}, nil
 }
 
@@ -620,6 +620,6 @@ func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID ksid.ID, user *iden
 	if err := ws.DeleteRecord(ctx, req.ID, req.RID, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
-	h.Svc.PublishRecordEvent(wsID, req.ID, req.RID, user.ID)
+	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, req.RID, user.ID)
 	return &dto.DeleteRecordResponse{Ok: true}, nil
 }

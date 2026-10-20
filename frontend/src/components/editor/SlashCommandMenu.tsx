@@ -208,7 +208,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         await fetchNodeChildren(parentId);
 
         // Load the new page data and navigate to it
-        await loadNode(newPage.id);
+        await loadNode(newPage.id, { refresh: false });
         navigate(url);
       } catch (err) {
         console.error("Failed to create subpage:", err);

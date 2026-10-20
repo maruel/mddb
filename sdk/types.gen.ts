@@ -1281,5 +1281,7 @@ export interface WorkspaceEvent {
   record_id?: string;
   actor_id: string;
   modified: number;
+  /** RequestID correlates a change with an individual HTTP write, not authorization. */
+  request_id?: string;
 }
 
