@@ -3,6 +3,8 @@
 import { createSignal, createEffect, createMemo, Show } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { useAuth } from "../../contexts";
+import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
 import type { UserResponse, OrgInvitationResponse, OrganizationRole, ResourceQuotas } from "@sdk/types.gen";
 import { OrgRoleOwner, OrgRoleAdmin, OrgRoleMember } from "@sdk/types.gen";
@@ -340,9 +342,16 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                 </div>
               </div>
 
-              <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t("common.save")}
-              </button>
+              <IconButton
+                variant="unstyled"
+                type="submit"
+                class={styles.saveButton}
+                disabled={loading()}
+                aria-label={t("common.save")}
+                title={t("common.save")}
+              >
+                <SaveIcon aria-hidden="true" />
+              </IconButton>
             </form>
           </Show>
         </section>
@@ -360,9 +369,16 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                 ceilingLabel={t("settings.serverCeiling")}
                 allowInherit={true}
               />
-              <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t("common.save")}
-              </button>
+              <IconButton
+                variant="unstyled"
+                type="submit"
+                class={styles.saveButton}
+                disabled={loading()}
+                aria-label={t("common.save")}
+                title={t("common.save")}
+              >
+                <SaveIcon aria-hidden="true" />
+              </IconButton>
             </form>
           </Show>
         </section>

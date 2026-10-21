@@ -3,6 +3,12 @@
 import { createSignal, createEffect, Show, For } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { useAuth } from "../../contexts";
+import AddIcon from "@material-symbols/svg-400/outlined/add.svg?solid";
+import UploadIcon from "@material-symbols/svg-400/outlined/cloud_upload.svg?solid";
+import DownloadIcon from "@material-symbols/svg-400/outlined/cloud_download.svg?solid";
+import CloseIcon from "@material-symbols/svg-400/outlined/close.svg?solid";
+import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
 import {
   WSRoleAdmin,
@@ -490,9 +496,16 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                 <input type="text" value={wsName()} onInput={(e) => setWsName(e.target.value)} required />
               </div>
 
-              <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t("settings.saveWorkspaceSettings")}
-              </button>
+              <IconButton
+                variant="unstyled"
+                type="submit"
+                class={styles.saveButton}
+                disabled={loading()}
+                aria-label={t("settings.saveWorkspaceSettings")}
+                title={t("settings.saveWorkspaceSettings")}
+              >
+                <SaveIcon aria-hidden="true" />
+              </IconButton>
             </form>
 
             <div class={styles.orgLink}>
@@ -528,9 +541,16 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                 ceilingLabel={t("settings.parentCeiling")}
                 allowInherit={true}
               />
-              <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t("common.save")}
-              </button>
+              <IconButton
+                variant="unstyled"
+                type="submit"
+                class={styles.saveButton}
+                disabled={loading()}
+                aria-label={t("common.save")}
+                title={t("common.save")}
+              >
+                <SaveIcon aria-hidden="true" />
+              </IconButton>
             </form>
           </Show>
         </section>
@@ -589,15 +609,36 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                         })()}
                       </td>
                       <td class={styles.actions}>
-                        <button onClick={handlePush} disabled={loading()} class={styles.smallButton}>
-                          {t("common.push")}
-                        </button>
-                        <button onClick={handlePull} disabled={loading()} class={styles.smallButton}>
-                          {t("settings.pull")}
-                        </button>
-                        <button onClick={handleDeleteRemote} disabled={loading()} class={styles.deleteButtonSmall}>
-                          {t("common.remove")}
-                        </button>
+                        <IconButton
+                          variant="unstyled"
+                          onClick={handlePush}
+                          disabled={loading()}
+                          class={styles.smallButton}
+                          aria-label={t("common.push")}
+                          title={t("common.push")}
+                        >
+                          <UploadIcon aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          variant="unstyled"
+                          onClick={handlePull}
+                          disabled={loading()}
+                          class={styles.smallButton}
+                          aria-label={t("settings.pull")}
+                          title={t("settings.pull")}
+                        >
+                          <DownloadIcon aria-hidden="true" />
+                        </IconButton>
+                        <IconButton
+                          variant="unstyled"
+                          onClick={handleDeleteRemote}
+                          disabled={loading()}
+                          class={styles.deleteButtonSmall}
+                          aria-label={t("common.remove")}
+                          title={t("common.remove")}
+                        >
+                          <CloseIcon aria-hidden="true" />
+                        </IconButton>
                       </td>
                     </tr>
                   </tbody>
@@ -729,9 +770,16 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                     />
                     <p class={styles.hint}>{t("settings.tokenHint")}</p>
                   </div>
-                  <button type="submit" class={styles.saveButton} disabled={loading()}>
-                    {t("settings.addRemote")}
-                  </button>
+                  <IconButton
+                    variant="unstyled"
+                    type="submit"
+                    class={styles.saveButton}
+                    disabled={loading()}
+                    aria-label={t("settings.addRemote")}
+                    title={t("settings.addRemote")}
+                  >
+                    <AddIcon aria-hidden="true" />
+                  </IconButton>
                 </form>
               </div>
             </Show>

@@ -20,6 +20,8 @@ test("member invitation forms send the API role values", async ({ page, request 
   await page.goto(`/?token=${owner.token}`);
   await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
+  await page.setViewportSize({ width: 390, height: 900 });
+
   const client = createClient(request, owner.token);
   const me = await client.getMe();
   const orgID = me.organization_id!;
@@ -29,7 +31,21 @@ test("member invitation forms send the API role values", async ({ page, request 
   const orgForm = page.locator('form[class*="inviteForm"]');
   await orgForm.locator('input[type="email"]').fill(invitee.email);
   await orgForm.locator("select").selectOption("org:admin");
-  await orgForm.locator('button[type="submit"]').click();
+  const invite = orgForm.getByRole("button", { name: "Invite", exact: true });
+  await expect(invite.locator('svg[aria-hidden="true"]')).toBeVisible();
+  for (const width of [390, 195]) {
+    await page.setViewportSize({ width, height: 900 });
+    const formBox = await orgForm.boundingBox();
+    if (formBox === null) throw new Error("Invite form is not visible");
+    for (const control of await orgForm.locator("input, select, button").all()) {
+      const box = await control.boundingBox();
+      if (box === null) throw new Error("Invite control is not visible");
+      expect(box.x).toBeGreaterThanOrEqual(formBox.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(formBox.x + formBox.width);
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 900 });
+  await invite.click();
   await expect
     .poll(
       async () =>
@@ -90,7 +106,7 @@ test.describe("User Profile Settings", () => {
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
   });
 
-  test("change theme setting", async ({ page, request }) => {
+  test("icon-only save stays reachable and saves with the keyboard", async ({ page, request }, testInfo) => {
     const { token } = await registerUser(request, "theme-change");
     await page.goto(`/?token=${token}`);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
@@ -105,9 +121,24 @@ test.describe("User Profile Settings", () => {
     // Change to dark
     await themeSelect.selectOption("dark");
 
-    // Save (use specific text to avoid matching password form button)
-    const saveButton = page.getByRole("button", { name: "Save Changes" });
-    await saveButton.click();
+    const saveButton = page.getByRole("button", { name: "Save Changes", exact: true });
+    await expect(saveButton).toHaveAttribute("title", "Save Changes");
+    await expect(saveButton).toHaveText("");
+    await expect(saveButton.locator('svg[aria-hidden="true"]')).toBeVisible();
+    for (const width of [1280, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await saveButton.scrollIntoViewIfNeeded();
+      const box = await saveButton.boundingBox();
+      if (box === null) throw new Error("Save action is not visible");
+      expect(box.width).toBeGreaterThanOrEqual(40);
+      expect(box.height).toBeGreaterThanOrEqual(40);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      await saveButton.focus();
+      await expect(saveButton).toBeFocused();
+      await page.screenshot({ path: testInfo.outputPath(`settings-save-${width}.png`) });
+    }
+    await saveButton.press("Space");
 
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
   });

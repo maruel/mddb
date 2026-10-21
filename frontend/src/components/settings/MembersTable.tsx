@@ -1,6 +1,8 @@
-// Shared members table component for workspace and organization settings.
+// Responsive member rows with role editing and removal for workspace and organization settings.
 
 import { For, Show } from "solid-js";
+import PersonRemoveIcon from "@material-symbols/svg-400/outlined/person_remove.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
 import type { UserResponse } from "@sdk/types.gen";
 import styles from "./MembersTable.module.css";
@@ -33,54 +35,84 @@ export default function MembersTable<T extends string>(props: MembersTableProps<
   };
 
   return (
-    <table class={styles.table}>
-      <thead>
-        <tr>
-          <th>{t("settings.nameColumn")}</th>
-          <th>{t("settings.emailColumn")}</th>
-          <th>{t("settings.roleColumn")}</th>
-          <Show when={props.onRemove}>
-            <th>{t("settings.actionsColumn")}</th>
-          </Show>
-        </tr>
-      </thead>
-      <tbody>
-        <For each={props.members}>
-          {(member) => (
-            <tr>
-              <td>{member.name}</td>
-              <td>{member.email}</td>
-              <td>
-                <Show when={member.id !== props.currentUserId} fallback={getMemberRole(member)}>
-                  <select
-                    value={getMemberRole(member)}
-                    onChange={(e) => updateRole(member.id, e.target.value)}
-                    class={styles.roleSelect}
-                    disabled={props.loading}
-                  >
-                    <For each={props.roleOptions}>
-                      {(option) => <option value={option.value}>{option.label}</option>}
-                    </For>
-                  </select>
-                </Show>
-              </td>
-              <Show when={props.onRemove}>
-                <td>
-                  <Show when={member.id !== props.currentUserId}>
-                    <button
-                      class={styles.removeButton}
-                      onClick={() => props.onRemove?.(member.id)}
+    <div class={styles.container}>
+      <table class={styles.table} role="table">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" role="columnheader">
+              {t("settings.nameColumn")}
+            </th>
+            <th scope="col" role="columnheader">
+              {t("settings.emailColumn")}
+            </th>
+            <th scope="col" role="columnheader">
+              {t("settings.roleColumn")}
+            </th>
+            <Show when={props.onRemove}>
+              <th scope="col" role="columnheader">
+                {t("settings.actionsColumn")}
+              </th>
+            </Show>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          <For each={props.members}>
+            {(member) => (
+              <tr role="row">
+                <td class={styles.name} role="cell">
+                  <span class={styles.label} aria-hidden="true">
+                    {t("settings.nameColumn")}
+                  </span>
+                  <span>{member.name}</span>
+                </td>
+                <td class={styles.email} role="cell">
+                  <span class={styles.label} aria-hidden="true">
+                    {t("settings.emailColumn")}
+                  </span>
+                  <span>{member.email}</span>
+                </td>
+                <td role="cell">
+                  <span class={styles.label} aria-hidden="true">
+                    {t("settings.roleColumn")}
+                  </span>
+                  <Show when={member.id !== props.currentUserId} fallback={getMemberRole(member)}>
+                    <select
+                      aria-label={`${t("settings.roleColumn")}: ${member.name}`}
+                      value={getMemberRole(member)}
+                      onChange={(e) => updateRole(member.id, e.target.value)}
+                      class={styles.roleSelect}
                       disabled={props.loading}
                     >
-                      {t("common.remove")}
-                    </button>
+                      <For each={props.roleOptions}>
+                        {(option) => <option value={option.value}>{option.label}</option>}
+                      </For>
+                    </select>
                   </Show>
                 </td>
-              </Show>
-            </tr>
-          )}
-        </For>
-      </tbody>
-    </table>
+                <Show when={props.onRemove}>
+                  <td role="cell">
+                    <Show when={member.id !== props.currentUserId}>
+                      <span class={styles.label} aria-hidden="true">
+                        {t("settings.actionsColumn")}
+                      </span>
+                      <IconButton
+                        variant="unstyled"
+                        aria-label={t("common.remove")}
+                        title={t("common.remove")}
+                        class={styles.removeButton}
+                        onClick={() => props.onRemove?.(member.id)}
+                        disabled={props.loading}
+                      >
+                        <PersonRemoveIcon aria-hidden="true" />
+                      </IconButton>
+                    </Show>
+                  </td>
+                </Show>
+              </tr>
+            )}
+          </For>
+        </tbody>
+      </table>
+    </div>
   );
 }

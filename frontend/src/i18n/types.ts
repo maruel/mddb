@@ -609,6 +609,7 @@ export interface Dictionary {
   };
 
   voice: {
+    dismiss: string;
     authorizationFailed: string;
     choiceUnavailable: string;
     choicesLoading: string;

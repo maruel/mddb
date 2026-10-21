@@ -2,6 +2,8 @@
 
 import { createSignal, createEffect, Show, lazy } from "solid-js";
 import { useAuth } from "../../contexts";
+import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
 import type { ResourceQuotas, ServerConfigResponse } from "@sdk/types.gen";
 import ResourceQuotaForm from "./ResourceQuotaForm";
@@ -247,9 +249,16 @@ export default function ServerSettingsPanel() {
               />
             </div>
 
-            <button type="submit" class={styles.saveButton} disabled={loading()}>
-              {t("server.saveConfiguration")}
-            </button>
+            <IconButton
+              variant="unstyled"
+              type="submit"
+              class={styles.saveButton}
+              disabled={loading()}
+              aria-label={t("server.saveConfiguration")}
+              title={t("server.saveConfiguration")}
+            >
+              <SaveIcon aria-hidden="true" />
+            </IconButton>
           </form>
         </section>
       </Show>
@@ -377,9 +386,16 @@ export default function ServerSettingsPanel() {
               </div>
             </div>
 
-            <button type="submit" class={styles.saveButton} disabled={loading()}>
-              {t("server.saveConfiguration")}
-            </button>
+            <IconButton
+              variant="unstyled"
+              type="submit"
+              class={styles.saveButton}
+              disabled={loading()}
+              aria-label={t("server.saveConfiguration")}
+              title={t("server.saveConfiguration")}
+            >
+              <SaveIcon aria-hidden="true" />
+            </IconButton>
           </form>
         </section>
       </Show>

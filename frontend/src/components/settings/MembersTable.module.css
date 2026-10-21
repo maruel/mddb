@@ -1,4 +1,14 @@
-/* Members table styles. */
+/* Member tables reflow into labeled rows within narrow settings panes. */
+
+.container {
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+}
+
+.label {
+  display: none;
+}
 
 .table {
   width: 100%;
@@ -8,7 +18,9 @@
 .table th,
 .table td {
   padding: var(--s-3);
+  vertical-align: top;
   text-align: left;
+  overflow-wrap: anywhere;
   border-bottom: 1px solid var(--c-border);
 }
 
@@ -19,6 +31,9 @@
 }
 
 .roleSelect {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   padding: var(--s-2);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
@@ -30,7 +45,7 @@
 }
 
 .removeButton {
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-3);
   color: var(--c-text-danger);
   cursor: pointer;
   background: transparent;
@@ -38,12 +53,55 @@
   border-radius: var(--radius-md);
 }
 
-.removeButton:hover {
+.removeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.removeButton:hover:not(:disabled) {
   color: var(--c-text-inverse);
   background: var(--c-surface-danger-solid);
 }
 
-.removeButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+@container (width < 36rem) {
+  .table,
+  .table tbody {
+    display: block;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--s-3);
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .name,
+  .email {
+    grid-column: 1 / -1;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: var(--s-1);
+    font-size: 0.75rem;
+    color: var(--c-text-muted);
+  }
 }

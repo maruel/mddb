@@ -16,18 +16,23 @@
 
 .formGroup {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-3);
 }
 
 .formGroup input,
 .formGroup select {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   padding: var(--s-2);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
 }
 
 .formGroup input {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .formGroup input:disabled,
@@ -37,7 +42,8 @@
 }
 
 .formGroup button {
-  padding: var(--s-2) var(--s-4);
+  flex-shrink: 0;
+  padding: var(--s-3);
   color: var(--c-text-inverse);
   cursor: pointer;
   background: var(--c-action-primary);

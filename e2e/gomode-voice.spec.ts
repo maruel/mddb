@@ -66,7 +66,9 @@ for (const external of [true, false]) {
     const offer = page.waitForRequest(`${gateway}/api/voicegateway/v1/voice/rtc/offer`);
     await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
     await offer;
-    await expect(page.getByText("Test gateway received voice offer", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Voice assistant", exact: true }).getByRole("alert")).toHaveText(
+      "Voice gateway unavailable (HTTP 503).",
+    );
   });
 }
 

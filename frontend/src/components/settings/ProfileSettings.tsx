@@ -5,6 +5,8 @@ import { useNavigate, useLocation } from "@solidjs/router";
 import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
 import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
 import { useAuth } from "../../contexts";
+import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n, type Locale } from "../../i18n";
 import { settingsUrl } from "../../utils/urls";
 import LinkedAccountsSection from "./LinkedAccountsSection";
@@ -192,9 +194,16 @@ export default function ProfileSettings() {
                     <option value="es">{t("settings.languageEs")}</option>
                   </select>
                 </div>
-                <button type="submit" class={styles.saveButton} disabled={loading()}>
-                  {t("settings.saveChanges")}
-                </button>
+                <IconButton
+                  variant="unstyled"
+                  type="submit"
+                  class={styles.saveButton}
+                  disabled={loading()}
+                  aria-label={t("settings.saveChanges")}
+                  title={t("settings.saveChanges")}
+                >
+                  <SaveIcon aria-hidden="true" />
+                </IconButton>
               </form>
             </section>
 

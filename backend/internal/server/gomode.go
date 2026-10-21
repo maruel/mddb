@@ -149,24 +149,25 @@ func (m *workspaceRegistry) Tools(context.Context) ([]mcp.ToolDescriptor, error)
 	return out, nil
 }
 
-func (m *workspaceRegistry) CallTool(ctx context.Context, name string, args json.RawMessage) (mcp.RawToolResult, error) {
+func (m *workspaceRegistry) CallTool(ctx context.Context, params *mcp.ToolsCallParams) (mcp.RawToolResult, error) {
 	for _, s := range m.readSpecs() {
-		if s.Name == name {
-			return s.Handler(ctx, args)
+		if s.Name == params.Name {
+			return s.Handler(ctx, params)
 		}
 	}
 	for _, s := range m.writeSpecs() {
-		if s.Name == name {
+		if s.Name == params.Name {
 			if !m.role.CanEdit() {
-				return mcp.RawToolResult{}, mcp.ErrInvalidParams("tool %s requires editor access to the active workspace", name)
+				return mcp.RawToolResult{}, mcp.ErrInvalidParams("tool %s requires editor access to the active workspace", params.Name)
 			}
-			return s.Handler(ctx, args)
+			return s.Handler(ctx, params)
 		}
 	}
-	return mcp.RawToolResult{}, mcp.ErrInvalidParams("unknown tool: %s", name)
+	return mcp.RawToolResult{}, mcp.ErrInvalidParams("unknown tool: %s", params.Name)
 }
 
-func (m *workspaceRegistry) listNodes(ctx context.Context, in listNodesInput) mcp.ToolResult[listNodesOutput] {
+func (m *workspaceRegistry) listNodes(ctx context.Context, req *mcp.ToolRequest[listNodesInput]) mcp.ToolResult[listNodesOutput] {
+	in := req.Arguments
 	var parentID ksid.ID
 	if in.ParentID != "" {
 		var err error
@@ -195,7 +196,8 @@ func (m *workspaceRegistry) listNodes(ctx context.Context, in listNodesInput) mc
 	return mcp.TypedToolResult(out)
 }
 
-func (m *workspaceRegistry) readNode(ctx context.Context, in readNodeInput) mcp.ToolResult[readNodeOutput] {
+func (m *workspaceRegistry) readNode(ctx context.Context, req *mcp.ToolRequest[readNodeInput]) mcp.ToolResult[readNodeOutput] {
+	in := req.Arguments
 	id, err := ksid.Parse(in.NodeID)
 	if err != nil || id.IsZero() {
 		return mcp.ToolError[readNodeOutput]("invalid nodeId")
@@ -233,7 +235,8 @@ func nodeDetailFrom(node *content.Node) nodeDetail {
 	}
 }
 
-func (m *workspaceRegistry) updateNode(ctx context.Context, in updateNodeInput) mcp.ToolResult[writeNodeOutput] {
+func (m *workspaceRegistry) updateNode(ctx context.Context, req *mcp.ToolRequest[updateNodeInput]) mcp.ToolResult[writeNodeOutput] {
+	in := req.Arguments
 	id, err := ksid.Parse(in.NodeID)
 	if err != nil || id.IsZero() {
 		return mcp.ToolError[writeNodeOutput]("invalid nodeId")
@@ -248,7 +251,8 @@ func (m *workspaceRegistry) updateNode(ctx context.Context, in updateNodeInput) 
 	return mcp.TypedToolResult(writeNodeOutput{Node: node})
 }
 
-func (m *workspaceRegistry) createNode(ctx context.Context, in createNodeInput) mcp.ToolResult[writeNodeOutput] {
+func (m *workspaceRegistry) createNode(ctx context.Context, req *mcp.ToolRequest[createNodeInput]) mcp.ToolResult[writeNodeOutput] {
+	in := req.Arguments
 	var parentID ksid.ID
 	if in.ParentID != "" {
 		id, err := ksid.Parse(in.ParentID)
@@ -268,7 +272,8 @@ func (m *workspaceRegistry) createNode(ctx context.Context, in createNodeInput) 
 	return mcp.TypedToolResult(writeNodeOutput{Node: node})
 }
 
-func (m *workspaceRegistry) appendNode(ctx context.Context, in appendNodeInput) mcp.ToolResult[writeNodeOutput] {
+func (m *workspaceRegistry) appendNode(ctx context.Context, req *mcp.ToolRequest[appendNodeInput]) mcp.ToolResult[writeNodeOutput] {
+	in := req.Arguments
 	id, err := ksid.Parse(in.NodeID)
 	if err != nil || id.IsZero() {
 		return mcp.ToolError[writeNodeOutput]("invalid nodeId")
@@ -342,7 +347,8 @@ func (m *workspaceRegistry) Resources(ctx context.Context) iter.Seq2[mcp.Resourc
 	}
 }
 
-func (m *workspaceRegistry) ReadResource(ctx context.Context, uri string) (mcp.ResourcesReadResult, error) {
+func (m *workspaceRegistry) ReadResource(ctx context.Context, params *mcp.ResourcesReadParams) (mcp.ResourcesReadResult, error) {
+	uri := params.URI
 	prefix := fmt.Sprintf("mddb://workspaces/%s/nodes/", m.wsID)
 	if !strings.HasPrefix(uri, prefix) {
 		return mcp.ResourcesReadResult{}, mcp.ErrInvalidParams("resource is outside active workspace")

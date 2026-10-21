@@ -3,7 +3,7 @@
 import { test, expect, registerUser, createClient } from "./helpers";
 
 test.describe("Remove Organization Member", () => {
-  test("removing org member cascades to workspace memberships", async ({ page, request }) => {
+  test("responsive member rows allow role changes and cascading removal", async ({ page, request }, testInfo) => {
     // Register owner (user A), onboard to create org+workspace.
     const userA = await registerUser(request, "remove-member-a");
     await page.goto(`/?token=${userA.token}`);
@@ -18,7 +18,7 @@ test.describe("Remove Organization Member", () => {
     expect(wsId).toBeTruthy();
 
     // Register user B (no onboarding needed — they'll be added to A's org).
-    const userB = await registerUser(request, "remove-member-b");
+    const userB = await registerUser(request, "Averylongmembernamewithoutspacesforresponsivememberlayout");
     const clientB = createClient(request, userB.token);
     const meB = await clientB.getMe();
     const userBId = meB.id;
@@ -39,12 +39,28 @@ test.describe("Remove Organization Member", () => {
     // Wait for the members table to load with user B's email.
     await expect(page.getByText(userB.email)).toBeVisible({ timeout: 10000 });
 
-    // Accept the confirmation dialog when it appears.
+    const userBRow = page.getByRole("row").filter({ hasText: userB.email });
+    const table = page.getByRole("table").filter({ has: userBRow });
+    for (const width of [1280, 390, 195]) {
+      await page.setViewportSize({ width, height: 900 });
+      await userBRow.scrollIntoViewIfNeeded();
+      const viewport = await page.evaluate(() => window.innerWidth);
+      for (const element of [table, userBRow, ...(await userBRow.getByRole("cell").all())]) {
+        const box = await element.boundingBox();
+        if (box === null) throw new Error("Member row is not visible");
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport);
+        expect(await element.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      }
+      await page.screenshot({ path: testInfo.outputPath(`member-rows-${width}.png`) });
+    }
+    await userBRow.getByRole("combobox").selectOption("org:admin");
+    await expect
+      .poll(async () => (await clientB.getMe()).organizations?.find((m) => m.organization_id === orgId)?.role)
+      .toBe("org:admin");
+    await page.setViewportSize({ width: 390, height: 900 });
     page.on("dialog", (dialog) => dialog.accept());
-
-    // Click the Remove button in user B's row.
-    const userBRow = page.locator("tr", { hasText: userB.email });
-    const removeButton = userBRow.locator("button", { hasText: "Remove" });
+    const removeButton = userBRow.getByRole("button", { name: "Remove", exact: true });
     await expect(removeButton).toBeVisible({ timeout: 5000 });
     await removeButton.click();
 

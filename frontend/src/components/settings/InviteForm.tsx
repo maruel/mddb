@@ -1,6 +1,8 @@
 // Shared invite form component for workspace and organization settings.
 
 import { createSignal, For, Show } from "solid-js";
+import PersonAddIcon from "@material-symbols/svg-400/outlined/person_add.svg?solid";
+import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
 import styles from "./InviteForm.module.css";
 
@@ -56,9 +58,15 @@ export default function InviteForm<T extends string>(props: InviteFormProps<T>) 
           <select value={role()} onChange={(e) => selectRole(e.target.value)} disabled={props.loading}>
             <For each={props.roleOptions}>{(option) => <option value={option.value}>{option.label}</option>}</For>
           </select>
-          <button type="submit" disabled={props.loading}>
-            {t("common.invite")}
-          </button>
+          <IconButton
+            variant="unstyled"
+            type="submit"
+            disabled={props.loading}
+            aria-label={t("common.invite")}
+            title={t("common.invite")}
+          >
+            <PersonAddIcon aria-hidden="true" />
+          </IconButton>
         </div>
       </form>
 

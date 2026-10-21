@@ -656,7 +656,7 @@ func TestGoModeMCPWriteToolsRequireEditor(t *testing.T) {
 		}
 	}
 	args := json.RawMessage(`{"nodeId":"` + ksid.ID(0).String() + `","title":"x","content":"y"}`)
-	if _, err := viewer.CallTool(t.Context(), "node_update", args); err == nil {
+	if _, err := viewer.CallTool(t.Context(), &mcp.ToolsCallParams{Name: "node_update", Arguments: args}); err == nil {
 		t.Fatal("viewer CallTool(node_update) succeeded, want an error")
 	}
 
