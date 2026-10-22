@@ -110,6 +110,7 @@ export default tseslint.config(
   },
   {
     ignores: [
+      "**/*.module.css.d.ts",
       "frontend/src/*.gen.ts",
       "frontend/src/sw.ts", // Built separately by VitePWA injectManifest
       "frontend/dist/**",

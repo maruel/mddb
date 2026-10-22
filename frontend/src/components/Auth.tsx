@@ -22,9 +22,9 @@ const providerIcons: Record<OAuthProvider, (props: JSX.SvgSVGAttributes<SVGSVGEl
 
 // Provider-specific configuration for OAuth buttons
 const providerConfig: Record<OAuthProvider, { style: string; labelKey: string }> = {
-  [OAuthProviderGoogle]: { style: styles.googleButton ?? "", labelKey: "auth.loginWithGoogle" },
-  [OAuthProviderMicrosoft]: { style: styles.microsoftButton ?? "", labelKey: "auth.loginWithMicrosoft" },
-  [OAuthProviderGitHub]: { style: styles.githubButton ?? "", labelKey: "auth.loginWithGitHub" },
+  [OAuthProviderGoogle]: { style: styles.googleButton, labelKey: "auth.loginWithGoogle" },
+  [OAuthProviderMicrosoft]: { style: styles.microsoftButton, labelKey: "auth.loginWithMicrosoft" },
+  [OAuthProviderGitHub]: { style: styles.githubButton, labelKey: "auth.loginWithGitHub" },
 };
 
 function getProviderConfig(provider: OAuthProvider): { style: string; label: string } {
@@ -33,7 +33,7 @@ function getProviderConfig(provider: OAuthProvider): { style: string; label: str
     return { style: config.style, label: config.labelKey };
   }
   // Fallback for unknown providers: use generic style and capitalize provider name
-  return { style: styles.oauthButton ?? "", label: provider.charAt(0).toUpperCase() + provider.slice(1) };
+  return { style: styles.oauthButton, label: provider.charAt(0).toUpperCase() + provider.slice(1) };
 }
 
 // Create an unauthenticated API client for login/register

@@ -15,6 +15,10 @@ sanitizer.
 dist directory is tracked in git. `make frontend-dev` serves Vite with live reload and proxies the API to
 `localhost:8080`.
 
+CSS Module declarations (`*.module.css.d.ts`) are generated. `make fix` updates
+them; `make verify` and build check freshness. `pnpm dev` watches CSS edits and
+regenerates declarations. Do not edit generated declarations by hand.
+
 ## Routing
 
 The router runs in `explicitLinks` mode: it intercepts only `<A>` from `@solidjs/router`. Use `<A>` for
