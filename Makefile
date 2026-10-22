@@ -5,6 +5,9 @@
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
+FRONTEND_TEST = pnpm exec node --test scripts/css_module_types.test.mjs && NODE_OPTIONS=--no-experimental-webstorage pnpm exec tsx --test --conditions=browser --test-force-exit --test-reporter=./scripts/quiet-test-reporter.mjs --import ./frontend/tests/setup-dom.ts
+FRONTEND_TEST_FILES = "frontend/src/**/*.test.ts" "frontend/src/**/*.test.tsx"
+
 # Static checks for verify, grouped into independent lanes run concurrently by
 # scripts/run-concurrently.sh. Each is read-only; fix applies their autofixes.
 #
@@ -21,8 +24,8 @@ FRONTEND_STAMP=node_modules/.modules.yaml
 # linting must run through the custom binary built from the published plugin
 # module; the plain binary is fine for `fmt`.
 VERIFY_GO = ./custom-gcl run --show-stats=false ./... && go mod tidy -diff
-VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && node scripts/lint_frontend_styles.mjs
-VERIFY_TS = node scripts/css_module_types.mjs --source-path frontend/src && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json
+VERIFY_JS = pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && pnpm exec node scripts/lint_frontend_styles.mjs
+VERIFY_TS = pnpm exec node scripts/css_module_types.mjs --source-path frontend/src && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json
 VERIFY_ESLINT = pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs
 VERIFY_PY = uv run --locked ruff format --check --quiet . && uv run --locked ruff check --quiet .
 VERIFY_SH = files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -d $$files
@@ -82,7 +85,7 @@ dev:
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
-	@pnpm --silent test
+	@$(FRONTEND_TEST) $(FRONTEND_TEST_FILES)
 
 # Slow and opt-in: needs GEMINI_API_KEY and reachable WebRTC UDP. Runs one live
 # Gemini voice turn through the embedded gateway, executes the workspace MCP
@@ -93,15 +96,15 @@ test-smoke-voice:
 # Frontend micro-benchmarks (tinybench) over frontend/src/**/*.bench.ts. Fast;
 # use --save/--compare for JSON baselines when reporting deltas.
 benchmark:
-	@pnpm --silent benchmark
+	@pnpm exec tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'
 
 # End-to-end tests run Playwright, whose webServer starts the e2e server via
 # scripts/run-dev.py --fake on the data-e2e directory. Slow. Server log:
 # data-e2e/server.log; HTML report: playwright-report/. CI runs these; verify
-# and test do not.
+# and test do not. Use `make test-e2e PLAYWRIGHT_ARGS=--ui` for interactive UI.
 test-e2e: test-e2e-go
 	@uv run --locked python scripts/clean_data_e2e.py
-	@pnpm --silent test:e2e; \
+	@pnpm exec playwright test $(PLAYWRIGHT_ARGS); \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
@@ -109,7 +112,7 @@ test-e2e: test-e2e-go
 	  exit $$e2e_exit; \
 	fi
 	@uv run --locked python scripts/verify_e2e_data.py
-	@node e2e/inject-tag-colors.cjs
+	@pnpm exec node e2e/inject-tag-colors.cjs
 
 # The e2e build tag also switches on the Go tests that only exist in that build,
 # which assert what a production binary must not do. Running the whole tagged
@@ -119,7 +122,7 @@ test-e2e-go:
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
-	@pnpm --silent coverage
+	@$(FRONTEND_TEST) --experimental-test-coverage $(FRONTEND_TEST_FILES)
 
 # The one static gate. Runs every check-only lane concurrently; the read-only
 # counterpart of fix and the pre-push gate. Independent of test.
@@ -140,7 +143,7 @@ fix: custom-gcl $(FRONTEND_STAMP)
 	@uv run --locked ruff format . >/dev/null
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || go tool shfmt -w $$files
 	@pnpm exec stylelint --fix "frontend/src/**/*.css"
-	@node scripts/css_module_types.mjs --source-path frontend/src --write
+	@pnpm exec node scripts/css_module_types.mjs --source-path frontend/src --write
 	@uv run --locked python scripts/update_agents_file_index.py
 
 git-hooks:

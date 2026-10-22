@@ -6,7 +6,7 @@
 in parallel; it is the only e2e gate. The tag raises every rate limit 10000x, because the suite registers a
 fresh account per test and would otherwise exhaust the production auth tier. Tests have zero retries, so they
 must be deterministic. Iterate on one test with `pnpm exec playwright test e2e/file.spec.ts:LINE`, and add
-`--trace on` to record a trace.
+`--trace on` to record a trace. Use `make test-e2e PLAYWRIGHT_ARGS=--ui` for interactive UI mode.
 
 The `e2e` build tag also swaps the OAuth providers for fakes that log in deterministic accounts and raises the
 server user quota so every spec can register its own user. A binary built without the tag has none of it, so

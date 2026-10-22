@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Inject custom tag colors and server log link into Playwright HTML report.
-// Usage: node e2e/inject-tag-colors.cjs
+// Usage: pnpm exec node e2e/inject-tag-colors.cjs
 
 const fs = require("fs");
 const path = require("path");
