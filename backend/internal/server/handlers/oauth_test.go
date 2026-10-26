@@ -17,12 +17,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/gomode/oauth/oauthserver"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
 )
 
@@ -273,7 +276,7 @@ func (e *oauthTestEnv) linkIdentity(t *testing.T, u *identity.User, p identity.O
 // wantLoggedIn checks that the login succeeded and returns the account that
 // holds the provider identity.
 func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identity.OAuthProvider, w *httptest.ResponseRecorder) *identity.User {
-	if w.Code != http.StatusFound || !strings.HasPrefix(w.Header().Get("Location"), "/?token=") {
+	if w.Code != http.StatusFound || w.Header().Get("Location") != "/" {
 		t.Fatalf("status = %d, location %q; body %s", w.Code, w.Header().Get("Location"), w.Body)
 	}
 	wantCleared(t, w)
@@ -283,6 +286,33 @@ func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identity.OAuthProvider, w *h
 	}
 	if n := e.sessions(u); n != 1 {
 		t.Errorf("%s sessions = %d, want 1", u.Email, n)
+	}
+	tokenString := ""
+	for _, cookie := range w.Result().Cookies() {
+		if cookie.Name == SessionCookieName {
+			if !cookie.HttpOnly || !cookie.Secure || cookie.Path != "/" || cookie.Domain != "" {
+				t.Fatal("unsafe session cookie attributes")
+			}
+			tokenString = cookie.Value
+		}
+	}
+	if tokenString == "" {
+		t.Fatal("no browser session cookie")
+	}
+	claims := &SessionClaims{}
+	if _, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (any, error) { return e.h.cfg.JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired(), jwt.WithIssuedAt()); err != nil {
+		t.Fatal(err)
+	}
+	sid, err := ksid.Parse(claims.SessionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := e.svc.Session.Get(sid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claims.Subject != u.ID.String() || claims.IssuedAt == nil || claims.Email == "" || session.UserID != u.ID || session.TokenHash != utils.HashToken(tokenString) || session.ExpiresAt.AsTime().Unix() != claims.ExpiresAt.Unix() {
+		t.Fatal("provider credential is not bound to its tracked session")
 	}
 	return u
 }
@@ -406,6 +436,47 @@ type idClaimsCase struct {
 }
 
 func TestNewOAuthHandler(t *testing.T) {
+	t.Run("login destination", func(t *testing.T) {
+		for _, p := range providers {
+			t.Run(string(p), func(t *testing.T) {
+				e := newOAuthTestEnv(t, "https://mddb.example.com")
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"?next=%2Fdevice", http.NoBody)
+				r.SetPathValue("provider", string(p))
+				w := httptest.NewRecorder()
+				e.h.LoginRedirect(w, r)
+				if w.Code != http.StatusTemporaryRedirect {
+					t.Fatalf("start = %d: %s", w.Code, w.Body)
+				}
+				state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
+				changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte("/device")), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
+				if got := e.callback(t, p, changed, cookie); got.Code != http.StatusBadRequest {
+					t.Fatalf("tampered state = %d", got.Code)
+				}
+				result := e.callback(t, p, state, cookie)
+				if result.Code != http.StatusFound || result.Header().Get("Location") != "/device" {
+					t.Fatalf("callback = %d, %q: %s", result.Code, result.Header().Get("Location"), result.Body)
+				}
+			})
+		}
+		for _, path := range []string{"https://evil.example/device", "//evil.example", "/\\evil", "/%5cevil", "/%2fevil", "/%252fevil", "/%00device", "/%0ddevice", "/%7fdevice", "/%", "device"} {
+			t.Run(path, func(t *testing.T) {
+				e := newOAuthTestEnv(t, "https://mddb.example.com")
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/google?next="+url.QueryEscape(path), http.NoBody)
+				r.SetPathValue("provider", "google")
+				w := httptest.NewRecorder()
+				e.h.LoginRedirect(w, r)
+				if w.Code != http.StatusBadRequest || w.Header().Get("Location") != "" || len(w.Result().Cookies()) != 0 {
+					t.Fatalf("unsafe destination = %d, %q, cookies %v", w.Code, w.Header().Get("Location"), w.Result().Cookies())
+				}
+				// Even signed state must pass validation before exchanging credentials.
+				state := loginStatePrefix + base64.RawURLEncoding.EncodeToString([]byte(path)) + ":nonce"
+				cookie := e.h.stateCookie(oauthserver.SignState(state, e.h.stateKey), oauthStateMaxAge)
+				if got := e.callback(t, identity.OAuthProviderGoogle, state, cookie); got.Code != http.StatusBadRequest || e.fake.exchanges.Load() != 0 {
+					t.Fatalf("unsafe signed destination = %d; exchanges = %d", got.Code, e.fake.exchanges.Load())
+				}
+			})
+		}
+	})
 	t.Run("LoginRedirect", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			for _, tc := range []redirectCase{
@@ -488,6 +559,9 @@ func TestNewOAuthHandler(t *testing.T) {
 				} {
 					t.Run(string(tc.p), func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
+						if _, err := e.svc.User.Modify(e.victim.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+							t.Fatal(err)
+						}
 						e.fake.idClaims["email"] = "victim@example.com"
 						for k, v := range tc.apis {
 							e.fake.apis[k] = v
@@ -495,6 +569,21 @@ func TestNewOAuthHandler(t *testing.T) {
 						u := e.wantLoggedIn(t, tc.p, e.login(t, tc.p))
 						if u.ID != e.victim.ID || !u.EmailVerified {
 							t.Errorf("identity on %s, verified %t; want victim@example.com, verified", u.Email, u.EmailVerified)
+						}
+					})
+				}
+			})
+			t.Run("verified provider cannot adopt an unverified password account", func(t *testing.T) {
+				for _, p := range providers {
+					t.Run(string(p), func(t *testing.T) {
+						e := newOAuthTestEnv(t, "http://localhost:8080")
+						e.fake.setEmail(e.victim.Email, true)
+						e.wantRefused(t, e.login(t, p), http.StatusConflict, dto.ErrorCodeEmailNotVerified)
+						if _, err := e.svc.User.Authenticate(e.victim.Email, "password123"); err != nil {
+							t.Fatal("collision changed existing password", err)
+						}
+						if n := e.sessions(e.victim); n != 0 {
+							t.Fatalf("victim sessions = %d, want zero", n)
 						}
 					})
 				}

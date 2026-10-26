@@ -1,5 +1,13 @@
 // E2E tests for mobile-responsive sidebar and UI.
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  getWorkspaceId,
+  fillEditorContent,
+  createClient,
+  gotoWithSession,
+} from "./helpers";
 
 // Use mobile viewport for all tests in this file
 test.use({
@@ -9,7 +17,7 @@ test.use({
 test.describe("Mobile UI - Sidebar Toggle", () => {
   test.screenshot("hamburger menu shows and hides sidebar", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "mobile-sidebar");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
 
     // Wait for app to load
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
@@ -47,7 +55,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
 
   test("clicking backdrop closes mobile sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-backdrop");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
     // Open sidebar
@@ -73,7 +81,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
 
   test("selecting a page closes mobile sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-select");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -111,7 +119,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
 test.describe("Mobile UI - Layout", () => {
   test.screenshot("content area uses full width on mobile", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "mobile-layout");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -144,7 +152,7 @@ test.describe("Mobile UI - Layout", () => {
 
   test("editor works on mobile with virtual keyboard consideration", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-editor");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -195,7 +203,7 @@ test.describe("Mobile UI - Touch Interactions", () => {
 
   test("tap on sidebar node navigates correctly", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-tap");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

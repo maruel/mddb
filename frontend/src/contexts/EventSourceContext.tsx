@@ -25,20 +25,21 @@ const EventSourceCtx = createContext<EventSourceContextValue>();
 let knownRevision: string | null = null;
 
 export const EventSourceProvider: ParentComponent = (props) => {
-  const { user, token } = useAuth();
+  const { user, identity } = useAuth();
   const [lastEvent, setLastEvent] = createSignal<WorkspaceEvent | null>(null);
   const [connected, setConnected] = createSignal(false);
 
   createEffect(() => {
     const wsId = user()?.workspace_id;
-    const t = token();
+    identity();
     const userId = user()?.id;
-    if (!wsId || !t || typeof EventSource === "undefined") {
+    if (!wsId || typeof EventSource === "undefined") {
       setConnected(false);
       return;
     }
 
-    const url = `/api/v1/workspaces/${wsId}/events?token=${encodeURIComponent(t)}`;
+    const sid = user()?.session_id;
+    const url = `/api/v1/workspaces/${wsId}/events${sid ? `?session_id=${encodeURIComponent(sid)}` : ""}`;
     const es = new EventSource(url);
 
     es.onopen = () => setConnected(true);

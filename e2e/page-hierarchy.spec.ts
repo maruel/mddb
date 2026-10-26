@@ -1,5 +1,5 @@
 // E2E tests for page parent-child hierarchy and nesting.
-import { test, expect, registerUser, createClient, getWorkspaceId } from "./helpers";
+import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
 
 test.describe("Page Hierarchy", () => {
   test.screenshot("create and navigate page hierarchy", async ({ page, request, takeScreenshot }) => {
@@ -8,7 +8,7 @@ test.describe("Page Hierarchy", () => {
     const client = createClient(request, token);
 
     // 2. Login via token in URL (simulating OAuth callback flow)
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
 
     // Wait for the app to load and authenticate - sidebar indicates logged in state
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
@@ -109,7 +109,7 @@ test.describe("Page Hierarchy", () => {
     const { token } = await registerUser(request, "delete-gc");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
@@ -183,7 +183,7 @@ test.describe("Page Hierarchy", () => {
     const { token } = await registerUser(request, "delete-child");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
@@ -251,7 +251,7 @@ test.describe("Page Hierarchy", () => {
     const { token } = await registerUser(request, "delete-sib");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
@@ -298,7 +298,7 @@ test.describe("Page Hierarchy", () => {
     const { token } = await registerUser(request, "sibling");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

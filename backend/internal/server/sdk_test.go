@@ -32,7 +32,7 @@ func TestSDKRoutesMatchRouter(t *testing.T) {
 			return true
 		}
 		name, ok := wrapper.Fun.(*ast.Ident)
-		if !ok || !strings.HasPrefix(name.Name, "Wrap") || name.Name == "WrapAuthRaw" {
+		if !ok || !strings.HasPrefix(strings.ToLower(name.Name), "wrap") || name.Name == "WrapAuthRaw" {
 			return true
 		}
 		lit, ok := call.Args[0].(*ast.BasicLit)

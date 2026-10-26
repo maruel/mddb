@@ -1,11 +1,11 @@
 // Verifies live page updates and draft protection for writes from the same account.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("same-account API edits update the open page and preserve unsaved drafts", async ({ page, request }) => {
   const { token } = await registerUser(request, "live-updates");
   const client = createClient(request, token);
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("connection-status")).toHaveText("Connected");
   const wsID = await getWorkspaceId(page);

@@ -1,4 +1,4 @@
-// Handles organization and workspace invitations.
+// Handles invitations granted only to authenticated owners of verified email addresses.
 
 package handlers
 
@@ -9,6 +9,7 @@ import (
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -50,7 +51,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.
 	}
 
 	// Notify the invitee (if they already have an account).
-	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil {
+	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil && invitee.EmailVerified {
 		org, _ := h.Svc.Organization.Get(orgID)
 		orgName := ""
 		if org != nil {
@@ -108,7 +109,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID
 	}
 
 	// Notify the invitee (if they already have an account).
-	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil {
+	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil && invitee.EmailVerified {
 		wsObj, _ := h.Svc.Workspace.Get(wsID)
 		wsName := ""
 		if wsObj != nil {
@@ -131,8 +132,8 @@ func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID ksid.ID,
 }
 
 // AcceptOrgInvitation handles a user accepting an organization invitation.
-// This is a public endpoint (no auth required).
-func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.AcceptInvitationRequest) (*dto.AuthResponse, error) {
+// The invitation token selects a grant; it is not an authentication or email proof.
+func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *identity.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}
@@ -146,17 +147,14 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 		return nil, dto.Expired("invitation")
 	}
 
-	// Create user or link to existing
-	user, err := h.Svc.User.GetByEmail(inv.Email)
+	// Inviters can read the token. Only an independently authenticated account
+	// that already proved this exact address may receive its permissions.
+	user, err = h.Svc.User.Get(user.ID)
 	if err != nil {
-		// Create new user if they don't exist
-		if req.Password == "" || req.Name == "" {
-			return nil, dto.MissingField("password and name required for new account")
-		}
-		user, err = h.Svc.User.Create(inv.Email, req.Password, req.Name)
-		if err != nil {
-			return nil, dto.InternalWithError("Failed to create user", err)
-		}
+		return nil, dto.Unauthorized()
+	}
+	if !user.EmailVerified || user.Email != inv.Email {
+		return nil, dto.NewAPIError(403, dto.ErrorCodeEmailNotVerified, "Sign in with the verified email address this invitation was sent to")
 	}
 
 	// Create organization membership
@@ -169,18 +167,13 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 		slog.Warn("Failed to delete invitation after acceptance", "invitationID", inv.ID, "error", err)
 	}
 
-	// Generate token
-	token, err := h.Cfg.GenerateToken(user)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
-	}
-
 	// Build user response
 	uwm, err := getUserWithMemberships(h.Svc.User, h.Svc.OrgMembership, h.Svc.WSMembership, h.Svc.Organization, h.Svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
+	userResp.SessionID = reqctx.SessionID(ctx)
 
 	// Set active context
 	uwm.populateActiveContext(userResp)
@@ -198,15 +191,12 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 		}
 	}
 
-	return &dto.AuthResponse{
-		Token: token,
-		User:  userResp,
-	}, nil
+	return userResp, nil
 }
 
 // AcceptWSInvitation handles a user accepting a workspace invitation.
-// This is a public endpoint (no auth required).
-func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.AcceptInvitationRequest) (*dto.AuthResponse, error) {
+// The invitation token selects a grant; it is not an authentication or email proof.
+func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identity.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}
@@ -226,17 +216,14 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	// Create user or link to existing
-	user, err := h.Svc.User.GetByEmail(inv.Email)
+	// Inviters can read the token. Only an independently authenticated account
+	// that already proved this exact address may receive its permissions.
+	user, err = h.Svc.User.Get(user.ID)
 	if err != nil {
-		// Create new user if they don't exist
-		if req.Password == "" || req.Name == "" {
-			return nil, dto.MissingField("password and name required for new account")
-		}
-		user, err = h.Svc.User.Create(inv.Email, req.Password, req.Name)
-		if err != nil {
-			return nil, dto.InternalWithError("Failed to create user", err)
-		}
+		return nil, dto.Unauthorized()
+	}
+	if !user.EmailVerified || user.Email != inv.Email {
+		return nil, dto.NewAPIError(403, dto.ErrorCodeEmailNotVerified, "Sign in with the verified email address this invitation was sent to")
 	}
 
 	// Ensure user has org membership (as member if not already)
@@ -256,18 +243,13 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 		slog.Warn("Failed to delete invitation after acceptance", "invitationID", inv.ID, "error", err)
 	}
 
-	// Generate token
-	token, err := h.Cfg.GenerateToken(user)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
-	}
-
 	// Build user response
 	uwm, err := getUserWithMemberships(h.Svc.User, h.Svc.OrgMembership, h.Svc.WSMembership, h.Svc.Organization, h.Svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
+	userResp.SessionID = reqctx.SessionID(ctx)
 
 	// Set active context
 	uwm.populateActiveContext(userResp)
@@ -280,8 +262,5 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 		}
 	}
 
-	return &dto.AuthResponse{
-		Token: token,
-		User:  userResp,
-	}, nil
+	return userResp, nil
 }

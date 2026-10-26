@@ -17,7 +17,7 @@ import styles from "./Onboarding.module.css";
  */
 export default function Onboarding() {
   const { t, ready: i18nReady } = useI18n();
-  const { user, token, login, setUser } = useAuth();
+  const { user, identity, setUser } = useAuth();
   const navigate = useNavigate();
 
   const [done, setDone] = createSignal(false);
@@ -29,8 +29,8 @@ export default function Onboarding() {
   // Run first-login flow
   createEffect(() => {
     const u = user();
-    const initialToken = token();
-    if (!u || !initialToken || !i18nReady() || running() || done() || error()) return;
+    const initialIdentity = identity();
+    if (!u || !i18nReady() || running() || done() || error()) return;
 
     // If user already has a workspace, redirect
     if (u.workspace_id) {
@@ -43,21 +43,16 @@ export default function Onboarding() {
     (async () => {
       try {
         const firstName = u.name.split(" ")[0] || u.name;
-        const result = await provisionFirstWorkspace(
-          u.id,
-          createApi(() => initialToken),
-          {
-            organization: (firstName
-              ? t("onboarding.defaultOrgName", { name: firstName })
-              : t("onboarding.defaultOrgNameFallback")) as string,
-            workspace: (firstName
-              ? t("onboarding.defaultWorkspaceName", { name: firstName })
-              : t("onboarding.defaultWorkspaceNameFallback")) as string,
-          },
-        );
-        if (token() !== initialToken) return;
-        if (result.token) login(result.token, result.user);
-        else setUser(result.user);
+        const result = await provisionFirstWorkspace(u.id, createApi(undefined, u.session_id), {
+          organization: (firstName
+            ? t("onboarding.defaultOrgName", { name: firstName })
+            : t("onboarding.defaultOrgNameFallback")) as string,
+          workspace: (firstName
+            ? t("onboarding.defaultWorkspaceName", { name: firstName })
+            : t("onboarding.defaultWorkspaceNameFallback")) as string,
+        });
+        if (identity() !== initialIdentity) return;
+        setUser(result.user);
         if (result.user.workspace_id)
           navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name), { replace: true });
         setDone(true);

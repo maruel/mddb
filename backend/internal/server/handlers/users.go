@@ -7,6 +7,7 @@ import (
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -202,7 +203,9 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.Use
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
-	return userWithMembershipsToResponse(uwm), nil
+	response := userWithMembershipsToResponse(uwm)
+	response.SessionID = reqctx.SessionID(ctx)
+	return response, nil
 }
 
 // bestAvatarURL returns the first non-empty avatar URL from a user's OAuth identities.

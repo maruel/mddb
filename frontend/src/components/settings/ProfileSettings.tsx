@@ -1,15 +1,16 @@
-// User profile settings panel for managing personal preferences.
+// User profile settings panel for personal preferences, linked accounts, and revocable sessions.
 
 import { createSignal, createEffect, onMount, Show, For } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
 import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
-import { useAuth } from "../../contexts";
+import { useAuth, useAuthScope } from "../../contexts";
 import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
 import { IconButton } from "../shared";
 import { useI18n, type Locale } from "../../i18n";
 import { settingsUrl } from "../../utils/urls";
 import LinkedAccountsSection from "./LinkedAccountsSection";
+import SessionsSection from "./SessionsSection";
 import PasswordSection from "./PasswordSection";
 import NotificationSettings from "./NotificationSettings";
 import styles from "./ProfileSettings.module.css";
@@ -19,6 +20,7 @@ export default function ProfileSettings() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, api, refreshUser } = useAuth();
+  const captureScope = useAuthScope();
 
   const [theme, setTheme] = createSignal("light");
   const [language, setLanguage] = createSignal("en");
@@ -73,6 +75,7 @@ export default function ProfileSettings() {
   });
 
   const savePersonalSettings = async (e: Event) => {
+    const isCurrent = captureScope();
     e.preventDefault();
 
     try {
@@ -86,11 +89,13 @@ export default function ProfileSettings() {
       };
 
       await api().updateUserSettings({ settings: userSettings });
+      if (!isCurrent()) return;
 
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
       await refreshUser();
+      if (!isCurrent()) return;
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
@@ -217,6 +222,7 @@ export default function ProfileSettings() {
             <PasswordSection hasPassword={u().has_password ?? false} onSuccess={setSuccess} onError={setError} />
 
             <NotificationSettings />
+            <SessionsSection />
           </>
         )}
       </Show>

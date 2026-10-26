@@ -3,7 +3,7 @@
 import { createSignal, createEffect, Show, For } from "solid-js";
 import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from "@sdk/types.gen";
 import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
-import { useAuth } from "../contexts";
+import { useAuth, useAuthScope } from "../contexts";
 import { slugify } from "../utils/urls";
 import styles from "./UserProfile.module.css";
 import { useI18n, type Locale } from "../i18n";
@@ -16,6 +16,7 @@ interface UserProfileProps {
 export default function UserProfile(props: UserProfileProps) {
   const { t, setLocale } = useI18n();
   const { user, api, wsApi, refreshUser } = useAuth();
+  const captureScope = useAuthScope();
 
   // Personal Settings states
   const [theme, setTheme] = createSignal("light");
@@ -80,6 +81,7 @@ export default function UserProfile(props: UserProfileProps) {
   });
 
   const savePersonalSettings = async (e: Event) => {
+    const isCurrent = captureScope();
     e.preventDefault();
     const ws = wsApi();
 
@@ -104,11 +106,13 @@ export default function UserProfile(props: UserProfileProps) {
       }
 
       await Promise.all(promises);
+      if (!isCurrent()) return;
 
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
       await refreshUser();
+      if (!isCurrent()) return;
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {

@@ -41,7 +41,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identity.Use
 		if err == nil {
 			resp.AssetURLs = make(map[string]string)
 			for a := range it {
-				resp.AssetURLs[a.Name] = h.Cfg.GenerateSignedAssetURL(wsID, req.ID, a.Name)
+				resp.AssetURLs[a.Name] = h.Cfg.GenerateSignedAssetURL(ctx, wsID, req.ID, a.Name)
 			}
 		}
 	}
@@ -165,11 +165,11 @@ func (h *NodeHandler) ListNodeAssets(ctx context.Context, wsID ksid.ID, _ *ident
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
 	assets := slices.Collect(it)
-	return &dto.ListNodeAssetsResponse{Assets: h.assetsToSummaries(assets, wsID, req.NodeID)}, nil
+	return &dto.ListNodeAssetsResponse{Assets: h.assetsToSummaries(ctx, assets, wsID, req.NodeID)}, nil
 }
 
 // assetsToSummaries converts assets to DTOs with signed URLs.
-func (h *NodeHandler) assetsToSummaries(assets []*content.Asset, wsID, nodeID ksid.ID) []dto.AssetSummary {
+func (h *NodeHandler) assetsToSummaries(ctx context.Context, assets []*content.Asset, wsID, nodeID ksid.ID) []dto.AssetSummary {
 	result := make([]dto.AssetSummary, len(assets))
 	for i, a := range assets {
 		result[i] = dto.AssetSummary{
@@ -178,7 +178,7 @@ func (h *NodeHandler) assetsToSummaries(assets []*content.Asset, wsID, nodeID ks
 			Size:     a.Size,
 			MimeType: a.MimeType,
 			Created:  a.Created,
-			URL:      h.Cfg.GenerateSignedAssetURL(wsID, nodeID, a.Name),
+			URL:      h.Cfg.GenerateSignedAssetURL(ctx, wsID, nodeID, a.Name),
 		}
 	}
 	return result

@@ -1,10 +1,11 @@
-// Handles active user sessions and token management.
+// Persists active host sessions, expiry, and credential revocation.
 
 package identity
 
 import (
 	"errors"
 	"iter"
+	"sync"
 	"time"
 
 	"github.com/maruel/ksid"
@@ -53,6 +54,9 @@ func (s *Session) Validate() error {
 
 // SessionService handles session management.
 type SessionService struct {
+	// creationMu serializes quota checking and insertion for concurrent logins.
+	creationMu sync.Mutex
+
 	table    *jsonldb.Table[*Session]
 	byUserID *jsonldb.Index[ksid.ID, *Session]
 }
@@ -76,7 +80,10 @@ func (s *SessionService) Create(userID ksid.ID, tokenHash, deviceInfo, ipAddress
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
 // maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
+// A row installed before a persistence error is returned alongside that error for cleanup.
 func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+	s.creationMu.Lock()
+	defer s.creationMu.Unlock()
 	if id.IsZero() {
 		return nil, errSessionIDRequired
 	}
@@ -111,8 +118,13 @@ func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo,
 		ExpiresAt:   expiresAt,
 	}
 
+	if s.table.Get(id) != nil {
+		return nil, errors.New("session already exists")
+	}
 	if err := s.table.Append(session); err != nil {
-		return nil, err
+		// Append can install the row before a deferred file close reports failure.
+		// The caller needs that handle to audit and revoke the partial creation.
+		return s.table.Get(id), err
 	}
 	return session.Clone(), nil
 }
@@ -201,21 +213,6 @@ func (s *SessionService) UpdateLastUsed(id ksid.ID) error {
 		return nil
 	})
 	return err
-}
-
-// IsValid checks if a session is valid (not revoked and not expired).
-func (s *SessionService) IsValid(id ksid.ID) (bool, error) {
-	session := s.table.Get(id)
-	if session == nil {
-		return false, errSessionNotFound
-	}
-	if !session.RevokedAt.IsZero() {
-		return false, nil
-	}
-	if session.ExpiresAt.Before(storage.Now()) {
-		return false, nil
-	}
-	return true, nil
 }
 
 // CleanupExpired removes sessions that have been expired for more than the given duration.

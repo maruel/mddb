@@ -57,8 +57,13 @@ export default function UserMenu(props: UserMenuProps) {
 
   const handleLogout = async () => {
     setIsOpen(false);
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+      navigate("/");
+    } catch {
+      // AuthProvider owns the error because this menu unmounts on identity changes.
+      return;
+    }
   };
 
   const handleProfile = () => {

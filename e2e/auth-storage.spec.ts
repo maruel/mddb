@@ -1,6 +1,6 @@
-// Verifies that a token change in another tab replaces the visible account and workspace.
+// Verifies that a cookie account change in another tab replaces the visible account and workspace.
 
-import { createClient, expect, getWorkspaceId, registerUser, test } from "./helpers";
+import { createClient, expect, getWorkspaceId, registerUser, test, gotoWithSession } from "./helpers";
 
 test("another tab signing in replaces the current account and workspace", async ({ page, context, request }) => {
   const first = await registerUser(request, "storage-first");
@@ -8,15 +8,20 @@ test("another tab signing in replaces the current account and workspace", async 
   const secondClient = createClient(request, second.token);
   const org = await secondClient.createOrganization({ name: "Second Account" });
   const workspace = await secondClient.org(org.id).createWorkspace({ name: "Second Workspace" });
-  const secondSession = await secondClient.switchWorkspace({ ws_id: workspace.id });
+  await secondClient.switchWorkspace({ ws_id: workspace.id });
 
-  await page.goto(`/?token=${first.token}`);
+  await gotoWithSession(page, first.token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   const firstWorkspace = await getWorkspaceId(page);
   await expect(page.getByTestId("user-menu-button")).toHaveAttribute("title", "storage-first Test User");
 
   const otherTab = await context.newPage();
-  await otherTab.goto(`/?token=${secondSession.token}`);
+  await otherTab.goto("/");
+  await otherTab.getByTestId("user-menu-button").click();
+  await otherTab.getByRole("menuitem", { name: "Logout", exact: true }).click();
+  await otherTab.getByLabel("Email", { exact: true }).fill(second.email);
+  await otherTab.getByLabel("Password", { exact: true }).fill("testpassword123");
+  await otherTab.getByRole("button", { name: "Login", exact: true }).click();
   await expect(otherTab.locator("aside")).toBeVisible({ timeout: 15000 });
   const secondWorkspace = await getWorkspaceId(otherTab);
   expect(secondWorkspace).not.toBe(firstWorkspace);
@@ -31,7 +36,7 @@ test("two tabs provision one organization, workspace, and welcome page", async (
   const { token } = await registerUser(request, "storage-first-login");
   const otherTab = await context.newPage();
 
-  await Promise.all([page.goto(`/?token=${token}`), otherTab.goto(`/?token=${token}`)]);
+  await Promise.all([gotoWithSession(page, token), gotoWithSession(otherTab, token)]);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   await expect(otherTab.locator("aside")).toBeVisible({ timeout: 15000 });
   const workspaceId = await getWorkspaceId(page);

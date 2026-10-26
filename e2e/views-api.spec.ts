@@ -1,6 +1,6 @@
 // E2E tests for table views API: filters, sorts, and view CRUD.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse } from "../sdk/types.gen";
 
 test.describe("Table Views API", () => {
@@ -8,7 +8,7 @@ test.describe("Table Views API", () => {
     const { token } = await registerUser(request, "views-api");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
 
@@ -60,7 +60,7 @@ test.describe("Table Views API", () => {
     const { token } = await registerUser(request, "views-sort-api");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
 
@@ -122,7 +122,7 @@ test.describe("Table Views API", () => {
     const { token } = await registerUser(request, "views-sort-persist");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
 
@@ -152,7 +152,7 @@ test.describe("Table Views API", () => {
     const { token } = await registerUser(request, "views-filter-sort");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
 

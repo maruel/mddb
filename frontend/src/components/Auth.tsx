@@ -10,7 +10,9 @@ import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "./OAuthIcons";
 import { useI18n } from "../i18n";
 
 interface AuthProps {
-  onLogin: (token: string, user: UserResponse) => void;
+  hideDeviceLogin?: boolean;
+  returnPath?: string;
+  onLogin: (user: UserResponse) => void;
 }
 
 // Map providers to their icon components
@@ -67,11 +69,11 @@ export default function Auth(props: AuthProps) {
 
     try {
       const data = isRegister()
-        ? await api.register({ email: email(), password: password(), name: name() })
-        : await api.login({ email: email(), password: password() });
+        ? await api.browserRegister({ email: email(), password: password(), name: name() })
+        : await api.browserLogin({ email: email(), password: password() });
 
-      if (data.token && data.user) {
-        props.onLogin(data.token, data.user);
+      if (typeof data.id === "string") {
+        props.onLogin(data);
       } else {
         setError("Invalid response from server");
       }
@@ -90,6 +92,9 @@ export default function Auth(props: AuthProps) {
     <div class={styles.authContainer}>
       <form class={styles.authForm} onSubmit={handleSubmit}>
         <h2>{isRegister() ? t("auth.createAccount") : t("auth.loginTitle")}</h2>
+        <Show when={!props.hideDeviceLogin}>
+          <A href="/device-login">{t("deviceLogin.start")}</A>
+        </Show>
 
         {error() && <div class={styles.error}>{error()}</div>}
 
@@ -101,7 +106,11 @@ export default function Auth(props: AuthProps) {
                 const isKnown = provider in providerConfig;
                 const Icon = providerIcons[provider];
                 return (
-                  <a href={`/api/v1/auth/oauth/${provider}`} class={config.style} target="_self">
+                  <a
+                    href={`/api/v1/auth/oauth/${provider}${props.returnPath ? `?next=${encodeURIComponent(props.returnPath)}` : ""}`}
+                    class={config.style}
+                    target="_self"
+                  >
                     {Icon && <Icon class={styles.oauthIcon} />}
                     {isKnown ? t(config.label) : config.label}
                   </a>

@@ -1,5 +1,5 @@
 // Browser coverage for lazy Pele diagrams, editable source, safe fallback, and history disclosure.
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 // Isolate application imports from the service worker's background asset precache.
 test.use({ serviceWorkers: "block" });
@@ -17,7 +17,7 @@ for (const width of [390, 1280]) {
     });
     const { token } = await registerUser(request, "pele");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("header")).toBeVisible({ timeout: 15000 });
     expect(rendererRequests).toEqual([]);
     const ws = client.ws(await getWorkspaceId(page));

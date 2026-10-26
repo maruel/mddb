@@ -13,7 +13,7 @@ import { voiceResourceNotice } from "./voiceResources";
 import styles from "./VoicePanel.module.css";
 
 export default function VoicePanel(props: { endpoints: VoiceEndpoints; resourceSubscriptions?: string[] }) {
-  const { token } = useAuth();
+  const { identity, user } = useAuth();
   const { t } = useI18n();
   // Translate every label gomode defines, so a gomode upgrade that adds labels
   // needs only dictionary entries; VoicePanel.test.ts requires them.
@@ -26,13 +26,20 @@ export default function VoicePanel(props: { endpoints: VoiceEndpoints; resourceS
   };
 
   onMount(() => {
-    configureMcpClient(props.endpoints.mcpEndpoint, "mddb-frontend", token);
+    const expectedSession = user()?.session_id;
+    const mcpEndpoint = new URL(props.endpoints.mcpEndpoint, window.location.origin);
+    if (expectedSession) mcpEndpoint.searchParams.set("session_id", expectedSession);
+    configureMcpClient(mcpEndpoint.href, "mddb-frontend");
     const endpoint = props.endpoints.tokenEndpoint;
+    const headers = (): HeadersInit => (expectedSession ? { "X-MDDB-Session": expectedSession } : {});
     if (endpoint === null) {
-      configureVoiceGateway(props.endpoints.gatewayURL, null, token);
+      configureVoiceGateway(props.endpoints.gatewayURL, null, undefined, headers);
     } else {
-      configureVoiceGateway(props.endpoints.gatewayURL, () =>
-        voiceAuthorization(endpoint, token(), t("voice.authorizationFailed")),
+      configureVoiceGateway(
+        props.endpoints.gatewayURL,
+        () => voiceAuthorization(endpoint, t("voice.authorizationFailed"), expectedSession),
+        undefined,
+        headers,
       );
     }
   });
@@ -43,6 +50,7 @@ export default function VoicePanel(props: { endpoints: VoiceEndpoints; resourceS
   let subscription: McpResourceSubscription | null = null;
   let subscriptionKey = "";
   createEffect(() => {
+    identity();
     const uris = props.resourceSubscriptions ?? [];
     const key = uris.join("\n");
     if (key === subscriptionKey) return;

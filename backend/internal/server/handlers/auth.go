@@ -48,30 +48,36 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid credentials")
 	}
 
-	// Get request metadata from context
-	clientIP := reqctx.ClientIP(ctx)
-	userAgent := reqctx.UserAgent(ctx)
-	countryCode := reqctx.CountryCode(ctx)
-
-	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent, countryCode)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
+	response, sid, err := h.IssueSession(ctx, user)
+	if err != nil && sid != 0 {
+		err = errors.Join(err, h.svc.Session.Revoke(sid))
 	}
+	return response, err
+}
 
+// IssueSession builds the account response, then issues its tracked credential and session ID.
+// A nonzero ID on error must be revoked; no account response is returned in that case.
+func (h *AuthHandler) IssueSession(ctx context.Context, user *identity.User) (*dto.AuthResponse, ksid.ID, error) {
 	// Build user response
 	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to get user response", err)
+		return nil, 0, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Set active context to first org/workspace
 	uwm.populateActiveContext(userResp)
 
+	token, sid, err := h.cfg.IssueToken(h.svc.Session, user, reqctx.ClientIP(ctx), reqctx.UserAgent(ctx), reqctx.CountryCode(ctx))
+	if err != nil {
+		return nil, sid, dto.InternalWithError("Failed to generate token", err)
+	}
+
+	userResp.SessionID = sid
 	return &dto.AuthResponse{
 		Token: token,
 		User:  userResp,
-	}, nil
+	}, sid, nil
 }
 
 // Register handles user registration.
@@ -96,32 +102,20 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, dto.InternalWithError("Failed to create user", err)
 	}
 
-	// Get request metadata from context
-	clientIP := reqctx.ClientIP(ctx)
-	userAgent := reqctx.UserAgent(ctx)
-	countryCode := reqctx.CountryCode(ctx)
-
-	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent, countryCode)
+	response, sid, err := h.IssueSession(ctx, user)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
+		if sid != 0 {
+			err = errors.Join(err, h.svc.Session.Revoke(sid))
+		}
+		return nil, err
 	}
-
-	// Build user response (will have empty memberships for new users)
-	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to get user response", err)
-	}
-	userResp := userWithMembershipsToResponse(uwm)
 
 	// Send verification email if SMTP is configured (use default locale for new users)
 	if h.svc.Email != nil && h.svc.EmailVerif != nil {
 		h.sendVerificationEmailAsync(ctx, user.ID, user.Email, user.Name, email.DefaultLocale)
 	}
 
-	return &dto.AuthResponse{
-		Token: token,
-		User:  userResp,
-	}, nil
+	return response, nil
 }
 
 // GetMe returns the current user info.
@@ -132,6 +126,7 @@ func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.G
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
+	userResp.SessionID = reqctx.SessionID(ctx)
 
 	// Populate active context
 	uwm.populateActiveContext(userResp)
@@ -184,10 +179,6 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 // Logout revokes the current session.
 func (h *AuthHandler) Logout(ctx context.Context, _ *identity.User, _ *dto.LogoutRequest) (*dto.LogoutResponse, error) {
 	sessionID := reqctx.SessionID(ctx)
-	if sessionID.IsZero() {
-		return &dto.LogoutResponse{Ok: true}, nil
-	}
-
 	if err := h.svc.Session.Revoke(sessionID); err != nil {
 		slog.ErrorContext(ctx, "Failed to revoke session", "error", err, "session_id", sessionID)
 		return nil, dto.InternalWithError("Failed to logout", err)
@@ -202,15 +193,7 @@ func (h *AuthHandler) ListSessions(ctx context.Context, user *identity.User, _ *
 
 	sessions := make([]dto.SessionResponse, 0, 8)
 	for session := range h.svc.Session.GetActiveByUserID(user.ID) {
-		sessions = append(sessions, dto.SessionResponse{
-			ID:          session.ID,
-			DeviceInfo:  session.DeviceInfo,
-			IPAddress:   session.IPAddress,
-			CountryCode: session.CountryCode,
-			Created:     session.Created,
-			LastUsed:    session.LastUsed,
-			IsCurrent:   session.ID == currentSessionID,
-		})
+		sessions = append(sessions, dto.SessionResponse{ID: session.ID, DeviceInfo: session.DeviceInfo, IPAddress: session.IPAddress, CountryCode: session.CountryCode, Created: session.Created, LastUsed: session.LastUsed, IsCurrent: session.ID == currentSessionID, ExpiresAt: session.ExpiresAt})
 	}
 
 	return &dto.ListSessionsResponse{Sessions: sessions}, nil

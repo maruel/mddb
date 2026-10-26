@@ -7,6 +7,7 @@ import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
 import AppErrorBoundary from "./components/ErrorBoundary";
 import PWAInstallBanner from "./components/PWAInstallBanner";
 import Auth from "./components/Auth";
+import { DeviceLoginRoute, DeviceApprovalRoute } from "./gomode/DeviceLogin";
 import Privacy from "./components/Privacy";
 import Terms from "./components/Terms";
 import Onboarding from "./sections/Onboarding";
@@ -145,9 +146,19 @@ const WorkspaceSectionWithAuth: ParentComponent = (props) => {
 // App routes wrapped in router
 function AppRoutes() {
   return (
-    <Router explicitLinks>
+    <Router
+      explicitLinks
+      root={(props) => (
+        <>
+          {props.children}
+          <PWAInstallBanner />
+        </>
+      )}
+    >
       {/* Public routes */}
       <Route path="/login" component={AuthRoute} />
+      <Route path="/device-login" component={DeviceLoginRoute} />
+      <Route path="/device" component={DeviceApprovalRoute} />
       <Route
         path="/onboarding"
         component={() => (
@@ -207,7 +218,6 @@ export default function App() {
     <AppErrorBoundary>
       <AuthProvider>
         <AppRoutes />
-        <PWAInstallBanner />
       </AuthProvider>
     </AppErrorBoundary>
   );

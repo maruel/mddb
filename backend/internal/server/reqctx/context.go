@@ -1,4 +1,4 @@
-// Defines request context keys and helper functions for metadata access.
+// Carries host request metadata, validated identity, and parent-session metadata through request contexts.
 
 // Package reqctx provides request context utilities for passing request metadata.
 package reqctx
@@ -88,6 +88,7 @@ const (
 	keyUserAgent   contextKey = "userAgent"
 	keyCountryCode contextKey = "countryCode"
 	keySessionID   contextKey = "sessionID"
+	keySession     contextKey = "session"
 	keyTokenString contextKey = "tokenString"
 	keyUser        contextKey = "user"
 	keyRequestID   contextKey = "requestID"
@@ -184,4 +185,15 @@ func User(ctx context.Context) *identity.User {
 		return v
 	}
 	return nil
+}
+
+// WithSession binds the validated host session to downstream authorization and asset links.
+func WithSession(ctx context.Context, session *identity.Session) context.Context {
+	return context.WithValue(ctx, keySession, session)
+}
+
+// Session returns the host session validated for this request, if any.
+func Session(ctx context.Context) *identity.Session {
+	session, _ := ctx.Value(keySession).(*identity.Session)
+	return session
 }

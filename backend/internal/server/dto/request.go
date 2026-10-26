@@ -866,23 +866,16 @@ func (r *ListWSInvitationsRequest) Validate() error {
 	return nil
 }
 
-// AcceptInvitationRequest is a request to accept an invitation.
+// AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+// Invitation tokens never authenticate a user or issue a session.
 type AcceptInvitationRequest struct {
-	Token    string `json:"token"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
+	Token string `json:"token"`
 }
 
 // Validate validates the accept invitation request fields.
 func (r *AcceptInvitationRequest) Validate() error {
 	if r.Token == "" {
 		return MissingField("token")
-	}
-	if r.Password == "" {
-		return MissingField("password")
-	}
-	if r.Name == "" {
-		return MissingField("name")
 	}
 	return nil
 }

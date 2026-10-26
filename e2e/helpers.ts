@@ -42,6 +42,24 @@ export function createClient(request: APIRequestContext, token?: string): APICli
   return createApiClient(fetchFn);
 }
 
+// Installs a normal API-issued credential as the host cookie for unrelated UI
+// fixtures. Browser credential tests exercise the actual login form separately.
+export async function gotoWithSession(page: Page, token: string, path?: string) {
+  const serviceURL = String(test.info().project.use.baseURL);
+  await page.context().addCookies([
+    {
+      name: "__Host-mddb_session",
+      value: token,
+      domain: new URL(serviceURL).hostname,
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+    },
+  ]);
+  await page.goto(path ?? "/");
+}
+
 // Helper to register a user and get token (with retry for rate limiting)
 export async function registerUser(request: APIRequestContext, prefix: string) {
   const email = `${prefix}-${Date.now()}@example.com`;

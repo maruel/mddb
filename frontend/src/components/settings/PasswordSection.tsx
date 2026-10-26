@@ -1,7 +1,7 @@
 // Password management section for adding or changing password.
 
 import { createSignal, Show } from "solid-js";
-import { useAuth } from "../../contexts";
+import { useAuth, useAuthScope } from "../../contexts";
 import { useI18n } from "../../i18n";
 import styles from "./PasswordSection.module.css";
 
@@ -14,6 +14,7 @@ interface Props {
 export default function PasswordSection(props: Props) {
   const { t } = useI18n();
   const { api } = useAuth();
+  const captureScope = useAuthScope();
 
   const [currentPassword, setCurrentPassword] = createSignal("");
   const [newPassword, setNewPassword] = createSignal("");
@@ -21,6 +22,7 @@ export default function PasswordSection(props: Props) {
   const [loading, setLoading] = createSignal(false);
 
   const handleSubmit = async (e: Event) => {
+    const isCurrent = captureScope();
     e.preventDefault();
 
     // Validate passwords match
@@ -35,6 +37,7 @@ export default function PasswordSection(props: Props) {
         current_password: props.hasPassword ? currentPassword() : undefined,
         new_password: newPassword(),
       });
+      if (!isCurrent()) return;
 
       // Clear form
       setCurrentPassword("");

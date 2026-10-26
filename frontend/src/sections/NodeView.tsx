@@ -12,7 +12,7 @@ import { AddColumnDropdown } from "../components/table/AddColumnDropdown";
 import MarkdownPreview from "../components/MarkdownPreview";
 import { PageHeader } from "../components/editor/PageHeader";
 import { useAssetUpload } from "../components/editor/useAssetUpload";
-import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from "../contexts";
+import { useAuthScope, useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from "../contexts";
 import { useI18n } from "../i18n";
 import { nodeUrl, stripSlug } from "../utils/urls";
 import { relativeLinksToSpaUrls } from "../utils/markdown-utils";
@@ -28,11 +28,13 @@ export default function NodeView() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const params = useParams<{ wsId: string; nodeId: string }>();
-  const { user, token, wsApi } = useAuth();
+  const { user, wsApi } = useAuth();
+  const captureScope = useAuthScope();
   const {
     selectedNodeId,
     selectedNodeData,
     setSelectedNodeData,
+    savingNodeId,
     setSavingNodeId,
     setLoadError,
     setSaveError,
@@ -59,14 +61,15 @@ export default function NodeView() {
     handleCoverChange,
   } = useEditor();
 
+  const coverSession = user()?.session_id;
   const coverUpload = useAssetUpload({
+    sessionID: coverSession,
     get wsId() {
       return user()?.workspace_id ?? "";
     },
     get nodeId() {
       return selectedNodeId() ?? "";
     },
-    getToken: () => token(),
   });
   const {
     records,
@@ -85,6 +88,14 @@ export default function NodeView() {
 
   const [previewContent, setPreviewContent] = createSignal<string | null>(null);
   const [previewCommit, setPreviewCommit] = createSignal<Commit | null>(null);
+  const [_loadingPreview, setLoadingPreview] = createSignal(false);
+  let previewRequest = 0;
+  const clearPreview = () => {
+    previewRequest++;
+    setLoadingPreview(false);
+    setPreviewContent(null);
+    setPreviewCommit(null);
+  };
   const [openRecordId, setOpenRecordId] = createSignal<string | null>(null);
 
   // Derive view type from active view in RecordsContext
@@ -102,6 +113,7 @@ export default function NodeView() {
       () => stripSlug(params.nodeId),
       () => {
         setViewParamApplied(false);
+        clearPreview();
       },
     ),
   );
@@ -152,46 +164,40 @@ export default function NodeView() {
     if (nodeId && nodeId !== selectedNodeId()) {
       flushAutoSave();
       loadNode(nodeId, { refresh: false });
-      setPreviewContent(null);
-      setPreviewCommit(null);
     }
   });
 
-  // Clear preview when history is hidden, and auto-load first item when shown
-  createEffect(() => {
-    if (!showHistory()) {
-      setPreviewContent(null);
-      setPreviewCommit(null);
-    } else if (history().length > 0 && !previewCommit()) {
+  // Opening history loads its first version; dismissing a preview must not reopen it.
+  createEffect(
+    on([showHistory, history], ([visible, commits]) => {
+      clearPreview();
       const id = selectedNodeId();
-      const first = history()[0];
-      if (id && first) {
-        loadPreview(id, first);
-      }
-    }
-  });
-
-  // Local loading state for preview (operation-specific) - can be used for UI feedback
-  const [_loadingPreview, setLoadingPreview] = createSignal(false);
+      const first = commits[0];
+      if (visible && id && first) void loadPreview(id, first);
+    }),
+  );
 
   async function updateTableProperties(nodeId: string, updatedProperties: Property[]) {
+    const isCurrent = captureScope();
     const nodeData = selectedNodeData();
     const ws = wsApi();
-    if (!nodeData || !ws) return;
+    if (!nodeData || nodeData.id !== nodeId || selectedNodeId() !== nodeId || !ws) return;
+    const ownsNode = () => isCurrent() && selectedNodeId() === nodeId && selectedNodeData() === nodeData;
     try {
       setSavingNodeId(nodeId);
       await ws.updateTable(nodeId, {
         title: nodeData.title,
         properties: updatedProperties,
       });
+      if (!ownsNode()) return;
       // Update selectedNodeData directly — loadNode() skips re-fetching the current node
       // due to a loadedNodeId guard, so we apply the new properties optimistically.
       setSelectedNodeData({ ...nodeData, properties: updatedProperties });
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      if (ownsNode()) setSaveError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
-      setSavingNodeId(null);
+      if (isCurrent() && savingNodeId() === nodeId) setSavingNodeId(null);
     }
   }
 
@@ -242,32 +248,44 @@ export default function NodeView() {
     await updateTableProperties(nodeId, currentProperties);
   }
 
-  async function handleUploadCover(file: File): Promise<string> {
+  async function handleUploadCover(file: File): Promise<void> {
+    const isCurrent = captureScope();
+    const nodeId = selectedNodeId();
     const result = await coverUpload.uploadFile(file);
+    if (!isCurrent() || selectedNodeId() !== nodeId) return;
     if (!result) {
       const err = coverUpload.error();
       if (err) setSaveError(err);
-      return "";
+      return;
     }
-    // Reload node to get updated asset URLs
-    const nodeId = selectedNodeId();
+    await handleCoverChange(result.name);
+    if (!isCurrent() || selectedNodeId() !== nodeId) return;
+    // Reload the originating node to get updated asset URLs
     if (nodeId) loadNode(nodeId, { refresh: false });
-    return result.name;
   }
 
   async function loadPreview(nodeId: string, commit: Commit) {
+    const isCurrent = captureScope();
     const ws = wsApi();
-    if (!ws) return;
+    const wsId = user()?.workspace_id;
+    if (!ws || !wsId || !showHistory() || selectedNodeId() !== nodeId || stripSlug(params.nodeId) !== nodeId) return;
+    const request = ++previewRequest;
+    const ownsPreview = () =>
+      isCurrent() &&
+      request === previewRequest &&
+      showHistory() &&
+      selectedNodeId() === nodeId &&
+      stripSlug(params.nodeId) === nodeId;
     try {
       setLoadingPreview(true);
       const data = await ws.getNodeVersion(nodeId, commit.hash);
-      const wsId = user()?.workspace_id || "";
+      if (!ownsPreview()) return;
       setPreviewContent(relativeLinksToSpaUrls(data.content || "", wsId));
       setPreviewCommit(commit);
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (ownsPreview()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
-      setLoadingPreview(false);
+      if (ownsPreview()) setLoadingPreview(false);
     }
   }
 
@@ -388,8 +406,8 @@ export default function NodeView() {
                     assetUrls={assetUrls()}
                     linkedNodeTitles={linkedNodeTitles()}
                     onChange={handleContentChange}
+                    sessionID={user()?.session_id}
                     wsId={user()?.workspace_id}
-                    getToken={() => token()}
                     onAssetUploaded={() => {
                       const nodeId = selectedNodeId();
                       if (nodeId) loadNode(nodeId, { refresh: false });
@@ -502,13 +520,7 @@ export default function NodeView() {
                     {previewCommit()?.author_name} • {new Date(previewCommit()?.timestamp || 0).toLocaleString()}
                   </span>
                 </div>
-                <button
-                  onClick={() => {
-                    setPreviewContent(null);
-                    setPreviewCommit(null);
-                  }}
-                  class={styles.closePreviewButton}
-                >
+                <button onClick={clearPreview} class={styles.closePreviewButton}>
                   {t("editor.closePreview")}
                 </button>
               </div>

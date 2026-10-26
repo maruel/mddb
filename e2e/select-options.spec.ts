@@ -1,13 +1,13 @@
 // Browser journeys for select option persistence, dropdowns, table cells, and filters.
 
 import type { Page, APIRequestContext } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 import type { Property } from "../sdk/types.gen";
 
 // Helper: create a table with a select column and navigate to it.
 async function setupSelectTable(page: Page, request: APIRequestContext, prefix: string) {
   const { token } = await registerUser(request, prefix);
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
   const wsID = await getWorkspaceId(page);
   const client = createClient(request, token);
@@ -76,7 +76,7 @@ test.describe("Select Dropdown Interaction", () => {
   // Helper: setup table with a select column and one record, navigate to it.
   async function setupAndNavigate(page: Page, request: APIRequestContext, prefix: string) {
     const { token } = await registerUser(request, prefix);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
@@ -159,7 +159,7 @@ test.describe("Select Dropdown Interaction", () => {
 test.describe("Select Column UX", () => {
   test("select chip renders in table cell (read mode)", async ({ page, request }) => {
     const { token } = await registerUser(request, "chip-render");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
@@ -187,7 +187,7 @@ test.describe("Select Column UX", () => {
 
   test("keyboard navigation selects option in single-select dropdown", async ({ page, request }) => {
     const { token } = await registerUser(request, "kbd-select");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
@@ -236,7 +236,7 @@ test.describe("Select Column UX", () => {
 
   test("multi-select dropdown opens and shows checkmarks when all options selected", async ({ page, request }) => {
     const { token } = await registerUser(request, "multi-all-sel");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
@@ -287,7 +287,7 @@ test.describe("Select Column UX", () => {
 test.describe("Select Filter Option Picker", () => {
   test("filter select column by clicking option chip in filter panel", async ({ page, request }) => {
     const { token } = await registerUser(request, "filter-picker");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);

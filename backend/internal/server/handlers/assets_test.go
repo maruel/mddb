@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestAssetHandler(t *testing.T) {
@@ -27,7 +29,7 @@ func TestAssetHandler(t *testing.T) {
 		nodeID := ksid.ID(456)
 		name := "test-image.png"
 
-		url := cfg.GenerateSignedAssetURL(wsID, nodeID, name)
+		url := cfg.GenerateSignedAssetURL(reqctx.WithSession(t.Context(), &identity.Session{ID: ksid.ID(789), ExpiresAt: storage.ToTime(time.Now().Add(time.Hour))}), wsID, nodeID, name)
 
 		// Verify URL format (rooted path, no hostname)
 		if !strings.HasPrefix(url, "/assets/") {
@@ -55,28 +57,28 @@ func TestAssetHandler(t *testing.T) {
 		path := "123/456/test.png"
 
 		t.Run("valid_signature", func(t *testing.T) {
-			sig := cfg.generateSignature(path, expiry)
-			if !cfg.VerifyAssetSignature(path, sig, expiry) {
+			sig := cfg.generateSignature(path, "parent", expiry)
+			if !cfg.VerifyAssetSignature(path, "parent", sig, expiry) {
 				t.Error("Expected valid signature to verify")
 			}
 		})
 
 		t.Run("invalid_signature", func(t *testing.T) {
-			if cfg.VerifyAssetSignature(path, "invalid-signature", expiry) {
+			if cfg.VerifyAssetSignature(path, "parent", "invalid-signature", expiry) {
 				t.Error("Expected invalid signature to fail verification")
 			}
 		})
 
 		t.Run("wrong_path", func(t *testing.T) {
-			sig := cfg.generateSignature(path, expiry)
-			if cfg.VerifyAssetSignature("wrong/path/test.png", sig, expiry) {
+			sig := cfg.generateSignature(path, "parent", expiry)
+			if cfg.VerifyAssetSignature("wrong/path/test.png", "parent", sig, expiry) {
 				t.Error("Expected signature with wrong path to fail verification")
 			}
 		})
 
 		t.Run("wrong_expiry", func(t *testing.T) {
-			sig := cfg.generateSignature(path, expiry)
-			if cfg.VerifyAssetSignature(path, sig, expiry+1000) {
+			sig := cfg.generateSignature(path, "parent", expiry)
+			if cfg.VerifyAssetSignature(path, "parent", sig, expiry+1000) {
 				t.Error("Expected signature with wrong expiry to fail verification")
 			}
 		})
@@ -100,7 +102,7 @@ func TestAssetHandler(t *testing.T) {
 		t.Run("expired_signature", func(t *testing.T) {
 			expiry := time.Now().Add(-time.Hour).Unix() // Expired
 			path := "123/456/test.png"
-			sig := cfg.generateSignature(path, expiry)
+			sig := cfg.generateSignature(path, "parent", expiry)
 
 			req := httptest.NewRequest(http.MethodGet, "/assets/123/456/test.png", http.NoBody)
 			req.SetPathValue("wsID", "123")

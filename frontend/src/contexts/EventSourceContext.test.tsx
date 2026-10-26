@@ -24,7 +24,7 @@ const testUser: UserResponse = {
 // Canned auth state provided through the real AuthContext instead of a module mock.
 const authValue: AuthContextValue = {
   user: () => testUser,
-  token: () => "test-token",
+  identity: () => 1,
   ready: () => true,
   api: () => {
     throw new Error("api is not used by these tests");
@@ -35,6 +35,7 @@ const authValue: AuthContextValue = {
   logout: async () => undefined,
   setUser: () => undefined,
   refreshUser: async () => undefined,
+  reloadIdentity: () => undefined,
 };
 
 class MockEventSource {
@@ -132,7 +133,7 @@ describe("EventSourceProvider", () => {
     if (!eventSource) {
       throw new Error("EventSourceProvider did not create an event source");
     }
-    expect(eventSource.url).toBe("/api/v1/workspaces/workspace-1/events?token=test-token");
+    expect(eventSource.url).toBe("/api/v1/workspaces/workspace-1/events");
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Reconnecting");
 
     eventSource.open();

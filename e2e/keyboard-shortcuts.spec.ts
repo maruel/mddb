@@ -1,11 +1,11 @@
 // End-to-end coverage for discoverable and editor-safe workspace keyboard shortcuts.
 
-import { createClient, expect, getWorkspaceId, registerUser, test } from "./helpers";
+import { createClient, expect, getWorkspaceId, registerUser, test, gotoWithSession } from "./helpers";
 
 test.describe("Workspace keyboard shortcuts", () => {
   test("shows shortcut help, preserves editor input, and focuses tree navigation", async ({ page, request }) => {
     const { token } = await registerUser(request, "keyboard-shortcuts");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);

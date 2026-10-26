@@ -1,7 +1,7 @@
 // E2E tests for table creation, record CRUD, view modes, and sort UI.
 
 import type { Page, APIRequestContext } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse, Property } from "../sdk/types.gen";
 
 // Helper: create a table with records and navigate to it.
@@ -13,7 +13,7 @@ async function setupTable(
   records: Record<string, unknown>[],
 ) {
   const { token } = await registerUser(request, prefix);
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
   const wsID = await getWorkspaceId(page);
   const client = createClient(request, token);
@@ -45,7 +45,7 @@ async function getRowOrder(page: Page, names: string[]): Promise<string[]> {
 test.describe("Table Creation and Basic Operations", () => {
   test.screenshot("create a table with properties and view it", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "table-create");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -563,7 +563,7 @@ test.describe("Table Filter UI", () => {
 test.describe("Table and Page Hybrid", () => {
   test("table node shows table view with records section", async ({ page, request }) => {
     const { token } = await registerUser(request, "hybrid-node");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

@@ -22,6 +22,12 @@ import (
 // the client's Accept-Encoding header.
 func compressMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Completion must observe every fallible body write before recording its outcome.
+		// Only compression is bypassed; all request protections remain in the outer stack.
+		if r.URL.Path == "/api/v1/auth/device/poll" || r.URL.Path == browserDevicePoll {
+			next.ServeHTTP(w, r)
+			return
+		}
 		accepted := parseAcceptEncoding(r.Header.Get("Accept-Encoding"))
 		enc := negotiateEncoding(accepted)
 		if enc == "" || r.Method == http.MethodHead {

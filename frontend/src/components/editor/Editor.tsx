@@ -1,4 +1,4 @@
-// WYSIWYG markdown editor component using ProseMirror with flat block architecture.
+// ProseMirror markdown editor preserving selection and history across metadata-only refreshes.
 
 import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from "solid-js";
 import { EditorView } from "prosemirror-view";
@@ -36,7 +36,7 @@ interface EditorProps {
   placeholder?: string;
   readOnly?: boolean;
   wsId?: string;
-  getToken?: () => string | null;
+  sessionID?: string;
   onAssetUploaded?: () => void;
   onError?: (error: string) => void;
   onNavigateToNode?: (nodeId: string) => void;
@@ -63,20 +63,31 @@ export default function Editor(props: EditorProps) {
 
   // Handle file drop uploads
   const handleFileDrop = async (files: File[], pos: number) => {
-    const editorView = view();
-    if (!editorView || !props.wsId || !props.nodeId || !props.getToken) return;
+    const initialEditorView = view();
+    if (!initialEditorView || !props.wsId || !props.nodeId) return;
 
+    const originalSession = props.sessionID;
+    const originalNode = props.nodeId;
+    const originalWorkspace = props.wsId;
+    const isCurrent = () =>
+      !initialEditorView.isDestroyed &&
+      view() === initialEditorView &&
+      props.sessionID === originalSession &&
+      props.nodeId === originalNode &&
+      props.wsId === originalWorkspace;
     const { uploadFile, error } = useAssetUpload({
       wsId: props.wsId,
       nodeId: props.nodeId,
-      getToken: props.getToken,
+      sessionID: props.sessionID,
     });
 
     for (const file of files) {
+      if (!isCurrent()) return;
       const result = await uploadFile(file);
+      if (!isCurrent()) return;
       if (result) {
         const isImage = isImageMimeType(result.mimeType);
-        let tr = editorView.state.tr;
+        let tr = initialEditorView.state.tr;
 
         if (isImage) {
           // Flattened block schemas handle images inside blocks or as separate blocks
@@ -118,7 +129,7 @@ export default function Editor(props: EditorProps) {
           }
         }
 
-        editorView.dispatch(tr);
+        initialEditorView.dispatch(tr);
         props.onAssetUploaded?.();
       } else {
         const errMsg = error();
@@ -153,12 +164,12 @@ export default function Editor(props: EditorProps) {
     left: number;
   } | null>(null);
 
-  const localParseMarkdown = (md: string): ProseMirrorNode | null => {
+  const resolveMarkdown = (md: string, titles: NodeTitleMap | undefined): string => {
     let processed = rewriteAssetUrls(md, props.assetUrls || {});
-    if (props.wsId && props.linkedNodeTitles && Object.keys(props.linkedNodeTitles).length > 0) {
-      processed = rewriteInternalLinkTitles(processed, props.linkedNodeTitles, props.wsId);
+    if (props.wsId && titles) {
+      processed = rewriteInternalLinkTitles(processed, titles, props.wsId);
     }
-    return parseMarkdown(processed);
+    return processed;
   };
 
   const localSerializeMarkdown = (doc: ProseMirrorNode): string => {
@@ -255,8 +266,7 @@ export default function Editor(props: EditorProps) {
     const editorEl = editorRef();
     if (!editorEl) return;
 
-    const doc = localParseMarkdown(props.content);
-    if (!doc) return;
+    const doc = parseMarkdown(resolveMarkdown(props.content, props.linkedNodeTitles));
     const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
 
     const editorView = new EditorView(editorEl, {
@@ -278,12 +288,10 @@ export default function Editor(props: EditorProps) {
         // Heuristic: if it has multiple lines or markdown markers, parse as markdown
         const hasMarkers = /^[#>\-*\d+]|[`[*_]/.test(text) || text.includes("\n");
         if (hasMarkers) {
-          const parsed = localParseMarkdown(text);
-          if (parsed) {
-            const slice = parsed.slice(0, parsed.content.size);
-            editorView.dispatch(editorView.state.tr.replaceSelection(slice));
-            return true;
-          }
+          const parsed = parseMarkdown(resolveMarkdown(text, props.linkedNodeTitles));
+          const slice = parsed.slice(0, parsed.content.size);
+          editorView.dispatch(editorView.state.tr.replaceSelection(slice));
+          return true;
         }
         return false;
       },
@@ -365,6 +373,11 @@ export default function Editor(props: EditorProps) {
         const nodeChanged = nodeId !== lastLoadedNodeId;
         const contentChangedExternally = content !== lastEmittedContent;
         const titlesChanged = linkedNodeTitles !== lastLinkedNodeTitles;
+        // Compare the same Markdown under each title map. Reparsing the live
+        // document would discard transient typing states such as trailing spaces.
+        const titlesChangeContent =
+          titlesChanged &&
+          resolveMarkdown(content, linkedNodeTitles) !== resolveMarkdown(content, lastLinkedNodeTitles);
 
         if (nodeChanged || contentChangedExternally || titlesChanged) {
           lastLoadedNodeId = nodeId;
@@ -378,12 +391,14 @@ export default function Editor(props: EditorProps) {
 
           const editorView = view();
           if (editorView) {
-            const doc = localParseMarkdown(content);
-            if (doc) {
-              const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
-              editorView.updateState(state);
-              updateInvalidLinkState(editorView, linkedNodeTitles || {}, props.wsId);
+            if (nodeChanged || contentChangedExternally || titlesChangeContent) {
+              const doc = parseMarkdown(resolveMarkdown(content, linkedNodeTitles));
+              if (nodeChanged || !doc.eq(editorView.state.doc)) {
+                const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
+                editorView.updateState(state);
+              }
             }
+            updateInvalidLinkState(editorView, linkedNodeTitles || {}, props.wsId);
           }
         }
       },
@@ -400,13 +415,11 @@ export default function Editor(props: EditorProps) {
   const switchToWysiwyg = () => {
     const editorView = view();
     if (editorView) {
-      const doc = localParseMarkdown(markdownContent());
-      if (doc) {
-        const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
-        editorView.updateState(state);
-        updateActiveStates(editorView);
-        updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
-      }
+      const doc = parseMarkdown(resolveMarkdown(markdownContent(), props.linkedNodeTitles));
+      const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
+      editorView.updateState(state);
+      updateActiveStates(editorView);
+      updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
     }
     setEditorMode("wysiwyg");
   };

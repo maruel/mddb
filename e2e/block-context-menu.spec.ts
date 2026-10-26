@@ -5,12 +5,12 @@
 // but keybindings need to be added separately via keymap() with undo/redo commands.
 
 import type { Page } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 // Helper to setup editor with test content
 async function setupEditorWithBlocks(page: Page, request: Parameters<typeof registerUser>[0]) {
   const { token } = await registerUser(request, "block-ctx");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);

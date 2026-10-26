@@ -774,26 +774,11 @@ func TestIntegration(t *testing.T) {
 			t.Fatal("Invitation token not found")
 		}
 
-		// Let's use the authenticated accept flow if possible?
-		// The `AcceptOrgInvitation` handler logic:
-		// If Authorization header is present:
-		//    Validate user.
-		//    Accept invitation for that user.
-		// Else:
-		//    Create user (if new) or login (if exists + password match)
-		//    Then accept.
-
-		// Since member is already registered and logged in (has memberToken),
-		// we can just call accept with the token in the body and Auth header.
-		acceptBody := struct {
-			Token    string `json:"token"`
-			Password string `json:"password"`
-			Name     string `json:"name"`
-		}{
-			Token:    inviteToken,
-			Password: "Pass1234",
-			Name:     "Member",
+		// Independently verified ownership is required before accepting the grant.
+		if _, err := env.userService.Modify(memberLogin.User.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+			t.Fatal(err)
 		}
+		acceptBody := dto.AcceptInvitationRequest{Token: inviteToken}
 
 		status = env.doJSON(t, http.MethodPost, "/api/v1/auth/invitations/org/accept", acceptBody, nil, memberToken)
 		if status != http.StatusOK {

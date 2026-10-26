@@ -67,27 +67,27 @@ jobs:
       - name: Playwright Report Summary
         if: always()
         run: |
-          if [ -f playwright-report/results.json ]; then
-            PASSED=$(jq '.stats.expected' playwright-report/results.json)
-            FAILED=$(jq '.stats.unexpected' playwright-report/results.json)
-            SKIPPED=$(jq '.stats.skipped' playwright-report/results.json)
-            FLAKY=$(jq '.stats.flaky' playwright-report/results.json)
-            TOTAL=$((PASSED + FAILED + SKIPPED + FLAKY))
-            {
-              echo "## Playwright Test Results (${{ runner.os }})"
+          report=playwright-report/results.json
+          [ -f "$report" ] || exit 0
+          PASSED=$(jq '.stats.expected' "$report")
+          FAILED=$(jq '.stats.unexpected' "$report")
+          SKIPPED=$(jq '.stats.skipped' "$report")
+          FLAKY=$(jq '.stats.flaky' "$report")
+          TOTAL=$((PASSED + FAILED + SKIPPED + FLAKY))
+          {
+            echo "## Playwright Test Results (${{ runner.os }})"
+            echo ""
+            if [ "$FAILED" -gt 0 ]; then
+              echo "| Status | Count |"
+              echo "|--------|-------|"
+              echo "| :white_check_mark: Passed | $PASSED |"
+              echo "| :x: Failed | $FAILED |"
+              [ "$FLAKY" -gt 0 ] && echo "| :warning: Flaky | $FLAKY |"
+              [ "$SKIPPED" -gt 0 ] && echo "| :fast_forward: Skipped | $SKIPPED |"
               echo ""
-              if [ "$FAILED" -gt 0 ]; then
-                echo "| Status | Count |"
-                echo "|--------|-------|"
-                echo "| :white_check_mark: Passed | $PASSED |"
-                echo "| :x: Failed | $FAILED |"
-                [ "$FLAKY" -gt 0 ] && echo "| :warning: Flaky | $FLAKY |"
-                [ "$SKIPPED" -gt 0 ] && echo "| :fast_forward: Skipped | $SKIPPED |"
-                echo ""
-              else
-                echo ":white_check_mark: **All $TOTAL tests passed on ${{ runner.os }}**"
-              fi
-              echo ""
-              echo ":page_facing_up: Playwright report for ${{ runner.os }} is available as a workflow artifact."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+            else
+              echo ":white_check_mark: **All $TOTAL tests passed on ${{ runner.os }}**"
+            fi
+            echo ""
+            echo ":page_facing_up: Playwright report for ${{ runner.os }} is available as a workflow artifact."
+          } >> "$GITHUB_STEP_SUMMARY"

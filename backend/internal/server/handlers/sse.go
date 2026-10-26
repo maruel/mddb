@@ -14,18 +14,6 @@ import (
 
 const sseKeepAliveInterval = 30 * time.Second
 
-// InjectTokenFromQuery copies a "token" query parameter into the Authorization
-// header when no Authorization header is present. This is needed because the
-// browser EventSource API cannot set custom headers.
-func InjectTokenFromQuery(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if t := r.URL.Query().Get("token"); t != "" && r.Header.Get("Authorization") == "" {
-			r.Header.Set("Authorization", "Bearer "+t)
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 // SSEHandler serves the Server-Sent Events endpoint for workspace events.
 type SSEHandler struct {
 	Svc *Services
@@ -33,8 +21,8 @@ type SSEHandler struct {
 }
 
 // ServeHTTP streams SSE events for a workspace to an authenticated client.
-// EventSource can't set custom headers, so the token can be passed as a query
-// parameter. InjectTokenFromQuery must wrap this handler before auth middleware.
+// Browser EventSource authenticates with the host session cookie; API clients
+// may supply an Authorization header. Credentials never travel in query strings.
 func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	user := reqctx.User(r.Context())
 	if user == nil {

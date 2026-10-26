@@ -1,12 +1,12 @@
 // E2E tests for page links with dynamic title resolution.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test.describe("Page Links with Dynamic Titles", () => {
   test.screenshot("link displays current title of linked page", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "page-links");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -78,7 +78,7 @@ test.describe("Page Links with Dynamic Titles", () => {
   test("verify GetNodeTitles API returns titles correctly", async ({ page, request }) => {
     const { token } = await registerUser(request, "titles-api");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -110,7 +110,7 @@ test.describe("Page Links with Dynamic Titles", () => {
   test("backlinks are returned when getting a page", async ({ page, request }) => {
     const { token } = await registerUser(request, "backlinks");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -143,7 +143,7 @@ test.describe("Page Links with Dynamic Titles", () => {
 
   test("/page slash command creates link that shows in parent", async ({ page, request }) => {
     const { token } = await registerUser(request, "slash-page-link");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -208,7 +208,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     "invalid link is highlighted in red after target page is deleted",
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "invalid-link");
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
       const wsID = await getWorkspaceId(page);
@@ -284,7 +284,7 @@ test.describe("Page Links with Dynamic Titles", () => {
   test("clicking internal link navigates to target page", async ({ page, request }) => {
     const { token } = await registerUser(request, "click-link");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

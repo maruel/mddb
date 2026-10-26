@@ -1,11 +1,11 @@
-// E2E tests for floating toolbar visibility lifecycle.
+// Browser coverage for toolbar selection and undo across asynchronous editor metadata updates.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test.describe("Floating Toolbar Visibility", () => {
   test("toolbar lifecycle: hidden -> visible on selection -> hidden on blur", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-lifecycle");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
@@ -26,6 +26,7 @@ test.describe("Floating Toolbar Visibility", () => {
     // Wait for WYSIWYG editor to load
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
+    await expect(editor.locator("p").first()).toHaveText("Hello world");
 
     // 1. Initial State: Toolbar should be HIDDEN
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
@@ -52,9 +53,97 @@ test.describe("Floating Toolbar Visibility", () => {
     await expect(modeToggle).toBeVisible();
   });
 
+  test.describe("Delayed metadata", () => {
+    // Service-worker interception can bypass page.route's response barrier.
+    test.use({ serviceWorkers: "block" });
+
+    for (const input of [
+      { name: "typed text", text: " more text", newParagraph: false },
+      { name: "trailing spaces", text: " more ", newParagraph: false },
+      { name: "empty paragraphs", text: " more ", newParagraph: true },
+    ]) {
+      test(`late link titles preserve ${input.name}, selection, and undo`, async ({ page, request }) => {
+        const { token } = await registerUser(request, "toolbar-late-titles");
+        const client = createClient(request, token);
+        await gotoWithSession(page, token);
+        const wsID = await getWorkspaceId(page);
+        const target = await client.ws(wsID).createPage("0", { title: "Linked target", content: "Target content" });
+        const node = await client.ws(wsID).createPage("0", {
+          title: "Delayed link titles",
+          content: `Hello world\n\n[Linked target](/w/@${wsID}/@${target.id})`,
+        });
+        await page.reload();
+        await expect(page.locator("aside")).toBeVisible();
+
+        let metadataRequested!: () => void;
+        const requested = new Promise<void>((resolve) => {
+          metadataRequested = resolve;
+        });
+        let releaseMetadata!: () => void;
+        const released = new Promise<void>((resolve) => {
+          releaseMetadata = resolve;
+        });
+        await page.route("**/nodes/titles?*", async (route) => {
+          const ids = new URL(route.request().url()).searchParams.get("ids")?.split(",") ?? [];
+          if (!ids.includes(target.id)) {
+            await route.continue();
+            return;
+          }
+          const response = await route.fetch();
+          metadataRequested();
+          await released;
+          await route.fulfill({ response });
+        });
+        try {
+          await page.getByTestId(`sidebar-node-${node.id}`).click();
+          await requested;
+          const editor = page.getByTestId("wysiwyg-editor").locator(".ProseMirror");
+          const paragraph = editor.locator("p").first();
+          await expect(paragraph).toHaveText("Hello world");
+          await expect(editor.locator(".invalid-link")).toHaveCount(1);
+          await paragraph.click();
+          await page.keyboard.press("End");
+          await page.keyboard.type(input.text);
+          if (input.newParagraph) {
+            await page.keyboard.press("Enter");
+            await expect(editor.locator("p")).toHaveCount(3);
+            await page.keyboard.press("ArrowUp");
+          }
+          await page.keyboard.press("Home");
+          await page.keyboard.down("Shift");
+          await page.keyboard.press("End");
+          await page.keyboard.up("Shift");
+          const toolbar = page.getByTestId("floating-toolbar");
+          await expect(toolbar).toBeVisible();
+
+          releaseMetadata();
+          await expect(editor.locator(".invalid-link")).toHaveCount(0);
+          expect(await paragraph.textContent()).toBe("Hello world" + input.text);
+          if (input.newParagraph) {
+            await expect(editor.locator("p")).toHaveCount(3);
+            await expect(editor.locator("p").nth(1)).toHaveText("");
+          }
+          await expect(toolbar).toBeVisible();
+          await expect
+            .poll(() => page.evaluate(() => window.getSelection()?.toString()))
+            .toBe("Hello world" + input.text);
+          await page.keyboard.press("ControlOrMeta+z");
+          if (input.newParagraph) {
+            await expect(editor.locator("p")).toHaveCount(2);
+          } else {
+            await expect(paragraph).toHaveText("Hello world");
+          }
+        } finally {
+          releaseMetadata();
+          await page.unroute("**/nodes/titles?*");
+        }
+      });
+    }
+  });
+
   test("toolbar appears on double-click word selection", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-dblclick");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
@@ -102,7 +191,7 @@ test.describe("Floating Toolbar Visibility", () => {
 
   test("toolbar stays within editor bounds when sidebar is open", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-bounds");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);

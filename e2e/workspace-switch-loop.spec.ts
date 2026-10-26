@@ -2,11 +2,11 @@
 // When switching workspaces while viewing a node, the frontend should not
 // repeatedly request the old node from the new workspace.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("switching workspace while viewing a node does not cause 404 loop", async ({ page, request }) => {
   const { token } = await registerUser(request, "ws-loop");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsID1 = await getWorkspaceId(page);

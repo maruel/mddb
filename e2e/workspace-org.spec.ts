@@ -1,10 +1,10 @@
 // E2E tests for workspace and organization creation flow.
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test.describe("First Login Flow", () => {
   test("new user gets auto-created org, workspace, and welcome page", async ({ page, request }) => {
     const { token } = await registerUser(request, "first-login");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
 
     // Wait for first-login flow to complete
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
@@ -24,7 +24,7 @@ test.describe("First Login Flow", () => {
 
   test("first login creates org named after user", async ({ page, request }) => {
     const { token } = await registerUser(request, "org-name");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Get user info to check org name
@@ -47,7 +47,7 @@ test.describe("First Login Flow", () => {
 test.describe("Workspace Switching", () => {
   test("create and switch to a new workspace", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-switch");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Get current user info
@@ -88,7 +88,7 @@ test.describe("Workspace Switching", () => {
 
   test("switching workspace clears selected node", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-clear");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID1 = await getWorkspaceId(page);
@@ -128,7 +128,7 @@ test.describe("Workspace Switching", () => {
 
     // Navigate to root URL - this will redirect to the saved workspace (WS2)
     // Note: Reloading with explicit /w/ws1/... URL would stay on WS1 (URL is trusted)
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // The first workspace page should NOT be visible (we're now in WS2)
@@ -139,7 +139,7 @@ test.describe("Workspace Switching", () => {
 test.describe("Organization Features", () => {
   test("create a new organization", async ({ page, request }) => {
     const { token } = await registerUser(request, "org-create");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Look for org menu or create org button
@@ -178,7 +178,7 @@ test.describe("Organization Features", () => {
 test.describe("User Menu", () => {
   test("user menu shows user name and email", async ({ page, request }) => {
     const { email, token } = await registerUser(request, "user-menu");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Click on user menu avatar button (shows initials)
@@ -192,7 +192,7 @@ test.describe("User Menu", () => {
 
   test("user menu has profile and logout options", async ({ page, request }) => {
     const { token } = await registerUser(request, "menu-options");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Click on user menu avatar button
@@ -210,7 +210,7 @@ test.describe("User Menu", () => {
 test.describe("Footer Links", () => {
   test("privacy and terms links in settings sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "footer-links");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Open user menu and navigate to settings
@@ -241,7 +241,7 @@ test.describe("Footer Links", () => {
     await Promise.all([page.waitForURL("/privacy", { timeout: 10000 }), privacyLink.click()]);
 
     // Navigate back to settings
-    await page.goto(`/settings/user?token=${token}`);
+    await gotoWithSession(page, token, `/settings/user`);
     await expect(page).toHaveURL(/\/settings/, { timeout: 10000 });
 
     // Click terms link
@@ -252,7 +252,7 @@ test.describe("Footer Links", () => {
 test.describe("Sidebar Workspace Display", () => {
   test("sidebar shows workspace header and settings", async ({ page, request }) => {
     const { token } = await registerUser(request, "sidebar-ws");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Sidebar should contain workspace header
@@ -271,7 +271,7 @@ test.describe("Sidebar Workspace Display", () => {
 
   test("workspace settings button is clickable", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-settings-click");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Hover over workspace header to reveal settings button
@@ -289,7 +289,7 @@ test.describe("Sidebar Workspace Display", () => {
 
   test("header shows user menu", async ({ page, request }) => {
     const { token } = await registerUser(request, "header-user");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Header should be visible
@@ -305,7 +305,7 @@ test.describe("Sidebar Workspace Display", () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     const { token } = await registerUser(request, "sidebar-mobile");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     // On mobile, wait for header instead (sidebar starts hidden)
     const header = page.locator("header");
     await expect(header).toBeVisible({ timeout: 15000 });
@@ -328,7 +328,7 @@ test.describe("Sidebar Workspace Display", () => {
 
   test("sidebar workspace header visible with long page title", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-long-title");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Get workspace ID

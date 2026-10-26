@@ -21,7 +21,8 @@ describe("UI write request IDs", () => {
       const headers = new Headers(init?.headers);
       seen.push(headers);
       expect(isLocalWriteRequest(headers.get("X-Request-ID") ?? undefined)).toBe(true);
-      expect(headers.get("Authorization")).toBe("Bearer token");
+      expect(headers.get("Authorization")).toBeNull();
+      expect(init?.credentials).toBe("same-origin");
       if (seen.length === 1) {
         attempted();
         return new Response(null, { status: 503 });
@@ -29,7 +30,7 @@ describe("UI write request IDs", () => {
       return Response.json({ modified: seen.length });
     });
     vi.stubGlobal("fetch", fetch);
-    const api = createApi(() => "token");
+    const api = createApi();
     const pending = api.ws("workspace").updatePage("node", { title: "One", content: "Body" });
     await firstAttempt;
     await api.ws("workspace").updatePage("node", { title: "Two", content: "Body" });
@@ -52,10 +53,8 @@ describe("UI write request IDs", () => {
         return Response.json({});
       }),
     );
-    await createApi(() => "token")
-      .ws("workspace")
-      .getNode("node");
-    await createAuthFetch(() => "token")("/api/v1/gomode/mcp", {
+    await createApi().ws("workspace").getNode("node");
+    await createAuthFetch()("/api/v1/gomode/mcp", {
       method: "POST",
       headers: { "X-Request-ID": "gomode-operation" },
     });

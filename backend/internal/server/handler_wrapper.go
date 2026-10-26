@@ -5,6 +5,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"encoding"
 	"encoding/json"
 	"errors"
@@ -14,7 +15,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/ksid"
@@ -24,6 +25,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // addRequestMetadataToContext adds the User-Agent and request correlation ID to the
@@ -153,12 +155,13 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 	if err != nil {
 		return nil, ctx, err
 	}
-	if !sessionID.IsZero() {
-		ctx = reqctx.WithSessionID(ctx, sessionID)
+	session, err := svc.Session.Get(sessionID)
+	if err != nil {
+		return nil, ctx, err
 	}
-	if tokenString != "" {
-		ctx = reqctx.WithTokenString(ctx, tokenString)
-	}
+	ctx = reqctx.WithSession(ctx, session)
+	ctx = reqctx.WithSessionID(ctx, sessionID)
+	ctx = reqctx.WithTokenString(ctx, tokenString)
 	return &authResult{user: user, sessionID: sessionID, tokenString: tokenString}, ctx, nil
 }
 
@@ -170,7 +173,7 @@ func checkWSMembership(
 	svc *handlers.Services,
 	requiredRole identity.WorkspaceRole,
 ) (errMsg string, statusCode int) {
-	role, msg, status := effectiveWSRole(user, wsID, svc)
+	role, msg, status := svc.EffectiveWorkspaceRole(user, wsID)
 	if msg != "" {
 		return msg, status
 	}
@@ -178,30 +181,6 @@ func checkWSMembership(
 		return "Forbidden: insufficient permissions", http.StatusForbidden
 	}
 	return "", 0
-}
-
-// effectiveWSRole returns the caller's effective role in wsID, applying the
-// org-owner/admin override. The error string and status code match the HTTP
-// wrappers so callers can answer directly.
-func effectiveWSRole(user *identity.User, wsID ksid.ID, svc *handlers.Services) (role identity.WorkspaceRole, errMsg string, statusCode int) {
-	ws, err := svc.Workspace.Get(wsID)
-	if err != nil {
-		return "", "Workspace not found", http.StatusNotFound
-	}
-
-	orgMem, err := svc.OrgMembership.Get(user.ID, ws.OrganizationID)
-	if err != nil {
-		return "", "Forbidden: not a member of this organization", http.StatusForbidden
-	}
-	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-		return identity.WSRoleAdmin, "", 0
-	}
-
-	wsMem, err := svc.WSMembership.Get(user.ID, wsID)
-	if err != nil {
-		return "", "Forbidden: not a member of this workspace", http.StatusForbidden
-	}
-	return wsMem.Role, "", 0
 }
 
 // Wrap wraps a handler function to work as an http.Handler.
@@ -537,7 +516,11 @@ func wrapAuthRaw(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session (don't need context for raw handlers)
-		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
+		auth, ctx, err := validateAuthWithContext(r.Context(), r, svc, cfg)
+		var user *identity.User
+		if auth != nil {
+			user = auth.user
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -578,7 +561,7 @@ func wrapAuthRaw(
 		}
 
 		// Store user in context for raw handlers
-		ctx := reqctx.WithUser(r.Context(), user)
+		ctx = reqctx.WithUser(ctx, user)
 		ctx = addRequestMetadataToContext(ctx, r)
 		fn(w, r.WithContext(ctx))
 		if mutating {
@@ -605,7 +588,11 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
-		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
+		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
+		var user *identity.User
+		if auth != nil {
+			user = auth.user
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -645,79 +632,67 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 }
 
 var (
-	errUnauthorized       = errors.New("unauthorized")
-	errInvalidAuthHdr     = errors.New("invalid authorization header")
-	errInvalidToken       = errors.New("invalid token")
-	errInvalidClaims      = errors.New("invalid claims")
-	errInvalidUserIDToken = errors.New("invalid user ID in token")
-	errInvalidUserIDFmt   = errors.New("invalid user ID format")
-	errUserNotFound       = errors.New("user not found")
-	errSessionRevoked     = errors.New("session revoked")
+	errUnauthorized     = errors.New("unauthorized")
+	errInvalidAuthHdr   = errors.New("invalid authorization header")
+	errInvalidToken     = errors.New("invalid token")
+	errInvalidClaims    = errors.New("invalid claims")
+	errInvalidUserIDFmt = errors.New("invalid user ID format")
+	errUserNotFound     = errors.New("user not found")
+	errSessionRevoked   = errors.New("session revoked")
 )
 
 // validateJWTAndSession extracts and validates the JWT token and session from the request.
 // Returns the user, session ID, token string, and any error.
-// If sessionService is nil, session validation is skipped (backwards compatible).
+// Every credential must exactly match a live, persisted session owned by its subject.
 func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, ksid.ID, string, error) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return nil, 0, "", errUnauthorized
+	tokenString, err := requestCredential(r)
+	if err != nil {
+		return nil, 0, "", err
 	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return nil, 0, "", errInvalidAuthHdr
+	if sessionService == nil || len(jwtSecret) < 32 {
+		return nil, 0, "", errInvalidToken
 	}
-
-	tokenString := parts[1]
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+	claims := &handlers.SessionClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (any, error) {
 		return jwtSecret, nil
-	})
-
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired(), jwt.WithIssuedAt())
 	if err != nil || !token.Valid {
 		return nil, 0, "", errInvalidToken
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
+	if claims.IssuedAt == nil || claims.ExpiresAt == nil || claims.IssuedAt.Unix() <= 0 ||
+		!claims.ExpiresAt.After(claims.IssuedAt.Time) || claims.Email == "" {
 		return nil, 0, "", errInvalidClaims
 	}
-
-	userIDStr, ok := claims["sub"].(string)
-	if !ok {
-		return nil, 0, "", errInvalidUserIDToken
-	}
-
-	userID, err := ksid.Parse(userIDStr)
-	if err != nil {
+	userID, err := ksid.Parse(claims.Subject)
+	if err != nil || userID.IsZero() {
 		return nil, 0, "", errInvalidUserIDFmt
 	}
-
+	sessionID, err := ksid.Parse(claims.SessionID)
+	if err != nil || sessionID.IsZero() {
+		return nil, 0, "", errInvalidToken
+	}
+	expected := r.Header.Get("X-MDDB-Session")
+	querySession := r.URL.Query().Get("session_id")
+	if len(r.Header.Values("X-MDDB-Session")) > 1 || (expected != "" && querySession != "" && expected != querySession) {
+		return nil, 0, "", errInvalidToken
+	}
+	if expected == "" {
+		expected = querySession
+	}
+	if expected != "" && expected != sessionID.String() {
+		return nil, 0, "", errInvalidToken
+	}
+	session, err := sessionService.Get(sessionID)
+	if err != nil || session.UserID != userID || session.ExpiresAt.AsTime().Unix() != claims.ExpiresAt.Unix() ||
+		subtle.ConstantTimeCompare([]byte(session.TokenHash), []byte(utils.HashToken(tokenString))) != 1 {
+		return nil, 0, "", errInvalidToken
+	}
+	if !session.RevokedAt.IsZero() || !session.ExpiresAt.AsTime().After(time.Now()) {
+		return nil, 0, "", errSessionRevoked
+	}
 	user, err := userService.Get(userID)
 	if err != nil {
 		return nil, 0, "", errUserNotFound
-	}
-
-	// Validate session if sessionService is provided and token has session ID
-	var sessionID ksid.ID
-	if sessionService != nil {
-		if sidStr, ok := claims["sid"].(string); ok && sidStr != "" {
-			sessionID, err = ksid.Parse(sidStr)
-			if err != nil {
-				return nil, 0, "", errInvalidToken
-			}
-
-			valid, err := sessionService.IsValid(sessionID)
-			if err != nil {
-				return nil, 0, "", errInvalidToken
-			}
-			if !valid {
-				return nil, 0, "", errSessionRevoked
-			}
-		}
 	}
 
 	return user, sessionID, tokenString, nil

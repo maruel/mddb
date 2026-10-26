@@ -1,10 +1,18 @@
 // Browser journeys for toolbar selection, block conversion, and markdown mode.
 
-import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, createClient } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  getWorkspaceId,
+  switchToMarkdownMode,
+  createClient,
+  gotoWithSession,
+} from "./helpers";
 
 test("selecting multiple lines and clicking Checkbox converts all lines to task list", async ({ page, request }) => {
   const { token } = await registerUser(request, "toolbar-checkbox-multi");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsID = await getWorkspaceId(page);
@@ -49,7 +57,7 @@ test("selecting multiple lines and clicking Checkbox converts all lines to task 
 
 test("underline formatting is preserved when switching to markdown mode", async ({ page, request }) => {
   const { token } = await registerUser(request, "toolbar-underline");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsID = await getWorkspaceId(page);

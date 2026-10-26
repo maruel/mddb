@@ -78,8 +78,8 @@ const (
 	ErrorCodeProviderNotLinked ErrorCode = "PROVIDER_NOT_LINKED"
 	// ErrorCodeEmailInUse is returned when an email is already in use by another account.
 	ErrorCodeEmailInUse ErrorCode = "EMAIL_IN_USE"
-	// ErrorCodeEmailNotVerified is returned when an OAuth login matches no
-	// linked account and the provider verified no email.
+	// ErrorCodeEmailNotVerified is returned when independent proof of email
+	// ownership is missing for an invitation or account link.
 	ErrorCodeEmailNotVerified ErrorCode = "EMAIL_NOT_VERIFIED"
 
 	// ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded.

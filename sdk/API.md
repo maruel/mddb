@@ -14,10 +14,13 @@ Type notation: `JSONValue` means any valid JSON value.
 | GET | `/api/v1/admin/server` |  |  | `AdminServerDetail` |
 | GET | `/api/v1/server/config` |  |  | `ServerConfigResponse` |
 | POST | `/api/v1/server/config` |  | `UpdateServerConfigRequest` | `OkResponse` |
+| POST | `/api/v1/auth/browser/login` |  | `LoginRequest` | `UserResponse` |
+| POST | `/api/v1/auth/browser/register` |  | `RegisterRequest` | `UserResponse` |
+| POST | `/api/v1/auth/browser/logout` |  |  | `OkResponse` |
 | POST | `/api/v1/auth/login` |  | `LoginRequest` | `AuthResponse` |
 | POST | `/api/v1/auth/register` |  | `RegisterRequest` | `AuthResponse` |
-| POST | `/api/v1/auth/invitations/org/accept` |  | `AcceptInvitationRequest` | `AuthResponse` |
-| POST | `/api/v1/auth/invitations/ws/accept` |  | `AcceptInvitationRequest` | `AuthResponse` |
+| POST | `/api/v1/auth/invitations/org/accept` |  | `AcceptInvitationRequest` | `UserResponse` |
+| POST | `/api/v1/auth/invitations/ws/accept` |  | `AcceptInvitationRequest` | `UserResponse` |
 | GET | `/api/v1/auth/providers` |  |  | `ProvidersResponse` |
 | GET | `/api/v1/auth/me` |  |  | `UserResponse` |
 | POST | `/api/v1/auth/logout` |  |  | `OkResponse` |
@@ -143,7 +146,7 @@ ErrorCode defines specific error types for the API.
 | `PROVIDER_ALREADY_LINKED` | ErrorCodeProviderAlreadyLinked is returned when trying to link an already linked provider. |
 | `PROVIDER_NOT_LINKED` | ErrorCodeProviderNotLinked is returned when trying to unlink a provider that is not linked. |
 | `EMAIL_IN_USE` | ErrorCodeEmailInUse is returned when an email is already in use by another account. |
-| `EMAIL_NOT_VERIFIED` | ErrorCodeEmailNotVerified is returned when an OAuth login matches no linked account and the provider verified no email. |
+| `EMAIL_NOT_VERIFIED` | ErrorCodeEmailNotVerified is returned when independent proof of email ownership is missing for an invitation or account link. |
 | `QUOTA_EXCEEDED` | ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded. |
 | `PAYLOAD_TOO_LARGE` | ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit. |
 
@@ -515,6 +518,7 @@ UserResponse is the API representation of a user.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `session_id` | `string` | SessionID identifies the current session when returning the authenticated caller; it is not a credential. |  |
 | `id` | `string` |  | yes |
 | `email` | `string` |  | yes |
 | `email_verified` | `boolean` |  |  |
@@ -533,16 +537,6 @@ UserResponse is the API representation of a user.
 | `organizations` | `OrgMembershipResponse[]` | All memberships |  |
 | `workspaces` | `WSMembershipResponse[]` |  |  |
 
-### AuthResponse
-
-AuthResponse is a response containing authentication token and user info.
-Used by login, register, and invitation acceptance endpoints.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `token` | `string` |  | yes |
-| `user` | `UserResponse` |  |  |
-
 ### RegisterRequest
 
 RegisterRequest is a request to register a new user.
@@ -553,15 +547,24 @@ RegisterRequest is a request to register a new user.
 | `password` | `string` |  | yes |
 | `name` | `string` |  | yes |
 
-### AcceptInvitationRequest
+### AuthResponse
 
-AcceptInvitationRequest is a request to accept an invitation.
+AuthResponse is a response containing authentication token and user info.
+Used by API login and registration endpoints.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `token` | `string` |  | yes |
-| `password` | `string` |  | yes |
-| `name` | `string` |  | yes |
+| `user` | `UserResponse` |  |  |
+
+### AcceptInvitationRequest
+
+AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+Invitation tokens never authenticate a user or issue a session.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `token` | `string` |  | yes |
 
 ### ProvidersResponse
 
@@ -577,6 +580,7 @@ SessionResponse is the API representation of a session.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `expires_at` | `number` |  | yes |
 | `id` | `string` |  | yes |
 | `device_info` | `string` |  | yes |
 | `ip_address` | `string` |  | yes |
@@ -651,7 +655,6 @@ SwitchWorkspaceResponse is a response from switching workspace.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `token` | `string` |  | yes |
 | `user` | `UserResponse` |  |  |
 
 ### UpdateUserSettingsRequest

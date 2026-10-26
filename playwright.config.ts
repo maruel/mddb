@@ -1,4 +1,4 @@
-// Playwright end-to-end test configuration.
+// Configures the complete browser suite against one isolated real backend.
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({

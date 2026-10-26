@@ -22,7 +22,8 @@ import MenuIcon from "@material-symbols/svg-400/outlined/menu.svg?solid";
 const WorkspaceLayout: ParentComponent = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { user, wsApi, orgApi } = useAuth();
+  const { user, wsApi, orgApi, identity: authIdentity } = useAuth();
+  let disposed = false;
   const {
     nodes,
     selectedNodeId,
@@ -203,13 +204,17 @@ const WorkspaceLayout: ParentComponent = (props) => {
   // Notion import polling
   let importPollInterval: number | undefined;
 
-  const startNotionImportPolling = (wsId: string) => {
+  const startNotionImportPolling = (wsId: string, org: NonNullable<ReturnType<typeof orgApi>>, identity: number) => {
     setNotionImportWsId(wsId);
     importPollInterval = window.setInterval(async () => {
-      const org = orgApi();
-      if (!org) return;
+      if (disposed || authIdentity() !== identity) {
+        window.clearInterval(importPollInterval);
+        importPollInterval = undefined;
+        return;
+      }
       try {
         const status = await org.getStatus(wsId);
+        if (disposed || authIdentity() !== identity) return;
         setNotionImportStatus(status);
         if (["completed", "failed", "cancelled"].includes(status.status)) {
           window.clearInterval(importPollInterval);
@@ -229,13 +234,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const handleNotionImport = async (data: NotionImportData) => {
     const org = orgApi();
     if (!org) return;
+    const identity = authIdentity();
     const result = await org.startImport({
       notion_token: data.notionToken,
     });
+    if (disposed || authIdentity() !== identity) return;
     // Switch to the new workspace (switchWorkspace navigates automatically)
     await switchWorkspace(result.workspace_id);
+    if (disposed || authIdentity() !== identity) return;
     // Start polling for import status
-    startNotionImportPolling(result.workspace_id);
+    startNotionImportPolling(result.workspace_id, org, identity);
     setNotionImportStatus({ status: "running", progress: 0, total: 0 });
   };
 
@@ -261,6 +269,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   };
 
   onCleanup(() => {
+    disposed = true;
     if (importPollInterval) {
       window.clearInterval(importPollInterval);
     }
@@ -287,6 +296,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
   // Create node helper
   async function createNode(type: "document" | "table" = "document", parentId?: string) {
+    const identity = authIdentity();
+    const initialWorkspace = user()?.workspace_id;
+    const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;
     const ws = wsApi();
     if (!ws) return;
 
@@ -303,12 +315,15 @@ const WorkspaceLayout: ParentComponent = (props) => {
           title: defaultTitle,
           properties: [{ name: "Name", type: "text", required: false }],
         });
+        if (!isCurrent()) return;
         newNodeId = result.id;
       } else {
         const result = await ws.createPage(parent, { title: defaultTitle });
+        if (!isCurrent()) return;
         newNodeId = result.id;
       }
       await loadNodes(true);
+      if (!isCurrent()) return;
       const u = user();
       const wsId = u?.workspace_id;
       const wsName = u?.workspace_name;
@@ -339,6 +354,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
   };
 
   async function handleDeleteNode(nodeId: string) {
+    const identity = authIdentity();
+    const initialWorkspace = user()?.workspace_id;
+    const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;
     const ws = wsApi();
     if (!ws) return;
     if (!confirm(t("table.confirmDeleteRecord") || "Delete this item?")) return;
@@ -364,6 +382,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     try {
       setDeletingNodeId(nodeId);
       await ws.deleteNode(nodeId);
+      if (!isCurrent()) return;
       removeNode(nodeId);
 
       if (nodeId === selectedNodeId()) {
@@ -374,6 +393,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           navigate(nodeUrl(wsId, wsName, nextNode.id, nextNode.title));
         } else if (wsId) {
           await loadNodes(true);
+          if (!isCurrent()) return;
           // Navigate to workspace root, let WorkspaceRoot handle redirect
           navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
         }
@@ -507,7 +527,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
             if (nodeId !== selectedNodeId() && wsId) {
               navigate(nodeUrl(wsId, wsName, nodeId));
               // Load history after navigation settles
-              setTimeout(() => loadHistory(nodeId), 100);
+              const identity = authIdentity();
+              setTimeout(() => {
+                if (
+                  !disposed &&
+                  authIdentity() === identity &&
+                  user()?.workspace_id === wsId &&
+                  selectedNodeId() === nodeId
+                )
+                  void loadHistory(nodeId);
+              }, 100);
             } else {
               loadHistory(nodeId);
             }

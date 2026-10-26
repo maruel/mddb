@@ -1,6 +1,6 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
 
-import { createSignal, createEffect, For, Show, on, untrack } from "solid-js";
+import { createSignal, onCleanup, createEffect, For, Show, on, untrack } from "solid-js";
 import { useI18n } from "../i18n";
 import type { NodeResponse } from "@sdk/types.gen";
 import { ContextMenu, type ContextMenuAction } from "./shared";
@@ -107,6 +107,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
   const [isDragging, setIsDragging] = createSignal(false);
   const [isDropTarget, setIsDropTarget] = createSignal(false);
   let expandTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(expandTimer));
 
   const handleDragStart = (e: DragEvent) => {
     if (!e.dataTransfer) return;

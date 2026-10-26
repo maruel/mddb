@@ -40,6 +40,7 @@ const (
 	oauthStateCookiePath = "/api/v1/auth/oauth"
 	oauthStateMaxAge     = 600 // seconds
 	linkingStatePrefix   = "link:"
+	loginStatePrefix     = "login:"
 )
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
@@ -216,7 +217,12 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := h.issueState(w, "")
+	next, err := loginReturnPath(r.URL.Query().Get("next"))
+	if err != nil {
+		writeErrorResponse(w, err)
+		return
+	}
+	state, err := h.issueState(w, loginStatePrefix+base64.RawURLEncoding.EncodeToString([]byte(next))+":")
 	if err != nil {
 		slog.ErrorContext(r.Context(), "Failed to generate OAuth state", "err", err)
 		writeErrorResponse(w, dto.Internal("state_generation"))
@@ -241,6 +247,20 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		slog.WarnContext(r.Context(), "OAuth: rejected callback state", "err", err, "provider", provider)
 		writeErrorResponse(w, err)
 		return
+	}
+	next := "/"
+	if strings.HasPrefix(state, loginStatePrefix) {
+		encoded, _, ok := strings.Cut(strings.TrimPrefix(state, loginStatePrefix), ":")
+		decoded, decodeErr := base64.RawURLEncoding.DecodeString(encoded)
+		if !ok || decodeErr != nil {
+			writeErrorResponse(w, dto.BadRequest("Invalid login destination"))
+			return
+		}
+		next, err = loginReturnPath(string(decoded))
+		if err != nil {
+			writeErrorResponse(w, err)
+			return
+		}
 	}
 
 	code := r.URL.Query().Get("code")
@@ -422,7 +442,37 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finishOAuthLogin(h.svc, h.cfg, w, r, provider, userInfo)
+	finishOAuthLogin(h.svc, h.cfg, w, r, provider, userInfo, next)
+}
+
+// loginReturnPath accepts only rooted same-origin paths. Check decoded forms too:
+// browsers and intermediaries can normalize escaped separators before navigation.
+func loginReturnPath(path string) (string, error) {
+	if path == "" {
+		return "/", nil
+	}
+	u, err := url.Parse(path)
+	if err != nil || len(path) > 2048 || u.Scheme != "" || u.Host != "" || u.Fragment != "" {
+		return "", dto.BadRequest("Invalid login destination")
+	}
+	for decoded := path; ; {
+		if !strings.HasPrefix(decoded, "/") || strings.HasPrefix(decoded, "//") || strings.ContainsAny(decoded, "\\\r\n\t") {
+			return "", dto.BadRequest("Invalid login destination")
+		}
+		for _, c := range decoded {
+			if c < 32 || c == 127 {
+				return "", dto.BadRequest("Invalid login destination")
+			}
+		}
+		next, err := url.PathUnescape(decoded)
+		if err != nil {
+			return "", dto.BadRequest("Invalid login destination")
+		}
+		if next == decoded {
+			return path, nil
+		}
+		decoded = next
+	}
 }
 
 // issueState returns a fresh OAuth state that starts with prefix and sets its
@@ -498,11 +548,17 @@ func knownEmail(email string) func() (string, error) {
 // finishOAuthLogin finds or creates a user from OAuth info, generates a JWT, and redirects.
 //
 // A provider identity that no account holds needs a verified email: it
-// attaches to the account holding that email, or creates one. Without a
+// attaches only to an account that already verified that email, or creates one. Without a
 // verified email the login fails, and the user can link the provider from a
 // signed-in session instead.
-func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identity.OAuthProvider, info oauthUserInfo) {
+func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identity.OAuthProvider, info oauthUserInfo, next string) {
 	ctx := r.Context()
+	// Revalidate at the redirect boundary, including destinations from signed state.
+	next, err := loginReturnPath(next)
+	if err != nil {
+		writeErrorResponse(w, err)
+		return
+	}
 
 	// Try to find user by OAuth ID
 	user, err := svc.User.GetByOAuth(provider, info.ID)
@@ -518,6 +574,16 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 			return
 		}
 		user, err = svc.User.GetByEmail(email)
+		// A password registrant has not proved the claimed address. Do not merge
+		// a verified provider into their account, content, or active sessions.
+		// Resolve the collision by verifying that account's email, or moving its
+		// claimed address before retrying provider login.
+		if err == nil && !user.EmailVerified {
+			writeErrorResponse(w, dto.NewAPIError(http.StatusConflict, dto.ErrorCodeEmailNotVerified,
+				"An account already claims this email. Verify its email before linking, or change its email and retry provider sign-in."))
+			return
+		}
+		created := err != nil
 		if err != nil {
 			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
@@ -535,6 +601,11 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 		}
 
 		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
+			// Bind proof and existing-account eligibility at the atomic mutation:
+			// a concurrent email change must not verify a different address.
+			if u.Email != email || (!created && !u.EmailVerified) {
+				return dto.EmailNotVerified()
+			}
 			u.EmailVerified = true
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
@@ -568,8 +639,11 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	clientIP := reqctx.ClientIP(ctx)
 	userAgent := r.Header.Get("User-Agent")
 	countryCode := reqctx.CountryCode(r.Context())
-	jwtToken, err := cfg.GenerateTokenWithSession(svc.Session, user, clientIP, userAgent, countryCode)
+	jwtToken, sid, err := cfg.IssueToken(svc.Session, user, clientIP, userAgent, countryCode)
 	if err != nil {
+		if sid != 0 {
+			err = errors.Join(err, svc.Session.Revoke(sid))
+		}
 		slog.ErrorContext(ctx, "OAuth: failed to generate token", "err", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))
 		return
@@ -581,8 +655,12 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 		return
 	}
 
-	slog.InfoContext(ctx, "OAuth: login successful, redirecting with token", "userID", user.ID, "email", user.Email)
-	http.Redirect(w, r, "/?token="+url.QueryEscape(jwtToken), http.StatusFound)
+	if err := cfg.WriteSessionCookie(w, jwtToken); err != nil {
+		writeErrorResponse(w, dto.Internal("cookie"))
+		return
+	}
+	slog.InfoContext(ctx, "OAuth: login successful", "userID", user.ID)
+	http.Redirect(w, r, next, http.StatusFound)
 }
 
 // googleUserInfo is the Google OAuth2 v2 userinfo response.

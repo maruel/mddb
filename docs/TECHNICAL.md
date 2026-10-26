@@ -11,6 +11,7 @@ mddb uses a multi-tenant directory structure where each organization owns its ow
   - `data/db/`: System-wide information (Users, Organizations, Workspaces, Memberships) stored in JSON.
 - **Configuration Directory**: `~/.config/mddb/`, selected with `-config-dir`
   - `config.toml`: Hand-written startup settings, read once at startup.
+  - `device-login-audit.jsonl`: Append-only approval and denial audit, mode 0600, outside the content repositories; contains no login codes or secrets.
   - `settings.json`: Server-written mutable settings (JWT secret, VAPID key pair, SMTP, quotas, rate limits), created mode 0600 on first boot, so the secrets it holds stay out of the content repositories.
 - **Workspace Repositories**: `data/{wsID}/`
   - Each workspace directory is an independent Git repository.
@@ -202,9 +203,23 @@ IDs are k-sortable 64-bit unique identifiers encoded as Base32 Extended Hex stri
 
 ### Identity & Authentication
 
-JWT-based authentication with 24-hour token expiry using HS256 signing.
+Password, provider and device sign-in use the same tracked HS256 JWT session issuer,
+account permissions and 31-day expiry. Each request validates the
+persisted session, its token hash, account, expiry and revocation state.
 
-- **Token flow**: Login/register → JWT issued → Bearer token in `Authorization` header
+- **Browser flow**: Browser login, registration, OAuth and device approval set the same normal credential
+  in a host-only `__Host-mddb_session` cookie with Secure, HttpOnly and SameSite=Lax. Browser JSON and
+  redirects contain no credential. Production deployments require HTTPS; Chromium also accepts Secure
+  cookies on localhost for desktop development. Android WebView requires HTTPS even on localhost;
+  use a trusted TLS endpoint for the shell. Plain HTTP outside desktop localhost cannot maintain login.
+- **API flow**: `/api/v1/auth/login` and `/api/v1/auth/register` return the normal tracked bearer credential.
+  API clients keep it in the Authorization header. Exact matching cookie and bearer credentials are
+  accepted together; conflicting credentials are rejected, even for the same account.
+- **Request protection**: CrossOriginProtection runs before credential selection. Cross-origin browser
+  mutations are rejected even with a forged bearer header. Native clients without Origin or fetch
+  metadata may send CookieManager cookies without a JavaScript CSRF nonce. OAuth callback GET requests
+  retain their separately validated state cookie. Browser operations pin their originating public session
+  ID so an account or session replacement cannot apply stale work to the new session.
 - **Storage**: User credentials and organization memberships in `data/db/` as JSON files
 - **Implementation**: `backend/internal/server/handlers/auth.go`
 
@@ -306,3 +321,15 @@ A thread-safe, in-memory cache is used to store:
 - **LRU Policy**: Least Recently Used eviction to maintain a fixed memory footprint.
 - **Write-Through/Invalidation**: Cache is updated or invalidated on every write operation to ensure consistency with the on-disk storage.
 - **Lazy Loading**: Data is loaded into the cache on the first read request.
+
+## Invitation email ownership
+
+Invitation grants require a signed-in account whose verified email matches the
+recipient. Invitation links select a grant and never authenticate a user, create an
+account, or issue a session: inviters can read those links. Email-addressed in-app
+notifications are delivered only to accounts that already verified their address.
+Password registration and sign-in work without SMTP. To accept an invitation, use
+an address verified through email or a provider. A provider login cannot merge
+into an unverified password account: verify the existing account's email first,
+or move its claimed address and retry provider sign-in. This avoids sharing
+content, passwords, and active sessions with an unproven registrant.

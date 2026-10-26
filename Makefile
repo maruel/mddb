@@ -98,19 +98,14 @@ test-smoke-voice:
 benchmark:
 	@pnpm exec tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'
 
-# End-to-end tests run Playwright, whose webServer starts the e2e server via
-# scripts/run-dev.py --fake on the data-e2e directory. Slow. Server log:
-# data-e2e/server.log; HTML report: playwright-report/. CI runs these; verify
-# and test do not. Use `make test-e2e PLAYWRIGHT_ARGS=--ui` for interactive UI.
+# Run the complete browser suite and verify its saved data with normal pairing limits.
+# Focused diagnostics use pnpm exec playwright test e2e/file.spec.ts directly.
 test-e2e: test-e2e-go
 	@uv run --locked python scripts/clean_data_e2e.py
 	@pnpm exec playwright test $(PLAYWRIGHT_ARGS); \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
-	if [ $$e2e_exit -ne 0 ]; then \
-	  echo ""; echo "Server Log: ./data-e2e/server.log"; \
-	  exit $$e2e_exit; \
-	fi
+	if [ $$e2e_exit -ne 0 ]; then echo 'Server Log: ./data-e2e/server.log'; exit $$e2e_exit; fi
 	@uv run --locked python scripts/verify_e2e_data.py
 	@pnpm exec node e2e/inject-tag-colors.cjs
 

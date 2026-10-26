@@ -391,6 +391,8 @@ export interface WSMembershipResponse {
 
 /** UserResponse is the API representation of a user. */
 export interface UserResponse {
+  /** SessionID identifies the current session when returning the authenticated caller; it is not a credential. */
+  session_id?: string;
   id: string;
   email: string;
   email_verified?: boolean;
@@ -412,15 +414,6 @@ export interface UserResponse {
   workspaces?: WSMembershipResponse[];
 }
 
-/**
- * AuthResponse is a response containing authentication token and user info.
- * Used by login, register, and invitation acceptance endpoints.
- */
-export interface AuthResponse {
-  token: string;
-  user?: UserResponse;
-}
-
 /** RegisterRequest is a request to register a new user. */
 export interface RegisterRequest {
   email: string;
@@ -428,11 +421,21 @@ export interface RegisterRequest {
   name: string;
 }
 
-/** AcceptInvitationRequest is a request to accept an invitation. */
+/**
+ * AuthResponse is a response containing authentication token and user info.
+ * Used by API login and registration endpoints.
+ */
+export interface AuthResponse {
+  token: string;
+  user?: UserResponse;
+}
+
+/**
+ * AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+ * Invitation tokens never authenticate a user or issue a session.
+ */
 export interface AcceptInvitationRequest {
   token: string;
-  password: string;
-  name: string;
 }
 
 /** ProvidersResponse is a response containing the list of configured OAuth providers. */
@@ -442,6 +445,7 @@ export interface ProvidersResponse {
 
 /** SessionResponse is the API representation of a session. */
 export interface SessionResponse {
+  expires_at: number;
   id: string;
   device_info: string;
   ip_address: string;
@@ -493,7 +497,6 @@ export interface SwitchWorkspaceRequest {
 
 /** SwitchWorkspaceResponse is a response from switching workspace. */
 export interface SwitchWorkspaceResponse {
-  token: string;
   user?: UserResponse;
 }
 

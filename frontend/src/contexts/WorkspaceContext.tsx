@@ -97,7 +97,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>();
 export const WorkspaceProvider: ParentComponent = (props) => {
   const { t, ready: i18nReady } = useI18n();
   const navigate = useNavigate();
-  const { user, token, setUser, api, wsApi, login } = useAuth();
+  const { user, identity: authIdentity, setUser, api, wsApi } = useAuth();
 
   // Node state
   const [nodes, setNodesStore] = createStore<NodeResponse[]>([]);
@@ -135,7 +135,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Track loaded state to prevent duplicate calls
   const [loadedForWorkspace, setLoadedForWorkspace] = createSignal<string | null>(null);
   const [loadedNodeId, setLoadedNodeId] = createSignal<string | null>(null);
-  const workspaceIdentity = () => `${token() ?? ""}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
+  const workspaceIdentity = () => `${authIdentity()}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
   let nodeListRequest = 0;
   let nodeRequest = 0;
   let loadingForWorkspace: string | null = null;
@@ -157,6 +157,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadedNodeId(null);
       setLoadingNodes(false);
       setLoadingNodeId(null);
+      setSwitchingWorkspace(false);
+      setCreatingNode(false);
     });
   });
 
@@ -240,8 +242,12 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   };
 
   async function createOrganization(data: { name: string }) {
-    await api().createOrganization({ name: data.name });
-    const updatedUser = await api().getMe();
+    const client = api();
+    const initialIdentity = authIdentity();
+    await client.createOrganization({ name: data.name });
+    if (authIdentity() !== initialIdentity) return;
+    const updatedUser = await client.getMe();
+    if (authIdentity() !== initialIdentity) return;
     setUser(updatedUser);
   }
 
@@ -250,8 +256,12 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (!u || !u.organization_id) {
       throw new Error("No organization selected");
     }
-    const ws = await api().org(u.organization_id).createWorkspace({ name: data.name });
-    const updatedUser = await api().getMe();
+    const client = api();
+    const initialIdentity = authIdentity();
+    const ws = await client.org(u.organization_id).createWorkspace({ name: data.name });
+    if (authIdentity() !== initialIdentity) return;
+    const updatedUser = await client.getMe();
+    if (authIdentity() !== initialIdentity) return;
     setUser(updatedUser);
     await switchWorkspace(ws.id);
   }
@@ -259,32 +269,29 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Provision the first organization and workspace with server-side idempotency.
   async function autoProvisionFirstLogin() {
     const initialUser = user();
-    const initialToken = token();
-    if (!initialUser || !initialToken) return;
+    const initialIdentity = authIdentity();
+    if (!initialUser) return;
     try {
       setCreatingNode(true);
       const firstName = initialUser.name.split(" ")[0] || initialUser.name;
-      const result = await provisionFirstWorkspace(
-        initialUser.id,
-        createApi(() => initialToken),
-        {
-          organization: (firstName
-            ? t("onboarding.defaultOrgName", { name: firstName })
-            : t("onboarding.defaultOrgNameFallback")) as string,
-          workspace: (firstName
-            ? t("onboarding.defaultWorkspaceName", { name: firstName })
-            : t("onboarding.defaultWorkspaceNameFallback")) as string,
-        },
-      );
-      if (token() !== initialToken) return;
-      if (result.token) login(result.token, result.user);
-      else setUser(result.user);
+      const result = await provisionFirstWorkspace(initialUser.id, createApi(undefined, initialUser.session_id), {
+        organization: (firstName
+          ? t("onboarding.defaultOrgName", { name: firstName })
+          : t("onboarding.defaultOrgNameFallback")) as string,
+        workspace: (firstName
+          ? t("onboarding.defaultWorkspaceName", { name: firstName })
+          : t("onboarding.defaultWorkspaceNameFallback")) as string,
+      });
+      if (authIdentity() !== initialIdentity) return;
+      setUser(result.user);
       if (result.user.workspace_id) navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name));
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
-      setFirstLoginCheckDone(true);
+      if (authIdentity() === initialIdentity) {
+        setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+        setFirstLoginCheckDone(true);
+      }
     } finally {
-      setCreatingNode(false);
+      if (authIdentity() === initialIdentity) setCreatingNode(false);
     }
   }
 
@@ -308,13 +315,16 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   }
 
   async function switchWorkspace(wsId: string) {
+    const initialIdentity = authIdentity();
+    const client = api();
     try {
       setSwitchingWorkspace(true);
-      const data = await api().switchWorkspace({ ws_id: wsId });
+      const data = await client.switchWorkspace({ ws_id: wsId });
+      if (authIdentity() !== initialIdentity) return;
       if (!data.user) {
         throw new Error("No user data returned");
       }
-      login(data.token, data.user);
+      setUser(data.user);
       batch(() => {
         setSelectedNodeId(null);
         setSelectedNodeData(null);
@@ -328,9 +338,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         navigate(workspaceUrl(u.workspace_id, u.workspace_name));
       }
     } catch (err) {
-      setLoadError(`${t("errors.failedToSwitch")}: ${err}`);
+      if (authIdentity() === initialIdentity) setLoadError(`${t("errors.failedToSwitch")}: ${err}`);
     } finally {
-      setSwitchingWorkspace(false);
+      if (authIdentity() === initialIdentity) setSwitchingWorkspace(false);
     }
   }
 

@@ -106,6 +106,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
+	mountDeviceLogin(mux, svc, cfg, hcfg, authh, limiters)
 	if cfg.ExternalVoice != nil {
 		// The Go Mode Android shell uses GET; browser clients use POST.
 		token := WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identity.WSRoleViewer, limiters)
@@ -145,7 +146,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Other handlers
 	uh := &handlers.UserHandler{Svc: svc}
 	ih := &handlers.InvitationHandler{Svc: svc, Cfg: hcfg}
-	mh := &handlers.MembershipHandler{Svc: svc, Cfg: hcfg}
+	mh := &handlers.MembershipHandler{Svc: svc}
 	orgh := &handlers.OrganizationHandler{Svc: svc, Cfg: hcfg}
 	// GitHub App client for git remote handler.
 	var ghAppClient *githubapp.Client
@@ -200,8 +201,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Public
 	mux.Handle("POST /api/v1/auth/login", WrapWithSvc(authh.Login, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/register", WrapWithSvc(authh.Register, svc, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/invitations/org/accept", WrapWithSvc(ih.AcceptOrgInvitation, svc, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/invitations/ws/accept", WrapWithSvc(ih.AcceptWSInvitation, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/browser/login", wrapBrowserLogin(authh.Login, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/browser/register", wrapBrowserLogin(authh.Register, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/browser/logout", wrapBrowserLogout(authh, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/invitations/org/accept", WrapAuth(ih.AcceptOrgInvitation, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/invitations/ws/accept", WrapAuth(ih.AcceptWSInvitation, svc, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/email/verify", authh.VerifyEmailRedirect)
 	mux.Handle("GET /api/v1/auth/providers", Wrap(oh.ListProviders, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}", loginRedirect)
@@ -306,7 +310,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// SSE events (EventSource can't set headers; token accepted as query param)
 	sseH := &handlers.SSEHandler{Svc: svc, Cfg: hcfg}
 	sseAuth := WrapAuthRaw(sseH.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters)
-	mux.HandleFunc("GET /api/v1/workspaces/{wsID}/events", handlers.InjectTokenFromQuery(sseAuth).ServeHTTP)
+	mux.HandleFunc("GET /api/v1/workspaces/{wsID}/events", sseAuth.ServeHTTP)
 
 	// Notification endpoints - /api/v1/notifications/*
 	notifh := &handlers.NotificationHandler{Svc: svc, Cfg: hcfg}
@@ -347,6 +351,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	var inner http.Handler = mux
 	inner = compressMiddleware(inner)
 	inner = decompressMiddleware(inner)
+	inner = http.NewCrossOriginProtection().Handler(inner)
 
 	f := func(w http.ResponseWriter, r *http.Request) {
 		clientIP := reqctx.ResolveClientIP(r, cfg.TrustedProxies)

@@ -1,10 +1,10 @@
 // Test for block handle visibility bug fix.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("block handle should be visible when block is hovered", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-handle-fix");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -52,7 +52,7 @@ test("block handle should be visible when block is hovered", async ({ page, requ
 
 test("numbered list items should have data-number attribute for CSS content", async ({ page, request }) => {
   const { token } = await registerUser(request, "number-data-attr");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -103,7 +103,7 @@ test("numbered list items should have data-number attribute for CSS content", as
 
 test("bullet list items should display with proper text alignment", async ({ page, request }) => {
   const { token } = await registerUser(request, "bullet-alignment");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);

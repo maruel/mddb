@@ -3,7 +3,7 @@
 import { createSignal, For, Show, createEffect, createMemo } from "solid-js";
 import SidebarNode from "./SidebarNode";
 import { useI18n } from "../i18n";
-import { useAuth } from "../contexts";
+import { useAuth, useAuthScope } from "../contexts";
 import { useWorkspace } from "../contexts";
 import type { NodeResponse, WSMembershipResponse } from "@sdk/types.gen";
 import { WSRoleAdmin } from "@sdk/types.gen";
@@ -47,6 +47,7 @@ interface SidebarProps {
 export default function Sidebar(props: SidebarProps) {
   const { t } = useI18n();
   const { user, wsApi, refreshUser } = useAuth();
+  const captureScope = useAuthScope();
   const { switchWorkspace } = useWorkspace();
   const [showOtherWorkspaces, setShowOtherWorkspaces] = createSignal(false);
   const [isEditingName, setIsEditingName] = createSignal(false);
@@ -115,6 +116,7 @@ export default function Sidebar(props: SidebarProps) {
   };
 
   const saveWorkspaceName = async () => {
+    const isCurrent = captureScope();
     const ws = wsApi();
     const newName = editNameValue().trim();
     if (!ws || !newName || newName === currentWsName()) {
@@ -125,7 +127,9 @@ export default function Sidebar(props: SidebarProps) {
     try {
       setIsSaving(true);
       await ws.updateWorkspace({ name: newName });
+      if (!isCurrent()) return;
       await refreshUser();
+      if (!isCurrent()) return;
       setIsEditingName(false);
     } catch (err) {
       console.error("Failed to update workspace name:", err);

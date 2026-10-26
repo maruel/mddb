@@ -1,13 +1,13 @@
 // E2E tests for navigating to a table with a specific ?view= query parameter.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 import { nodeUrl } from "../frontend/src/utils/urls";
 
 test("navigating with ?view= param activates the correct non-default view", async ({ page, request }) => {
   const { token } = await registerUser(request, "view-param");
   const client = createClient(request, token);
 
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   const wsID = await getWorkspaceId(page);
 

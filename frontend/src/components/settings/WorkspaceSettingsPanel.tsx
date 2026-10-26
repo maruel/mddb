@@ -102,6 +102,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   };
 
   const loadData = async () => {
+    const client = api();
     const org = orgApi();
     if (!org) return;
 
@@ -137,11 +138,11 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
       if (activeTab() === "sync" && isAdmin() && ws) {
         try {
-          const availResp = await api().isGitHubAppAvailable();
+          const availResp = await client.isGitHubAppAvailable();
           setGitHubAppAvailable(availResp.available);
           if (availResp.available) {
             try {
-              const instResp = await api().listGitHubAppInstallations();
+              const instResp = await client.listGitHubAppInstallations();
               setGhInstallations(instResp.installations || []);
             } catch {
               setGhInstallations([]);

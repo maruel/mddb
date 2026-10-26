@@ -1,5 +1,5 @@
 // E2E tests for OAuth2 authentication flow.
-import { test, expect, registerUser } from "./helpers";
+import { test, expect, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("API routing", () => {
   test("unknown /api/v1/ routes return 404, not SPA", async ({ request }) => {
@@ -89,7 +89,7 @@ test.describe("OAuth Login", () => {
     const { token } = await registerUser(request, "oauth-callback");
 
     // Now simulate OAuth callback with this valid token
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
 
     // Should be logged in - sidebar indicates logged in state
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });

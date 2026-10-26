@@ -5,7 +5,7 @@ import { useNavigate } from "@solidjs/router";
 import type { EditorView } from "prosemirror-view";
 import { schema, marks } from "./prosemirror-config";
 import { useI18n } from "../../i18n";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth, useAuthScope } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useEditor } from "../../contexts/EditorContext";
 import { useClickOutside } from "../../composables/useClickOutside";
@@ -24,6 +24,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { user, wsApi } = useAuth();
+  const captureScope = useAuthScope();
   const { loadNode, fetchNodeChildren } = useWorkspace();
   const { flushAutoSave } = useEditor();
   const [selectedIndex, setSelectedIndex] = createSignal(0);
@@ -163,6 +164,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   });
 
   const executeCommand = async (command: SlashCommand | undefined) => {
+    const scopeCurrent = captureScope();
+    const originalView = props.view;
+    const isCurrent = () => scopeCurrent() && !originalView.isDestroyed && props.view === originalView;
     if (!command) return;
 
     // Get current plugin state from ProseMirror (authoritative source)
@@ -187,6 +191,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         // Create the subpage
         const untitledTitle = t("slashMenu.untitledSubpage") || "Untitled";
         const newPage = await ws.createPage(parentId, { title: untitledTitle });
+        if (!isCurrent() || props.nodeId !== parentId) return;
         if (!newPage?.id) return;
 
         // Build the URL for the new page
@@ -206,9 +211,11 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         // Refresh parent's children in sidebar to show new subpage
         // (loadNodes only refreshes root nodes, fetchNodeChildren refreshes the parent's children)
         await fetchNodeChildren(parentId);
+        if (!isCurrent() || props.nodeId !== parentId) return;
 
         // Load the new page data and navigate to it
         await loadNode(newPage.id, { refresh: false });
+        if (!isCurrent()) return;
         navigate(url);
       } catch (err) {
         console.error("Failed to create subpage:", err);

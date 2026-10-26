@@ -488,14 +488,14 @@ func (t *Table[T]) Append(row T) (err error) {
 			}
 		}
 
-		data, err := json.Marshal(row)
-		if err != nil {
-			return fmt.Errorf("failed to marshal row: %w", err)
+		data, marshalErr := json.Marshal(row)
+		if marshalErr != nil {
+			return fmt.Errorf("failed to marshal row: %w", marshalErr)
 		}
 
-		f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
-		if err != nil {
-			return fmt.Errorf("failed to open table file for append: %w", err)
+		f, openErr := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
+		if openErr != nil {
+			return fmt.Errorf("failed to open table file for append: %w", openErr)
 		}
 		defer func() {
 			if cerr := f.Close(); cerr != nil && err == nil {

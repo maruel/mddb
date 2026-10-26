@@ -1,6 +1,6 @@
 // E2E screenshot test: table with every column type shown in all four view modes.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 const ALL_PROPERTIES = [
   { name: "Name", type: "text" as const },
@@ -68,7 +68,7 @@ const SAMPLE_RECORDS = [
 
 test.screenshot("all column types in all view modes", async ({ page, request, takeScreenshot }) => {
   const { token } = await registerUser(request, "all-col-views");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   const wsID = await getWorkspaceId(page);

@@ -97,7 +97,7 @@ function setupApi(initial: { organization: boolean; workspace: boolean; member: 
       body = { id: "ws-1" };
     } else if (url === "/api/v1/auth/switch-workspace" && method === "POST") {
       activeWorkspaceId = (JSON.parse(String(init?.body)) as { ws_id: string }).ws_id;
-      body = { token: "workspace-token", user: currentUser() };
+      body = { user: currentUser() };
     } else throw new Error(`Unexpected request: ${method} ${url}`);
     return { ok: true, json: async () => body } as Response;
   };
@@ -109,7 +109,6 @@ describe("provisionFirstWorkspace", () => {
     const { api, requests } = setupApi({ organization: false, workspace: false, member: false });
     const result = await provisionFirstWorkspace("user-1", api, names);
     expect(result.user.workspace_id).toBe("ws-1");
-    expect(result.token).toBe("workspace-token");
     expect(requests.filter((request) => request.startsWith("POST"))).toEqual([
       "POST /api/v1/organizations",
       "POST /api/v1/organizations/org-1/workspaces",
@@ -121,7 +120,6 @@ describe("provisionFirstWorkspace", () => {
     const { api, requests } = setupApi({ organization: true, workspace: true, member: false });
     const result = await provisionFirstWorkspace("user-1", api, names);
     expect(result.user.workspace_id).toBe("ws-1");
-    expect(result.token).toBeNull();
     expect(requests).toEqual(["GET /api/v1/auth/me"]);
   });
 
@@ -129,7 +127,6 @@ describe("provisionFirstWorkspace", () => {
     const { api, requests } = setupApi({ organization: true, workspace: false, member: true });
     const result = await provisionFirstWorkspace("user-1", api, names);
     expect(result.user.workspace_id).toBeUndefined();
-    expect(result.token).toBeNull();
     expect(requests).toEqual(["GET /api/v1/auth/me"]);
   });
 
@@ -137,7 +134,6 @@ describe("provisionFirstWorkspace", () => {
     const { api, requests } = setupApi({ organization: true, workspace: false, member: true, otherWorkspace: true });
     const result = await provisionFirstWorkspace("user-1", api, names);
     expect(result.user.workspace_id).toBe("ws-2");
-    expect(result.token).toBe("workspace-token");
     expect(requests).toEqual(["GET /api/v1/auth/me", "POST /api/v1/auth/switch-workspace"]);
   });
 });

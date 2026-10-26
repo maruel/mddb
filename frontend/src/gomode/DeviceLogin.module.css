@@ -1,0 +1,22 @@
+/* Maps mddb's semantic theme roles onto device login at touchscreen and narrow widths. */
+.shell {
+  max-width: 42rem;
+  padding: var(--s-4);
+  margin: 2rem auto;
+  color: var(--c-text);
+  background: var(--c-surface);
+
+  --device-login-color: var(--c-text);
+  --device-login-background: var(--c-surface);
+  --device-login-button-color: var(--c-text-inverse);
+  --device-login-button-background: var(--c-action-primary);
+  --device-login-input-color: var(--c-text);
+  --device-login-input-background: var(--c-surface);
+  --device-login-border: var(--c-border);
+  --device-login-focus: var(--c-border-focus);
+}
+
+.accountButton {
+  min-height: 3rem;
+  margin-bottom: var(--s-4);
+}

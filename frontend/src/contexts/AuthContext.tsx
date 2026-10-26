@@ -1,4 +1,4 @@
-// Authentication context providing user state, token management, and API clients.
+// Owns cookie account state and native identity transitions without browser-readable credentials.
 
 import {
   createContext,
@@ -7,215 +7,215 @@ import {
   createMemo,
   createEffect,
   batch,
-  on,
   onMount,
   onCleanup,
   type ParentComponent,
   type Accessor,
+  Show,
 } from "solid-js";
 import { createApi, APIError, type Api } from "../useApi";
 import type { UserResponse } from "@sdk/types.gen";
-import { publishGoModeBearerToken } from "../gomode/host";
+import { publishGoModeAuthChanging, publishGoModeAuthChanged } from "../gomode/host";
 import { useI18n, type Locale } from "../i18n";
 
 export interface AuthContextValue {
   user: Accessor<UserResponse | null>;
-  token: Accessor<string | null>;
-  /** True once initial auth check is complete (token validated or no token present) */
+  identity: Accessor<number>;
   ready: Accessor<boolean>;
   api: Accessor<Api>;
   wsApi: Accessor<ReturnType<Api["ws"]> | null>;
   orgApi: Accessor<ReturnType<Api["org"]> | null>;
-  login: (token: string, user: UserResponse) => void;
+  login: (user: UserResponse) => void;
   logout: () => Promise<void>;
+  /** Invalidate native identity before rediscovering the authoritative cookie. */
+  reloadIdentity: () => void;
   setUser: (user: UserResponse | null) => void;
   refreshUser: () => Promise<void>;
 }
-
-// Exported so tests can provide canned auth state without mocking the module.
 export const AuthContext = createContext<AuthContextValue>();
+const authEventKey = "mddb_auth_changed";
 
 export const AuthProvider: ParentComponent = (props) => {
-  const { setLocale } = useI18n();
+  const { setLocale, t } = useI18n();
   const [user, setUser] = createSignal<UserResponse | null>(null);
-  const [token, setToken] = createSignal<string | null>(localStorage.getItem("mddb_token"));
   const [ready, setReady] = createSignal(false);
-
+  const [identity, setIdentity] = createSignal(0);
+  const [logoutFailed, setLogoutFailed] = createSignal(false);
+  let generation = 0;
   createEffect(() => {
-    const language = user()?.settings?.language;
-    const locale: Locale = language === "fr" || language === "de" || language === "es" ? language : "en";
+    const lang = user()?.settings?.language;
+    const locale: Locale = lang === "fr" || lang === "de" || lang === "es" ? lang : "en";
     setLocale(locale);
   });
-
-  const clearAuth = () => {
-    localStorage.removeItem("mddb_token");
+  const changing = () => {
+    generation++;
+    publishGoModeAuthChanging();
     batch(() => {
-      setToken(null);
+      setIdentity(generation);
       setUser(null);
+      setReady(false);
+    });
+    return generation;
+  };
+  const settle = (id: number, value: UserResponse | null) => {
+    if (id !== generation) return;
+    batch(() => {
+      setUser(value);
       setReady(true);
     });
-    publishGoModeBearerToken(null);
+    publishGoModeAuthChanged(value !== null);
   };
-
-  const logout = async () => {
-    const currentToken = token();
-    clearAuth();
-    if (currentToken) {
-      try {
-        const logoutApi = createApi(
-          () => currentToken,
-          () => {},
-        );
-        await logoutApi.logout();
-      } catch {
-        // Ignore errors - proceed with local logout even if server call fails
-      }
-    }
-    // Note: Navigation after logout is handled by calling components
-  };
-
-  // Create API client with auth
-  const api = createMemo(() =>
-    createApi(
-      () => token(),
-      (failedToken) => {
-        if (failedToken && token() === failedToken) void logout();
-      },
-    ),
-  );
-
-  // Get workspace-scoped API client
+  const signalChange = () => localStorage.setItem(authEventKey, crypto.randomUUID());
+  const sessionID = createMemo(() => user()?.session_id);
+  const api = createMemo(() => {
+    const id = identity();
+    const sid = sessionID();
+    return createApi(() => {
+      if (id === generation) void load();
+    }, sid);
+  });
   const wsApi = createMemo(() => {
-    const wsID = user()?.workspace_id;
-    return wsID ? api().ws(wsID) : null;
+    const id = user()?.workspace_id;
+    return id ? api().ws(id) : null;
   });
-
-  // Get organization-scoped API client
   const orgApi = createMemo(() => {
-    const orgID = user()?.organization_id;
-    return orgID ? api().org(orgID) : null;
+    const id = user()?.organization_id;
+    return id ? api().org(id) : null;
   });
-
-  const login = (newToken: string, userData: UserResponse) => {
-    localStorage.setItem("mddb_token", newToken);
-    batch(() => {
-      setToken(newToken);
-      setUser(userData);
-    });
-    publishGoModeBearerToken(newToken);
+  const login = (value: UserResponse) => {
+    setLogoutFailed(false);
+    const id = changing();
+    settle(id, value);
+    signalChange();
   };
-
-  const acceptValidatedUser = (validatedToken: string, data: UserResponse) => {
-    if (token() !== validatedToken) return;
-    setUser(data);
-    publishGoModeBearerToken(validatedToken);
+  const confirmLoggedOut = () => settle(changing(), null);
+  const reloadIdentity = () => {
+    changing();
+    window.location.reload();
   };
-
-  const refreshUser = async () => {
-    const currentToken = token();
-    if (!currentToken) return;
+  const logout = async () => {
+    setLogoutFailed(false);
+    const sid = user()?.session_id;
+    const id = changing();
     try {
-      const data = await api().getMe();
-      acceptValidatedUser(currentToken, data);
+      await createApi(undefined, sid).browserLogout();
     } catch (err) {
-      console.error("Failed to refresh user", err);
-      if (err instanceof APIError && err.status === 401) {
-        if (token() === currentToken) clearAuth();
+      console.error("Failed to revoke browser session", err);
+      // Discover the current cookie without revoking a possible replacement.
+      // If recovery also fails, settle signed out locally so login/retry stays
+      // usable; the surviving provider owns the visible uncertain-revoke error.
+      let recovered: UserResponse | null = null;
+      try {
+        recovered = await createApi().getMe();
+      } catch (recoveryError) {
+        console.error("Failed to recover browser session", recoveryError);
       }
+      if (id === generation) {
+        settle(id, recovered);
+        setLogoutFailed(true);
+      }
+      throw err;
+    }
+    if (id === generation) {
+      settle(id, null);
+      signalChange();
     }
   };
-
-  // Handle OAuth token from URL on mount and fetch user data
-  onMount(async () => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.storageArea !== localStorage || (event.key !== "mddb_token" && event.key !== null)) return;
-      const storedToken = localStorage.getItem("mddb_token");
-      if (storedToken === token()) return;
-      batch(() => {
-        setReady(!storedToken);
-        setToken(storedToken);
-        setUser(null);
-      });
-      publishGoModeBearerToken(null);
+  const refreshUser = async () => {
+    const id = generation;
+    try {
+      const value = await createApi(() => {
+        // Middleware can reject authentication before a JSON API response exists.
+        if (id === generation) confirmLoggedOut();
+      }).getMe();
+      if (id !== generation) return;
+      if (user()?.id !== value.id || user()?.session_id !== value.session_id) {
+        const next = changing();
+        settle(next, value);
+      } else setUser(value);
+    } catch (err) {
+      if (id !== generation) return;
+      if (err instanceof APIError && err.status === 401) {
+        const next = changing();
+        settle(next, null);
+      } else console.error("Failed to refresh user", err);
+    }
+  };
+  const load = async () => {
+    const id = changing();
+    try {
+      const value = await createApi().getMe();
+      settle(id, value);
+    } catch (err) {
+      if (!(err instanceof APIError && err.status === 401)) console.error("Failed to load user", err);
+      settle(id, null);
+    }
+  };
+  onMount(() => {
+    localStorage.removeItem("mddb_token");
+    const params = new URLSearchParams(window.location.search);
+    if ((window.location.pathname === "/" || window.location.pathname === "/login") && params.has("token")) {
+      params.delete("token");
+      const q = params.toString();
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname + (q ? `?${q}` : "") + window.location.hash,
+      );
+    }
+    const storage = (event: StorageEvent) => {
+      if (event.storageArea === localStorage && (event.key === authEventKey || event.key === null)) void load();
     };
-    window.addEventListener("storage", handleStorage);
-    onCleanup(() => window.removeEventListener("storage", handleStorage));
-    publishGoModeBearerToken(null);
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get("token");
-    if (urlToken) {
-      localStorage.setItem("mddb_token", urlToken);
-      setToken(urlToken);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    // Determine which token to use - URL token takes priority over localStorage
-    // Note: We read the token directly from the sources, not from the signal,
-    // because the signal update might not be visible in this synchronous context
-    const effectiveToken = urlToken || localStorage.getItem("mddb_token");
-    if (effectiveToken) {
-      try {
-        const data = await api().getMe();
-        acceptValidatedUser(effectiveToken, data);
-      } catch (err) {
-        console.error("Failed to load user", err);
-        if (err instanceof APIError && err.status === 401) {
-          if (token() === effectiveToken) clearAuth();
-        }
-      }
-    }
-
-    // Auth check complete - mark as ready
-    if (token() === effectiveToken) setReady(true);
+    const focus = () => {
+      void refreshUser();
+    };
+    window.addEventListener("storage", storage);
+    window.addEventListener("focus", focus);
+    onCleanup(() => {
+      generation++;
+      window.removeEventListener("storage", storage);
+      window.removeEventListener("focus", focus);
+    });
+    void load();
   });
-
-  // Fetch user when token changes after mount (e.g., login)
-  // Using on() with defer: true to skip initial execution (handled in onMount)
-  createEffect(
-    on(
-      () => [token(), user()] as const,
-      ([tok, u]) => {
-        if (tok && !u) {
-          (async () => {
-            const currentToken = tok;
-            try {
-              const data = await api().getMe();
-              acceptValidatedUser(currentToken, data);
-            } catch (err) {
-              console.error("Failed to load user", err);
-              if (err instanceof APIError && err.status === 401) {
-                if (token() === currentToken) clearAuth();
-              }
-            } finally {
-              if (token() === currentToken) setReady(true);
-            }
-          })();
-        }
-      },
-      { defer: true },
-    ),
-  );
-
-  const value: AuthContextValue = {
+  const contextValue: AuthContextValue = {
     user,
-    token,
+    identity,
     ready,
     api,
     wsApi,
     orgApi,
     login,
     logout,
+    reloadIdentity,
     setUser,
     refreshUser,
   };
-
-  return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      <Show when={logoutFailed()}>
+        <p role="alert">{t("auth.logoutFailed")}</p>
+      </Show>
+      {props.children}
+    </AuthContext.Provider>
+  );
 };
-
 export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const value = useContext(AuthContext);
+  if (!value) throw new Error("useAuth must be used within an AuthProvider");
+  return value;
+}
+
+/** Capture an operation's account/workspace lifetime before awaiting or scheduling work. */
+export function useAuthScope(): () => () => boolean {
+  const { identity, user } = useAuth();
+  let disposed = false;
+  onCleanup(() => {
+    disposed = true;
+  });
+  return () => {
+    const epoch = identity();
+    const workspace = user()?.workspace_id;
+    return () => !disposed && identity() === epoch && user()?.workspace_id === workspace;
+  };
 }

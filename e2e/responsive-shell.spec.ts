@@ -1,13 +1,13 @@
 // End-to-end coverage for responsive workspace and settings sidebar behavior.
 
-import { createClient, expect, registerUser, test } from "./helpers";
+import { createClient, expect, registerUser, test, gotoWithSession } from "./helpers";
 import { OrgRoleMember } from "../sdk/types.gen";
 
 test.describe("Responsive shell", () => {
   test("keeps desktop collapse separate from mobile overlay dismissal across resizes", async ({ page, request }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const { token } = await registerUser(request, "responsive-workspace");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     const sidebar = page.locator("aside").first();
     await expect(sidebar).toHaveClass(/open/i, { timeout: 10000 });
 
@@ -42,7 +42,7 @@ test.describe("Responsive shell", () => {
   test("keeps the settings sidebar closed on mobile after breakpoint changes", async ({ page, request }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const { token } = await registerUser(request, "responsive-settings");
-    await page.goto(`/settings/user?token=${token}`);
+    await gotoWithSession(page, token, `/settings/user`);
     const sidebar = page.locator("aside").first();
     await expect(sidebar).toBeVisible({ timeout: 10000 });
 
@@ -62,7 +62,7 @@ test.describe("Responsive shell", () => {
 
   test("uses dismissible workspace creation when a workspace already exists", async ({ page, request }) => {
     const { token } = await registerUser(request, "responsive-create-workspace");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     const createWorkspace = page.getByTestId("create-workspace-button");
     await expect(createWorkspace).toBeVisible({ timeout: 10000 });
 
@@ -84,7 +84,7 @@ test.describe("Responsive shell", () => {
   test("keeps the mobile sidebar open when Escape dismisses its workspace dialog", async ({ page, request }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     const { token } = await registerUser(request, "responsive-dialog-escape");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     const menuButton = page.getByRole("button", { name: "Toggle menu" });
     const sidebar = page.locator("aside").first();
     await expect(menuButton).toBeVisible({ timeout: 10000 });
@@ -133,7 +133,7 @@ test.describe("Responsive shell", () => {
         body: JSON.stringify(firstWorkspaceUser),
       });
     });
-    await page.goto(`/w/@first-workspace?token=${token}`);
+    await gotoWithSession(page, token, `/w/@first-workspace`);
 
     const menuButton = page.getByRole("button", { name: "Toggle menu" });
     const sidebar = page.locator("aside").first();

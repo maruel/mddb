@@ -1,10 +1,10 @@
 // Diagnostic tests for block handle visibility and text alignment issues.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("diagnose: block handle visibility on hover", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-handle-visual");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -90,7 +90,7 @@ code block
 
 test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ page, request }) => {
   const { token } = await registerUser(request, "text-alignment-diagnostic");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);

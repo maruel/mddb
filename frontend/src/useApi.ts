@@ -89,35 +89,25 @@ function withRetry(fetchFn: FetchFn): FetchFn {
 
 /**
  * Creates an authenticated fetch function for use with the API client.
- * @param getToken - Function that returns the current auth token
  * @param onUnauthorized - Callback when a 401 response is received
  */
-export function createAuthFetch(
-  getToken: () => string | null,
-  onUnauthorized?: (token: string | null) => void,
-): FetchFn {
-  const baseFetch: FetchFn = async (url: string, init?: RequestInit) => {
-    const token = getToken();
+export function createAuthFetch(onUnauthorized?: () => void, expectedSession?: string): FetchFn {
+  const baseFetch: FetchFn = async (url, init) => {
     const headers = new Headers(init?.headers);
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    const res = await fetch(url, { ...init, headers, cache: "no-store" });
-    if (res.status === 401 && onUnauthorized) {
-      onUnauthorized(token);
-    }
-    return res;
+    if (expectedSession) headers.set("X-MDDB-Session", expectedSession);
+    const response = await fetch(url, { ...init, headers, credentials: "same-origin", cache: "no-store" });
+    if (response.status === 401) onUnauthorized?.();
+    return response;
   };
   return withRetry(baseFetch);
 }
 
 /**
  * Creates an API client with authentication.
- * @param getToken - Function that returns the current auth token
  * @param onUnauthorized - Callback when a 401 response is received
  */
-export function createApi(getToken: () => string | null, onUnauthorized?: (token: string | null) => void) {
-  const authFetch = createAuthFetch(getToken, onUnauthorized);
+export function createApi(onUnauthorized?: () => void, expectedSession?: string) {
+  const authFetch = createAuthFetch(onUnauthorized, expectedSession);
   return createApiClient((url, init) => {
     // Only the generated UI mutation methods own optimistic updates. Generic
     // authenticated fetches (including MCP transports) must remain observable.

@@ -11,11 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/gomode/devicelogin"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -172,6 +175,28 @@ func (s *Services) ActiveWorkspaceID(user *identity.User) ksid.ID {
 	return resp.WorkspaceID
 }
 
+// EffectiveWorkspaceRole applies current workspace membership and the organization owner/admin override.
+func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (role identity.WorkspaceRole, errMsg string, statusCode int) {
+	ws, err := svc.Workspace.Get(wsID)
+	if err != nil {
+		return "", "Workspace not found", http.StatusNotFound
+	}
+
+	orgMem, err := svc.OrgMembership.Get(user.ID, ws.OrganizationID)
+	if err != nil {
+		return "", "Forbidden: not a member of this organization", http.StatusForbidden
+	}
+	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
+		return identity.WSRoleAdmin, "", 0
+	}
+
+	wsMem, err := svc.WSMembership.Get(user.ID, wsID)
+	if err != nil {
+		return "", "Forbidden: not a member of this workspace", http.StatusForbidden
+	}
+	return wsMem.Role, "", 0
+}
+
 // BandwidthUpdater allows updating bandwidth limits at runtime.
 type BandwidthUpdater interface {
 	Update(maxBytesPerSecond int64)
@@ -192,25 +217,32 @@ type Config struct {
 	Dirty     bool
 }
 
-// GenerateSignedAssetURL creates a signed rooted path for asset access.
-func (c *Config) GenerateSignedAssetURL(wsID, nodeID ksid.ID, name string) string {
-	expiry := time.Now().Add(AssetURLExpiry).Unix()
+// GenerateSignedAssetURL creates a parent-session-bound rooted asset link.
+// Without a validated host session it returns no link; user-only contexts cannot delegate access.
+func (c *Config) GenerateSignedAssetURL(ctx context.Context, wsID, nodeID ksid.ID, name string) string {
+	session := reqctx.Session(ctx)
+	if session == nil {
+		return ""
+	}
+	sid := session.ID.String()
+	expiry := min(time.Now().Add(AssetURLExpiry).Unix(), session.ExpiresAt.AsTime().Unix())
 	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
-	sig := c.generateSignature(path, expiry)
-	return fmt.Sprintf("/assets/%s?sig=%s&exp=%d", path, sig, expiry)
+	sig := c.generateSignature(path, sid, expiry)
+	urlPath := fmt.Sprintf("%s/%s/%s", wsID, nodeID, url.PathEscape(name))
+	return fmt.Sprintf("/assets/%s?sig=%s&exp=%d&sid=%s", urlPath, sig, expiry, sid)
 }
 
 // generateSignature creates an HMAC-SHA256 signature for asset access.
-func (c *Config) generateSignature(path string, expiry int64) string {
-	data := fmt.Sprintf("%s:%d", path, expiry)
+func (c *Config) generateSignature(path, sid string, expiry int64) string {
+	data := fmt.Sprintf("mddb-asset-session-v1:%s:%s:%d", path, sid, expiry)
 	mac := hmac.New(sha256.New, c.JWTSecret)
 	mac.Write([]byte(data))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // VerifyAssetSignature checks if the provided signature is valid.
-func (c *Config) VerifyAssetSignature(path, sig string, expiry int64) bool {
-	expected := c.generateSignature(path, expiry)
+func (c *Config) VerifyAssetSignature(path, sid, sig string, expiry int64) bool {
+	expected := c.generateSignature(path, sid, expiry)
 	return hmac.Equal([]byte(expected), []byte(sig))
 }
 
@@ -219,54 +251,49 @@ const AssetURLExpiry = 1 * time.Hour
 
 const tokenExpiration = 31 * 24 * time.Hour
 
-// GenerateToken generates a JWT token for the given user (without session tracking).
-func (c *Config) GenerateToken(user *identity.User) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":   user.ID,
-		"email": user.Email,
-		"exp":   time.Now().Add(tokenExpiration).Unix(),
-		"iat":   time.Now().Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(c.JWTSecret)
+// SessionClaims binds a host JWT to its persisted session and account.
+type SessionClaims struct {
+	jwt.RegisteredClaims
+	SessionID string `json:"sid"`
+	Email     string `json:"email"`
 }
 
-// GenerateTokenWithSession creates a session and generates a JWT token with session ID.
-func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent, countryCode string) (string, error) {
-	expiresAt := time.Now().Add(tokenExpiration)
-
-	// Pre-generate session ID so we can include it in the JWT
+// IssueToken persists a session and returns its signed credential and non-secret ID.
+// A nonzero ID on error identifies partial creation that the caller must revoke.
+func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent, countryCode string) (credential string, id ksid.ID, err error) {
+	now := time.Now().Truncate(time.Second)
+	expiresAt := now.Add(tokenExpiration)
 	sessionID := ksid.NewID()
-
-	// Build claims with session ID
-	claims := jwt.MapClaims{
-		"sub":   user.ID,
-		"email": user.Email,
-		"sid":   sessionID.String(),
-		"exp":   expiresAt.Unix(),
-		"iat":   time.Now().Unix(),
+	claims := SessionClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   user.ID.String(),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+		SessionID: sessionID.String(),
+		Email:     user.Email,
 	}
 
 	// Generate the token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
 	tokenString, err := token.SignedString(c.JWTSecret)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	// Create session with the pre-generated ID and token hash
-	deviceInfo := userAgent
-	if len(deviceInfo) > 200 {
-		deviceInfo = deviceInfo[:200]
-	}
-	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
+	deviceInfo := devicelogin.UserAgent(userAgent)
+	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
 		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
-			return "", dto.QuotaExceeded("sessions per user", c.Quotas.MaxSessionsPerUser)
+			return "", 0, dto.QuotaExceeded("sessions per user", c.Quotas.MaxSessionsPerUser)
 		}
-		return "", err
+		if created != nil {
+			return tokenString, sessionID, err
+		}
+		return "", 0, err
 	}
 
-	return tokenString, nil
+	return tokenString, sessionID, nil
 }
 
 // VAPIDKeys returns a VAPIDKeys pair from the Config, or nil if unconfigured.
@@ -275,4 +302,28 @@ func (c *Config) VAPIDKeys() *vapidKeys {
 		return nil
 	}
 	return &vapidKeys{Public: c.VAPID.PublicKey, Private: c.VAPID.PrivateKey}
+}
+
+// SessionCookieName identifies the host-only HttpOnly browser credential.
+const SessionCookieName = "__Host-mddb_session"
+
+// WriteSessionCookie serializes an already-issued session as a Secure, HttpOnly
+// cookie. Local development uses localhost, which browsers treat as trustworthy.
+func (c *Config) WriteSessionCookie(w http.ResponseWriter, token string) error {
+	claims := &SessionClaims{}
+	if _, err := jwt.ParseWithClaims(token, claims, func(_ *jwt.Token) (any, error) { return c.JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired()); err != nil {
+		return err
+	}
+	if claims.ExpiresAt == nil {
+		return errors.New("session expiry missing")
+	}
+	http.SetCookie(w, &http.Cookie{Name: SessionCookieName, Value: token, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, Expires: claims.ExpiresAt.Time, MaxAge: int(math.Ceil(time.Until(claims.ExpiresAt.Time).Seconds()))})
+	w.Header().Set("Cache-Control", "no-store")
+	return nil
+}
+
+// ClearSessionCookie expires the browser credential after server-side revocation.
+func ClearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: SessionCookieName, Value: "", Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+	w.Header().Set("Cache-Control", "no-store")
 }

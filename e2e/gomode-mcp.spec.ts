@@ -1,6 +1,6 @@
 // Verifies Go Mode discovery, resource reads, and browser MCP writes updating the open page.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 const protocolVersion = "2026-07-28";
 
@@ -23,7 +23,7 @@ test("Go Mode discovers mddb, reads its workspace, and updates the page open in 
 
   const { token } = await registerUser(request, "gomode-mcp");
   const client = createClient(request, token);
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
   const wsID = await getWorkspaceId(page);
   const node = await client.ws(wsID).createPage("0", { title: "Go Mode document", content: "Readable through MCP" });

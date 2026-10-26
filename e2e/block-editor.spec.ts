@@ -1,10 +1,10 @@
 // E2E tests for flat block editor: input rules, drag handles, context menu, keyboard navigation.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("create blocks via input rules", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-editor");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   // Get workspace ID from URL
@@ -70,7 +70,7 @@ Another paragraph`;
 
 test("drag handles are present on all blocks", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-drag");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);

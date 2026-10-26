@@ -12,7 +12,7 @@ interface PageHeaderProps {
   coverUrl: string; // signed URL for cover asset
   onIconChange: (icon: string) => void;
   onCoverChange: (cover: string) => void;
-  onUploadCover: (file: File) => Promise<string>; // returns new asset filename
+  onUploadCover: (file: File) => Promise<void>;
 }
 
 export function PageHeader(props: PageHeaderProps) {
@@ -25,10 +25,7 @@ export function PageHeader(props: PageHeaderProps) {
   const hasIcon = () => !!props.icon;
 
   async function handleCoverFileInput(file: File) {
-    const filename = await props.onUploadCover(file);
-    if (filename) {
-      props.onCoverChange(filename);
-    }
+    await props.onUploadCover(file);
   }
 
   function handleCoverDrop(e: DragEvent) {

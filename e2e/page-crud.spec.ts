@@ -1,11 +1,19 @@
 // E2E tests for page create, read, update, and delete operations.
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  getWorkspaceId,
+  fillEditorContent,
+  createClient,
+  gotoWithSession,
+} from "./helpers";
 
 test.describe("Page CRUD Operations", () => {
   test("delete a page - page removed from sidebar and content area cleared", async ({ page, request }) => {
     const { token } = await registerUser(request, "delete-page");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId("connection-status")).toHaveText("Connected", { timeout: 10000 });
 
@@ -72,7 +80,7 @@ test.describe("Page CRUD Operations", () => {
   test("page title updates in sidebar as user types (real-time sync)", async ({ page, request }) => {
     const { token } = await registerUser(request, "sidebar-sync");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -109,7 +117,7 @@ test.describe("Page CRUD Operations", () => {
   test("unsaved indicator appears when editing and disappears after save", async ({ page, request }) => {
     const { token } = await registerUser(request, "unsaved-ind");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -153,7 +161,7 @@ test.describe("Page CRUD Operations", () => {
   test("shows a fixed transient failure message when autosave fails", async ({ page, request }) => {
     const { token } = await registerUser(request, "autosave-feedback");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
     const pageData = await client.ws(wsID).createPage("0", {
@@ -186,7 +194,7 @@ test.describe("Page Navigation", () => {
   test.screenshot("browser back button navigates between pages", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "browser-nav");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -230,7 +238,7 @@ test.describe("Page Navigation", () => {
   test("URL updates with page slug when navigating", async ({ page, request }) => {
     const { token } = await registerUser(request, "url-slug");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -255,7 +263,7 @@ test.describe("Page Navigation", () => {
   test("direct URL navigation loads correct page", async ({ page, request }) => {
     const { token } = await registerUser(request, "direct-url");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -267,7 +275,7 @@ test.describe("Page Navigation", () => {
     });
 
     // Navigate directly to the page URL
-    await page.goto(`/w/@${wsID}/@${pageData.id}?token=${token}`);
+    await gotoWithSession(page, token, `/w/@${wsID}/@${pageData.id}`);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Page content should be visible
@@ -283,7 +291,7 @@ test.describe("Page Navigation", () => {
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "direct-grandchild");
       const client = createClient(request, token);
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
       const wsID = await getWorkspaceId(page);
@@ -305,7 +313,7 @@ test.describe("Page Navigation", () => {
       });
 
       // Navigate directly to grandchild URL (fresh page load)
-      await page.goto(`/w/@${wsID}/@${grandchildData.id}?token=${token}`);
+      await gotoWithSession(page, token, `/w/@${wsID}/@${grandchildData.id}`);
       await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
       // Grandchild content should be visible
@@ -330,7 +338,7 @@ test.describe("Page Navigation", () => {
   test("direct URL navigation to great-grandchild expands all ancestors", async ({ page, request }) => {
     const { token } = await registerUser(request, "direct-greatgrand");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -357,7 +365,7 @@ test.describe("Page Navigation", () => {
     });
 
     // Navigate directly to great-grandchild URL
-    await page.goto(`/w/@${wsID}/@${greatGrandchildData.id}?token=${token}`);
+    await gotoWithSession(page, token, `/w/@${wsID}/@${greatGrandchildData.id}`);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Content should be visible
@@ -375,7 +383,7 @@ test.describe("Page Navigation", () => {
   test("breadcrumb navigation works for nested pages", async ({ page, request }) => {
     const { token } = await registerUser(request, "breadcrumb");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -435,7 +443,7 @@ test.describe("Editor Features", () => {
   test.screenshot("WYSIWYG editor renders markdown correctly", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "wysiwyg-editor");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -470,7 +478,7 @@ test.describe("Editor Features", () => {
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "round-trip");
       const client = createClient(request, token);
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
       const wsID = await getWorkspaceId(page);
@@ -630,7 +638,7 @@ function hello() {
   test("markdown editor fills available vertical space", async ({ page, request }) => {
     const { token } = await registerUser(request, "editor-height");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -679,7 +687,7 @@ function hello() {
   test.screenshot("slash command menu appears and applies block types", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "slash-cmd");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -826,7 +834,7 @@ function hello() {
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "slash-bottom");
       const client = createClient(request, token);
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
       const wsID = await getWorkspaceId(page);
@@ -901,7 +909,7 @@ function hello() {
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "slash-subpage");
       const client = createClient(request, token);
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
       const wsID = await getWorkspaceId(page);
@@ -1001,7 +1009,7 @@ function hello() {
   test.screenshot("version history loads and displays commits", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "version-history");
     const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

@@ -1,0 +1,15 @@
+/* Session management layout and touchscreen actions. */
+.section {
+  overflow-wrap: anywhere;
+}
+
+.section ul {
+  display: grid;
+  gap: var(--s-4);
+  padding-inline-start: var(--s-5);
+}
+
+.action {
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-4);
+}

@@ -1,4 +1,4 @@
-// Handles file upload and retrieval for node assets.
+// Handles node asset uploads and parent-session-bound retrieval with current membership checks.
 
 package handlers
 
@@ -153,7 +153,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		Name:     asset.Name,
 		Size:     asset.Size,
 		MimeType: asset.MimeType,
-		URL:      h.Cfg.GenerateSignedAssetURL(wsID, nodeID, asset.Name),
+		URL:      h.Cfg.GenerateSignedAssetURL(r.Context(), wsID, nodeID, asset.Name),
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		slog.Error("Failed to write asset response", "error", err)
@@ -162,13 +162,16 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 
 // ServeAssetFile serves the binary data of an asset.
 // This is a raw http.HandlerFunc for direct file serving.
-// Requires valid signature query parameters: sig (HMAC signature) and exp (expiry timestamp).
+// The signature binds path, parent session, and expiry. Every read rechecks the
+// parent lifecycle and current workspace membership, without authorization caching.
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	wsIDStr := r.PathValue("wsID")
 	nodeIDStr := r.PathValue("id")
 	assetName := r.PathValue("name")
 
 	// Verify signature
+	w.Header().Set("Cache-Control", "no-store")
+	sidString := r.URL.Query().Get("sid")
 	sig := r.URL.Query().Get("sig")
 	expStr := r.URL.Query().Get("exp")
 	if sig == "" || expStr == "" {
@@ -183,7 +186,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if URL has expired
-	if time.Now().Unix() > expiry {
+	if time.Now().Unix() >= expiry {
 		writeErrorResponse(w, dto.Forbidden("expired_url"))
 		return
 	}
@@ -201,11 +204,30 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 
 	// Verify signature matches the path and expiry
 	path := fmt.Sprintf("%s/%s/%s", wsIDStr, nodeIDStr, assetName)
-	if !h.Cfg.VerifyAssetSignature(path, sig, expiry) {
+	if !h.Cfg.VerifyAssetSignature(path, sidString, sig, expiry) {
 		writeErrorResponse(w, dto.Forbidden("invalid_signature"))
 		return
 	}
 
+	sid, err := ksid.Parse(sidString)
+	if err != nil {
+		writeErrorResponse(w, dto.Forbidden("invalid_session"))
+		return
+	}
+	session, err := h.Svc.Session.Get(sid)
+	if err != nil || !session.RevokedAt.IsZero() || !session.ExpiresAt.AsTime().After(time.Now()) || expiry > session.ExpiresAt.AsTime().Unix() {
+		writeErrorResponse(w, dto.Forbidden("session_expired"))
+		return
+	}
+	user, err := h.Svc.User.Get(session.UserID)
+	if err != nil {
+		writeErrorResponse(w, dto.Forbidden("session_user"))
+		return
+	}
+	if _, message, _ := h.Svc.EffectiveWorkspaceRole(user, wsID); message != "" {
+		writeErrorResponse(w, dto.Forbidden("workspace_membership"))
+		return
+	}
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
@@ -223,8 +245,6 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", mimeType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	// Cache asset for the duration of the URL validity
-	w.Header().Set("Cache-Control", "private, max-age=3600")
 	if _, err := w.Write(data); err != nil {
 		slog.Error("Failed to write asset data", "error", err, "asset", assetName)
 	}

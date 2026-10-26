@@ -78,7 +78,8 @@ const EditorContext = createContext<EditorContextValue>();
 
 export const EditorProvider: ParentComponent = (props) => {
   const { t } = useI18n();
-  const { user, wsApi } = useAuth();
+  const { user, wsApi, identity: authIdentity } = useAuth();
+  let disposed = false;
   const { selectedNodeId, selectedNodeData, updateNodeTitle, updateNodeIcon, loadNode, setLoadError, setSaveError } =
     useWorkspace();
   const { lastEvent } = useEventSource();
@@ -161,26 +162,39 @@ export const EditorProvider: ParentComponent = (props) => {
   });
 
   // Debounced auto-save
-  // eslint-disable-next-line solid/reactivity -- intentionally reads current signal values when debounced function executes
-  const debouncedAutoSave = debounce(async () => {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !hasUnsavedChanges() || !ws) return;
+  const captureSave = () => ({
+    identity: authIdentity(),
+    ws: wsApi(),
+    wsId: user()?.workspace_id ?? "",
+    wsName: user()?.workspace_name,
+    nodeId: selectedNodeId(),
+    title: title(),
+    content: content(),
+  });
+  const saveCurrent = (scope: ReturnType<typeof captureSave>) =>
+    !disposed &&
+    authIdentity() === scope.identity &&
+    user()?.workspace_id === scope.wsId &&
+    selectedNodeId() === scope.nodeId;
+  // eslint-disable-next-line solid/reactivity -- delayed saves validate their captured owner at execution time
+  const debouncedAutoSave = debounce(async (scope: ReturnType<typeof captureSave>) => {
+    const { nodeId, ws, wsId, wsName } = scope;
+    if (!saveCurrent(scope) || !nodeId || !hasUnsavedChanges() || !ws) return;
 
     try {
       setAutoSaveStatus("saving");
-      const wsId = user()?.workspace_id || "";
-      const diskContent = spaUrlsToRelativeLinks(content(), wsId);
-      const saved = await ws.updatePage(nodeId, { title: title(), content: diskContent });
+      const diskContent = spaUrlsToRelativeLinks(scope.content, wsId);
+      const saved = await ws.updatePage(nodeId, { title: scope.title, content: diskContent });
+      if (!saveCurrent(scope)) return;
       setSyncedModified(saved.modified);
+      if (title() !== scope.title || content() !== scope.content) return;
       setHasUnsavedChanges(false);
       setAutoSaveStatus("saved");
 
       // Update URL if title changed
-      const wsName = user()?.workspace_name;
       if (wsId) {
         const currentPath = window.location.pathname;
-        const newPath = nodeUrl(wsId, wsName, nodeId, title());
+        const newPath = nodeUrl(wsId, wsName, nodeId, scope.title);
         if (currentPath !== newPath) {
           window.history.replaceState(null, "", newPath);
         }
@@ -196,14 +210,18 @@ export const EditorProvider: ParentComponent = (props) => {
         }
       }, 2000);
     } catch (err) {
+      if (!saveCurrent(scope)) return;
       setSaveError(`${t("errors.autoSaveFailed")}: ${err}`);
       setAutoSaveStatus("error");
     }
   }, 2000);
 
-  // Cleanup debounce on unmount
+  const scheduleAutoSave = () => debouncedAutoSave(captureSave());
+
+  // Flush ordinary navigation; stale scheduled identities are discarded by saveCurrent.
   onCleanup(() => {
     debouncedAutoSave.flush();
+    disposed = true;
     if (savedStatusTimer !== undefined) {
       window.clearTimeout(savedStatusTimer);
     }
@@ -211,7 +229,9 @@ export const EditorProvider: ParentComponent = (props) => {
 
   // Fetch linked node titles when content has internal links
   async function fetchLinkedNodeTitles(nodeContent: string) {
-    const ws = wsApi();
+    const scope = captureSave();
+    const ws = scope.ws;
+    if (!saveCurrent(scope)) return;
     const wsId = user()?.workspace_id;
     if (!ws || !wsId || !nodeContent) {
       setLinkedNodeTitles({});
@@ -227,6 +247,7 @@ export const EditorProvider: ParentComponent = (props) => {
 
     try {
       const resp = await ws.getNodeTitles({ IDs: linkedIds.join(",") });
+      if (!saveCurrent(scope)) return;
       setLinkedNodeTitles(resp.titles || {});
     } catch {
       // Silent failure - just use stored titles in links
@@ -254,7 +275,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setShowHistory(false);
       setExternalChange(false);
       // Fetch linked node titles in the background
-      fetchLinkedNodeTitles(spaContent);
+      untrack(() => fetchLinkedNodeTitles(spaContent));
     } else {
       resetEditor();
     }
@@ -276,12 +297,15 @@ export const EditorProvider: ParentComponent = (props) => {
 
   async function handleIconChange(newIcon: string) {
     const nodeId = selectedNodeId();
-    const ws = wsApi();
+    const scope = captureSave();
+    const ws = scope.ws;
+    if (!saveCurrent(scope)) return;
     if (!nodeId || !ws) return;
     setIcon(newIcon);
     updateNodeIcon(nodeId, newIcon);
     try {
       const saved = await ws.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
+      if (!saveCurrent(scope)) return;
       setSyncedModified(saved.modified);
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
@@ -290,11 +314,14 @@ export const EditorProvider: ParentComponent = (props) => {
 
   async function handleCoverChange(newCover: string) {
     const nodeId = selectedNodeId();
-    const ws = wsApi();
+    const scope = captureSave();
+    const ws = scope.ws;
+    if (!saveCurrent(scope)) return;
     if (!nodeId || !ws) return;
     setCover(newCover);
     try {
       const saved = await ws.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
+      if (!saveCurrent(scope)) return;
       setSyncedModified(saved.modified);
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
@@ -328,13 +355,13 @@ export const EditorProvider: ParentComponent = (props) => {
       updateNodeTitle(id, newTitle);
     }
     setHasUnsavedChanges(true);
-    debouncedAutoSave();
+    scheduleAutoSave();
   }
 
   function handleContentChange(newContent: string) {
     setContent(newContent);
     setHasUnsavedChanges(true);
-    debouncedAutoSave();
+    scheduleAutoSave();
   }
 
   // Local loading state for history - can be exposed later for UI feedback
@@ -345,12 +372,15 @@ export const EditorProvider: ParentComponent = (props) => {
       setShowHistory(false);
       return;
     }
-    const ws = wsApi();
+    const scope = captureSave();
+    const ws = scope.ws;
+    if (!saveCurrent(scope)) return;
     if (!ws) return;
 
     try {
       setLoadingHistory(true);
       const data = await ws.listNodeVersions(nodeId, { Limit: 100 });
+      if (!saveCurrent(scope)) return;
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
@@ -381,7 +411,7 @@ export const EditorProvider: ParentComponent = (props) => {
     cover,
     handleIconChange,
     handleCoverChange,
-    triggerAutoSave: debouncedAutoSave,
+    triggerAutoSave: scheduleAutoSave,
     flushAutoSave: debouncedAutoSave.flush,
     resetEditor,
     handleTitleChange,

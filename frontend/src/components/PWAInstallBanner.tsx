@@ -1,6 +1,7 @@
-// Banner component prompting users to install the app as a PWA.
+// Defers optional PWA installation prompts while users sign in or manage account security.
 
 import { createSignal, onMount, onCleanup, Show } from "solid-js";
+import { useLocation } from "@solidjs/router";
 import { useI18n } from "../i18n";
 import styles from "./PWAInstallBanner.module.css";
 import { isGoModeHost } from "../gomode/host";
@@ -26,6 +27,8 @@ function isDismissed(): boolean {
 
 export default function PWAInstallBanner() {
   const { t } = useI18n();
+  const location = useLocation();
+  const securityRoute = () => ["/login", "/device", "/device-login", "/settings/user"].includes(location.pathname);
   const [deferredPrompt, setDeferredPrompt] = createSignal<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = createSignal(false);
 
@@ -72,7 +75,7 @@ export default function PWAInstallBanner() {
   };
 
   return (
-    <Show when={showBanner() && deferredPrompt()}>
+    <Show when={!securityRoute() && showBanner() && deferredPrompt()}>
       <div class={styles.banner}>
         <div class={styles.content}>
           <div class={styles.title}>{t("pwa.installTitle")}</div>

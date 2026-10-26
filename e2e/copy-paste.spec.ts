@@ -1,10 +1,10 @@
 // E2E tests for copy and paste functionality in the block editor.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
+import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 
 test("paste standard HTML lists into the editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-test");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -73,7 +73,7 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
   const { token } = await registerUser(request, "copy-test");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -110,7 +110,7 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
 
 test("paste HTML headings into the editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-h");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -160,7 +160,7 @@ test("copy headings from editor as markdown", async ({ page, request, context })
   const { token } = await registerUser(request, "copy-h");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -199,7 +199,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   const { token } = await registerUser(request, "rt-h");
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
@@ -273,7 +273,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
 
 test("paste markdown into editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-md");
-  await page.goto(`/?token=${token}`);
+  await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);

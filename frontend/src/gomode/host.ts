@@ -1,4 +1,4 @@
-// Detects the Go Mode Android shell and sends its trusted main frame an in-memory bearer token.
+// Signals settled cookie identity and transitions to the trusted Go Mode Android main frame.
 
 declare global {
   interface Window {
@@ -6,12 +6,12 @@ declare global {
     gomodeAuth?: { postMessage(message: string): void };
   }
 }
-
 export function isGoModeHost(): boolean {
   return window.goModeHost !== undefined || new URLSearchParams(window.location.search).get("goModeHost") === "1";
 }
-
-export function publishGoModeBearerToken(token: string | null): void {
-  if (!isGoModeHost()) return;
-  window.gomodeAuth?.postMessage(JSON.stringify({ bearerToken: token }));
+export function publishGoModeAuthChanging(): void {
+  if (isGoModeHost()) window.gomodeAuth?.postMessage(JSON.stringify({ authChanging: true }));
+}
+export function publishGoModeAuthChanged(nativeAccess: boolean): void {
+  if (isGoModeHost()) window.gomodeAuth?.postMessage(JSON.stringify({ authChanged: true, nativeAccess }));
 }

@@ -92,9 +92,9 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "smoke", VoiceBridge: bridge}))
 	t.Cleanup(server.Close)
 
-	tools := smokeToolDeclarations(t, env, switched.Token)
+	tools := smokeToolDeclarations(t, env, auth.Token)
 
-	client, sessionID := newSmokeVoiceClient(t, server.URL, switched.Token)
+	client, sessionID := newSmokeVoiceClient(t, server.URL, auth.Token)
 	client.send(t, voicev1.SessionSetup{
 		Kind:  voicev1.MessageKindSessionSetup,
 		Voice: voicev1.VoiceConfig{Name: "Orus", Language: "en"},
@@ -107,7 +107,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 
 	ask := time.Now()
 	client.send(t, voicev1.UserMessage{Kind: voicev1.MessageKindUserMessage, Text: "List the documents in my workspace."})
-	sawToolCall, answered, err := client.runTurn(t, env, switched.Token, ask)
+	sawToolCall, answered, err := client.runTurn(t, env, auth.Token, ask)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 
 	// A hang-up must release the session so the next offer is not a replacement.
 	client.close(t)
-	waitVoiceSessionGone(t, server.URL, switched.Token, sessionID, 20*time.Second)
+	waitVoiceSessionGone(t, server.URL, auth.Token, sessionID, 20*time.Second)
 	t.Log("voice session released after hang-up")
 }
 

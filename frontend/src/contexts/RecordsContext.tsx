@@ -93,7 +93,7 @@ export const RecordsContext = createContext<RecordsContextValue>();
 
 export const RecordsProvider: ParentComponent = (props) => {
   const { t } = useI18n();
-  const { user, token, wsApi } = useAuth();
+  const { user, identity: authIdentity, wsApi } = useAuth();
   const { selectedNodeId, selectedNodeData } = useWorkspace();
 
   // Application-level undo stack for record CRUD operations.
@@ -112,9 +112,10 @@ export const RecordsProvider: ParentComponent = (props) => {
   // Full dataset cache for client-side filtering when all records are loaded
   // allRecords stores the unfiltered dataset when hasMore is false
   const [allRecords, setAllRecords] = createSignal<DataRecordResponse[] | null>(null);
-  const workspaceIdentity = () => `${token() ?? ""}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
+  const workspaceIdentity = () => `${authIdentity()}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
   const recordIdentity = (nodeId: string) => `${workspaceIdentity()}:${nodeId}`;
   let recordsRequest = 0;
+  let disposed = false;
 
   // View state
   const [views, setViews] = createSignal<View[]>([]);
@@ -318,6 +319,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   // Cleanup debounced function on unmount
   onCleanup(() => {
+    disposed = true;
     debouncedServerReload.cancel();
   });
 
@@ -545,13 +547,17 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     try {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
       const result = await ws.createRecord(nodeId, { data });
+      if (!operationCurrent()) return;
       await loadRecords(nodeId);
+      if (!operationCurrent()) return;
       setSaveError(null);
 
       if (!isUndoing) {
@@ -561,22 +567,24 @@ export const RecordsProvider: ParentComponent = (props) => {
         undoActions.push({
           description: t("common.undo"),
           undo: async () => {
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               await ws2.deleteRecord(capturedNodeId, createdId);
+              if (!operationCurrent()) return;
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
             }
           },
           redo: async () => {
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               await ws2.createRecord(capturedNodeId, { data: capturedData });
+              if (!operationCurrent()) return;
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -595,6 +603,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     // Capture previous field values before overwriting.
     const prevRecord = records().find((r) => r.id === recordId);
@@ -605,7 +615,9 @@ export const RecordsProvider: ParentComponent = (props) => {
       // Invalidate cache since data is changing
       setAllRecords(null);
       await ws.updateRecord(nodeId, recordId, { data });
+      if (!operationCurrent()) return;
       await loadRecords(nodeId);
+      if (!operationCurrent()) return;
       setSaveError(null);
 
       if (!isUndoing) {
@@ -616,26 +628,28 @@ export const RecordsProvider: ParentComponent = (props) => {
         undoActions.push({
           description: t("common.undo"),
           undo: async () => {
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedPrevData,
               });
+              if (!operationCurrent()) return;
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
             }
           },
           redo: async () => {
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedNewData,
               });
+              if (!operationCurrent()) return;
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -654,6 +668,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
     if (!confirm(t("table.confirmDeleteRecord") || "Delete this record?")) return;
 
     // Capture full record data before deletion for undo.
@@ -665,7 +681,9 @@ export const RecordsProvider: ParentComponent = (props) => {
       // Invalidate cache since data is changing
       setAllRecords(null);
       await ws.deleteRecord(nodeId, recordId);
+      if (!operationCurrent()) return;
       await loadRecords(nodeId);
+      if (!operationCurrent()) return;
       setSaveError(null);
 
       if (!isUndoing) {
@@ -676,13 +694,14 @@ export const RecordsProvider: ParentComponent = (props) => {
         undoActions.push({
           description: t("common.undo"),
           undo: async () => {
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               const result = await ws2.createRecord(capturedNodeId, {
                 data: capturedData,
               });
+              if (!operationCurrent()) return;
               reCreatedId = result.id;
               await loadRecords(capturedNodeId);
             } finally {
@@ -691,11 +710,12 @@ export const RecordsProvider: ParentComponent = (props) => {
           },
           redo: async () => {
             if (!reCreatedId) return;
-            const ws2 = wsApi();
-            if (!ws2) return;
+            if (!operationCurrent()) return;
+            const ws2 = ws;
             isUndoing = true;
             try {
               await ws2.deleteRecord(capturedNodeId, reCreatedId);
+              if (!operationCurrent()) return;
               reCreatedId = null;
               await loadRecords(capturedNodeId);
             } finally {
@@ -715,6 +735,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     const record = records().find((r) => r.id === recordId);
     if (!record) return;
@@ -724,7 +746,9 @@ export const RecordsProvider: ParentComponent = (props) => {
       // Invalidate cache since data is changing
       setAllRecords(null);
       await ws.createRecord(nodeId, { data: record.data || {} });
+      if (!operationCurrent()) return;
       await loadRecords(nodeId);
+      if (!operationCurrent()) return;
       setSaveError(null);
     } catch (err) {
       setSaveError(`${t("errors.failedToCreate")}: ${err}`);
@@ -737,10 +761,13 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     try {
       setSavingView(true);
       const res = await ws.createView(nodeId, { name, type });
+      if (!operationCurrent()) return;
 
       // Ideally reload node to get updated views list, but we can also optimistically update
       // Since we need the full View object which CreateViewResponse doesn't return (only ID),
@@ -776,6 +803,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     try {
       setSavingView(true);
@@ -784,6 +813,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       // But we need to map View properties to UpdateViewRequest properties if they differ.
       // They are identical in our DTOs.
       await ws.updateView(nodeId, viewId, updates);
+      if (!operationCurrent()) return;
 
       setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
 
@@ -803,12 +833,15 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
 
     if (!confirm(t("table.confirmDeleteView") || "Delete this view?")) return;
 
     try {
       setSavingView(true);
       await ws.deleteView(nodeId, viewId);
+      if (!operationCurrent()) return;
 
       const newViews = views().filter((v) => v.id !== viewId);
       setViews(newViews);

@@ -7,17 +7,23 @@ import (
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // MembershipHandler handles membership-related requests.
 type MembershipHandler struct {
 	Svc *Services
-	Cfg *Config
 }
 
-// SwitchWorkspace switches the user's active workspace and returns a new token.
+// SwitchWorkspace updates the active workspace while preserving the validated login session.
 func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
+	// Workspace selection is stored in user settings, not in JWT claims. Preserve the
+	// existing session and its expiry so switching cannot remove session revocation.
+	token := reqctx.TokenString(ctx)
+	if token == "" {
+		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Authentication required")
+	}
 	// Get workspace to check org membership
 	ws, err := h.Svc.Workspace.Get(req.WsID)
 	if err != nil {
@@ -56,17 +62,13 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 		return nil, dto.InternalWithError("Failed to save workspace preference", err)
 	}
 
-	token, err := h.Cfg.GenerateToken(user)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
-	}
-
 	// Build user response with memberships
 	uwm, err := getUserWithMemberships(h.Svc.User, h.Svc.OrgMembership, h.Svc.WSMembership, h.Svc.Organization, h.Svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
+	userResp.SessionID = reqctx.SessionID(ctx)
 
 	// Set the switched workspace as active
 	userResp.OrganizationID = ws.OrganizationID
@@ -80,8 +82,7 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 	}
 
 	return &dto.SwitchWorkspaceResponse{
-		Token: token,
-		User:  userResp,
+		User: userResp,
 	}, nil
 }
 

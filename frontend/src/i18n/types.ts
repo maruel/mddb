@@ -68,7 +68,55 @@ export interface Dictionary {
     adminSettings: string;
   };
 
+  deviceLogin: {
+    newCode: string;
+    checkSignIn: string;
+    throttled: string;
+    approvalThrottled: string;
+    audit: string;
+    approvalAudit: string;
+    session: string;
+    delivery: string;
+    approvalDelivery: string;
+    approvalNetwork: string;
+    changed: string;
+    decided: string;
+    login: string;
+    ineligible: string;
+    disabled: string;
+    network: string;
+    account: string;
+    changeAccount: string;
+    expires: string;
+    sessions: string;
+    signOutSession: string;
+    sessionsError: string;
+
+    start: string;
+    starting: string;
+    instructions: string;
+    pending: string;
+    approved: string;
+    denied: string;
+    expired: string;
+    error: string;
+    remaining: string;
+    code: string;
+    lookup: string;
+    approve: string;
+    deny: string;
+    warning: string;
+    approvalApproved: string;
+    approvalDenied: string;
+    approvalError: string;
+    approvalExpired: string;
+    device: string;
+    address: string;
+    requested: string;
+  };
+
   auth: {
+    logoutFailed: string;
     login: string;
     register: string;
     createAccount: string;
@@ -654,7 +702,7 @@ export interface Dictionary {
     endSession: string;
     listening: string;
     microphone: string;
-    mute: string;
+    enableMicrophoneMeter: string;
     muted: string;
     reconnecting: string;
     retry: string;
@@ -665,7 +713,6 @@ export interface Dictionary {
     transcribing: string;
     transcript: string;
     transcriptPlaceholder: string;
-    unmute: string;
     voiceAssistant: string;
     waitingForServer: string;
     settingUpWebRTC: string;

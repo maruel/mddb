@@ -1,6 +1,6 @@
 // Context providers for global application state.
 
-export { AuthProvider, useAuth } from "./AuthContext";
+export { AuthProvider, useAuth, useAuthScope } from "./AuthContext";
 export { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 export { EditorProvider, useEditor } from "./EditorContext";
 export { RecordsProvider, useRecords, DEFAULT_VIEW_ID } from "./RecordsContext";

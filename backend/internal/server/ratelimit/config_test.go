@@ -86,9 +86,11 @@ func TestLimiters_MatchUnauth(t *testing.T) {
 		path     string
 		wantTier string
 	}{
-		{"GET", "/api/v1/health", ""},                         // No rate limit for health check
-		{"POST", "/api/v1/auth/login", "auth"},                // Auth tier
-		{"POST", "/api/v1/auth/register", "auth"},             // Auth tier
+		{"GET", "/api/v1/health", ""},             // No rate limit for health check
+		{"POST", "/api/v1/auth/login", "auth"},    // Auth tier
+		{"POST", "/api/v1/auth/register", "auth"}, // Auth tier
+		{"POST", "/api/v1/auth/browser/login", "auth"},
+		{"POST", "/api/v1/auth/browser/register", "auth"},
 		{"GET", "/api/v1/auth/oauth/google/callback", "auth"}, // Auth tier (OAuth callback)
 		{"GET", "/api/v1/something", "read"},                  // Unauth read tier
 		{"GET", "/api/v1/pages/123", "read"},                  // Unauth read tier

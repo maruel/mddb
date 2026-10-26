@@ -54,7 +54,7 @@ func goModeMCP(svc *handlers.Services, version string, nodeH *handlers.NodeHandl
 			writeMCPError(w, http.StatusConflict, "Select a workspace first")
 			return
 		}
-		role, msg, status := effectiveWSRole(u, wsID, svc)
+		role, msg, status := svc.EffectiveWorkspaceRole(u, wsID)
 		if msg != "" {
 			writeMCPError(w, status, msg)
 			return

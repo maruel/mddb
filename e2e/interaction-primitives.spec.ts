@@ -1,11 +1,11 @@
 // End-to-end coverage for dialog-contained field dropdowns and import-dialog focus behavior.
 
-import { test, expect, createClient, getWorkspaceId, registerUser } from "./helpers";
+import { test, expect, createClient, getWorkspaceId, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("Interaction primitives", () => {
   test("record detail keeps select and multi-select dropdowns inside its drawer", async ({ page, request }) => {
     const { token } = await registerUser(request, "record-detail-dropdowns");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);
@@ -64,7 +64,7 @@ test.describe("Interaction primitives", () => {
     request,
   }) => {
     const { token } = await registerUser(request, "notion-import-dialog");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     const importButton = page.getByTestId("import-notion-button");
     await expect(importButton).toBeVisible({ timeout: 10000 });
 
@@ -84,7 +84,7 @@ test.describe("Interaction primitives", () => {
     test("keeps Notion import actions reachable", async ({ page, request }) => {
       await page.setViewportSize({ width: 568, height: 240 });
       const { token } = await registerUser(request, "notion-import-short-viewport");
-      await page.goto(`/?token=${token}`);
+      await gotoWithSession(page, token);
       const menuToggle = page.getByRole("button", { name: "Toggle menu" });
       await expect(menuToggle).toBeVisible({ timeout: 10000 });
       await menuToggle.click();

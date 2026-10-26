@@ -1,6 +1,6 @@
 // Modal for importing a workspace from Notion.
 
-import { createSignal, createUniqueId, Show } from "solid-js";
+import { createSignal, createUniqueId, Show, onCleanup } from "solid-js";
 import { useI18n } from "../i18n";
 import { Button, Dialog } from "./shared";
 import styles from "./NotionImportModal.module.css";
@@ -18,6 +18,10 @@ const NOTION_INTEGRATION_URL = "https://www.notion.so/profile/integrations/form/
 
 export default function NotionImportModal(props: NotionImportModalProps) {
   const { t } = useI18n();
+  let disposed = false;
+  onCleanup(() => {
+    disposed = true;
+  });
   const [notionToken, setNotionToken] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -33,11 +37,11 @@ export default function NotionImportModal(props: NotionImportModalProps) {
       await props.onImport({
         notionToken: notionToken().trim(),
       });
-      props.onClose();
+      if (!disposed) props.onClose();
     } catch (err) {
-      setError(String(err));
+      if (!disposed) setError(String(err));
     } finally {
-      setLoading(false);
+      if (!disposed) setLoading(false);
     }
   };
 

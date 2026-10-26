@@ -1,11 +1,11 @@
 // End-to-end keyboard navigation coverage for the workspace sidebar tree.
 
-import { createClient, expect, getWorkspaceId, registerUser, test } from "./helpers";
+import { createClient, expect, getWorkspaceId, registerUser, test, gotoWithSession } from "./helpers";
 
 test.describe("Workspace tree navigation", () => {
   test("activates tree items and moves a page with the keyboard context-menu workflow", async ({ page, request }) => {
     const { token } = await registerUser(request, "keyboard-tree");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);

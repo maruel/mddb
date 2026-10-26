@@ -9,6 +9,7 @@ import { I18nProvider } from "../../i18n";
 import NotificationSettings from "./NotificationSettings";
 
 const auth = {
+  user: () => null,
   api: () => ({ getNotificationPrefs: async () => ({ defaults: {}, overrides: {} }) }),
 } as unknown as AuthContextValue;
 

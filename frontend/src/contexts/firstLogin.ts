@@ -5,7 +5,6 @@ import type { Api } from "../useApi";
 
 export interface FirstWorkspaceResult {
   user: UserResponse;
-  token: string | null;
 }
 
 export async function provisionFirstWorkspace(
@@ -15,7 +14,7 @@ export async function provisionFirstWorkspace(
 ): Promise<FirstWorkspaceResult> {
   let current = await api.getMe();
   if (current.id !== userId) throw new Error("Account changed during first-login setup");
-  if (current.workspace_id) return { user: current, token: null };
+  if (current.workspace_id) return { user: current };
 
   if (!current.organizations?.length) {
     await api.createOrganization({ name: names.organization, ensure_first: true });
@@ -28,12 +27,12 @@ export async function provisionFirstWorkspace(
   let workspaceId = workspaces.find((ws) => ws.organization_id === firstOrg.organization_id)?.workspace_id;
   workspaceId ??= workspaces[0]?.workspace_id;
   if (!workspaceId) {
-    if (firstOrg.role !== OrgRoleAdmin && firstOrg.role !== OrgRoleOwner) return { user: current, token: null };
+    if (firstOrg.role !== OrgRoleAdmin && firstOrg.role !== OrgRoleOwner) return { user: current };
     const ws = await api.org(firstOrg.organization_id).createWorkspace({ name: names.workspace, ensure_first: true });
     workspaceId = ws.id;
   }
 
   const switched = await api.switchWorkspace({ ws_id: workspaceId });
   if (!switched.user) throw new Error("First-login workspace switch returned no user");
-  return { user: switched.user, token: switched.token };
+  return { user: switched.user };
 }

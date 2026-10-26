@@ -361,7 +361,7 @@ func TestGoModeMCP(t *testing.T) {
 
 	// MCP is a POST transport for reads; no database commit is allowed.
 	env.services.RootRepo = nil
-	result := callMCP(t, env, switched.Token, "resources/list", map[string]any{})
+	result := callMCP(t, env, auth.Token, "resources/list", map[string]any{})
 	var listed mcp.ResourcesListResult
 	if err := json.Unmarshal(result, &listed); err != nil {
 		t.Fatalf("decode resources/list: %v", err)
@@ -398,7 +398,7 @@ func TestGoModeMCP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create oversized MCP request: %v", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+switched.Token)
+	req.Header.Set("Authorization", "Bearer "+auth.Token)
 	req.Header.Set("Content-Type", "multipart/form-data; boundary=test")
 	req.Header.Set("Mcp-Protocol-Version", mcp.ProtocolVersion)
 	req.Header.Set("Mcp-Method", "resources/list")
@@ -585,7 +585,7 @@ func setupGoModeWorkspace(t *testing.T, env *testEnv, email string) (string, ksi
 	}, &switched, auth.Token); status != http.StatusOK {
 		t.Fatalf("switch workspace status = %d", status)
 	}
-	return switched.Token, ws.ID
+	return auth.Token, ws.ID
 }
 
 // TestGoModeMCPWriteTools verifies that an editor can create, append to, and

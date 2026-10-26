@@ -16,7 +16,7 @@ type OkResponse struct {
 // --- Auth Responses ---
 
 // AuthResponse is a response containing authentication token and user info.
-// Used by login, register, and invitation acceptance endpoints.
+// Used by API login and registration endpoints.
 type AuthResponse struct {
 	Token string        `json:"token"`
 	User  *UserResponse `json:"user"`
@@ -31,6 +31,7 @@ type ProvidersResponse struct {
 
 // SessionResponse is the API representation of a session.
 type SessionResponse struct {
+	ExpiresAt   Time    `json:"expires_at"`
 	ID          ksid.ID `json:"id" jsonschema:"description=Unique session identifier"`
 	DeviceInfo  string  `json:"device_info" jsonschema:"description=Browser/OS info"`
 	IPAddress   string  `json:"ip_address" jsonschema:"description=IP address"`
@@ -212,8 +213,7 @@ type ResolveUsersResponse struct {
 
 // SwitchWorkspaceResponse is a response from switching workspace.
 type SwitchWorkspaceResponse struct {
-	Token string        `json:"token"`
-	User  *UserResponse `json:"user"`
+	User *UserResponse `json:"user"`
 }
 
 // --- Git Remote Responses ---
@@ -267,6 +267,8 @@ type ListUsersResponse struct {
 
 // UserResponse is the API representation of a user.
 type UserResponse struct {
+	// SessionID identifies the current session when returning the authenticated caller; it is not a credential.
+	SessionID       ksid.ID         `json:"session_id,omitempty"`
 	ID              ksid.ID         `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
 	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`

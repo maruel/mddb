@@ -1,11 +1,11 @@
 // E2E tests for language switching in settings.
 
-import { test, expect, registerUser } from "./helpers";
+import { test, expect, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("Language Settings", () => {
   test("changing language updates settings page labels immediately", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-settings-page");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Open user menu and go to profile/settings
@@ -52,7 +52,7 @@ test.describe("Language Settings", () => {
 
   test("changing language in settings updates UI without refresh", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-switch");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Verify we start in English - check sidebar "Create Workspace" button text
@@ -104,7 +104,7 @@ test.describe("Language Settings", () => {
 
   test("language persists after page reload", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-persist");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Verify we start in English - check Create Workspace button text
@@ -151,7 +151,7 @@ test.describe("Language Settings", () => {
 
   test("switching back to English works", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-switch-back");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // First change to French

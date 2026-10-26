@@ -26,7 +26,7 @@ export interface UploadResult {
 export interface UseAssetUploadOptions {
   wsId: string;
   nodeId: string;
-  getToken: () => string | null;
+  sessionID?: string;
 }
 
 export interface UseAssetUploadReturn {
@@ -58,14 +58,6 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
       return null;
     }
 
-    const token = options.getToken();
-    if (!token) {
-      const err = "Not authenticated";
-      setError(err);
-      console.error(err);
-      return null;
-    }
-
     setUploading(true);
     try {
       const formData = new FormData();
@@ -73,9 +65,8 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
 
       const response = await fetch(`/api/v1/workspaces/${options.wsId}/nodes/${options.nodeId}/assets`, {
         method: "POST",
-        headers: localWriteHeaders({
-          Authorization: `Bearer ${token}`,
-        }),
+        headers: localWriteHeaders(options.sessionID ? { "X-MDDB-Session": options.sessionID } : undefined),
+        credentials: "same-origin",
         body: formData,
       });
 

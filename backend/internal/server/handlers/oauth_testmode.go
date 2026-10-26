@@ -35,7 +35,7 @@ func (h *TestOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	slog.InfoContext(r.Context(), "e2e build: bypassing real OAuth, using fake account", "provider", provider)
-	finishOAuthLogin(h.svc, h.cfg, w, r, provider, testUserInfo(provider))
+	finishOAuthLogin(h.svc, h.cfg, w, r, provider, testUserInfo(provider), r.URL.Query().Get("next"))
 }
 
 // testUserInfo returns deterministic fake user info for an e2e build.

@@ -193,7 +193,7 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 		return
 	}
 	ticket := rand.Text()
-	g.tickets[ticket] = voiceTextTicket{owner: u.ID, origin: r.Header.Get("Origin"), choice: choice, expiry: now.Add(30 * time.Second)}
+	g.tickets[ticket] = voiceTextTicket{session: reqctx.Session(r.Context()), owner: u.ID, origin: r.Header.Get("Origin"), choice: choice, expiry: now.Add(30 * time.Second)}
 	g.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -229,7 +229,12 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 		writeVoiceError(w, http.StatusUnauthorized, "invalid or expired voice ticket")
 		return
 	}
-	r = r.Clone(reqctx.WithUser(r.Context(), &identity.User{ID: entry.owner}))
+	ctx := reqctx.WithUser(r.Context(), &identity.User{ID: entry.owner})
+	if entry.session != nil {
+		ctx = reqctx.WithSession(ctx, entry.session)
+		ctx = reqctx.WithSessionID(ctx, entry.session.ID)
+	}
+	r = r.Clone(ctx)
 	r.URL.Path = "/api/voicegateway/v1/voice/text"
 	q := r.URL.Query()
 	q.Set("choiceID", entry.choice)
@@ -448,10 +453,11 @@ var _ voicegateway.MediaBridge = (*voiceGateway)(nil)
 var _ voicegateway.DiagnosticMediaBridge = (*voiceGateway)(nil)
 
 type voiceTextTicket struct {
-	owner  ksid.ID
-	origin string
-	choice string
-	expiry time.Time
+	session *identity.Session
+	owner   ksid.ID
+	origin  string
+	choice  string
+	expiry  time.Time
 }
 
 type voiceTextCancelKey struct{}

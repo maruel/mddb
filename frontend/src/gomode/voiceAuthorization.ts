@@ -41,15 +41,14 @@ export function mddbEndpoint(value: string, origin: string): string {
 /** Errors intentionally exclude response bodies, which may contain credentials. */
 export async function voiceAuthorization(
   endpoint: string,
-  token: string | null,
   failureMessage: string,
+  expectedSession?: string,
 ): Promise<ServiceAuthorization> {
-  if (!token) throw new Error(failureMessage);
   let response: Response;
   try {
     response = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      ...(expectedSession ? { headers: { "X-MDDB-Session": expectedSession } } : {}),
       cache: "no-store",
       credentials: "same-origin",
       redirect: "error",

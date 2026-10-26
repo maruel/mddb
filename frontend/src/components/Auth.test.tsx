@@ -6,7 +6,7 @@ import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import Auth from "./Auth";
 import { I18nProvider } from "../i18n";
-import type { UserResponse, AuthResponse, ErrorResponse } from "@sdk/types.gen";
+import type { UserResponse, ErrorResponse } from "@sdk/types.gen";
 
 // Mock CSS module
 // Mock response for providers endpoint
@@ -97,16 +97,13 @@ describe("Auth", () => {
       modified: 1704067200,
     };
 
-    const mockResponse: AuthResponse = {
-      token: "test-token-123",
-      user: mockUser,
-    };
+    const mockResponse: UserResponse = mockUser;
 
     mockFetch.mockImplementation((url: string) => {
       if (url === "/api/v1/auth/providers") {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === "/api/v1/auth/login") {
+      if (url === "/api/v1/auth/browser/login") {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockResponse),
@@ -134,7 +131,7 @@ describe("Auth", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith("/api/v1/auth/login", {
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/auth/browser/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: "test@example.com", password: "password123" }),
@@ -143,7 +140,7 @@ describe("Auth", () => {
     });
 
     await waitFor(() => {
-      expect(mockOnLogin).toHaveBeenCalledWith("test-token-123", mockUser);
+      expect(mockOnLogin).toHaveBeenCalledWith(mockUser);
     });
   });
 
@@ -159,7 +156,7 @@ describe("Auth", () => {
       if (url === "/api/v1/auth/providers") {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === "/api/v1/auth/login") {
+      if (url === "/api/v1/auth/browser/login") {
         return Promise.resolve({
           ok: false,
           json: () => Promise.resolve(errorResponse),
@@ -232,16 +229,13 @@ describe("Auth", () => {
       modified: 1704067200,
     };
 
-    const mockResponse: AuthResponse = {
-      token: "new-token-123",
-      user: mockUser,
-    };
+    const mockResponse: UserResponse = mockUser;
 
     mockFetch.mockImplementation((url: string) => {
       if (url === "/api/v1/auth/providers") {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === "/api/v1/auth/register") {
+      if (url === "/api/v1/auth/browser/register") {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockResponse),
@@ -288,7 +282,7 @@ describe("Auth", () => {
     }
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith("/api/v1/auth/register", {
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/auth/browser/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -366,7 +360,7 @@ describe("Auth", () => {
       if (url === "/api/v1/auth/providers") {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === "/api/v1/auth/login") {
+      if (url === "/api/v1/auth/browser/login") {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({}), // Empty response

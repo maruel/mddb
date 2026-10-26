@@ -1,6 +1,7 @@
 // E2E tests for page rename race conditions during navigation.
 import {
   test,
+  gotoWithSession,
   expect,
   registerUser,
   fillEditorContent,
@@ -16,7 +17,7 @@ test.describe("Page rename with navigation", () => {
     const client = createClient(request, token);
 
     // 2. Login via token
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // 3. Get workspace ID from URL
@@ -90,7 +91,7 @@ test.describe("Page rename with navigation", () => {
     const { token } = await registerUser(request, "rename-wait");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -138,7 +139,7 @@ test.describe("Page rename with navigation", () => {
     const { token } = await registerUser(request, "rename-rapid");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -191,7 +192,7 @@ test.describe("Page rename with navigation", () => {
     const { token } = await registerUser(request, "content-nav");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -246,7 +247,7 @@ test.describe("Page rename with navigation", () => {
     const { token } = await registerUser(request, "both-nav");
     const client = createClient(request, token);
 
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

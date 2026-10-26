@@ -3,7 +3,7 @@
 import { createSignal, createEffect, Show, For } from "solid-js";
 import type { OAuthIdentity, OAuthProvider, LinkOAuthAccountResponse, ErrorResponse } from "@sdk/types.gen";
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
-import { useAuth } from "../../contexts";
+import { useAuth, useAuthScope } from "../../contexts";
 import { useI18n } from "../../i18n";
 import styles from "./LinkedAccountsSection.module.css";
 import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "../OAuthIcons";
@@ -31,18 +31,20 @@ const PROVIDERS: ProviderInfo[] = [
 
 export default function LinkedAccountsSection(props: Props) {
   const { t } = useI18n();
-  const { api, token } = useAuth();
+  const { api, user } = useAuth();
+  const captureScope = useAuthScope();
 
   const [availableProviders, setAvailableProviders] = createSignal<OAuthProvider[]>([]);
   const [loading, setLoading] = createSignal<OAuthProvider | null>(null);
 
   // Helper to make authenticated fetch calls for OAuth endpoints (not in generated SDK)
   const authFetch = async (url: string, body: object) => {
+    const sid = user()?.session_id;
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token()}`,
+        ...(sid ? { "X-MDDB-Session": sid } : {}),
       },
       body: JSON.stringify(body),
     });
@@ -74,9 +76,11 @@ export default function LinkedAccountsSection(props: Props) {
 
   // Link a provider
   const handleLink = async (providerId: OAuthProvider) => {
+    const isCurrent = captureScope();
     setLoading(providerId);
     try {
       const resp = (await authFetch("/api/v1/auth/oauth/link", { provider: providerId })) as LinkOAuthAccountResponse;
+      if (!isCurrent()) return;
       // Redirect to OAuth provider
       window.location.href = resp.redirect_url;
     } catch (err) {
@@ -87,6 +91,7 @@ export default function LinkedAccountsSection(props: Props) {
 
   // Unlink a provider
   const handleUnlink = async (providerId: OAuthProvider) => {
+    const isCurrent = captureScope();
     if (!canUnlink()) {
       props.onError(t("settings.cannotUnlinkOnly"));
       return;
@@ -95,6 +100,7 @@ export default function LinkedAccountsSection(props: Props) {
     setLoading(providerId);
     try {
       await authFetch("/api/v1/auth/oauth/unlink", { provider: providerId });
+      if (!isCurrent()) return;
       props.onSuccess(t("settings.accountUnlinked"));
       // Refresh user data
       window.location.reload();

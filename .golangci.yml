@@ -61,6 +61,12 @@ linters:
   exclusions:
     generated: lax
     rules:
+      # OAuth destinations are configured providers or validated rooted paths;
+      # gosec cannot follow loginReturnPath through the signed state envelope.
+      - path: backend/internal/server/handlers/oauth\.go$
+        linters: [gosec]
+        text: "G710:"
+        source: 'http.Redirect\(w, r, (authCodeURL\(config, provider, state\)|next),'
       - path: (.+)\.go$
         text: should have a package comment
       - path: _test\.go$

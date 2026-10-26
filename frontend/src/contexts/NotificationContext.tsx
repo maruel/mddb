@@ -1,4 +1,4 @@
-// Notification context providing notification state, polling, and push subscription management.
+// Provides session-owned notifications and browser push registration.
 
 import {
   createContext,
@@ -46,10 +46,14 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   let swRegistration: ServiceWorkerRegistration | null = null;
   let pushSubscription: PushSubscription | null = null;
   let pollTimer: number | undefined;
+  let disposed = false;
+  const current = (client: APIClient) => !disposed && props.api() === client;
 
   const fetchUnreadCount = async () => {
+    const client = props.api();
     try {
-      const result = await props.api().getUnreadCount();
+      const result = await client.getUnreadCount();
+      if (!current(client)) return;
       setUnreadCount(result.count);
     } catch {
       // Silently ignore polling errors
@@ -57,13 +61,15 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const fetchNotifications = async (offset = 0) => {
+    const client = props.api();
     setIsLoading(true);
     try {
-      const result = await props.api().listNotifications({
+      const result = await client.listNotifications({
         Limit: PAGE_SIZE,
         Offset: offset,
         UnreadOnly: false,
       });
+      if (!current(client)) return;
       if (offset === 0) {
         setNotifications(result.notifications ?? []);
       } else {
@@ -74,7 +80,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
     } catch {
       // Silently ignore
     } finally {
-      setIsLoading(false);
+      if (current(client)) setIsLoading(false);
     }
   };
 
@@ -87,8 +93,10 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const markAsRead = async (id: string) => {
+    const client = props.api();
     try {
-      await props.api().markNotificationRead(id);
+      await client.markNotificationRead(id);
+      if (!current(client)) return;
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {
@@ -97,8 +105,10 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const markAllAsRead = async () => {
+    const client = props.api();
     try {
-      await props.api().markAllNotificationsRead();
+      await client.markAllNotificationsRead();
+      if (!current(client)) return;
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch {
@@ -107,9 +117,11 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const deleteNotification = async (id: string) => {
+    const client = props.api();
     try {
       const target = notifications().find((item) => item.id === id);
-      await props.api().deleteNotification(id);
+      await client.deleteNotification(id);
+      if (!current(client)) return;
       setNotifications((prev) => prev.filter((item) => item.id !== id));
       if (target && !target.read) {
         setUnreadCount((c) => Math.max(0, c - 1));
@@ -120,14 +132,18 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const enablePush = async (): Promise<boolean> => {
+    const client = props.api();
     if (isGoModeHost()) return false;
     try {
       if (!swRegistration) {
         swRegistration = await registerServiceWorker();
       }
-      if (!swRegistration) return false;
-      const vapidResp = await props.api().getVAPIDPublicKey();
-      pushSubscription = await subscribeToPush(swRegistration, vapidResp.public_key, props.api());
+      if (!current(client) || !swRegistration) return false;
+      const vapidResp = await client.getVAPIDPublicKey();
+      if (!current(client)) return false;
+      const subscription = await subscribeToPush(swRegistration, vapidResp.public_key, client);
+      if (!current(client)) return false;
+      pushSubscription = subscription;
       if (pushSubscription) {
         setPushEnabled(true);
         return true;
@@ -139,9 +155,11 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const disablePush = async () => {
+    const client = props.api();
     try {
       if (pushSubscription) {
-        await unsubscribeFromPush(pushSubscription, props.api());
+        await unsubscribeFromPush(pushSubscription, client);
+        if (!current(client)) return;
         pushSubscription = null;
       }
       setPushEnabled(false);
@@ -151,14 +169,18 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   onMount(async () => {
+    const client = props.api();
     // Initial fetch
     await fetchUnreadCount();
+    if (!current(client)) return;
 
     // Check existing push subscription
     if (!isGoModeHost()) {
       swRegistration = await registerServiceWorker();
+      if (!current(client)) return;
       if (swRegistration) {
         const existing = await swRegistration.pushManager.getSubscription();
+        if (!current(client)) return;
         if (existing) {
           pushSubscription = existing;
           setPushEnabled(true);
@@ -171,6 +193,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   });
 
   onCleanup(() => {
+    disposed = true;
     if (pollTimer) {
       window.clearInterval(pollTimer);
     }

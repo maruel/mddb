@@ -202,9 +202,9 @@ func isAuthEndpoint(method, path string) bool {
 		return false
 	}
 
-	// POST /api/v1/auth/login or /api/v1/auth/register
+	// Browser and bearer login share one per-IP authentication budget.
 	if method == "POST" {
-		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
+		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" || path == "/api/v1/auth/browser/login" || path == "/api/v1/auth/browser/register" {
 			return true
 		}
 	}

@@ -1,16 +1,24 @@
 // E2E tests for invalid route handling and error pages.
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  getWorkspaceId,
+  fillEditorContent,
+  createClient,
+  gotoWithSession,
+} from "./helpers";
 
 test.describe("Error Handling - Invalid Routes", () => {
   test("navigating to non-existent page shows appropriate error or handles gracefully", async ({ page, request }) => {
     const { token } = await registerUser(request, "invalid-page");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Try to navigate to a non-existent page ID
-    await page.goto(`/w/@${wsID}/@nonexistent-page-id-12345?token=${token}`);
+    await gotoWithSession(page, token, `/w/@${wsID}/@nonexistent-page-id-12345`);
 
     // Should either show error message or redirect to workspace root
     // Wait for either an error message to appear OR the sidebar to show
@@ -26,11 +34,11 @@ test.describe("Error Handling - Invalid Routes", () => {
   // Testing if invalid workspace ID is handled gracefully (doesn't crash)
   test("navigating to non-existent workspace shows error", async ({ page, request }) => {
     const { token } = await registerUser(request, "invalid-ws");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Try to navigate to a non-existent workspace
-    await page.goto(`/w/@invalid-workspace-12345/@some-page?token=${token}`);
+    await gotoWithSession(page, token, `/w/@invalid-workspace-12345/@some-page`);
 
     // Should handle gracefully: show error, redirect to valid workspace, or load user's workspace
     await expect(async () => {
@@ -63,7 +71,7 @@ test.describe("Error Handling - Invalid Routes", () => {
 test.describe("Error Handling - API Failures", () => {
   test("network error during save shows error message", async ({ page, request }) => {
     const { token } = await registerUser(request, "network-error");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -98,7 +106,7 @@ test.describe("Error Handling - API Failures", () => {
 test.describe("Error Handling - Concurrent Edits", () => {
   test("editing same page in two tabs - last writer wins", async ({ page, request, context }) => {
     const { token } = await registerUser(request, "concurrent-edit");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -112,7 +120,7 @@ test.describe("Error Handling - Concurrent Edits", () => {
 
     // Open same page in second tab
     const page2 = await context.newPage();
-    await page2.goto(`/w/@${wsID}/@${pageData.id}?token=${token}`);
+    await gotoWithSession(page2, token, `/w/@${wsID}/@${pageData.id}`);
     await expect(page2.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to page in first tab
@@ -142,7 +150,7 @@ test.describe("Error Handling - Concurrent Edits", () => {
 test.describe("Edge Cases", () => {
   test("empty page title is handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "empty-title");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -185,7 +193,7 @@ test.describe("Edge Cases", () => {
 
   test("very long title is handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "long-title");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -225,7 +233,7 @@ test.describe("Edge Cases", () => {
 
   test("special characters in title are handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "special-chars");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
@@ -255,7 +263,7 @@ test.describe("Edge Cases", () => {
 
   test("WYSIWYG editor renders code blocks correctly", async ({ page, request }) => {
     const { token } = await registerUser(request, "code-blocks");
-    await page.goto(`/?token=${token}`);
+    await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);

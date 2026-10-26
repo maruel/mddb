@@ -1,12 +1,12 @@
 // E2E tests for removing an organization member with cascading workspace membership removal.
 
-import { test, expect, registerUser, createClient } from "./helpers";
+import { test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 
 test.describe("Remove Organization Member", () => {
   test("responsive member rows allow role changes and cascading removal", async ({ page, request }, testInfo) => {
     // Register owner (user A), onboard to create org+workspace.
     const userA = await registerUser(request, "remove-member-a");
-    await page.goto(`/?token=${userA.token}`);
+    await gotoWithSession(page, userA.token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Get user A's org and workspace IDs.
@@ -81,7 +81,7 @@ test.describe("Remove Organization Member", () => {
 
   test("cannot remove yourself from organization", async ({ page, request }) => {
     const userA = await registerUser(request, "remove-self");
-    await page.goto(`/?token=${userA.token}`);
+    await gotoWithSession(page, userA.token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const clientA = createClient(request, userA.token);
@@ -97,7 +97,7 @@ test.describe("Remove Organization Member", () => {
 
   test("cannot remove the last owner", async ({ page, request }) => {
     const userA = await registerUser(request, "remove-last-owner");
-    await page.goto(`/?token=${userA.token}`);
+    await gotoWithSession(page, userA.token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const clientA = createClient(request, userA.token);
