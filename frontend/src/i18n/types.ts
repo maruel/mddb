@@ -609,6 +609,34 @@ export interface Dictionary {
   };
 
   voice: {
+    audioDevices: string;
+    callingTool: string;
+    credits: string;
+    enableMicrophone: string;
+    enableSound: string;
+    hideTranscript: string;
+    microphoneAccessOff: string;
+    microphoneFullyMuted: string;
+    microphoneListening: string;
+    microphoneMode: string;
+    microphoneMuteNextReplyHelp: string;
+    microphoneMuteOnce: string;
+    microphoneMuteOnceHelp: string;
+    microphoneMutedHelp: string;
+    microphoneNextState: string;
+    musicArranger: string;
+    musicComposer: string;
+    musicPlaybackError: string;
+    nextServer: string;
+    playMusic: string;
+    playMusicLabel: string;
+    requestingMicrophone: string;
+    showTranscript: string;
+    stopMusic: string;
+    stopMusicLabel: string;
+    thinkingMusic: string;
+    voiceActivity: string;
+    voiceControls: string;
     dismiss: string;
     authorizationFailed: string;
     choiceUnavailable: string;
