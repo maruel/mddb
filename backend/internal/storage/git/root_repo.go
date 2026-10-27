@@ -4,9 +4,11 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -72,10 +74,9 @@ func (rr *RootRepo) CommitDBChanges(ctx context.Context, author Author, msg stri
 		// Exit code 0 means no staged changes
 		return nil
 	}
-	// Exit code 1 means there are staged changes — this is the expected path.
-	// Any other error would have a non-nil err but we can't distinguish exit
-	// codes portably, so we just proceed to commit.
-	_ = out
+	if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != 1 {
+		return fmt.Errorf("failed to inspect staged db changes: %w\nOutput: %s", err, string(out))
+	}
 
 	name := author.Name
 	email := author.Email

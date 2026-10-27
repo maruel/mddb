@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,6 +27,7 @@ import (
 var testJWTSecret = []byte("test-secret-key-32-bytes-long!!!")
 
 type testEnv struct {
+	dataDir       string
 	server        *httptest.Server
 	services      *handlers.Services
 	userService   *identity.UserService
@@ -39,38 +42,42 @@ type testEnv struct {
 
 func setupTestEnv(t *testing.T) *testEnv {
 	tempDir := t.TempDir()
+	dbDir := filepath.Join(tempDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: test data
+		t.Fatal(err)
+	}
 
-	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
+	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
 	if err != nil {
 		t.Fatalf("NewUserService: %v", err)
 	}
 
-	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
+	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"))
 	if err != nil {
 		t.Fatalf("NewOrganizationService: %v", err)
 	}
 
-	wsService, err := identity.NewWorkspaceService(filepath.Join(tempDir, "workspaces.jsonl"))
+	wsService, err := identity.NewWorkspaceService(filepath.Join(dbDir, "workspaces.jsonl"))
 	if err != nil {
 		t.Fatalf("NewWorkspaceService: %v", err)
 	}
 
-	orgMemService, err := identity.NewOrganizationMembershipService(filepath.Join(tempDir, "org_memberships.jsonl"), userService, orgService)
+	orgMemService, err := identity.NewOrganizationMembershipService(filepath.Join(dbDir, "org_memberships.jsonl"), userService, orgService)
 	if err != nil {
 		t.Fatalf("NewOrganizationMembershipService: %v", err)
 	}
 
-	wsMemService, err := identity.NewWorkspaceMembershipService(filepath.Join(tempDir, "ws_memberships.jsonl"), wsService, orgService)
+	wsMemService, err := identity.NewWorkspaceMembershipService(filepath.Join(dbDir, "ws_memberships.jsonl"), wsService, orgService)
 	if err != nil {
 		t.Fatalf("NewWorkspaceMembershipService: %v", err)
 	}
 
-	orgInvService, err := identity.NewOrganizationInvitationService(filepath.Join(tempDir, "org_invitations.jsonl"))
+	orgInvService, err := identity.NewOrganizationInvitationService(filepath.Join(dbDir, "org_invitations.jsonl"))
 	if err != nil {
 		t.Fatalf("NewOrganizationInvitationService: %v", err)
 	}
 
-	wsInvService, err := identity.NewWorkspaceInvitationService(filepath.Join(tempDir, "ws_invitations.jsonl"))
+	wsInvService, err := identity.NewWorkspaceInvitationService(filepath.Join(dbDir, "ws_invitations.jsonl"))
 	if err != nil {
 		t.Fatalf("NewWorkspaceInvitationService: %v", err)
 	}
@@ -83,7 +90,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewFileStore: %v", err)
 	}
 
-	sessionService, err := identity.NewSessionService(filepath.Join(tempDir, "sessions.jsonl"))
+	sessionService, err := identity.NewSessionService(filepath.Join(dbDir, "sessions.jsonl"))
 	if err != nil {
 		t.Fatalf("NewSessionService: %v", err)
 	}
@@ -124,11 +131,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 		OAuth:        OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
 	}
 	router := NewRouter(svc, cfg)
+	t.Cleanup(router.Close)
 
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 
 	return &testEnv{
+		dataDir:       tempDir,
 		server:        server,
 		services:      svc,
 		userService:   userService,
@@ -258,6 +267,27 @@ func TestIntegration(t *testing.T) {
 		status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", registerReq, &loginResp, "")
 		if status != http.StatusOK {
 			t.Fatalf("POST /api/v1/auth/register: got status %d, want %d", status, http.StatusOK)
+		}
+
+		// Registration must persist identity changes in Git, not merely return a
+		// successful response after logging a failed database commit.
+		cmd := exec.CommandContext(t.Context(), "git", "log", "-1", "--format=%s")
+		cmd.Dir = env.dataDir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("read registration commit: %v\n%s", err, out)
+		}
+		if strings.TrimSpace(string(out)) != "POST /api/v1/auth/register" {
+			t.Fatalf("registration commit = %s", out)
+		}
+		cmd = exec.CommandContext(t.Context(), "git", "show", "HEAD:db/users.jsonl")
+		cmd.Dir = env.dataDir
+		out, err = cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("read committed users: %v\n%s", err, out)
+		}
+		if !bytes.Contains(out, []byte("alice@example.com")) {
+			t.Fatalf("registered user missing from Git: %s", out)
 		}
 
 		if loginResp.Token == "" {

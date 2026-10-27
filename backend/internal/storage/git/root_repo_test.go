@@ -3,6 +3,7 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,6 +146,44 @@ func TestRootRepo(t *testing.T) {
 		}
 		if strings.TrimSpace(string(out)) != "User <user@example.com>" {
 			t.Errorf("unexpected author: %s", string(out))
+		}
+	})
+
+	t.Run("CommitDBChanges/error", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		dbDir := filepath.Join(dir, "db")
+		if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: test data
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+		head, err := gitOutput(dir, "rev-parse", "HEAD")
+		if err != nil {
+			t.Fatal(err)
+		}
+		hash := strings.TrimSpace(string(head))
+		// Staging still succeeds with a corrupt HEAD commit, but diff exits 128.
+		// Preserve that failure instead of attempting a commit on a broken repo.
+		obj := filepath.Join(dir, ".git", "objects", hash[:2], hash[2:])
+		if err := os.Remove(obj); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(obj, []byte("corrupt object"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		err = rr.CommitDBChanges(t.Context(), Author{}, "must not commit")
+		if err == nil || !strings.Contains(err.Error(), "failed to inspect staged db changes") {
+			t.Fatalf("CommitDBChanges() = %v, want diff inspection failure", err)
+		}
+		exit, ok := errors.AsType[*exec.ExitError](err)
+		if !ok || exit.ExitCode() != 128 {
+			t.Fatalf("CommitDBChanges() = %v, want wrapped Git exit 128", err)
 		}
 	})
 

@@ -110,7 +110,7 @@ func (l *Limiters) StartTime() time.Time {
 	return l.startTime
 }
 
-// Close stops all limiter cleanup goroutines.
+// Close stops and waits for all limiter cleanup goroutines. Call it once.
 func (l *Limiters) Close() {
 	l.Auth.Limiter.Close()
 	l.Write.Limiter.Close()

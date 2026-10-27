@@ -28,6 +28,7 @@ type Limiter struct {
 	burst   int
 	window  time.Duration
 	stop    chan struct{}
+	workers sync.WaitGroup
 	count   atomic.Int64
 }
 
@@ -44,8 +45,8 @@ func NewLimiter(requests int, window time.Duration, burst int) *Limiter {
 		stop:    make(chan struct{}),
 	}
 
-	// Start cleanup goroutine
-	go l.cleanupLoop()
+	// Own the cleanup worker until Close has waited for its termination.
+	l.workers.Go(l.cleanupLoop)
 
 	return l
 }
@@ -143,9 +144,11 @@ func (l *Limiter) cleanup() {
 	}
 }
 
-// Close stops the cleanup goroutine.
+// Close stops and waits for the cleanup goroutine. Call it once.
+// Allow and Update remain safe to call during and after Close.
 func (l *Limiter) Close() {
 	close(l.stop)
+	l.workers.Wait()
 }
 
 // Update changes the rate limit parameters. 0 rate means unlimited.

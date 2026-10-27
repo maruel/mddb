@@ -43,17 +43,14 @@ func TestDeviceLogin(t *testing.T) {
 	setup := func(t *testing.T) (*testEnv, http.Handler, string, dto.AuthResponse) {
 		env := setupTestEnv(t)
 		dir := t.TempDir()
-		sessions, err := identity.NewSessionService(filepath.Join(dir, "sessions.jsonl"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		env.services.Session = sessions
 		var auth dto.AuthResponse
 		if status := env.doJSON(t, "POST", "/api/v1/auth/register", dto.RegisterRequest{Email: "pair@example.com", Password: "Password123", Name: "Pair"}, &auth, ""); status != 200 {
 			t.Fatalf("register = %d", status)
 		}
 		cfg := &Config{ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir, BaseURL: "https://mddb.example", FastRateLimits: true, VoiceBridge: &testVoiceBridge{}, OAuth: OAuthConfig{GoogleClientID: "client", GoogleClientSecret: "secret"}}
-		return env, NewRouter(env.services, cfg), dir, auth
+		h := NewRouter(env.services, cfg)
+		t.Cleanup(h.Close)
+		return env, h, dir, auth
 	}
 	t.Run("normal session user agent is UTF-8 bounded", func(t *testing.T) {
 		for _, tc := range []struct {
@@ -163,7 +160,7 @@ func TestDeviceLogin(t *testing.T) {
 					} else {
 						poll()
 					}
-					restarted, err := identity.NewSessionService(filepath.Join(dir, "sessions.jsonl"))
+					restarted, err := identity.NewSessionService(filepath.Join(env.dataDir, "db", "sessions.jsonl"))
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -435,6 +432,7 @@ func TestDeviceLogin(t *testing.T) {
 					cfg.ConfigDir = ""
 				}
 				h := NewRouter(env.services, cfg)
+				t.Cleanup(h.Close)
 				for _, name := range []string{"start", "poll", "lookup", "approve"} {
 					if w := post(h, name, "{}", "", ""); w.Code != 404 {
 						t.Fatalf("%s=%d", name, w.Code)
@@ -447,6 +445,7 @@ func TestDeviceLogin(t *testing.T) {
 		env, _, dir, _ := setup(t)
 		cfg := &Config{ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir}
 		h := NewRouter(env.services, cfg)
+		t.Cleanup(h.Close)
 		for range 5 {
 			start(t, h)
 		}

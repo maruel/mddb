@@ -65,10 +65,17 @@ type OAuthConfig struct {
 	TestOAuth          bool // When true, OAuth login bypasses real providers and uses fake accounts.
 }
 
+// Router serves HTTP requests and owns the rate-limiter cleanup workers.
+// Construct it with NewRouter and close it when the HTTP server shuts down.
+type Router struct {
+	handler  http.Handler
+	limiters *ratelimit.Limiters
+}
+
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // Services.Email and Services.EmailVerif may be nil if SMTP is not configured.
-func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
+func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux := &http.ServeMux{}
 	settings := goModeSettings(cfg.Version, cfg.VoiceBridge != nil)
 	if cfg.ExternalVoice != nil {
@@ -379,7 +386,19 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 			"cc", cc,
 		)
 	}
-	return http.HandlerFunc(f)
+	return &Router{handler: http.HandlerFunc(f), limiters: limiters}
+}
+
+// ServeHTTP routes the request through the configured middleware and handlers.
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(w, req)
+}
+
+// Close stops and waits for the owned rate-limiter cleanup workers. Call it once.
+// It does not stop HTTP serving or wait for request handlers. In-flight requests
+// can finish safely: rate-limit checks remain usable after cleanup stops.
+func (r *Router) Close() {
+	r.limiters.Close()
 }
 
 // responseWriter wraps http.ResponseWriter to capture status code, response size, and apply bandwidth limiting.

@@ -33,9 +33,14 @@ func TestExternalVoiceGateway(t *testing.T) {
 				if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "voice-external@example.com", Password: "Pass1234", Name: "Voice"}, &auth, ""); status != http.StatusOK {
 					t.Fatalf("register: %d", status)
 				}
-				var h http.Handler
+				var h *Router
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { h.ServeHTTP(w, r) }))
-				t.Cleanup(ts.Close)
+				t.Cleanup(func() {
+					ts.Close()
+					if h != nil {
+						h.Close()
+					}
+				})
 				var key any
 				var public ed25519.PublicKey
 				if mode == "scoped" {

@@ -100,7 +100,9 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	}
 	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	bridge := &testVoiceChoiceBridge{}
-	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge}))
+	router := NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge})
+	t.Cleanup(router.Close)
+	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 
 	discoveryReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/.well-known/gomode.json", http.NoBody)
@@ -771,7 +773,9 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 		t.Fatalf("register: %d", status)
 	}
 	cfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	ts := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", VoiceBridge: &websocketVoiceBridge{}}))
+	router := NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", VoiceBridge: &websocketVoiceBridge{}})
+	t.Cleanup(router.Close)
+	ts := httptest.NewServer(router)
 	t.Cleanup(ts.Close)
 	ticketRequest := func(token string) *http.Response {
 		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/api/voicegateway/v1/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))

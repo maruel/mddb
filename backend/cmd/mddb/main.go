@@ -397,9 +397,12 @@ Flags:
 		GitHubApp: ghAppConfig,
 	}
 
+	router := server.NewRouter(svc, routerCfg)
+	defer router.Close()
+
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(svc, routerCfg),
+		Handler:           router,
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -418,7 +421,7 @@ Flags:
 	select {
 	case err := <-serverErr:
 		if !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("server error: %w", err)
+			return errors.Join(fmt.Errorf("server error: %w", err), httpServer.Close())
 		}
 	case <-ctx.Done():
 		// Graceful shutdown
@@ -426,10 +429,20 @@ Flags:
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		if err := shutdownHTTPServer(shutdownCtx, httpServer); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}
 		slog.InfoContext(ctx, "Server stopped")
+	}
+	return nil
+}
+
+// shutdownHTTPServer preserves the graceful deadline and closes active HTTP
+// connections if draining fails. It does not wait for arbitrary handler work
+// or hijacked connections; fatal shutdown does not promise lossless completion.
+func shutdownHTTPServer(ctx context.Context, srv *http.Server) error {
+	if err := srv.Shutdown(ctx); err != nil {
+		return errors.Join(err, srv.Close())
 	}
 	return nil
 }
