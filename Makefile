@@ -100,7 +100,8 @@ benchmark:
 
 # Run the complete browser suite and verify its saved data with normal pairing limits.
 # Focused diagnostics use pnpm exec playwright test e2e/file.spec.ts directly.
-test-e2e: test-e2e-go
+test-e2e: $(FRONTEND_STAMP) test-e2e-go
+	@pnpm exec playwright install --no-shell chromium
 	@uv run --locked python scripts/clean_data_e2e.py
 	@pnpm exec playwright test $(PLAYWRIGHT_ARGS); \
 	e2e_exit=$$?; \
