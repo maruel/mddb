@@ -32,7 +32,7 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 	return gomode.Settings{
 		Service: "mddb", ServiceVersion: version, APIVersion: 1,
 		WebShell: gomode.WebShellSettings{
-			BridgeVersion: 1,
+			BridgeVersion: 2,
 			ToolGroups: []gomode.ToolGroup{{
 				Name: "workspace", Description: "Read and edit documents in your active workspace",
 				Endpoint: goModeMCPEndpoint, ProtocolVersion: mcp.ProtocolVersion, AuthRequired: true,

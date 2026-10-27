@@ -1,4 +1,4 @@
-// Owns cookie account state and native identity transitions without browser-readable credentials.
+// Owns cookie account state, page-bound frontend preparation, and session-scoped identity transitions.
 
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
 } from "solid-js";
 import { createApi, APIError, type Api } from "../useApi";
 import type { UserResponse } from "@sdk/types.gen";
-import { publishGoModeAuthChanging, publishGoModeAuthChanged } from "../gomode/host";
+import { createFrontendPreparationClient, type FrontendPreparation } from "@maruel/gomode/web/FrontendVoiceTools";
 import { useI18n, type Locale } from "../i18n";
 
 export interface AuthContextValue {
@@ -36,12 +36,26 @@ export const AuthContext = createContext<AuthContextValue>();
 const authEventKey = "mddb_auth_changed";
 
 export const AuthProvider: ParentComponent = (props) => {
+  const nativeFrontend = createFrontendPreparationClient();
   const { setLocale, t } = useI18n();
   const [user, setUser] = createSignal<UserResponse | null>(null);
   const [ready, setReady] = createSignal(false);
   const [identity, setIdentity] = createSignal(0);
   const [logoutFailed, setLogoutFailed] = createSignal(false);
   let generation = 0;
+  let disposed = false;
+  let nativeIdentity: FrontendPreparation | null = null;
+  const publishNativeAuth = (message: Record<string, unknown>) => {
+    if (disposed) return;
+    nativeIdentity?.dispose();
+    nativeIdentity = nativeFrontend.publishAuth(message);
+    // mddb exposes no frontend tools, so settled identity needs no tool data.
+    nativeIdentity.setReady(message.authChanged === true && message.nativeAccess === true);
+  };
+  onCleanup(() => {
+    disposed = true;
+    nativeIdentity?.dispose();
+  });
   createEffect(() => {
     const lang = user()?.settings?.language;
     const locale: Locale = lang === "fr" || lang === "de" || lang === "es" ? lang : "en";
@@ -49,7 +63,7 @@ export const AuthProvider: ParentComponent = (props) => {
   });
   const changing = () => {
     generation++;
-    publishGoModeAuthChanging();
+    publishNativeAuth({ authChanging: true });
     batch(() => {
       setIdentity(generation);
       setUser(null);
@@ -58,12 +72,12 @@ export const AuthProvider: ParentComponent = (props) => {
     return generation;
   };
   const settle = (id: number, value: UserResponse | null) => {
-    if (id !== generation) return;
+    if (disposed || id !== generation) return;
+    publishNativeAuth({ authChanged: true, nativeAccess: value !== null });
     batch(() => {
       setUser(value);
       setReady(true);
     });
-    publishGoModeAuthChanged(value !== null);
   };
   const signalChange = () => localStorage.setItem(authEventKey, crypto.randomUUID());
   const sessionID = createMemo(() => user()?.session_id);
@@ -83,6 +97,7 @@ export const AuthProvider: ParentComponent = (props) => {
     return id ? api().org(id) : null;
   });
   const login = (value: UserResponse) => {
+    if (disposed) return;
     setLogoutFailed(false);
     const id = changing();
     settle(id, value);
@@ -90,10 +105,12 @@ export const AuthProvider: ParentComponent = (props) => {
   };
   const confirmLoggedOut = () => settle(changing(), null);
   const reloadIdentity = () => {
+    if (disposed) return;
     changing();
     window.location.reload();
   };
   const logout = async () => {
+    if (disposed) return;
     setLogoutFailed(false);
     const sid = user()?.session_id;
     const id = changing();
@@ -122,6 +139,7 @@ export const AuthProvider: ParentComponent = (props) => {
     }
   };
   const refreshUser = async () => {
+    if (disposed) return;
     const id = generation;
     try {
       const value = await createApi(() => {
@@ -142,6 +160,7 @@ export const AuthProvider: ParentComponent = (props) => {
     }
   };
   const load = async () => {
+    if (disposed) return;
     const id = changing();
     try {
       const value = await createApi().getMe();

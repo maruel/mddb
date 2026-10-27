@@ -6,12 +6,25 @@ import type { AddressInfo } from "node:net";
 
 test("browser credentials stay HttpOnly through registration, reload and logout", async ({ page, context }) => {
   const messages: unknown[] = [];
-  await page.exposeFunction("recordNativeAuth", (value: string) => messages.push(JSON.parse(value)));
+  await page.exposeFunction("recordNativeAuth", (value: string) => {
+    const { frontendDocument, frontendRequest, ...auth } = JSON.parse(value);
+    expect(frontendDocument).toBe("device-document");
+    expect(typeof frontendRequest).toBe("string");
+    messages.push(auth);
+  });
   await page.addInitScript(() => {
     Object.defineProperty(window, "goModeHost", { value: {} });
+    Object.defineProperty(window, "goModeFrontendDocument", { value: Promise.resolve("device-document") });
     Object.defineProperty(window, "gomodeAuth", {
       value: {
         postMessage: (value: string) => {
+          const { frontendDocument, frontendRequest, ...auth } = JSON.parse(value);
+          if (auth.authChanged === true && auth.nativeAccess === true) {
+            const bridge = window as unknown as { gomodeAuth: { onmessage?: (event: { data: string }) => void } };
+            bridge.gomodeAuth.onmessage?.({
+              data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken: "device-token" }),
+            });
+          }
           void (window as unknown as { recordNativeAuth: (value: string) => Promise<void> }).recordNativeAuth(value);
         },
       },

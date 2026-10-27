@@ -460,11 +460,21 @@ test("a delayed signed-out probe rediscovers a replacement cookie before settlin
   const context = await browser.newContext();
   await context.addInitScript(() => {
     Object.defineProperty(window, "goModeHost", { value: {} });
+    Object.defineProperty(window, "goModeFrontendDocument", { value: Promise.resolve("device-document") });
     Object.defineProperty(window, "gomodeAuth", {
       value: {
         postMessage: (message: string) => {
           const events: unknown[] = JSON.parse(sessionStorage.getItem("test-auth-events") ?? "[]");
-          events.push(JSON.parse(message));
+          const { frontendDocument, frontendRequest, ...auth } = JSON.parse(message);
+          if (frontendDocument !== "device-document" || typeof frontendRequest !== "string")
+            throw new Error("Invalid bridge owner");
+          events.push(auth);
+          if (auth.authChanged === true && auth.nativeAccess === true) {
+            const bridge = window as unknown as { gomodeAuth: { onmessage?: (event: { data: string }) => void } };
+            bridge.gomodeAuth.onmessage?.({
+              data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken: "device-token" }),
+            });
+          }
           sessionStorage.setItem("test-auth-events", JSON.stringify(events));
         },
       },

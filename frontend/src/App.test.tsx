@@ -60,6 +60,20 @@ function apiGet(match: string | RegExp, respond: (url: string) => unknown): void
   api("GET", match, (url) => respond(url));
 }
 
+function nativeAuthSpy() {
+  const postMessage = vi.fn();
+  window.goModeFrontendDocument = Promise.resolve("app-document");
+  window.gomodeAuth = {
+    postMessage(message) {
+      const { frontendDocument, frontendRequest, ...auth } = JSON.parse(message) as Record<string, unknown>;
+      expect(frontendDocument).toBe("app-document");
+      expect(typeof frontendRequest).toBe("string");
+      postMessage(JSON.stringify(auth));
+    },
+  };
+  return postMessage;
+}
+
 // --- Fixtures -----------------------------------------------------------------
 
 const mockUser: UserResponse = {
@@ -163,6 +177,8 @@ beforeEach(() => {
   localStorage.clear();
   delete window.goModeHost;
   delete window.gomodeAuth;
+  delete window.goModeFrontendDocument;
+  delete window.gomodeFrontendReadiness;
   // Reset URL to root for each test.
   window.history.replaceState(null, "", "/");
 });
@@ -213,8 +229,7 @@ describe("App", () => {
     it("settles failed logout and failed recovery with a persistent visible error", async () => {
       const errors = vi.spyOn(console, "error").mockImplementation(() => {});
       window.goModeHost = {};
-      const postMessage = vi.fn();
-      window.gomodeAuth = { postMessage };
+      const postMessage = nativeAuthSpy();
       let meCalls = 0;
       apiGet("/api/v1/auth/me", () => {
         if (meCalls++ === 0) return mockUser;
@@ -395,8 +410,7 @@ describe("App", () => {
 
     it("signals settled cookie authentication to Go Mode and pauses it on logout", async () => {
       window.goModeHost = {};
-      const postMessage = vi.fn();
-      window.gomodeAuth = { postMessage };
+      const postMessage = nativeAuthSpy();
       let resolveUser!: (user: UserResponse) => void;
       const userResponse = new Promise<UserResponse>((resolve) => {
         resolveUser = resolve;

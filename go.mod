@@ -13,7 +13,7 @@ require (
 	github.com/klauspost/compress v1.20.1
 	github.com/lmittmann/tint v1.2.0
 	github.com/maruel/apisdkgen v0.1.3
-	github.com/maruel/gomode v0.2.1-0.20261027014544-5e12888062c2
+	github.com/maruel/gomode v0.2.1-0.20261027030932-949e2973d838
 	github.com/maruel/ksid v0.1.1
 	github.com/mattn/go-colorable v0.1.15
 	github.com/mattn/go-isatty v0.0.24

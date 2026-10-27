@@ -12,6 +12,7 @@ test("Go Mode discovers mddb, reads its workspace, and updates the page open in 
   expect(discovery.ok()).toBe(true);
   const settings = await discovery.json();
   expect(settings.service).toBe("mddb");
+  expect(settings.webShell.bridgeVersion).toBe(2);
   expect(settings.webShell.toolGroups).toEqual([
     expect.objectContaining({ endpoint: "/api/v1/gomode/mcp", authRequired: true, protocolVersion }),
   ]);
