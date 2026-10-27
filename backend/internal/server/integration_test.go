@@ -166,7 +166,7 @@ func (e *testEnv) doJSON(t *testing.T, method, path string, body, response any, 
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.server.Client().Do(req)
 	if err != nil {
 		t.Fatalf("Do request: %v", err)
 	}

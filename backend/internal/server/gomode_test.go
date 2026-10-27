@@ -712,7 +712,7 @@ func callMCPNamed(t *testing.T, e *testEnv, token, method string, params map[str
 	if name != "" {
 		req.Header.Set("Mcp-Name", name)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := e.server.Client().Do(req)
 	if err != nil {
 		t.Fatalf("send MCP request: %v", err)
 	}

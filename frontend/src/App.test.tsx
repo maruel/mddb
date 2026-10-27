@@ -211,6 +211,7 @@ describe("App", () => {
       expect(fetchCalls.filter(({ url }) => url.endsWith("/notifications/subscribe"))).toHaveLength(0);
     });
     it("settles failed logout and failed recovery with a persistent visible error", async () => {
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
       window.goModeHost = {};
       const postMessage = vi.fn();
       window.gomodeAuth = { postMessage };
@@ -229,6 +230,10 @@ describe("App", () => {
       fireEvent.click(screen.getByRole("menuitem", { name: "Logout" }));
       await waitFor(() => expect(screen.getByRole("heading", { name: "Login to mddb" })).toBeTruthy());
       expect(screen.getByRole("alert")).toHaveTextContent("Sign-out failed");
+      expect(errors.mock.calls).toEqual([
+        ["Failed to revoke browser session", new Error("logout offline")],
+        ["Failed to recover browser session", new Error("recovery offline")],
+      ]);
       expect(postMessage).toHaveBeenLastCalledWith(JSON.stringify({ authChanged: true, nativeAccess: false }));
     });
 
@@ -462,6 +467,7 @@ describe("App", () => {
     });
 
     it("keeps credentials out of storage and shows the main app after the login form submits", async () => {
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
       apiGet("/api/v1/auth/me", () => {
         throw new Error("not signed in");
       });
@@ -484,6 +490,7 @@ describe("App", () => {
       await waitFor(() => {
         expect(screen.getByTestId("user-menu-button")).toBeTruthy();
       });
+      expect(errors.mock.calls).toEqual([["Failed to load user", new Error("not signed in")]]);
     });
   });
 

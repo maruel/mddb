@@ -16,6 +16,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -29,7 +30,16 @@ import (
 )
 
 func TestDeviceLogin(t *testing.T) {
-	t.Parallel()
+	// KSID's process-wide generator must not interleave real and frozen clocks.
+	// The real HTTP fixture owns sessions and background workers outside each
+	// bubble. Align virtual time with those sessions before advancing the poll.
+	afterPollInterval := func(t *testing.T, f func(*testing.T)) {
+		now := time.Now()
+		synctest.Test(t, func(t *testing.T) {
+			time.Sleep(time.Until(now) + 5*time.Second)
+			f(t)
+		})
+	}
 	setup := func(t *testing.T) (*testEnv, http.Handler, string, dto.AuthResponse) {
 		env := setupTestEnv(t)
 		dir := t.TempDir()
@@ -133,58 +143,59 @@ func TestDeviceLogin(t *testing.T) {
 				if w := post(mux, "approve", `{"user_code":"`+code.UserCode+`","approve":true}`, auth.Token, detail.CSRFToken); w.Code != 200 {
 					t.Fatal(w.Body.String())
 				}
-				time.Sleep(5 * time.Second)
-				poll := func() {
-					r := httptest.NewRequestWithContext(ctx, http.MethodPost, deviceLoginPrefix+"poll", strings.NewReader(`{"device_code":"`+code.DeviceCode+`"}`))
-					r.Header.Set("Content-Type", "application/json")
-					r.Header.Set("Accept-Encoding", "gzip")
-					w := http.ResponseWriter(httptest.NewRecorder())
-					if failure == "write" {
-						w = &deviceFailedWriter{w}
+				afterPollInterval(t, func(t *testing.T) {
+					poll := func() {
+						r := httptest.NewRequestWithContext(ctx, http.MethodPost, deviceLoginPrefix+"poll", strings.NewReader(`{"device_code":"`+code.DeviceCode+`"}`))
+						r.Header.Set("Content-Type", "application/json")
+						r.Header.Set("Accept-Encoding", "gzip")
+						w := http.ResponseWriter(httptest.NewRecorder())
+						if failure == "write" {
+							w = &deviceFailedWriter{w}
+						}
+						compressMiddleware(http.HandlerFunc(core.Poll)).ServeHTTP(w, r)
 					}
-					compressMiddleware(http.HandlerFunc(core.Poll)).ServeHTTP(w, r)
-				}
-				if failure == "concurrent" {
-					var wg sync.WaitGroup
-					for range 12 {
-						wg.Go(poll)
+					if failure == "concurrent" {
+						var wg sync.WaitGroup
+						for range 12 {
+							wg.Go(poll)
+						}
+						wg.Wait()
+					} else {
+						poll()
 					}
-					wg.Wait()
-				} else {
+					restarted, err := identity.NewSessionService(filepath.Join(dir, "sessions.jsonl"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					active := restarted.CountActive()
+					// setup created the approver's independent normal session.
+					if failure == "none" || failure == "concurrent" {
+						if active != 2 || host.created.Load() != 1 {
+							t.Fatalf("active %d created %d", active, host.created.Load())
+						}
+					} else if active != 1 {
+						t.Fatalf("failed completion left %d active sessions", active)
+					}
+					if failure == "before creation" {
+						if host.created.Load() != 0 {
+							t.Fatal("creation attempted after prerequisite failed")
+						}
+					} else if host.created.Load() != 1 {
+						t.Fatalf("created %d sessions", host.created.Load())
+					}
+					before := host.created.Load()
 					poll()
-				}
-				restarted, err := identity.NewSessionService(filepath.Join(dir, "sessions.jsonl"))
-				if err != nil {
-					t.Fatal(err)
-				}
-				active := restarted.CountActive()
-				// setup created the approver's independent normal session.
-				if failure == "none" || failure == "concurrent" {
-					if active != 2 || host.created.Load() != 1 {
-						t.Fatalf("active %d created %d", active, host.created.Load())
+					if host.created.Load() != before {
+						t.Fatal("retry duplicated persistent session")
 					}
-				} else if active != 1 {
-					t.Fatalf("failed completion left %d active sessions", active)
-				}
-				if failure == "before creation" {
-					if host.created.Load() != 0 {
-						t.Fatal("creation attempted after prerequisite failed")
+					data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
+					if err != nil {
+						t.Fatal(err)
 					}
-				} else if host.created.Load() != 1 {
-					t.Fatalf("created %d sessions", host.created.Load())
-				}
-				before := host.created.Load()
-				poll()
-				if host.created.Load() != before {
-					t.Fatal("retry duplicated persistent session")
-				}
-				data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !strings.Contains(string(data), code.RequestID) || strings.Contains(string(data), code.DeviceCode) || strings.Contains(string(data), code.UserCode) {
-					t.Fatal("audit correlation/secrecy")
-				}
+					if !strings.Contains(string(data), code.RequestID) || strings.Contains(string(data), code.DeviceCode) || strings.Contains(string(data), code.UserCode) {
+						t.Fatal("audit correlation/secrecy")
+					}
+				})
 			})
 		}
 	})
@@ -195,22 +206,23 @@ func TestDeviceLogin(t *testing.T) {
 		if w := post(h, "approve", `{"user_code":"`+code.UserCode+`","approve":true}`, auth.Token, detail.CSRFToken); w.Code != 200 {
 			t.Fatal(w.Body.String())
 		}
-		time.Sleep(5 * time.Second)
-		r := httptest.NewRequest(http.MethodPost, deviceLoginPrefix+"poll", strings.NewReader(`{"device_code":"`+code.DeviceCode+`"}`))
-		r.RemoteAddr = "192.0.2.123:1234"
-		r.Header.Set("Content-Type", "application/json")
-		r.Header.Set("Accept-Encoding", "gzip")
-		h.ServeHTTP(&deviceFailedWriter{httptest.NewRecorder()}, r)
-		if env.services.Session.CountActive() != 1 {
-			t.Fatal("failed compressed delivery left display session active")
-		}
-		data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(data), `"kind":"response_failed"`) || !strings.Contains(string(data), `"kind":"session_revoked"`) {
-			t.Fatal("missing delivery cleanup audit")
-		}
+		afterPollInterval(t, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, deviceLoginPrefix+"poll", strings.NewReader(`{"device_code":"`+code.DeviceCode+`"}`))
+			r.RemoteAddr = "192.0.2.123:1234"
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Accept-Encoding", "gzip")
+			h.ServeHTTP(&deviceFailedWriter{httptest.NewRecorder()}, r)
+			if env.services.Session.CountActive() != 1 {
+				t.Fatal("failed compressed delivery left display session active")
+			}
+			data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), `"kind":"response_failed"`) || !strings.Contains(string(data), `"kind":"session_revoked"`) {
+				t.Fatal("missing delivery cleanup audit")
+			}
+		})
 	})
 	t.Run("normal session and individual revocation", func(t *testing.T) {
 		env, h, dir, auth := setup(t)
@@ -232,125 +244,127 @@ func TestDeviceLogin(t *testing.T) {
 		if w := post(h, "approve", body, auth.Token, d.CSRFToken); w.Code != 200 {
 			t.Fatalf("approve %d: %s", w.Code, w.Body)
 		}
-		time.Sleep(5 * time.Second)
-		w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", "")
-		if w.Code != 200 {
-			t.Fatalf("poll %d: %s", w.Code, w.Body)
-		}
-		var display dto.AuthResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &display); err != nil {
-			t.Fatal(err)
-		}
-		if display.User.ID != auth.User.ID || display.Token == auth.Token {
-			t.Fatal("session identity/independence mismatch")
-		}
-		parsed, err := jwt.Parse(display.Token, func(_ *jwt.Token) (any, error) { return testJWTSecret, nil })
-		if err != nil {
-			t.Fatal(err)
-		}
-		claims := parsed.Claims.(jwt.MapClaims)
-		if claims["email"] != auth.User.Email || claims["sub"] != auth.User.ID.String() || claims["sid"] == nil || claims["exp"].(float64)-claims["iat"].(float64) != 31*24*3600 {
-			t.Fatalf("unexpected claims %+v", claims)
-		}
-		sid, err := ksid.Parse(claims["sid"].(string))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, &dto.UserResponse{}, display.Token); status != 200 {
-			t.Fatalf("normal me %d", status)
-		}
-
-		var org dto.OrganizationResponse
-		if status := env.doJSON(t, "POST", "/api/v1/organizations", dto.CreateOrganizationRequest{Name: "Pair org"}, &org, auth.Token); status != 200 {
-			t.Fatalf("create org %d", status)
-		}
-		var ws dto.WorkspaceResponse
-		if status := env.doJSON(t, "POST", "/api/v1/organizations/"+org.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{Name: "Pair workspace"}, &ws, auth.Token); status != 200 {
-			t.Fatalf("create workspace %d", status)
-		}
-		var switched dto.SwitchWorkspaceResponse
-		if status := env.doJSON(t, "POST", "/api/v1/auth/switch-workspace", dto.SwitchWorkspaceRequest{WsID: ws.ID}, &switched, display.Token); status != 200 {
-			t.Fatalf("switch workspace %d", status)
-		}
-		if switched.User.WorkspaceID != ws.ID || switched.User.WorkspaceRole != dto.WSRoleAdmin {
-			t.Fatalf("switch changed session or permissions: %+v", switched.User)
-		}
-		// Pairing issues the same credential: writes, MCP, push, voice, OAuth linking
-		// and approving another device use the account's ordinary permissions.
-		var page dto.CreatePageResponse
-		if status := env.doJSON(t, "POST", "/api/v1/workspaces/"+ws.ID.String()+"/nodes/0/page/create", dto.CreatePageRequest{Title: "Device write", Content: "Original"}, &page, display.Token); status != 200 {
-			t.Fatal("device write", status)
-		}
-		outcome := callMCPTool(t, env, display.Token, "node_update", map[string]any{"nodeId": page.ID.String(), "title": "Device MCP", "content": "Updated by device MCP"})
-		if outcome.IsError || outcome.StructuredContent.Error != "" {
-			t.Fatalf("device MCP write: %+v", outcome)
-		}
-		var node dto.NodeResponse
-		if status := env.doJSON(t, "GET", "/api/v1/workspaces/"+ws.ID.String()+"/nodes/"+page.ID.String(), nil, &node, display.Token); status != 200 || node.Content != "Updated by device MCP" {
-			t.Fatalf("device MCP persistence %d %+v", status, node)
-		}
-		push, err := identity.NewPushSubscriptionService(filepath.Join(t.TempDir(), "push.jsonl"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		env.services.PushSubscription = push
-		if status := env.doJSON(t, "POST", "/api/v1/notifications/subscribe", dto.PushSubscribeRequest{Endpoint: "https://push.example.test/device", P256dh: "key", Auth: "auth"}, nil, display.Token); status != 200 {
-			t.Fatal("device push", status)
-		}
-		for _, action := range []struct{ path, body string }{
-			{"/api/voicegateway/v1/voice/rtc/offer", `{"sdp":"m=audio 9"}`},
-			{"/api/v1/auth/oauth/link", `{"provider":"google"}`},
-		} {
-			r := httptest.NewRequest(http.MethodPost, action.path, strings.NewReader(action.body))
-			r.Header.Set("Content-Type", "application/json")
-			r.Header.Set("Authorization", "Bearer "+display.Token)
-			response := httptest.NewRecorder()
-			h.ServeHTTP(response, r)
-			if response.Code != 200 {
-				t.Fatalf("device action %s=%d %s", action.path, response.Code, response.Body)
+		env.server.Client().Transport = deviceTransport{h}
+		afterPollInterval(t, func(t *testing.T) {
+			w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", "")
+			if w.Code != 200 {
+				t.Fatalf("poll %d: %s", w.Code, w.Body)
 			}
-		}
-		delegated := start(t, h)
-		proof := lookup(t, h, delegated.UserCode, display.Token)
-		if response := post(h, "approve", `{"user_code":"`+delegated.UserCode+`","approve":true}`, display.Token, proof.CSRFToken); response.Code != 200 {
-			t.Fatalf("device delegation %d %s", response.Code, response.Body)
-		}
-		var other dto.AuthResponse
-		if status := env.doJSON(t, "POST", "/api/v1/auth/login", dto.LoginRequest{Email: "pair@example.com", Password: "Password123"}, &other, ""); status != 200 {
-			t.Fatal("normal login", status)
-		}
-		if status := env.doJSON(t, "POST", "/api/v1/auth/sessions/revoke", dto.RevokeSessionRequest{SessionID: other.User.SessionID}, nil, display.Token); status != 200 {
-			t.Fatal("device revocation of another owned session", status)
-		}
-		if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, nil, other.Token); status != 401 {
-			t.Fatal("other session survived revocation", status)
-		}
-		if err := env.services.Session.Revoke(sid); err != nil {
-			t.Fatal(err)
-		}
-		if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, nil, display.Token); status != 401 {
-			t.Fatalf("revoked me %d", status)
-		}
-		if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, &dto.UserResponse{}, auth.Token); status != 200 {
-			t.Fatalf("approver revoked %d", status)
-		}
-		if w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", ""); w.Code == 200 {
-			t.Fatal("code reused")
-		}
-		data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(data), code.DeviceCode) || strings.Contains(string(data), code.UserCode) || !strings.Contains(string(data), `"approved":true`) {
-			t.Fatalf("audit content %s", data)
-		}
-		info, err := os.Stat(filepath.Join(dir, "device-login-audit.jsonl"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if info.Mode().Perm() != 0o600 {
-			t.Fatalf("audit permissions %v", info.Mode())
-		}
+			var display dto.AuthResponse
+			if err := json.Unmarshal(w.Body.Bytes(), &display); err != nil {
+				t.Fatal(err)
+			}
+			if display.User.ID != auth.User.ID || display.Token == auth.Token {
+				t.Fatal("session identity/independence mismatch")
+			}
+			parsed, err := jwt.Parse(display.Token, func(_ *jwt.Token) (any, error) { return testJWTSecret, nil })
+			if err != nil {
+				t.Fatal(err)
+			}
+			claims := parsed.Claims.(jwt.MapClaims)
+			if claims["email"] != auth.User.Email || claims["sub"] != auth.User.ID.String() || claims["sid"] == nil || claims["exp"].(float64)-claims["iat"].(float64) != 31*24*3600 {
+				t.Fatalf("unexpected claims %+v", claims)
+			}
+			sid, err := ksid.Parse(claims["sid"].(string))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, &dto.UserResponse{}, display.Token); status != 200 {
+				t.Fatalf("normal me %d", status)
+			}
+
+			var org dto.OrganizationResponse
+			if status := env.doJSON(t, "POST", "/api/v1/organizations", dto.CreateOrganizationRequest{Name: "Pair org"}, &org, auth.Token); status != 200 {
+				t.Fatalf("create org %d", status)
+			}
+			var ws dto.WorkspaceResponse
+			if status := env.doJSON(t, "POST", "/api/v1/organizations/"+org.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{Name: "Pair workspace"}, &ws, auth.Token); status != 200 {
+				t.Fatalf("create workspace %d", status)
+			}
+			var switched dto.SwitchWorkspaceResponse
+			if status := env.doJSON(t, "POST", "/api/v1/auth/switch-workspace", dto.SwitchWorkspaceRequest{WsID: ws.ID}, &switched, display.Token); status != 200 {
+				t.Fatalf("switch workspace %d", status)
+			}
+			if switched.User.WorkspaceID != ws.ID || switched.User.WorkspaceRole != dto.WSRoleAdmin {
+				t.Fatalf("switch changed session or permissions: %+v", switched.User)
+			}
+			// Pairing issues the same credential: writes, MCP, push, voice, OAuth linking
+			// and approving another device use the account's ordinary permissions.
+			var page dto.CreatePageResponse
+			if status := env.doJSON(t, "POST", "/api/v1/workspaces/"+ws.ID.String()+"/nodes/0/page/create", dto.CreatePageRequest{Title: "Device write", Content: "Original"}, &page, display.Token); status != 200 {
+				t.Fatal("device write", status)
+			}
+			outcome := callMCPTool(t, env, display.Token, "node_update", map[string]any{"nodeId": page.ID.String(), "title": "Device MCP", "content": "Updated by device MCP"})
+			if outcome.IsError || outcome.StructuredContent.Error != "" {
+				t.Fatalf("device MCP write: %+v", outcome)
+			}
+			var node dto.NodeResponse
+			if status := env.doJSON(t, "GET", "/api/v1/workspaces/"+ws.ID.String()+"/nodes/"+page.ID.String(), nil, &node, display.Token); status != 200 || node.Content != "Updated by device MCP" {
+				t.Fatalf("device MCP persistence %d %+v", status, node)
+			}
+			push, err := identity.NewPushSubscriptionService(filepath.Join(t.TempDir(), "push.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			env.services.PushSubscription = push
+			if status := env.doJSON(t, "POST", "/api/v1/notifications/subscribe", dto.PushSubscribeRequest{Endpoint: "https://push.example.test/device", P256dh: "key", Auth: "auth"}, nil, display.Token); status != 200 {
+				t.Fatal("device push", status)
+			}
+			for _, action := range []struct{ path, body string }{
+				{"/api/voicegateway/v1/voice/rtc/offer", `{"sdp":"m=audio 9"}`},
+				{"/api/v1/auth/oauth/link", `{"provider":"google"}`},
+			} {
+				r := httptest.NewRequest(http.MethodPost, action.path, strings.NewReader(action.body))
+				r.Header.Set("Content-Type", "application/json")
+				r.Header.Set("Authorization", "Bearer "+display.Token)
+				response := httptest.NewRecorder()
+				h.ServeHTTP(response, r)
+				if response.Code != 200 {
+					t.Fatalf("device action %s=%d %s", action.path, response.Code, response.Body)
+				}
+			}
+			delegated := start(t, h)
+			proof := lookup(t, h, delegated.UserCode, display.Token)
+			if response := post(h, "approve", `{"user_code":"`+delegated.UserCode+`","approve":true}`, display.Token, proof.CSRFToken); response.Code != 200 {
+				t.Fatalf("device delegation %d %s", response.Code, response.Body)
+			}
+			var other dto.AuthResponse
+			if status := env.doJSON(t, "POST", "/api/v1/auth/login", dto.LoginRequest{Email: "pair@example.com", Password: "Password123"}, &other, ""); status != 200 {
+				t.Fatal("normal login", status)
+			}
+			if status := env.doJSON(t, "POST", "/api/v1/auth/sessions/revoke", dto.RevokeSessionRequest{SessionID: other.User.SessionID}, nil, display.Token); status != 200 {
+				t.Fatal("device revocation of another owned session", status)
+			}
+			if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, nil, other.Token); status != 401 {
+				t.Fatal("other session survived revocation", status)
+			}
+			if err := env.services.Session.Revoke(sid); err != nil {
+				t.Fatal(err)
+			}
+			if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, nil, display.Token); status != 401 {
+				t.Fatalf("revoked me %d", status)
+			}
+			if status := env.doJSON(t, "GET", "/api/v1/auth/me", nil, &dto.UserResponse{}, auth.Token); status != 200 {
+				t.Fatalf("approver revoked %d", status)
+			}
+			if w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", ""); w.Code == 200 {
+				t.Fatal("code reused")
+			}
+			data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), code.DeviceCode) || strings.Contains(string(data), code.UserCode) || !strings.Contains(string(data), `"approved":true`) {
+				t.Fatalf("audit content %s", data)
+			}
+			info, err := os.Stat(filepath.Join(dir, "device-login-audit.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode().Perm() != 0o600 {
+				t.Fatalf("audit permissions %v", info.Mode())
+			}
+		})
 	})
 	t.Run("same-account session cannot reuse decision proof", func(t *testing.T) {
 		env, h, _, auth := setup(t)
@@ -387,17 +401,18 @@ func TestDeviceLogin(t *testing.T) {
 		if w := post(h, "approve", body, auth.Token, d.CSRFToken); w.Code != 200 {
 			t.Fatalf("deny %d: %s", w.Code, w.Body)
 		}
-		time.Sleep(5 * time.Second)
-		if w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", ""); !strings.Contains(w.Body.String(), "access_denied") {
-			t.Fatalf("denial %d: %s", w.Code, w.Body)
-		}
-		data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(data), `"approved":false`) {
-			t.Fatalf("denial audit %s", data)
-		}
+		afterPollInterval(t, func(t *testing.T) {
+			if w := post(h, "poll", `{"device_code":"`+code.DeviceCode+`"}`, "", ""); !strings.Contains(w.Body.String(), "access_denied") {
+				t.Fatalf("denial %d: %s", w.Code, w.Body)
+			}
+			data, err := fs.ReadFile(os.DirFS(dir), "device-login-audit.jsonl")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), `"approved":false`) {
+				t.Fatalf("denial audit %s", data)
+			}
+		})
 	})
 	t.Run("revoked approver", func(t *testing.T) {
 		env, h, _, auth := setup(t)
@@ -484,4 +499,22 @@ func (h *deviceCompletionHost) Audit(ctx context.Context, e *devicelogin.AuditEv
 		return errors.New("audit unavailable")
 	}
 	return h.Host.Audit(ctx, e)
+}
+
+// deviceTransport keeps the real router and middleware in the virtual-time
+// bubble, so normal API and MCP authentication see the session issuance clock.
+type deviceTransport struct{ handler http.Handler }
+
+func (d deviceTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.RemoteAddr = "192.0.2.123:1234"
+	if r.Body == nil {
+		r.Body = http.NoBody
+	}
+	w := httptest.NewRecorder()
+	d.handler.ServeHTTP(w, r)
+	if err := r.Body.Close(); err != nil {
+		return nil, err
+	}
+	return w.Result(), nil
 }
