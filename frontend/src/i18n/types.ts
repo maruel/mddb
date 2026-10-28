@@ -107,10 +107,8 @@ export interface Dictionary {
     tooLong: string;
     approvalTitle: string;
     approve: string;
-    deny: string;
     warning: string;
     approvalApproved: string;
-    approvalDenied: string;
     approvalError: string;
     approvalExpired: string;
     device: string;

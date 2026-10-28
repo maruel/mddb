@@ -72,7 +72,7 @@ export const dict: Dictionary = {
     throttled: "Trop de tentatives. Attendez {{seconds}} secondes avant de créer un code.",
     approvalThrottled: "Trop de tentatives. Attendez {{seconds}} secondes avant de vérifier le code.",
     audit: "La connexion n’a pas pu être enregistrée. Créez un nouveau code.",
-    approvalAudit: "Votre décision n’a pas pu être enregistrée. Vérifiez le code avant d’approuver ou de refuser.",
+    approvalAudit: "Votre approbation n’a pas pu être enregistrée. Vérifiez le code avant d’approuver.",
     session: "La session n’a pas pu être créée. Créez un nouveau code.",
     delivery:
       "La connexion n’a pas pu être confirmée. Vérifiez si ce navigateur est connecté ou créez un nouveau code.",
@@ -106,11 +106,9 @@ export const dict: Dictionary = {
     tooLong: "Saisissez le code à 12 caractères affiché sur l’autre appareil.",
     approvalTitle: "Autoriser la connexion de l’appareil",
     approve: "Approuver la connexion",
-    deny: "Refuser la connexion",
     warning:
       "Approuvez uniquement un code affiché sur un appareil devant vous que vous souhaitez connecter. N’approuvez jamais un code envoyé par quelqu’un d’autre. Cet appareil recevra les autorisations de votre compte.",
     approvalApproved: "Connexion approuvée. Vous pouvez fermer cette page.",
-    approvalDenied: "Connexion refusée. Vous pouvez fermer cette page.",
     approvalError: "Impossible de vérifier ou d’approuver ce code. Vérifiez-le à nouveau.",
     approvalExpired: "Ce code a expiré. Créez un nouveau code sur l’appareil à connecter.",
     device: "Navigateur",

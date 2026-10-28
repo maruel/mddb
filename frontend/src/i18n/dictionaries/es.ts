@@ -72,7 +72,7 @@ export const dict: Dictionary = {
     throttled: "Demasiados intentos. Espere {{seconds}} segundos antes de crear un código.",
     approvalThrottled: "Demasiados intentos. Espere {{seconds}} segundos antes de comprobar el código.",
     audit: "No se pudo registrar el inicio de sesión. Cree un código nuevo.",
-    approvalAudit: "No se pudo registrar su decisión. Compruebe el código antes de aprobar o denegar.",
+    approvalAudit: "No se pudo registrar su aprobación. Compruebe el código antes de aprobar.",
     session: "No se pudo crear la sesión. Cree un código nuevo.",
     delivery:
       "No se pudo confirmar el inicio de sesión. Compruebe si este navegador ha iniciado sesión o cree un código nuevo.",
@@ -106,11 +106,9 @@ export const dict: Dictionary = {
     tooLong: "Introduzca el código de 12 caracteres que aparece en el otro dispositivo.",
     approvalTitle: "Aprobar el inicio de sesión del dispositivo",
     approve: "Aprobar inicio de sesión",
-    deny: "Denegar inicio de sesión",
     warning:
       "Apruebe solo un código que aparezca en un dispositivo que tenga delante y en el que quiera iniciar sesión. Nunca apruebe un código enviado por otra persona. Este dispositivo recibirá los permisos de su cuenta.",
     approvalApproved: "Inicio de sesión aprobado. Puede cerrar esta página.",
-    approvalDenied: "Inicio de sesión denegado. Puede cerrar esta página.",
     approvalError: "No se pudo comprobar o aprobar este código. Compruébelo de nuevo.",
     approvalExpired: "Este código ha caducado. Cree un código nuevo en el dispositivo donde quiera iniciar sesión.",
     device: "Navegador",

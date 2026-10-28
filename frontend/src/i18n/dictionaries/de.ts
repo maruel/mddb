@@ -72,8 +72,7 @@ export const dict: Dictionary = {
     throttled: "Zu viele Versuche. Warten Sie {{seconds}} Sekunden, bevor Sie einen Code erstellen.",
     approvalThrottled: "Zu viele Versuche. Warten Sie {{seconds}} Sekunden, bevor Sie den Code erneut prüfen.",
     audit: "Die Anmeldung konnte nicht protokolliert werden. Erstellen Sie einen neuen Code.",
-    approvalAudit:
-      "Ihre Entscheidung konnte nicht protokolliert werden. Prüfen Sie den Code vor dem Genehmigen oder Ablehnen erneut.",
+    approvalAudit: "Ihre Genehmigung konnte nicht protokolliert werden. Prüfen Sie den Code vor dem Genehmigen erneut.",
     session: "Die Sitzung konnte nicht erstellt werden. Erstellen Sie einen neuen Code.",
     delivery:
       "Die Anmeldung konnte nicht bestätigt werden. Prüfen Sie, ob dieser Browser angemeldet ist, oder erstellen Sie einen neuen Code.",
@@ -107,11 +106,9 @@ export const dict: Dictionary = {
     tooLong: "Geben Sie den 12-stelligen Code vom anderen Gerät ein.",
     approvalTitle: "Geräteanmeldung bestätigen",
     approve: "Anmeldung genehmigen",
-    deny: "Anmeldung ablehnen",
     warning:
       "Genehmigen Sie nur einen Code, der auf einem Gerät vor Ihnen angezeigt wird, das Sie anmelden möchten. Genehmigen Sie niemals einen von jemand anderem gesendeten Code. Dieses Gerät erhält die Berechtigungen Ihres Kontos.",
     approvalApproved: "Anmeldung genehmigt. Sie können diese Seite schließen.",
-    approvalDenied: "Anmeldung abgelehnt. Sie können diese Seite schließen.",
     approvalError: "Dieser Code konnte nicht geprüft oder genehmigt werden. Prüfen Sie ihn erneut.",
     approvalExpired: "Dieser Code ist abgelaufen. Erstellen Sie auf dem anzumeldenden Gerät einen neuen Code.",
     device: "Browser",

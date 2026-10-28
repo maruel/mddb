@@ -109,8 +109,8 @@ test("signed-out provider approval returns to the verification page and identifi
     await expect(approver).toHaveURL("http://localhost:8080/device");
     await expect(approver.getByText("Signed in as Google Test User (test-google@example.com).")).toBeVisible();
     await approver.getByRole("textbox", { name: "Device code" }).fill(code);
-    await approver.getByRole("button", { name: "Deny sign-in", exact: true }).click();
-    await expect(display.getByText("Sign-in denied.", { exact: true })).toBeVisible({ timeout: 10000 });
+    await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
+    await expect(display).toHaveURL(/\/w\/@/, { timeout: 15000 });
     await approver.getByRole("button", { name: "Use another account" }).click();
     await expect(approver.getByRole("textbox", { name: "Email" })).toBeVisible();
     await expect(approver.getByRole("link", { name: /Google/ })).toHaveAttribute(
@@ -157,11 +157,8 @@ test("changed approving account clears the old decision and keeps the replacemen
   }
 });
 
-test("another-device denial leaves the display signed out and approval requires sign in", async ({
-  browser,
-  request,
-}) => {
-  const { token } = await registerUser(request, "device-deny");
+test("closing approval leaves the display signed out and approval requires sign in", async ({ browser, request }) => {
+  const { token } = await registerUser(request, "device-abandon");
   const approverContext = await browser.newContext();
   const displayContext = await browser.newContext();
   try {
@@ -179,9 +176,10 @@ test("another-device denial leaves the display signed out and approval requires 
     const code = display.locator("section p").filter({ hasText: /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/ });
     await expect(code).toBeVisible();
     await approver.getByRole("textbox", { name: "Device code" }).fill(await code.innerText());
-    await approver.getByRole("button", { name: "Deny sign-in", exact: true }).click();
-    await expect(approver.getByText("Sign-in denied. You can close this page.")).toBeVisible();
-    await expect(display.getByText("Sign-in denied.", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
+    await approver.close();
+    await expect(display.getByRole("status")).toHaveText("Waiting for approval…");
+    expect((await display.request.get("/api/v1/auth/me")).status()).toBe(401);
     expect(await display.evaluate(() => localStorage.getItem("mddb_token"))).toBeNull();
   } finally {
     await approverContext.close();
@@ -303,7 +301,7 @@ test("pairing failures offer explicit localized recovery without replaying decis
     for (const [error, message] of [
       ["expired_token", "This code expired. Create a new code on the device you want to sign in."],
       ["rate_limited", "Too many attempts. Wait 60 seconds before checking the code again."],
-      ["audit_failed", "Your decision could not be recorded. Check the code again before approving or denying."],
+      ["audit_failed", "Your approval could not be recorded. Check the code again before approving."],
       ["csrf_failed", "Your account or request changed. Check the code again."],
       ["already_decided", "This code is being processed or already used. Check the other device."],
       ["network", "Your decision could not be confirmed. Check the code again, and check the other device."],
@@ -396,7 +394,7 @@ test("pairing code, countdown, account and decisions reflow at native 200% and 3
       await page.setViewportSize({ width, height: 960 });
       await expect.poll(() => page.evaluate(() => innerWidth)).toBe(width / 2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      for (const name of ["Approve sign-in", "Deny sign-in", "Use another account"]) {
+      for (const name of ["Approve sign-in", "Use another account"]) {
         const button = page.getByRole("button", { name, exact: true });
         await button.scrollIntoViewIfNeeded();
         const box = await button.boundingBox();
@@ -405,7 +403,7 @@ test("pairing code, countdown, account and decisions reflow at native 200% and 3
         expect(box.x + box.width).toBeLessThanOrEqual(width / 2);
         expect(box.height).toBeGreaterThanOrEqual(44);
       }
-      await page.getByRole("button", { name: "Deny sign-in", exact: true }).scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: "Approve sign-in", exact: true }).scrollIntoViewIfNeeded();
       const capture = await cdp.send("Page.captureScreenshot", { format: "png", fromSurface: false });
       await writeFile(
         testInfo.outputPath(`approval-${width / 2}-200-percent.png`),
@@ -418,8 +416,8 @@ test("pairing code, countdown, account and decisions reflow at native 200% and 3
     await page.setViewportSize({ width: 640, height: 960 });
     await worker.evaluate("chrome.tabs.setZoom(2)");
     await expect.poll(() => page.evaluate(() => innerWidth)).toBe(320);
-    await page.getByRole("button", { name: "Deny sign-in", exact: true }).click();
-    await expect(page.getByRole("status")).toHaveText("Sign-in denied. You can close this page.");
+    await page.getByRole("button", { name: "Approve sign-in", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Sign-in approved. You can close this page.");
     await cdp.detach();
   } finally {
     await context.close();
