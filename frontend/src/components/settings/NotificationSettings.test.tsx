@@ -3,6 +3,8 @@
 import { afterEach, describe, it } from "node:test";
 import { expect } from "@tests/expect";
 import { cleanup, render, screen } from "@solidjs/testing-library";
+import { Router } from "@solidjs/router";
+import { HostModeProvider } from "@maruel/gomode/web/HostMode";
 import { AuthContext, type AuthContextValue } from "../../contexts/AuthContext";
 import { NotificationContext, type NotificationContextValue } from "../../contexts/NotificationContext";
 import { I18nProvider } from "../../i18n";
@@ -28,13 +30,19 @@ describe("NotificationSettings", () => {
   it("shows browser push only outside Go Mode", async () => {
     const renderSettings = () =>
       render(() => (
-        <AuthContext.Provider value={auth}>
-          <NotificationContext.Provider value={notifications}>
-            <I18nProvider>
-              <NotificationSettings />
-            </I18nProvider>
-          </NotificationContext.Provider>
-        </AuthContext.Provider>
+        <Router
+          root={() => (
+            <HostModeProvider>
+              <AuthContext.Provider value={auth}>
+                <NotificationContext.Provider value={notifications}>
+                  <I18nProvider>
+                    <NotificationSettings />
+                  </I18nProvider>
+                </NotificationContext.Provider>
+              </AuthContext.Provider>
+            </HostModeProvider>
+          )}
+        />
       ));
 
     renderSettings();

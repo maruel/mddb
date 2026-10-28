@@ -100,6 +100,9 @@ export default defineConfig({
         // Split chunks for better caching and lazy loading
         manualChunks: (id) => {
           if (id.includes("node_modules")) {
+            // Go Mode's shell is eager, but its optional voice runtime and
+            // overlay retain their own dynamic import boundary.
+            if (id.includes("/@maruel/gomode/")) return;
             // Preserve Pele's per-diagram dynamic imports instead of putting
             // the optional renderer in the eager shared vendor chunk.
             if (id.includes("/pele/")) return;

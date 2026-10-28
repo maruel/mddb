@@ -159,13 +159,17 @@ export default function NodeView() {
   });
 
   // Load node when nodeId param changes
-  createEffect(() => {
-    const nodeId = stripSlug(params.nodeId);
-    if (nodeId && nodeId !== selectedNodeId()) {
-      flushAutoSave();
-      loadNode(nodeId, { refresh: false });
-    }
-  });
+  createEffect(
+    on(
+      () => stripSlug(params.nodeId),
+      (nodeId) => {
+        if (nodeId && nodeId !== selectedNodeId()) {
+          flushAutoSave();
+          void loadNode(nodeId, { refresh: false, canApply: () => stripSlug(params.nodeId) === nodeId });
+        }
+      },
+    ),
+  );
 
   // Opening history loads its first version; dismissing a preview must not reopen it.
   createEffect(

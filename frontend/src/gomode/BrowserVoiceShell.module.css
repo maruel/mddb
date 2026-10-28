@@ -1,6 +1,0 @@
-/* Styles the manifest-gated voice setup error in the workspace. */
-.error {
-  padding: var(--s-2);
-  color: var(--c-text-danger);
-  background: var(--c-surface-danger);
-}

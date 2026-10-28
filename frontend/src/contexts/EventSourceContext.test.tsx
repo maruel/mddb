@@ -23,6 +23,7 @@ const testUser: UserResponse = {
 
 // Canned auth state provided through the real AuthContext instead of a module mock.
 const authValue: AuthContextValue = {
+  frontendIdentity: () => null,
   user: () => testUser,
   identity: () => 1,
   ready: () => true,

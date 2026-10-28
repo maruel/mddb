@@ -43,6 +43,7 @@ it("a late revoke never refetches under replacement-session authority", async ()
     return { ok: true };
   });
   const auth: AuthContextValue = {
+    frontendIdentity: () => null,
     user,
     identity,
     ready: () => true,

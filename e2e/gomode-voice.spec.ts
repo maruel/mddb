@@ -151,3 +151,51 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
   expect(status).toBe(401);
   expect((await createClient(request, replacement.token).getMe()).session_id).not.toBe(original.session_id);
 });
+
+function gate() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
+test("logout aborts pending voice discovery and a late manifest cannot mount controls", async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  const { token } = await registerUser(request, "voice-discovery-logout");
+  const discovery = gate();
+  const release = gate();
+  const finished = gate();
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  let gatewayRequests = 0;
+  await page.route("**/api/voicegateway/v1/**", (route) => {
+    gatewayRequests++;
+    return route.abort();
+  });
+  await page.route("**/.well-known/gomode.json", async (route) => {
+    const response = await route.fetch();
+    const manifest = await response.json();
+    manifest.webShell.voiceGateway = { url: baseURL! };
+    discovery.resolve();
+    await release.promise;
+    await route.fulfill({ response, json: manifest });
+    finished.resolve();
+  });
+  await gotoWithSession(page, token);
+  await discovery.promise;
+  await expect(page.getByTestId("user-menu-button")).toBeVisible();
+  const aborted = page.waitForEvent("requestfailed", (req) => req.url().endsWith("/.well-known/gomode.json"));
+  await page.getByTestId("user-menu-button").click();
+  await page.getByRole("menuitem", { name: "Logout" }).click();
+  await aborted;
+  await expect(page.getByRole("heading", { name: "Login to mddb" })).toBeVisible();
+  release.resolve();
+  await finished.promise;
+  await expect(page.getByRole("region", { name: "Voice assistant", exact: true })).toHaveCount(0);
+  expect(gatewayRequests).toBe(0);
+  expect(errors).toEqual([]);
+});

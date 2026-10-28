@@ -231,12 +231,12 @@ type ServerQuotas struct {
 
 // DefaultServerQuotas returns the default server-wide quotas.
 //
-// e2e raises the user quota to 200 for the e2e suite, which registers a user
-// per test.
+// e2e raises the user quota so isolated browser tests can register a fresh
+// account for each journey.
 func DefaultServerQuotas(e2e bool) ServerQuotas {
 	maxUsers := 50 // 50 users
 	if e2e {
-		maxUsers = 200
+		maxUsers = 1000
 	}
 	return ServerQuotas{
 		ResourceQuotas:            DefaultResourceQuotas(),

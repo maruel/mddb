@@ -24,20 +24,6 @@ export function voiceOrigin(value: string, origin: string): URL {
   return url;
 }
 
-export function mddbEndpoint(value: string, origin: string): string {
-  const url = new URL(value, origin);
-  if (
-    url.origin !== origin ||
-    !["http:", "https:"].includes(url.protocol) ||
-    url.username ||
-    url.password ||
-    value.includes("#")
-  ) {
-    throw new Error("Voice token and MCP endpoints must be same-origin");
-  }
-  return url.href;
-}
-
 /** Errors intentionally exclude response bodies, which may contain credentials. */
 export async function voiceAuthorization(
   endpoint: string,

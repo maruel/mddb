@@ -10,6 +10,8 @@ import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import App from "./App";
 import { I18nProvider, useI18n } from "./i18n";
+import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { WorkspaceDataProvider } from "./contexts/WorkspaceDataContext";
 import { AuthProvider, useAuth, type AuthContextValue } from "./contexts/AuthContext";
 import { WorkspaceProvider, useWorkspace } from "./contexts/WorkspaceContext";
 import { EventSourceProvider } from "./contexts/EventSourceContext";
@@ -44,11 +46,21 @@ globalThis.fetch = ((request: RequestInfo | URL, init?: RequestInit) => {
   for (const route of fetchRoutes) {
     if (route.method && (init?.method ?? "GET") !== route.method) continue;
     if (typeof route.match === "string" ? url === route.match : route.match.test(url)) {
-      return Promise.resolve(jsonResponse(route.respond(url, init)));
+      const response = route.respond(url, init);
+      return Promise.resolve(response instanceof Response ? response : jsonResponse(response));
     }
   }
+  const unauthenticated = url.endsWith("/auth/me");
   return Promise.resolve(
-    jsonResponse({ error: { code: "UNAUTHORIZED", message: "Sign in required" } }, !url.endsWith("/auth/me")),
+    Response.json(
+      {
+        error: {
+          code: unauthenticated ? "UNAUTHORIZED" : "NOT_FOUND",
+          message: unauthenticated ? "Sign in required" : "Not found",
+        },
+      },
+      { status: unauthenticated ? 401 : 404 },
+    ),
   );
 }) as typeof fetch;
 
@@ -156,6 +168,7 @@ function stubWorkspace(user: UserResponse = mockUser, nodes = mockNodes): void {
     children: [],
   }));
   apiGet(/\/nodes\/0\/children$/, () => ({ nodes }));
+  for (const node of nodes) apiGet(new RegExp(`/nodes/${node.id}$`), () => node);
 }
 
 // --- Harness ------------------------------------------------------------------
@@ -174,6 +187,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fetchCalls.length = 0;
   fetchRoutes = [];
+  apiGet("/api/v1/auth/providers", () => ({ providers: [] }));
   localStorage.clear();
   delete window.goModeHost;
   delete window.gomodeAuth;
@@ -214,9 +228,15 @@ describe("App", () => {
       apiGet("/api/v1/notifications/vapid-key", () => vapid);
       let client = createApi(undefined, "session-A");
       render(() => (
-        <NotificationProvider api={() => client}>
-          <Probe />
-        </NotificationProvider>
+        <Router
+          root={() => (
+            <HostModeProvider>
+              <NotificationProvider api={() => client}>
+                <Probe />
+              </NotificationProvider>
+            </HostModeProvider>
+          )}
+        />
       ));
       const pending = context.enablePush();
       await waitFor(() => expect(fetchCalls.some(({ url }) => url.endsWith("/vapid-key"))).toBe(true));
@@ -279,9 +299,11 @@ describe("App", () => {
           <Router
             root={(props) => (
               <AuthProvider>
-                <EventSourceProvider>
-                  <WorkspaceProvider>{props.children}</WorkspaceProvider>
-                </EventSourceProvider>
+                <WorkspaceDataProvider>
+                  <EventSourceProvider>
+                    <WorkspaceProvider>{props.children}</WorkspaceProvider>
+                  </EventSourceProvider>
+                </WorkspaceDataProvider>
               </AuthProvider>
             )}
           >
@@ -465,19 +487,36 @@ describe("App", () => {
       );
       stubWorkspace();
       apiGet("/.well-known/gomode.json", () => ({
+        apiVersion: 1,
         service: "mddb",
         webShell: {
           toolGroups: [{ name: "workspace", endpoint: "/api/v1/gomode/mcp" }],
           voiceGateway: { url: "/", authRequired: true },
         },
       }));
+      const subscriptionSignals: AbortSignal[] = [];
+      api("POST", "/api/v1/gomode/mcp", (_url, init) => {
+        expect(new Headers(init?.headers).get("Mcp-Method")).toBe("subscriptions/listen");
+        const signal = init?.signal;
+        if (!signal) throw new Error("Missing MCP subscription lifetime");
+        subscriptionSignals.push(signal);
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            signal.addEventListener("abort", () => controller.close(), { once: true });
+          },
+        });
+        return new Response(stream, { headers: { "Content-Type": "text/event-stream" } });
+      });
 
-      renderWithI18n(() => <App />);
+      const view = renderWithI18n(() => <App />);
 
       await waitFor(() => {
         expect(screen.getByTestId("voice-overlay")).toBeTruthy();
       });
       expect(screen.getByRole("button", { name: "Connect voice assistant" })).toBeTruthy();
+      await waitFor(() => expect(subscriptionSignals).toHaveLength(1));
+      view.unmount();
+      expect(subscriptionSignals[0]?.aborted).toBe(true);
     });
 
     it("keeps credentials out of storage and shows the main app after the login form submits", async () => {
@@ -626,6 +665,7 @@ describe("App", () => {
       });
       api("POST", "/api/v1/auth/switch-workspace", () => ({ user: userAfterWorkspaceCreation }));
       apiGet(/\/nodes\/0\/children$/, () => ({ nodes: mockNodes }));
+      for (const node of mockNodes) apiGet(new RegExp(`/nodes/${node.id}$`), () => node);
 
       renderWithI18n(() => <App />);
 

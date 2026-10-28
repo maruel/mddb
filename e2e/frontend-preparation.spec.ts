@@ -1,6 +1,6 @@
 // Verifies built mddb publishes explicit zero-tool readiness only for its validated identity.
 
-import { expect, gotoWithSession, registerUser, test } from "./helpers";
+import { createClient, expect, gotoWithSession, registerUser, test } from "./helpers";
 
 function gate() {
   let resolve: () => void = () => {
@@ -12,8 +12,19 @@ function gate() {
   return { promise, resolve };
 }
 
-test("native preparation waits for cookie identity and revokes on logout", async ({ page, request }) => {
+test("native preparation survives cold settings and workspace navigation, then revokes on logout", async ({
+  page,
+  request,
+}) => {
   const { token } = await registerUser(request, "frontend-ready");
+  const discovery = await request.get("/.well-known/gomode.json");
+  expect(discovery.ok()).toBe(true);
+  // The native fixture may mount only a service the pinned version-3 host accepts.
+  expect(await discovery.json()).toMatchObject({ apiVersion: 1, service: "mddb", webShell: { bridgeVersion: 3 } });
+  const client = createClient(request, token);
+  const org = await client.createOrganization({ name: "Frontend preparation" });
+  const workspace = await client.org(org.id).createWorkspace({ name: "Prepared workspace" });
+  await client.switchWorkspace({ ws_id: workspace.id });
   const identity = gate();
   const requested = gate();
   const errors: string[] = [];
@@ -41,7 +52,7 @@ test("native preparation waits for cookie identity and revokes on logout", async
     await identity.promise;
     await route.continue();
   });
-  await gotoWithSession(page, token);
+  await gotoWithSession(page, token, "/settings/user");
   await requested.promise;
   const readiness = () =>
     page.evaluate(
@@ -52,22 +63,32 @@ test("native preparation waits for cookie identity and revokes on logout", async
   identity.resolve();
   await expect
     .poll(async () => (await readiness()).slice(-1)[0])
-    .toEqual({
-      document: "native-document",
-      token: "native-identity",
-      ready: true,
-      tools: [],
-    });
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    .toEqual(
+      expect.objectContaining({
+        document: "native-document",
+        token: "native-identity",
+        ready: true,
+        tools: [expect.objectContaining({ name: "focus_node" })],
+      }),
+    );
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Voice assistant", exact: true })).toHaveCount(0);
+  expect((await client.ws(workspace.id).listNodeChildren("0")).nodes).toEqual([]);
+  const prepared = await readiness();
+  await page.getByRole("heading", { name: "Settings", exact: true }).click();
+  await expect(page.getByTestId("workspace-tree")).toBeVisible({ timeout: 15000 });
+  expect(await readiness()).toEqual(prepared);
   await page.getByTestId("user-menu-button").click();
   await page.getByRole("menuitem", { name: "Logout" }).click();
   await expect
     .poll(async () => (await readiness()).slice(-1)[0])
-    .toEqual({
-      document: "native-document",
-      token: "native-identity",
-      ready: false,
-      tools: [],
-    });
+    .toEqual(
+      expect.objectContaining({
+        document: "native-document",
+        token: "native-identity",
+        ready: false,
+        tools: [],
+      }),
+    );
   expect(errors).toEqual([]);
 });

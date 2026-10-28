@@ -120,8 +120,8 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	if err := resp.Body.Close(); err != nil {
 		t.Fatalf("close discovery: %v", err)
 	}
-	if settings.WebShell.BridgeVersion != 2 {
-		t.Fatalf("bridge version = %d, want 2", settings.WebShell.BridgeVersion)
+	if settings.WebShell.BridgeVersion != 3 {
+		t.Fatalf("bridge version = %d, want 3", settings.WebShell.BridgeVersion)
 	}
 	if settings.WebShell.VoiceGateway.URL != "/" || !settings.WebShell.VoiceGateway.AuthRequired {
 		t.Fatalf("voice discovery = %+v", settings.WebShell.VoiceGateway)

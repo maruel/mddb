@@ -60,11 +60,9 @@ for (const width of [390, 1280]) {
     expect(new Set(ids).size).toBe(ids.length);
 
     const editableSource = editor.locator("pre code").first();
-    await editableSource.click({ position: { x: 5, y: 5 } });
-    await page.keyboard.press("Home");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("ArrowDown");
+    const sourceBounds = (await editableSource.boundingBox())!;
+    // Click the final rendered source line; ArrowDown follows visual wrapping.
+    await editableSource.click({ position: { x: 5, y: sourceBounds.height - 5 } });
     await page.keyboard.press("End");
     await page.keyboard.type("ing");
     await expect(editableSource).toContainText("Build --> Testing");

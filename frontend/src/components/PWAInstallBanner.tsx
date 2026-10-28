@@ -1,10 +1,10 @@
 // Defers optional PWA installation prompts while users sign in or manage account security.
 
-import { createSignal, onMount, onCleanup, Show } from "solid-js";
+import { createSignal, createEffect, onCleanup, Show } from "solid-js";
 import { useLocation } from "@solidjs/router";
 import { useI18n } from "../i18n";
 import styles from "./PWAInstallBanner.module.css";
-import { isGoModeHost } from "../gomode/host";
+import { useHostMode } from "@maruel/gomode/web/HostMode";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -26,14 +26,19 @@ function isDismissed(): boolean {
 }
 
 export default function PWAInstallBanner() {
+  const host = useHostMode();
   const { t } = useI18n();
   const location = useLocation();
   const securityRoute = () => ["/login", "/device", "/device-login", "/settings/user"].includes(location.pathname);
   const [deferredPrompt, setDeferredPrompt] = createSignal<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = createSignal(false);
 
-  onMount(() => {
-    if (isGoModeHost()) return;
+  createEffect(() => {
+    if (host.isGoModeHost()) {
+      setShowBanner(false);
+      setDeferredPrompt(null);
+      return;
+    }
     if (isDismissed()) return;
 
     const handleBeforeInstall = (e: Event) => {
@@ -58,7 +63,7 @@ export default function PWAInstallBanner() {
 
   const handleInstall = async () => {
     const prompt = deferredPrompt();
-    if (!prompt) return;
+    if (!prompt || host.isGoModeHost()) return;
 
     await prompt.prompt();
     const { outcome } = await prompt.userChoice;
@@ -75,7 +80,7 @@ export default function PWAInstallBanner() {
   };
 
   return (
-    <Show when={!securityRoute() && showBanner() && deferredPrompt()}>
+    <Show when={!host.isGoModeHost() && !securityRoute() && showBanner() && deferredPrompt()}>
       <div class={styles.banner}>
         <div class={styles.content}>
           <div class={styles.title}>{t("pwa.installTitle")}</div>

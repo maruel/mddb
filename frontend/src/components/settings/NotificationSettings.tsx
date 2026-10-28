@@ -5,7 +5,7 @@ import type { ChannelSetDTO, NotificationPrefsDTO } from "@sdk/types.gen";
 import { useAuth } from "../../contexts";
 import { useNotifications } from "../../contexts/NotificationContext";
 import { useI18n } from "../../i18n";
-import { isGoModeHost } from "../../gomode/host";
+import { useHostMode } from "@maruel/gomode/web/HostMode";
 import styles from "./NotificationSettings.module.css";
 
 const NOTIFICATION_TYPES = [
@@ -27,6 +27,7 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
 };
 
 export default function NotificationSettings() {
+  const host = useHostMode();
   const { t } = useI18n();
   const { api } = useAuth();
   const { pushEnabled, enablePush, disablePush } = useNotifications();
@@ -105,7 +106,7 @@ export default function NotificationSettings() {
         <div class={styles.error}>{error()}</div>
       </Show>
 
-      <Show when={!isGoModeHost()}>
+      <Show when={host.browserNotificationsEnabled()}>
         <div class={styles.pushSection}>
           <button
             class={`${styles.pushButton} ${pushEnabled() ? styles.pushActive : ""}`}

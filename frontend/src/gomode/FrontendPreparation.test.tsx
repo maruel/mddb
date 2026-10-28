@@ -4,13 +4,21 @@ import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { expect, vi } from "@tests/expect";
 import type { UserResponse } from "@sdk/types.gen";
+import { WorkspaceDataProvider } from "../contexts/WorkspaceDataContext";
+import { WorkspaceNavigationProvider } from "../contexts/WorkspaceNavigationContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { Router, useNavigate } from "@solidjs/router";
+import { HostModeProvider, useHostMode } from "@maruel/gomode/web/HostMode";
+import { GoModeProvider, useGoMode } from "./GoMode";
 import { I18nProvider } from "../i18n";
 
 const account = { id: "account-a", session_id: "session-a", name: "Account A", settings: {} } as UserResponse;
 const messages: Record<string, unknown>[] = [];
 const readiness: Array<{ document: string; token: string; ready: boolean; tools: unknown[] }> = [];
 let responses: Array<Promise<UserResponse>> = [];
+let product: ReturnType<typeof useGoMode> | null = null;
+let host: ReturnType<typeof useHostMode> | null = null;
+let navigate: ReturnType<typeof useNavigate> | null = null;
 let auth: ReturnType<typeof useAuth> | null = null;
 
 function currentAuth() {
@@ -20,13 +28,28 @@ function currentAuth() {
 
 function Probe() {
   auth = useAuth();
+  product = useGoMode();
+  host = useHostMode();
+  navigate = useNavigate();
   return null;
 }
 function mount() {
   return render(() => (
     <I18nProvider initialLocale="en">
       <AuthProvider>
-        <Probe />
+        <Router
+          root={() => (
+            <HostModeProvider>
+              <WorkspaceDataProvider>
+                <WorkspaceNavigationProvider>
+                  <GoModeProvider>
+                    <Probe />
+                  </GoModeProvider>
+                </WorkspaceNavigationProvider>
+              </WorkspaceDataProvider>
+            </HostModeProvider>
+          )}
+        />
       </AuthProvider>
     </I18nProvider>
   ));
@@ -36,6 +59,7 @@ beforeEach(() => {
   messages.length = 0;
   readiness.length = 0;
   responses = [];
+  window.goModeHost = {};
   window.goModeFrontendDocument = Promise.resolve("originating-document");
   const bridge: NonNullable<Window["gomodeAuth"]> = {
     postMessage(message) {
@@ -55,6 +79,7 @@ beforeEach(() => {
       if (!response) throw new Error("No cookie identity response queued");
       return new Response(JSON.stringify(await response), { headers: { "Content-Type": "application/json" } });
     }
+    if (url.endsWith("/nodes/0/children")) return Response.json({ nodes: [] });
     return new Response("{}", { headers: { "Content-Type": "application/json" } });
   });
 });
@@ -62,6 +87,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   auth = null;
+  delete window.goModeHost;
   delete window.goModeFrontendDocument;
   delete window.gomodeAuth;
   delete window.gomodeFrontendReadiness;
@@ -99,7 +125,8 @@ it("keeps metadata refresh ready but replaces the lease for a new authoritative 
   await currentAuth().refreshUser();
   await waitFor(() => expect(readiness.at(-1)?.ready).toBe(true));
   expect(currentAuth().identity()).toBeGreaterThan(previousIdentity);
-  expect(readiness.slice(firstCount).map((message) => message.ready)).toEqual([false, true]);
+  expect(readiness.slice(firstCount).some((message) => !message.ready)).toBe(true);
+  expect(readiness.at(-1)?.ready).toBe(true);
   const count = readiness.length;
   retiredReceive?.({ data: JSON.stringify({ ...firstGrant, frontendToken: "retired" }) });
   expect(readiness).toHaveLength(count);
@@ -136,4 +163,29 @@ it("captures all page bridges before cookie discovery awaits", async () => {
   expect(messages.every((message) => message.frontendDocument === "originating-document")).toBe(true);
   expect(replacementAuth).not.toHaveBeenCalled();
   expect(replacementReadiness).not.toHaveBeenCalled();
+});
+
+it("keeps preparation across settings routes, replaces workspace ownership, and exposes native voice state", async () => {
+  window.history.replaceState(null, "", "/settings/user");
+  responses.push(Promise.resolve({ ...account, workspace_id: "workspace-a" }));
+  mount();
+  await waitFor(() => expect(product?.preparation()?.ready()).toBe(true));
+  const first = product!.preparation()!;
+  navigate!("/settings/user");
+  expect(product!.preparation()).toBe(first);
+  navigate!("/w/@workspace-a/node");
+  expect(product!.preparation()).toBe(first);
+  let connected = false;
+  window.goModeHost = { isVoiceConnected: () => connected };
+  connected = true;
+  window.dispatchEvent(new Event("gomodevoicechange"));
+  expect(host!.nativeVoiceConnected()).toBe(true);
+  expect(host!.browserVoiceEnabled()).toBe(false);
+  navigate!("/settings/user");
+  currentAuth().setUser({ ...account, workspace_id: "workspace-b" });
+  expect(first.ready()).toBe(false);
+  expect(product!.preparation()).not.toBe(first);
+  await waitFor(() => expect(product!.preparation()?.ready()).toBe(true));
+  cleanup();
+  expect(product!.preparation()?.ready()).toBe(false);
 });

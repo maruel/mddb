@@ -15,7 +15,7 @@ import { useEventSource } from "./EventSourceContext";
 import { useWorkspace } from "./WorkspaceContext";
 import { useI18n } from "../i18n";
 import { debounce } from "../utils/debounce";
-import { nodeUrl } from "../utils/urls";
+import { nodeUrl, parseNodeUrl } from "../utils/urls";
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from "../utils/markdown-utils";
 import { classifyExternalUpdate } from "./editorSync";
 import { EventNodeUpdated, type Commit } from "@sdk/types.gen";
@@ -195,7 +195,8 @@ export const EditorProvider: ParentComponent = (props) => {
       if (wsId) {
         const currentPath = window.location.pathname;
         const newPath = nodeUrl(wsId, wsName, nodeId, scope.title);
-        if (currentPath !== newPath) {
+        const currentNode = parseNodeUrl(currentPath);
+        if (currentNode?.wsId === wsId && currentNode.nodeId === nodeId && currentPath !== newPath) {
           window.history.replaceState(null, "", newPath);
         }
       }

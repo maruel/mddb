@@ -13,7 +13,7 @@ import type { NotificationDTO } from "@sdk/types.gen";
 import type { APIClient } from "@sdk/api.gen";
 import { registerServiceWorker } from "../notifications/sw-register";
 import { subscribeToPush, unsubscribeFromPush } from "../notifications/push-manager";
-import { isGoModeHost } from "../gomode/host";
+import { useHostMode } from "@maruel/gomode/web/HostMode";
 
 const POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 20;
@@ -37,6 +37,7 @@ export interface NotificationContextValue {
 export const NotificationContext = createContext<NotificationContextValue>();
 
 export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }> = (props) => {
+  const host = useHostMode();
   const [notifications, setNotifications] = createSignal<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = createSignal(0);
   const [isLoading, setIsLoading] = createSignal(false);
@@ -133,14 +134,14 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
 
   const enablePush = async (): Promise<boolean> => {
     const client = props.api();
-    if (isGoModeHost()) return false;
+    if (!host.browserNotificationsEnabled()) return false;
     try {
       if (!swRegistration) {
         swRegistration = await registerServiceWorker();
       }
-      if (!current(client) || !swRegistration) return false;
+      if (!current(client) || !host.browserNotificationsEnabled() || !swRegistration) return false;
       const vapidResp = await client.getVAPIDPublicKey();
-      if (!current(client)) return false;
+      if (!current(client) || !host.browserNotificationsEnabled()) return false;
       const subscription = await subscribeToPush(swRegistration, vapidResp.public_key, client);
       if (!current(client)) return false;
       pushSubscription = subscription;
@@ -175,7 +176,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
     if (!current(client)) return;
 
     // Check existing push subscription
-    if (!isGoModeHost()) {
+    if (host.browserNotificationsEnabled()) {
       swRegistration = await registerServiceWorker();
       if (!current(client)) return;
       if (swRegistration) {

@@ -30,7 +30,7 @@ commit; rolling only the Go module leaves the frontend on old code.
 5. Follow the validation workflow above, including `make test-e2e`. Adapt mddb to the new version; do not pin
    an older one. A roll usually needs:
    - a key in `voice` of `frontend/src/i18n/types.ts` and in all four dictionaries for each new overlay label
-     (`frontend/src/gomode/VoicePanel.test.ts` lists the missing ones);
+     (`frontend/src/gomode/GoMode.test.ts` lists the missing ones);
    - a DOM global in `frontend/tests/setup-dom.ts` for each browser API the new code uses;
    - a newer `target` and `lib` in `tsconfig.json` when gomode uses newer JavaScript APIs.
 6. Commit `go.mod`, `go.sum`, `package.json`, `pnpm-lock.yaml`, `dist/`, and the adaptations together.

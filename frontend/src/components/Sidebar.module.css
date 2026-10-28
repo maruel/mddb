@@ -1,13 +1,13 @@
 /* Styles for the Sidebar component. */
 .sidebar {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   z-index: 200;
   display: flex;
   flex-direction: column;
   width: 260px;
-  height: 100vh;
+  height: 100%;
   background: var(--c-surface);
   border-right: 1px solid var(--c-border);
   transform: translateX(-100%);
@@ -252,10 +252,10 @@
 
 @media (width <= 768px) {
   .sidebar {
-    top: 40px; /* Below header (min-height 36px + padding) */
+    top: 0;
     left: 0;
     visibility: hidden;
-    height: calc(100vh - 40px);
+    height: 100%;
     margin: 0;
     transition:
       transform 0.15s ease,

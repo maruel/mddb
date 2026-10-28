@@ -16,12 +16,12 @@
 
 @media (width <= 768px) {
   .sidebar {
-    position: fixed;
-    top: 56px;
+    position: absolute;
+    top: 0;
     left: 0;
     z-index: 100;
     visibility: hidden;
-    height: calc(100vh - 56px);
+    height: 100%;
     transform: translateX(-100%);
     transition:
       transform var(--transition-fast),

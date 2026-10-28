@@ -57,7 +57,7 @@ func TestResolveConfigFakeOAuth(t *testing.T) {
 }
 
 func TestDefaultServerQuotas(t *testing.T) {
-	if got := storage.DefaultServerQuotas(e2eBuild).MaxUsers; got != 200 {
-		t.Errorf("got max users %d, want 200", got)
+	if got := storage.DefaultServerQuotas(e2eBuild).MaxUsers; got != 1000 {
+		t.Errorf("got max users %d, want 1000", got)
 	}
 }

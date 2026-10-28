@@ -21,6 +21,7 @@ import { useI18n, type Locale } from "../i18n";
 export interface AuthContextValue {
   user: Accessor<UserResponse | null>;
   identity: Accessor<number>;
+  frontendIdentity: Accessor<FrontendPreparation | null>;
   ready: Accessor<boolean>;
   api: Accessor<Api>;
   wsApi: Accessor<ReturnType<Api["ws"]> | null>;
@@ -44,13 +45,13 @@ export const AuthProvider: ParentComponent = (props) => {
   const [logoutFailed, setLogoutFailed] = createSignal(false);
   let generation = 0;
   let disposed = false;
+  const [frontendIdentity, setFrontendIdentity] = createSignal<FrontendPreparation | null>(null);
   let nativeIdentity: FrontendPreparation | null = null;
   const publishNativeAuth = (message: Record<string, unknown>) => {
     if (disposed) return;
     nativeIdentity?.dispose();
     nativeIdentity = nativeFrontend.publishAuth(message);
-    // mddb exposes no frontend tools, so settled identity needs no tool data.
-    nativeIdentity.setReady(message.authChanged === true && message.nativeAccess === true);
+    setFrontendIdentity(message.authChanged === true && message.nativeAccess === true ? nativeIdentity : null);
   };
   onCleanup(() => {
     disposed = true;
@@ -73,8 +74,8 @@ export const AuthProvider: ParentComponent = (props) => {
   };
   const settle = (id: number, value: UserResponse | null) => {
     if (disposed || id !== generation) return;
-    publishNativeAuth({ authChanged: true, nativeAccess: value !== null });
     batch(() => {
+      publishNativeAuth({ authChanged: true, nativeAccess: value !== null });
       setUser(value);
       setReady(true);
     });
@@ -198,6 +199,7 @@ export const AuthProvider: ParentComponent = (props) => {
     void load();
   });
   const contextValue: AuthContextValue = {
+    frontendIdentity,
     user,
     identity,
     ready,

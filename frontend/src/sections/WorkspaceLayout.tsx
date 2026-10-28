@@ -1,6 +1,16 @@
 // Workspace layout with header, sidebar, and content outlet.
 
-import { createSignal, Show, For, onCleanup, onMount, type ParentComponent } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  Show,
+  For,
+  onCleanup,
+  onMount,
+  type ParentComponent,
+} from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
@@ -10,7 +20,8 @@ import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
 import NotionImportModal, { type NotionImportData } from "../components/NotionImportModal";
 import KeyboardShortcutsDialog from "../components/KeyboardShortcutsDialog";
 import { TransientFeedback } from "../components/TransientFeedback";
-import BrowserVoiceShell from "../gomode/BrowserVoiceShell";
+import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
+import { useGoMode } from "../gomode/GoMode";
 import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from "../contexts";
 import { useI18n } from "../i18n";
 import { settingsUrl, nodeUrl } from "../utils/urls";
@@ -30,6 +41,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     selectedNodeData,
     breadcrumbPath,
     loading,
+    failedNodeId,
     setCreatingNode,
     setDeletingNodeId,
     loadError,
@@ -54,6 +66,14 @@ const WorkspaceLayout: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     return wsId && nodeId ? [`mddb://workspaces/${wsId}/nodes/${nodeId}`] : [];
   };
+
+  const goMode = useGoMode();
+  const voiceOwner = createMemo(() => `${authIdentity()}:${user()?.workspace_id ?? ""}`);
+  createEffect(
+    on(voiceOwner, () => {
+      goMode.watchResources(voiceResourceSubscriptions);
+    }),
+  );
 
   // Global Ctrl-Z / Ctrl-Shift-Z handler for application-level undo/redo.
   // ProseMirror and native inputs handle their own undo — skip if an editable
@@ -110,6 +130,17 @@ const WorkspaceLayout: ParentComponent = (props) => {
       setDesktopSidebarOpen(false);
     }
   };
+  const navigation = useWorkspaceNavigation();
+  navigation.registerView({
+    selectedNodeId,
+    selectedNodeData,
+    failedNodeId,
+    beforeNavigate() {
+      flushAutoSave();
+      if (isMobileLayout()) setMobileSidebarOpen(false);
+    },
+  });
+
   const isFirstWorkspace = () => {
     const currentUser = user();
     return !currentUser?.workspace_id && (currentUser?.workspaces ?? []).length === 0;
@@ -569,8 +600,6 @@ const WorkspaceLayout: ParentComponent = (props) => {
           {props.children}
         </main>
       </div>
-
-      <BrowserVoiceShell resourceSubscriptions={voiceResourceSubscriptions()} />
 
       <Show when={showCreateWorkspace()}>
         <CreateWorkspaceModal
