@@ -20,7 +20,6 @@ test("another-device login preserves user permissions and supports individual re
     await approver.goto("/device");
     await display.goto("/login");
     await display.getByRole("link", { name: "Sign in with another device" }).click();
-    await display.getByRole("button", { name: "Sign in with another device" }).click();
     const code = display.locator("section p").filter({ hasText: /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/ });
     await expect(code).toBeVisible();
     await expect(display.getByText(/Expires in/)).toBeVisible();
@@ -29,9 +28,23 @@ test("another-device login preserves user permissions and supports individual re
     expect(await code.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(32);
     await display.screenshot({ path: test.info().outputPath("device-code-320.png"), fullPage: true });
     await expect(display.getByText("http://localhost:8080/device", { exact: true })).toBeVisible();
-    await approver.getByRole("textbox", { name: "Device code" }).fill(await code.innerText());
-    await approver.getByRole("button", { name: "Check code" }).click();
+    const input = approver.getByRole("textbox", { name: "Device code" });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute("inputmode", "text");
+    let lookups = 0;
+    approver.on("request", (req) => {
+      if (req.url().endsWith("/auth/device/lookup")) lookups++;
+    });
+    const value = await code.innerText();
+    const raw = value.replace(/-/g, "").toLowerCase();
+    await input.pressSequentially(raw.slice(0, -1));
+    await input.press("Enter");
+    expect(lookups).toBe(0);
+    await expect(approver.getByRole("status", { includeHidden: true })).toHaveText("");
+    await expect(input).toHaveValue(value.slice(0, -1));
+    await input.pressSequentially(raw.slice(-1));
     await expect(approver.getByText("Network", { exact: true })).toBeVisible();
+    expect(lookups).toBe(1);
     await expect(approver.getByText(/Never approve a code sent by someone else/)).toBeVisible();
     await approver.setViewportSize({ width: 320, height: 800 });
     expect(await approver.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -90,14 +103,12 @@ test("signed-out provider approval returns to the verification page and identifi
     const display = await displayContext.newPage();
     const approver = await approverContext.newPage();
     await display.goto("/device-login");
-    await display.getByRole("button", { name: "Sign in with another device" }).click();
     const code = await display.getByLabel("Device code", { exact: true }).innerText();
     await approver.goto("/device");
     await approver.getByRole("link", { name: /Google/ }).click();
     await expect(approver).toHaveURL("http://localhost:8080/device");
     await expect(approver.getByText("Signed in as Google Test User (test-google@example.com).")).toBeVisible();
     await approver.getByRole("textbox", { name: "Device code" }).fill(code);
-    await approver.getByRole("button", { name: "Check code" }).click();
     await approver.getByRole("button", { name: "Deny sign-in", exact: true }).click();
     await expect(display.getByText("Sign-in denied.", { exact: true })).toBeVisible({ timeout: 10000 });
     await approver.getByRole("button", { name: "Use another account" }).click();
@@ -125,10 +136,8 @@ test("changed approving account clears the old decision and keeps the replacemen
     const display = await displayContext.newPage();
     await gotoWithSession(approver, first.token, "/device");
     await display.goto("/device-login");
-    await display.getByRole("button", { name: "Sign in with another device" }).click();
     const code = await display.getByLabel("Device code", { exact: true }).innerText();
     await approver.getByRole("textbox", { name: "Device code" }).fill(code);
-    await approver.getByRole("button", { name: "Check code" }).click();
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
     if (!cookie) throw new Error("Missing approver cookie");
@@ -139,7 +148,6 @@ test("changed approving account clears the old decision and keeps the replacemen
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toHaveCount(0);
     expect((await createClient(context.request).getMe()).email).toBe(second.email);
     await approver.getByRole("textbox", { name: "Device code" }).fill(code);
-    await approver.getByRole("button", { name: "Check code" }).click();
     await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
     await expect(display).toHaveURL(/\/w\/@/, { timeout: 15000 });
     expect((await createClient(displayContext.request).getMe()).email).toBe(second.email);
@@ -168,11 +176,9 @@ test("another-device denial leaves the display signed out and approval requires 
     await expect(approver).toHaveURL(/\/w\/@/, { timeout: 15000 });
     await approver.goto("/device");
     await display.goto("/device-login");
-    await display.getByRole("button", { name: "Sign in with another device" }).click();
     const code = display.locator("section p").filter({ hasText: /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/ });
     await expect(code).toBeVisible();
     await approver.getByRole("textbox", { name: "Device code" }).fill(await code.innerText());
-    await approver.getByRole("button", { name: "Check code" }).click();
     await approver.getByRole("button", { name: "Deny sign-in", exact: true }).click();
     await expect(approver.getByText("Sign-in denied. You can close this page.")).toBeVisible();
     await expect(display.getByText("Sign-in denied.", { exact: true })).toBeVisible({ timeout: 10000 });
@@ -193,9 +199,8 @@ test("approval cannot use a replacement session for the same account", async ({ 
       user_code: string;
       device_code: string;
     };
-    await approver.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
     const checked = approver.waitForResponse((response) => response.url().endsWith("/auth/device/lookup"));
-    await approver.getByRole("button", { name: "Check code" }).click();
+    await approver.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
     const proof = (await (await checked).json()) as { csrf_token: string };
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     const original = await createClient(request, token).getMe();
@@ -222,7 +227,6 @@ test("approval cannot use a replacement session for the same account", async ({ 
       expect(replay.status()).toBe(403);
     }
     await approver.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
-    await approver.getByRole("button", { name: "Check code" }).click();
     await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
     await expect(approver.getByRole("status")).toHaveText("Sign-in approved. You can close this page.");
   } finally {
@@ -262,7 +266,6 @@ test("pairing failures offer explicit localized recovery without replaying decis
           : route.fulfill({ status: error === "rate_limited" ? 429 : 400, json: { error } }),
       );
       await display.goto("/device-login");
-      await display.getByRole("button", { name: "Sign in with another device", exact: true }).click();
       await expect(display.getByRole("status")).toHaveText(message ?? "");
       await expect(display.getByRole("button", { name: "Create a new code", exact: true })).toBeVisible();
       if (error === "network")
@@ -318,7 +321,6 @@ test("pairing failures offer explicit localized recovery without replaying decis
       );
       await approver.goto("/device");
       await approver.getByRole("textbox", { name: "Device code" }).fill(details.user_code);
-      await approver.getByRole("button", { name: "Check code", exact: true }).click();
       if (!lookupFailure) await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
       await expect(approver.getByRole("status")).toHaveText(message ?? "");
       await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toHaveCount(0);
@@ -371,7 +373,6 @@ test("pairing code, countdown, account and decisions reflow at native 200% and 3
       ),
     );
     await expect(page.getByText("Install mddb", { exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Sign in with another device" }).click();
     const code = await page.getByLabel("Device code", { exact: true }).innerText();
     await worker.evaluate("chrome.tabs.setZoom(2)");
     const cdp = await context.newCDPSession(page);
@@ -391,7 +392,6 @@ test("pairing code, countdown, account and decisions reflow at native 200% and 3
     );
     await expect(page.getByText("Install mddb", { exact: true })).toHaveCount(0);
     await page.getByRole("textbox", { name: "Device code" }).fill(code);
-    await page.getByRole("button", { name: "Check code" }).click();
     for (const width of [1280, 640]) {
       await page.setViewportSize({ width, height: 960 });
       await expect.poll(() => page.evaluate(() => innerWidth)).toBe(width / 2);
@@ -436,7 +436,6 @@ test("fresh approval probe losing its session returns to sign-in without a decis
       user_code: string;
     };
     await page.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
-    await page.getByRole("button", { name: "Check code" }).click();
     await expect(page.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     await context.clearCookies();
     await page.getByRole("button", { name: "Approve sign-in", exact: true }).click();
@@ -487,7 +486,6 @@ test("a delayed signed-out probe rediscovers a replacement cookie before settlin
       user_code: string;
     };
     await page.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
-    await page.getByRole("button", { name: "Check code" }).click();
     await expect(page.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     await context.clearCookies();
     await page.evaluate(() => sessionStorage.removeItem("test-auth-events"));

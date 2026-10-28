@@ -102,7 +102,10 @@ export const dict: Dictionary = {
     error: "Anmeldung fehlgeschlagen. Erstellen Sie einen neuen Code.",
     remaining: "Läuft in {{time}} ab",
     code: "Gerätecode",
-    lookup: "Code prüfen",
+    retry: "Erneut versuchen",
+    checking: "Code wird geprüft…",
+    tooLong: "Geben Sie den 12-stelligen Code vom anderen Gerät ein.",
+    approvalTitle: "Geräteanmeldung bestätigen",
     approve: "Anmeldung genehmigen",
     deny: "Anmeldung ablehnen",
     warning:

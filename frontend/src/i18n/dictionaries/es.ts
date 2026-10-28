@@ -101,7 +101,10 @@ export const dict: Dictionary = {
     error: "Error al iniciar sesión. Cree un código nuevo.",
     remaining: "Caduca en {{time}}",
     code: "Código del dispositivo",
-    lookup: "Comprobar código",
+    retry: "Reintentar",
+    checking: "Comprobando el código…",
+    tooLong: "Introduzca el código de 12 caracteres que aparece en el otro dispositivo.",
+    approvalTitle: "Aprobar el inicio de sesión del dispositivo",
     approve: "Aprobar inicio de sesión",
     deny: "Denegar inicio de sesión",
     warning:

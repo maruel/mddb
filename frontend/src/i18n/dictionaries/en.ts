@@ -100,7 +100,10 @@ export const dict: Dictionary = {
     error: "Sign-in failed. Create a new code.",
     remaining: "Expires in {{time}}",
     code: "Device code",
-    lookup: "Check code",
+    retry: "Try again",
+    checking: "Checking code…",
+    tooLong: "Enter the 12-character code shown on the other device.",
+    approvalTitle: "Approve device sign-in",
     approve: "Approve sign-in",
     deny: "Deny sign-in",
     warning:

@@ -1,7 +1,7 @@
 // Hosts shared device login with mddb's translated labels and cookie-backed browser sessions.
 
 import { createEffect, createSignal, Show } from "solid-js";
-import { Navigate, A } from "@solidjs/router";
+import { Navigate } from "@solidjs/router";
 import {
   DeviceLoginDisplay,
   DeviceLoginApproval,
@@ -25,7 +25,6 @@ const endpoints = {
 function useMessages(): () => DeviceLoginMessages {
   const { t } = useI18n();
   return () => ({
-    start: t("deviceLogin.start") || "",
     starting: t("deviceLogin.starting") || "",
     instructions: t("deviceLogin.instructions") || "",
     pending: t("deviceLogin.pending") || "",
@@ -37,7 +36,9 @@ function useMessages(): () => DeviceLoginMessages {
       t("deviceLogin.remaining", { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` }) ||
       "",
     code: t("deviceLogin.code") || "",
-    lookup: t("deviceLogin.lookup") || "",
+    retry: t("deviceLogin.retry") || "",
+    checking: t("deviceLogin.checking") || "",
+    tooLong: t("deviceLogin.tooLong") || "",
     approve: t("deviceLogin.approve") || "",
     deny: t("deviceLogin.deny") || "",
     warning: t("deviceLogin.warning") || "",
@@ -107,7 +108,6 @@ export function DeviceLoginRoute() {
               },
             }}
           />
-          <A href="/login">{t("auth.login")}</A>
         </main>
       </Show>
     </Show>
@@ -150,7 +150,7 @@ export function DeviceApprovalRoute() {
       <Show keyed when={user()?.session_id} fallback={<Auth onLogin={login} hideDeviceLogin returnPath="/device" />}>
         {(sessionID) => (
           <main class={styles.shell}>
-            <h1>{t("deviceLogin.lookup")}</h1>
+            <h1>{t("deviceLogin.approvalTitle")}</h1>
             <p>{t("deviceLogin.account", { name: user()?.name || user()?.email || "", email: user()?.email || "" })}</p>
             <button
               class={styles.accountButton}

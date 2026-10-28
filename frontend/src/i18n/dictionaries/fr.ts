@@ -101,7 +101,10 @@ export const dict: Dictionary = {
     error: "La connexion a échoué. Créez un nouveau code.",
     remaining: "Expire dans {{time}}",
     code: "Code de l’appareil",
-    lookup: "Vérifier le code",
+    retry: "Réessayer",
+    checking: "Vérification du code…",
+    tooLong: "Saisissez le code à 12 caractères affiché sur l’autre appareil.",
+    approvalTitle: "Autoriser la connexion de l’appareil",
     approve: "Approuver la connexion",
     deny: "Refuser la connexion",
     warning:

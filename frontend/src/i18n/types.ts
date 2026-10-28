@@ -102,7 +102,10 @@ export interface Dictionary {
     error: string;
     remaining: string;
     code: string;
-    lookup: string;
+    retry: string;
+    checking: string;
+    tooLong: string;
+    approvalTitle: string;
     approve: string;
     deny: string;
     warning: string;
