@@ -266,6 +266,10 @@ func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (
 	return wsMem.Role, "", 0
 }
 
+func (s *Services) rollbackUnpublishedWorkspace(wsID ksid.ID) error {
+	return errors.Join(s.Workspace.Delete(wsID), s.FileStore.DiscardWorkspace(wsID))
+}
+
 // BandwidthUpdater allows updating bandwidth limits at runtime.
 type BandwidthUpdater interface {
 	Update(maxBytesPerSecond int64)

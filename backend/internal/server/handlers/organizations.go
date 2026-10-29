@@ -117,13 +117,13 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 
 	// Initialize workspace storage
 	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
-		err = errors.Join(err, h.rollbackUnpublishedWorkspace(ws.ID))
+		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 
 	// Publish membership only after the workspace can be opened by the user.
 	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
-		err = errors.Join(err, h.rollbackUnpublishedWorkspace(ws.ID))
+		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
@@ -135,10 +135,6 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)
 	parentLimits := h.workspaceParentLimits(org)
 	return workspaceToResponse(ws, memberCount, parentLimits), nil
-}
-
-func (h *OrganizationHandler) rollbackUnpublishedWorkspace(wsID ksid.ID) error {
-	return errors.Join(h.Svc.Workspace.Delete(wsID), h.Svc.FileStore.DiscardWorkspace(wsID))
 }
 
 // GetWorkspace retrieves workspace details.

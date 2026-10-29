@@ -28,10 +28,8 @@ type importState struct {
 }
 
 type importJob struct {
-	wsID   ksid.ID
-	token  string
-	state  *importState
-	cancel context.CancelFunc
+	wsID  ksid.ID
+	state *importState
 }
 
 // NotionImportHandler handles Notion import requests.
@@ -72,12 +70,14 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 	// Reserve a worker before publishing a workspace. The worker waits for setup
 	// to finish, so shutdown cannot reject the import after membership is visible.
 	jobs := make(chan importJob, 1)
+	// Preserve request values while allowing the import to outlive the request.
 	importCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	token := req.NotionToken
 	if !h.Svc.StartBackground(importCtx, 24*time.Hour, func(ctx context.Context) {
 		job, ok := <-jobs
 		if ok {
-			defer job.cancel()
-			h.runImport(ctx, job.wsID, job.token, job.state)
+			defer cancel()
+			h.runImport(ctx, job.wsID, token, job.state)
 		}
 	}) {
 		cancel()
@@ -99,15 +99,15 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 
 	// Initialize storage before publishing membership.
 	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
-		err = errors.Join(err, h.Svc.Workspace.Delete(ws.ID), h.Svc.FileStore.DiscardWorkspace(ws.ID))
+		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
-		err = errors.Join(err, h.Svc.Workspace.Delete(ws.ID), h.Svc.FileStore.DiscardWorkspace(ws.ID))
+		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
-	// Create import state with a context that outlives the HTTP request but preserves values.
+	// Create import state.
 	state := &importState{
 		status:    "running",
 		cancel:    cancel,
@@ -118,7 +118,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 	h.states[ws.ID] = state
 	h.mu.Unlock()
 
-	jobs <- importJob{wsID: ws.ID, token: req.NotionToken, state: state, cancel: cancel}
+	jobs <- importJob{wsID: ws.ID, state: state}
 	handedOff = true
 
 	return &dto.NotionImportResponse{
