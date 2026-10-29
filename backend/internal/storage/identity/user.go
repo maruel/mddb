@@ -113,9 +113,10 @@ type OAuthIdentity struct {
 
 // UserService handles user management and authentication.
 type UserService struct {
-	table   *jsonldb.Table[*userStorage]
-	byEmail *jsonldb.UniqueIndex[string, *userStorage]
-	byOAuth *oauthIndex
+	table      *jsonldb.Table[*userStorage]
+	byEmail    *jsonldb.UniqueIndex[string, *userStorage]
+	byOAuth    *oauthIndex
+	bcryptCost int
 }
 
 // NewUserService creates a new user service.
@@ -129,6 +130,18 @@ func NewUserService(tablePath string) (*UserService, error) {
 	return &UserService{table: table, byEmail: byEmail, byOAuth: byOAuth}, nil
 }
 
+// SetBcryptCostForTesting overrides the bcrypt cost for password hashing in tests.
+func (s *UserService) SetBcryptCostForTesting(cost int) {
+	s.bcryptCost = cost
+}
+
+func (s *UserService) cost() int {
+	if s.bcryptCost > 0 {
+		return s.bcryptCost
+	}
+	return bcrypt.DefaultCost
+}
+
 // Create creates a new user.
 // The first user created becomes a global admin.
 func (s *UserService) Create(email, password, name string) (*User, error) {
@@ -139,7 +152,7 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	if s.byEmail.Get(email) != nil {
 		return nil, errUserExists
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), s.cost())
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -294,7 +307,7 @@ func (s *UserService) SetPassword(id ksid.ID, currentPassword, newPassword strin
 	}
 
 	// Hash the new password
-	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), s.cost())
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}

@@ -49,107 +49,109 @@ func TestConfigFromStorage(t *testing.T) {
 	})
 }
 
-func TestNewLimiters(t *testing.T) {
-	cfg := DefaultConfig(false)
-	limiters := NewLimiters(cfg)
-	defer limiters.Close()
+func TestLimiters(t *testing.T) {
+	t.Run("NewLimiters", func(t *testing.T) {
+		cfg := DefaultConfig(false)
+		limiters := NewLimiters(cfg)
+		t.Cleanup(limiters.Close)
 
-	// Verify limiters are initialized
-	if limiters.Auth.Limiter == nil {
-		t.Error("Auth limiter should not be nil")
-	}
-	if limiters.Write.Limiter == nil {
-		t.Error("Write limiter should not be nil")
-	}
-	if limiters.ReadAuth.Limiter == nil {
-		t.Error("ReadAuth limiter should not be nil")
-	}
-	if limiters.ReadUnauth.Limiter == nil {
-		t.Error("ReadUnauth limiter should not be nil")
-	}
+		// Verify limiters are initialized
+		if limiters.Auth.Limiter == nil {
+			t.Error("Auth limiter should not be nil")
+		}
+		if limiters.Write.Limiter == nil {
+			t.Error("Write limiter should not be nil")
+		}
+		if limiters.ReadAuth.Limiter == nil {
+			t.Error("ReadAuth limiter should not be nil")
+		}
+		if limiters.ReadUnauth.Limiter == nil {
+			t.Error("ReadUnauth limiter should not be nil")
+		}
 
-	// Verify tier config is preserved
-	if limiters.Auth.Scope != ScopeIP {
-		t.Error("Auth tier should have IP scope")
-	}
-	if limiters.Write.Scope != ScopeUser {
-		t.Error("Write tier should have User scope")
-	}
-}
+		// Verify tier config is preserved
+		if limiters.Auth.Scope != ScopeIP {
+			t.Error("Auth tier should have IP scope")
+		}
+		if limiters.Write.Scope != ScopeUser {
+			t.Error("Write tier should have User scope")
+		}
+	})
 
-func TestLimiters_MatchUnauth(t *testing.T) {
-	limiters := NewLimiters(DefaultConfig(false))
-	defer limiters.Close()
+	t.Run("MatchUnauth", func(t *testing.T) {
+		limiters := NewLimiters(DefaultConfig(false))
+		t.Cleanup(limiters.Close)
 
-	tests := []struct {
-		method   string
-		path     string
-		wantTier string
-	}{
-		{"GET", "/api/v1/health", ""},             // No rate limit for health check
-		{"POST", "/api/v1/auth/login", "auth"},    // Auth tier
-		{"POST", "/api/v1/auth/register", "auth"}, // Auth tier
-		{"POST", "/api/v1/auth/browser/login", "auth"},
-		{"POST", "/api/v1/auth/browser/register", "auth"},
-		{"GET", "/api/v1/auth/oauth/google/callback", "auth"}, // Auth tier (OAuth callback)
-		{"GET", "/api/v1/something", "read"},                  // Unauth read tier
-		{"GET", "/api/v1/pages/123", "read"},                  // Unauth read tier
-	}
+		tests := []struct {
+			method   string
+			path     string
+			wantTier string
+		}{
+			{"GET", "/api/v1/health", ""},             // No rate limit for health check
+			{"POST", "/api/v1/auth/login", "auth"},    // Auth tier
+			{"POST", "/api/v1/auth/register", "auth"}, // Auth tier
+			{"POST", "/api/v1/auth/browser/login", "auth"},
+			{"POST", "/api/v1/auth/browser/register", "auth"},
+			{"GET", "/api/v1/auth/oauth/google/callback", "auth"}, // Auth tier (OAuth callback)
+			{"GET", "/api/v1/something", "read"},                  // Unauth read tier
+			{"GET", "/api/v1/pages/123", "read"},                  // Unauth read tier
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
-			tier := limiters.MatchUnauth(tt.method, tt.path)
-			if tt.wantTier == "" {
-				if tier != nil {
-					t.Errorf("expected nil tier, got %s", tier.Name)
+		for _, tt := range tests {
+			t.Run(tt.method+" "+tt.path, func(t *testing.T) {
+				tier := limiters.MatchUnauth(tt.method, tt.path)
+				if tt.wantTier == "" {
+					if tier != nil {
+						t.Errorf("expected nil tier, got %s", tier.Name)
+					}
+				} else {
+					if tier == nil {
+						t.Errorf("expected tier %s, got nil", tt.wantTier)
+					} else if tier.Name != tt.wantTier {
+						t.Errorf("expected tier %s, got %s", tt.wantTier, tier.Name)
+					}
 				}
-			} else {
-				if tier == nil {
-					t.Errorf("expected tier %s, got nil", tt.wantTier)
-				} else if tier.Name != tt.wantTier {
-					t.Errorf("expected tier %s, got %s", tt.wantTier, tier.Name)
-				}
-			}
-		})
-	}
-}
+			})
+		}
+	})
 
-func TestLimiters_MatchAuth(t *testing.T) {
-	limiters := NewLimiters(DefaultConfig(false))
-	defer limiters.Close()
+	t.Run("MatchAuth", func(t *testing.T) {
+		limiters := NewLimiters(DefaultConfig(false))
+		t.Cleanup(limiters.Close)
 
-	tests := []struct {
-		method   string
-		path     string
-		wantTier string
-	}{
-		{"GET", "/api/v1/health", ""},                            // No rate limit for health check
-		{"GET", "/api/v1/pages", "read"},                         // Read tier
-		{"GET", "/api/v1/users", "read"},                         // Read tier
-		{"POST", "/api/v1/pages", "write"},                       // Write tier
-		{"POST", "/api/v1/tables", "write"},                      // Write tier
-		{"DELETE", "/api/v1/pages/123", "write"},                 // Write tier (DELETE)
-		{"POST", "/api/v1/search", "read"},                       // Search is a read operation
-		{"POST", "/api/v1/gomode/mcp", "read"},                   // MCP read transport
-		{"POST", "/api/voicegateway/v1/voice/rtc/offer", "read"}, // Voice offer has a dedicated limiter
-	}
+		tests := []struct {
+			method   string
+			path     string
+			wantTier string
+		}{
+			{"GET", "/api/v1/health", ""},                            // No rate limit for health check
+			{"GET", "/api/v1/pages", "read"},                         // Read tier
+			{"GET", "/api/v1/users", "read"},                         // Read tier
+			{"POST", "/api/v1/pages", "write"},                       // Write tier
+			{"POST", "/api/v1/tables", "write"},                      // Write tier
+			{"DELETE", "/api/v1/pages/123", "write"},                 // Write tier (DELETE)
+			{"POST", "/api/v1/search", "read"},                       // Search is a read operation
+			{"POST", "/api/v1/gomode/mcp", "read"},                   // MCP read transport
+			{"POST", "/api/voicegateway/v1/voice/rtc/offer", "read"}, // Voice offer has a dedicated limiter
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
-			tier := limiters.MatchAuth(tt.method, tt.path)
-			if tt.wantTier == "" {
-				if tier != nil {
-					t.Errorf("expected nil tier, got %s", tier.Name)
+		for _, tt := range tests {
+			t.Run(tt.method+" "+tt.path, func(t *testing.T) {
+				tier := limiters.MatchAuth(tt.method, tt.path)
+				if tt.wantTier == "" {
+					if tier != nil {
+						t.Errorf("expected nil tier, got %s", tier.Name)
+					}
+				} else {
+					if tier == nil {
+						t.Errorf("expected tier %s, got nil", tt.wantTier)
+					} else if tier.Name != tt.wantTier {
+						t.Errorf("expected tier %s, got %s", tt.wantTier, tier.Name)
+					}
 				}
-			} else {
-				if tier == nil {
-					t.Errorf("expected tier %s, got nil", tt.wantTier)
-				} else if tier.Name != tt.wantTier {
-					t.Errorf("expected tier %s, got %s", tt.wantTier, tier.Name)
-				}
-			}
-		})
-	}
+			})
+		}
+	})
 }
 
 func TestIsAuthEndpoint(t *testing.T) {

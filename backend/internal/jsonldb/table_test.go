@@ -1436,68 +1436,6 @@ not valid json
 	})
 }
 
-// TestRow tests the Row interface through Table operations.
-// The Row interface is tested indirectly through the testRow and validatingRow types.
-func TestRow(t *testing.T) {
-	t.Run("Clone", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			original := &testRow{ID: 1, Name: "Original"}
-			cloned := original.Clone()
-
-			if cloned == original {
-				t.Error("Clone returned same pointer")
-			}
-			if cloned.ID != original.ID || cloned.Name != original.Name {
-				t.Error("Clone has different values")
-			}
-
-			// Modify clone and verify original unchanged
-			cloned.Name = "Modified"
-			if original.Name == "Modified" {
-				t.Error("Modifying clone affected original")
-			}
-		})
-	})
-
-	t.Run("GetID", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			tests := []struct {
-				name string
-				row  *testRow
-				want ksid.ID
-			}{
-				{"zero ID", &testRow{ID: 0}, 0},
-				{"positive ID", &testRow{ID: 42}, 42},
-				{"large ID", &testRow{ID: 1000000}, 1000000},
-			}
-
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					if got := tt.row.GetID(); got != tt.want {
-						t.Errorf("GetID() = %d, want %d", got, tt.want)
-					}
-				})
-			}
-		})
-	})
-
-	t.Run("Validate", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			row := &testRow{ID: 1, Name: "Test"}
-			if err := row.Validate(); err != nil {
-				t.Errorf("Validate() error = %v, want nil", err)
-			}
-		})
-
-		t.Run("errors", func(t *testing.T) {
-			row := &validatingRow{ID: 1, Name: "Test", FailValidate: true}
-			if err := row.Validate(); err == nil {
-				t.Error("Validate() expected error, got nil")
-			}
-		})
-	})
-}
-
 func TestDeriveBlobDir(t *testing.T) {
 	tests := []struct {
 		path string

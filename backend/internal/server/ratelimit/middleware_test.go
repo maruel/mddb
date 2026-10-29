@@ -10,54 +10,56 @@ import (
 )
 
 func TestWriteHeaders(t *testing.T) {
-	w := httptest.NewRecorder()
+	t.Run("allowed", func(t *testing.T) {
+		w := httptest.NewRecorder()
 
-	result := Result{
-		Allowed:    true,
-		Limit:      60,
-		Remaining:  45,
-		ResetAt:    time.Unix(1706012345, 0),
-		RetryAfter: 0,
-	}
+		result := Result{
+			Allowed:    true,
+			Limit:      60,
+			Remaining:  45,
+			ResetAt:    time.Unix(1706012345, 0),
+			RetryAfter: 0,
+		}
 
-	WriteHeaders(w, result)
+		WriteHeaders(w, result)
 
-	if got := w.Header().Get("X-RateLimit-Limit"); got != "60" {
-		t.Errorf("X-RateLimit-Limit = %s, want 60", got)
-	}
-	if got := w.Header().Get("X-RateLimit-Remaining"); got != "45" {
-		t.Errorf("X-RateLimit-Remaining = %s, want 45", got)
-	}
-	if got := w.Header().Get("X-RateLimit-Reset"); got != "1706012345" {
-		t.Errorf("X-RateLimit-Reset = %s, want 1706012345", got)
-	}
-	if got := w.Header().Get("Retry-After"); got != "" {
-		t.Errorf("Retry-After should not be set for allowed requests, got %s", got)
-	}
-}
+		if got := w.Header().Get("X-RateLimit-Limit"); got != "60" {
+			t.Errorf("X-RateLimit-Limit = %s, want 60", got)
+		}
+		if got := w.Header().Get("X-RateLimit-Remaining"); got != "45" {
+			t.Errorf("X-RateLimit-Remaining = %s, want 45", got)
+		}
+		if got := w.Header().Get("X-RateLimit-Reset"); got != "1706012345" {
+			t.Errorf("X-RateLimit-Reset = %s, want 1706012345", got)
+		}
+		if got := w.Header().Get("Retry-After"); got != "" {
+			t.Errorf("Retry-After should not be set for allowed requests, got %s", got)
+		}
+	})
 
-func TestWriteHeaders_RateLimited(t *testing.T) {
-	w := httptest.NewRecorder()
+	t.Run("rate limited", func(t *testing.T) {
+		w := httptest.NewRecorder()
 
-	result := Result{
-		Allowed:    false,
-		Limit:      60,
-		Remaining:  0,
-		ResetAt:    time.Unix(1706012345, 0),
-		RetryAfter: 30 * time.Second,
-	}
+		result := Result{
+			Allowed:    false,
+			Limit:      60,
+			Remaining:  0,
+			ResetAt:    time.Unix(1706012345, 0),
+			RetryAfter: 30 * time.Second,
+		}
 
-	WriteHeaders(w, result)
+		WriteHeaders(w, result)
 
-	if got := w.Header().Get("X-RateLimit-Limit"); got != "60" {
-		t.Errorf("X-RateLimit-Limit = %s, want 60", got)
-	}
-	if got := w.Header().Get("X-RateLimit-Remaining"); got != "0" {
-		t.Errorf("X-RateLimit-Remaining = %s, want 0", got)
-	}
-	if got := w.Header().Get("Retry-After"); got != "30" {
-		t.Errorf("Retry-After = %s, want 30", got)
-	}
+		if got := w.Header().Get("X-RateLimit-Limit"); got != "60" {
+			t.Errorf("X-RateLimit-Limit = %s, want 60", got)
+		}
+		if got := w.Header().Get("X-RateLimit-Remaining"); got != "0" {
+			t.Errorf("X-RateLimit-Remaining = %s, want 0", got)
+		}
+		if got := w.Header().Get("Retry-After"); got != "30" {
+			t.Errorf("Retry-After = %s, want 30", got)
+		}
+	})
 }
 
 func TestBuildKey(t *testing.T) {
@@ -84,90 +86,94 @@ func TestBuildKey(t *testing.T) {
 }
 
 func TestRateLimitResponseWriter(t *testing.T) {
-	underlying := httptest.NewRecorder()
+	t.Run("Write", func(t *testing.T) {
+		underlying := httptest.NewRecorder()
 
-	result := Result{
-		Allowed:   true,
-		Limit:     100,
-		Remaining: 99,
-		ResetAt:   time.Unix(1706012345, 0),
-	}
+		result := Result{
+			Allowed:   true,
+			Limit:     100,
+			Remaining: 99,
+			ResetAt:   time.Unix(1706012345, 0),
+		}
 
-	rw := NewResponseWriter(underlying, result)
+		rw := NewResponseWriter(underlying, result)
 
-	// Write should inject headers
-	if _, err := rw.Write([]byte("test")); err != nil {
-		t.Fatalf("Write failed: %v", err)
-	}
+		// Write should inject headers
+		if _, err := rw.Write([]byte("test")); err != nil {
+			t.Fatalf("Write failed: %v", err)
+		}
 
-	if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
-		t.Errorf("X-RateLimit-Limit not set after Write, got %s", got)
-	}
-	if underlying.Body.String() != "test" {
-		t.Errorf("Body = %s, want test", underlying.Body.String())
-	}
-}
+		if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
+			t.Errorf("X-RateLimit-Limit not set after Write, got %s", got)
+		}
+		if underlying.Body.String() != "test" {
+			t.Errorf("Body = %s, want test", underlying.Body.String())
+		}
+	})
 
-func TestRateLimitResponseWriter_WriteHeader(t *testing.T) {
-	underlying := httptest.NewRecorder()
+	t.Run("WriteHeader", func(t *testing.T) {
+		t.Run("injects headers first", func(t *testing.T) {
+			underlying := httptest.NewRecorder()
 
-	result := Result{
-		Allowed:   true,
-		Limit:     100,
-		Remaining: 99,
-		ResetAt:   time.Unix(1706012345, 0),
-	}
+			result := Result{
+				Allowed:   true,
+				Limit:     100,
+				Remaining: 99,
+				ResetAt:   time.Unix(1706012345, 0),
+			}
 
-	rw := NewResponseWriter(underlying, result)
+			rw := NewResponseWriter(underlying, result)
 
-	// WriteHeader should inject rate limit headers first
-	rw.WriteHeader(http.StatusOK)
+			// WriteHeader should inject rate limit headers first
+			rw.WriteHeader(http.StatusOK)
 
-	if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
-		t.Errorf("X-RateLimit-Limit not set after WriteHeader, got %s", got)
-	}
-	if underlying.Code != http.StatusOK {
-		t.Errorf("Status code = %d, want %d", underlying.Code, http.StatusOK)
-	}
-}
+			if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
+				t.Errorf("X-RateLimit-Limit not set after WriteHeader, got %s", got)
+			}
+			if underlying.Code != http.StatusOK {
+				t.Errorf("Status code = %d, want %d", underlying.Code, http.StatusOK)
+			}
+		})
 
-func TestRateLimitResponseWriter_HeadersOnlyOnce(t *testing.T) {
-	underlying := httptest.NewRecorder()
+		t.Run("headers only once", func(t *testing.T) {
+			underlying := httptest.NewRecorder()
 
-	result := Result{
-		Allowed:   true,
-		Limit:     100,
-		Remaining: 99,
-		ResetAt:   time.Unix(1706012345, 0),
-	}
+			result := Result{
+				Allowed:   true,
+				Limit:     100,
+				Remaining: 99,
+				ResetAt:   time.Unix(1706012345, 0),
+			}
 
-	rw := NewResponseWriter(underlying, result)
+			rw := NewResponseWriter(underlying, result)
 
-	// Multiple writes should only set headers once
-	rw.WriteHeader(http.StatusOK)
-	if _, err := rw.Write([]byte("first")); err != nil {
-		t.Fatalf("Write failed: %v", err)
-	}
-	if _, err := rw.Write([]byte("second")); err != nil {
-		t.Fatalf("Write failed: %v", err)
-	}
+			// Multiple writes should only set headers once
+			rw.WriteHeader(http.StatusOK)
+			if _, err := rw.Write([]byte("first")); err != nil {
+				t.Fatalf("Write failed: %v", err)
+			}
+			if _, err := rw.Write([]byte("second")); err != nil {
+				t.Fatalf("Write failed: %v", err)
+			}
 
-	// Headers should still be set correctly
-	if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
-		t.Errorf("X-RateLimit-Limit = %s, want 100", got)
-	}
-}
+			// Headers should still be set correctly
+			if got := underlying.Header().Get("X-RateLimit-Limit"); got != "100" {
+				t.Errorf("X-RateLimit-Limit = %s, want 100", got)
+			}
+		})
+	})
 
-func TestRateLimitResponseWriter_Flush(t *testing.T) {
-	underlying := httptest.NewRecorder()
-	rw := NewResponseWriter(underlying, Result{Allowed: true})
+	t.Run("Flush", func(t *testing.T) {
+		underlying := httptest.NewRecorder()
+		rw := NewResponseWriter(underlying, Result{Allowed: true})
 
-	var flusher http.Flusher = rw
-	flusher.Flush()
-	if !underlying.Flushed {
-		t.Error("Flush did not reach the underlying writer")
-	}
-	if err := http.NewResponseController(rw).Flush(); err != nil {
-		t.Errorf("Flush() = %v", err)
-	}
+		var flusher http.Flusher = rw
+		flusher.Flush()
+		if !underlying.Flushed {
+			t.Error("Flush did not reach the underlying writer")
+		}
+		if err := http.NewResponseController(rw).Flush(); err != nil {
+			t.Errorf("Flush() = %v", err)
+		}
+	})
 }

@@ -159,9 +159,15 @@ func TestMapper(t *testing.T) {
 			t.Errorf("expected Done %v, got %v", true, record.Data["Done"])
 		}
 	})
+	t.Run("mapDBProperty", func(t *testing.T) {
+		t.Run("basic", testMapDBProperty)
+		t.Run("relational", testMapDBPropertyRelational)
+	})
+	t.Run("ResolveRelations", testResolveRelations)
+	t.Run("ClearPendingRelations", testClearPendingRelations)
 }
 
-func TestMapDBProperty(t *testing.T) {
+func testMapDBProperty(t *testing.T) {
 	m := NewMapper()
 
 	tests := []struct {
@@ -181,7 +187,8 @@ func TestMapDBProperty(t *testing.T) {
 		{"phone_number", DBProperty{Type: "phone_number"}, content.PropertyTypePhone},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := &tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			result := m.mapDBProperty(tt.name, &tt.prop)
 			if result.Type != tt.wantType {
@@ -202,7 +209,8 @@ func TestRichTextToPlain(t *testing.T) {
 		{"multiple", []RichText{{PlainText: "Hello "}, {PlainText: "World"}}, "Hello World"},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := &tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			got := richTextToPlain(tt.rt)
 			if got != tt.want {
@@ -237,7 +245,7 @@ func TestMapRollupAggregation(t *testing.T) {
 	}
 }
 
-func TestMapDBPropertyRelational(t *testing.T) {
+func testMapDBPropertyRelational(t *testing.T) {
 	m := NewMapper()
 
 	t.Run("relation", func(t *testing.T) {
@@ -320,7 +328,7 @@ func TestMapDBPropertyRelational(t *testing.T) {
 	})
 }
 
-func TestResolveRelations(t *testing.T) {
+func testResolveRelations(t *testing.T) {
 	m := NewMapper()
 
 	// Simulate mapping two databases
@@ -369,7 +377,7 @@ func TestResolveRelations(t *testing.T) {
 	}
 }
 
-func TestClearPendingRelations(t *testing.T) {
+func testClearPendingRelations(t *testing.T) {
 	m := NewMapper()
 	m.PendingRelations["Tasks"] = "db-123"
 	m.PendingRelations["Projects"] = "db-456"
@@ -408,7 +416,8 @@ func TestExtractPageTitle(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for i := range tests {
+		tt := &tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			got := extractPageTitle(tt.page)
 			if got != tt.want {

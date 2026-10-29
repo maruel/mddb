@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_coerceValue(t *testing.T) {
+func TestCoerceValue(t *testing.T) {
 	t.Run("Text", func(t *testing.T) {
 		tests := []struct {
 			name  string
@@ -167,7 +167,7 @@ func Test_coerceValue(t *testing.T) {
 	})
 }
 
-func Test_propertyAffinity(t *testing.T) {
+func TestPropertyAffinity(t *testing.T) {
 	tests := []struct {
 		propType PropertyType
 		want     affinity
@@ -194,7 +194,7 @@ func Test_propertyAffinity(t *testing.T) {
 	}
 }
 
-func Test_CoerceRecordData(t *testing.T) {
+func TestCoerceRecordData(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		properties := []Property{
 			{Name: "name", Type: PropertyTypeText},

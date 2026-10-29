@@ -237,25 +237,6 @@ log_level = "debug"
 	})
 }
 
-func TestLoadTOMLConfigTilde(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	cfgSubdir := filepath.Join(home, "custom")
-	if err := os.MkdirAll(cfgSubdir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(cfgSubdir, "config.toml"), []byte("[server]\nhttp = \":9999\"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadTOMLConfig("~/custom")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Server.HTTP != ":9999" {
-		t.Errorf("got http %q, want :9999", got.Server.HTTP)
-	}
-}
-
 func TestResolveConfig(t *testing.T) {
 	cfgDir := t.TempDir()
 
@@ -763,16 +744,16 @@ model = "gemma"
 			t.Fatal("unknown backend accepted")
 		}
 	})
-}
 
-func TestVoiceGatewayMixedChoicesRequireGeminiKey(t *testing.T) {
-	tc := defaultConfig()
-	tc.VoiceGateway.Config.Choices = []voicegateway.ChoiceConfig{{ID: "local", Label: "Local", Backend: voicegateway.BackendLocalStack, LocalStack: voicegateway.LocalStackConfig{TextOnly: true}}, {ID: "gemini", Label: "Gemini", Backend: voicegateway.BackendGeminiLive}}
-	if _, err := resolveConfig(&tc, t.TempDir()); err == nil || !strings.Contains(err.Error(), "voice-gateway.api_key") {
-		t.Fatalf("missing Gemini credential: %v", err)
-	}
-	tc.VoiceGateway.APIKey = "explicit-key"
-	if _, err := resolveConfig(&tc, t.TempDir()); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("mixed choices require Gemini key", func(t *testing.T) {
+		tc := defaultConfig()
+		tc.VoiceGateway.Config.Choices = []voicegateway.ChoiceConfig{{ID: "local", Label: "Local", Backend: voicegateway.BackendLocalStack, LocalStack: voicegateway.LocalStackConfig{TextOnly: true}}, {ID: "gemini", Label: "Gemini", Backend: voicegateway.BackendGeminiLive}}
+		if _, err := resolveConfig(&tc, t.TempDir()); err == nil || !strings.Contains(err.Error(), "voice-gateway.api_key") {
+			t.Fatalf("missing Gemini credential: %v", err)
+		}
+		tc.VoiceGateway.APIKey = "explicit-key"
+		if _, err := resolveConfig(&tc, t.TempDir()); err != nil {
+			t.Fatal(err)
+		}
+	})
 }

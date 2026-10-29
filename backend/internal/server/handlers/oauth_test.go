@@ -26,6 +26,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 )
 
@@ -151,6 +152,7 @@ func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	users.SetBcryptCostForTesting(bcrypt.MinCost)
 	sessions, err := identity.NewSessionService(filepath.Join(db, "sessions.jsonl"))
 	if err != nil {
 		t.Fatal(err)
@@ -435,48 +437,7 @@ type idClaimsCase struct {
 	edit func(c map[string]any)
 }
 
-func TestNewOAuthHandler(t *testing.T) {
-	t.Run("login destination", func(t *testing.T) {
-		for _, p := range providers {
-			t.Run(string(p), func(t *testing.T) {
-				e := newOAuthTestEnv(t, "https://mddb.example.com")
-				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"?next=%2Fdevice", http.NoBody)
-				r.SetPathValue("provider", string(p))
-				w := httptest.NewRecorder()
-				e.h.LoginRedirect(w, r)
-				if w.Code != http.StatusTemporaryRedirect {
-					t.Fatalf("start = %d: %s", w.Code, w.Body)
-				}
-				state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
-				changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte("/device")), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
-				if got := e.callback(t, p, changed, cookie); got.Code != http.StatusBadRequest {
-					t.Fatalf("tampered state = %d", got.Code)
-				}
-				result := e.callback(t, p, state, cookie)
-				if result.Code != http.StatusFound || result.Header().Get("Location") != "/device" {
-					t.Fatalf("callback = %d, %q: %s", result.Code, result.Header().Get("Location"), result.Body)
-				}
-			})
-		}
-		for _, path := range []string{"https://evil.example/device", "//evil.example", "/\\evil", "/%5cevil", "/%2fevil", "/%252fevil", "/%00device", "/%0ddevice", "/%7fdevice", "/%", "device"} {
-			t.Run(path, func(t *testing.T) {
-				e := newOAuthTestEnv(t, "https://mddb.example.com")
-				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/google?next="+url.QueryEscape(path), http.NoBody)
-				r.SetPathValue("provider", "google")
-				w := httptest.NewRecorder()
-				e.h.LoginRedirect(w, r)
-				if w.Code != http.StatusBadRequest || w.Header().Get("Location") != "" || len(w.Result().Cookies()) != 0 {
-					t.Fatalf("unsafe destination = %d, %q, cookies %v", w.Code, w.Header().Get("Location"), w.Result().Cookies())
-				}
-				// Even signed state must pass validation before exchanging credentials.
-				state := loginStatePrefix + base64.RawURLEncoding.EncodeToString([]byte(path)) + ":nonce"
-				cookie := e.h.stateCookie(oauthserver.SignState(state, e.h.stateKey), oauthStateMaxAge)
-				if got := e.callback(t, identity.OAuthProviderGoogle, state, cookie); got.Code != http.StatusBadRequest || e.fake.exchanges.Load() != 0 {
-					t.Fatalf("unsafe signed destination = %d; exchanges = %d", got.Code, e.fake.exchanges.Load())
-				}
-			})
-		}
-	})
+func TestOAuthHandler(t *testing.T) {
 	t.Run("LoginRedirect", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			for _, tc := range []redirectCase{
@@ -494,6 +455,47 @@ func TestNewOAuthHandler(t *testing.T) {
 					}
 					if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.Secure != tc.secure || c.Path != oauthStateCookiePath || c.MaxAge != oauthStateMaxAge {
 						t.Errorf("cookie = %+v", c)
+					}
+				})
+			}
+		})
+		t.Run("destination", func(t *testing.T) {
+			for _, p := range providers {
+				t.Run(string(p), func(t *testing.T) {
+					e := newOAuthTestEnv(t, "https://mddb.example.com")
+					r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"?next=%2Fdevice", http.NoBody)
+					r.SetPathValue("provider", string(p))
+					w := httptest.NewRecorder()
+					e.h.LoginRedirect(w, r)
+					if w.Code != http.StatusTemporaryRedirect {
+						t.Fatalf("start = %d: %s", w.Code, w.Body)
+					}
+					state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
+					changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte("/device")), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
+					if got := e.callback(t, p, changed, cookie); got.Code != http.StatusBadRequest {
+						t.Fatalf("tampered state = %d", got.Code)
+					}
+					result := e.callback(t, p, state, cookie)
+					if result.Code != http.StatusFound || result.Header().Get("Location") != "/device" {
+						t.Fatalf("callback = %d, %q: %s", result.Code, result.Header().Get("Location"), result.Body)
+					}
+				})
+			}
+			e := newOAuthTestEnv(t, "https://mddb.example.com")
+			for _, path := range []string{"https://evil.example/device", "//evil.example", "/\\evil", "/%5cevil", "/%2fevil", "/%252fevil", "/%00device", "/%0ddevice", "/%7fdevice", "/%", "device"} {
+				t.Run(path, func(t *testing.T) {
+					r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/google?next="+url.QueryEscape(path), http.NoBody)
+					r.SetPathValue("provider", "google")
+					w := httptest.NewRecorder()
+					e.h.LoginRedirect(w, r)
+					if w.Code != http.StatusBadRequest || w.Header().Get("Location") != "" || len(w.Result().Cookies()) != 0 {
+						t.Fatalf("unsafe destination = %d, %q, cookies %v", w.Code, w.Header().Get("Location"), w.Result().Cookies())
+					}
+					// Even signed state must pass validation before exchanging credentials.
+					state := loginStatePrefix + base64.RawURLEncoding.EncodeToString([]byte(path)) + ":nonce"
+					cookie := e.h.stateCookie(oauthserver.SignState(state, e.h.stateKey), oauthStateMaxAge)
+					if got := e.callback(t, identity.OAuthProviderGoogle, state, cookie); got.Code != http.StatusBadRequest || e.fake.exchanges.Load() != 0 {
+						t.Fatalf("unsafe signed destination = %d; exchanges = %d", got.Code, e.fake.exchanges.Load())
 					}
 				})
 			}

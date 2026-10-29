@@ -10,31 +10,32 @@ import (
 	"github.com/maruel/ksid"
 )
 
-func TestAssetDownloader_ExternalURLsPassThrough(t *testing.T) {
-	// Create a test server that returns a small image
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "image/png")
-		_, err := w.Write([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a})
-		if err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
-	}))
-	defer server.Close()
+func TestAssetDownloader(t *testing.T) {
+	t.Run("DownloadAsset", func(t *testing.T) {
+		t.Run("external URLs pass through", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "image/png")
+				_, err := w.Write([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a})
+				if err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+			}))
+			t.Cleanup(server.Close)
 
-	tempDir := t.TempDir()
-	downloader := NewAssetDownloader(tempDir)
-	nodeID := ksid.NewID()
+			tempDir := t.TempDir()
+			downloader := NewAssetDownloader(tempDir)
+			nodeID := ksid.NewID()
 
-	// Test with an external URL (non-Notion) - should return original URL
-	result, err := downloader.DownloadAsset(nodeID, server.URL+"/test.png")
-	if err != nil {
-		t.Fatalf("DownloadAsset() error = %v", err)
-	}
+			result, err := downloader.DownloadAsset(nodeID, server.URL+"/test.png")
+			if err != nil {
+				t.Fatalf("DownloadAsset() error = %v", err)
+			}
 
-	// For external URLs, it should return the original URL
-	if result != server.URL+"/test.png" {
-		t.Errorf("DownloadAsset() for external URL = %q, want original URL", result)
-	}
+			if result != server.URL+"/test.png" {
+				t.Errorf("DownloadAsset() for external URL = %q, want original URL", result)
+			}
+		})
+	})
 }
 
 func TestIsNotionAssetURL(t *testing.T) {
@@ -64,16 +65,4 @@ func TestIsNotionAssetURL(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestAssetDownloader_RelativePathIsJustFilename(t *testing.T) {
-	// The relative path returned should be just the filename.
-	// Assets are stored in the same directory as index.md.
-	// The frontend transforms filename.png to /assets/{wsId}/{nodeId}/filename.png
-
-	// Expected format: just the hashed filename like "abc123def456-image.png"
-	// NOT "./assets/..." or "assets/..." - just the filename itself
-
-	// This matches how workspace_store.go stores assets:
-	// filePath := filepath.Join(dir, assetName)  // Same dir as index.md
 }

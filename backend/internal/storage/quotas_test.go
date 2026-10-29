@@ -152,38 +152,40 @@ func TestEffectiveParentLimits(t *testing.T) {
 	}
 }
 
-func TestResourceQuotas_Validate(t *testing.T) {
-	t.Run("inherit (-1) valid", func(t *testing.T) {
-		q := ResourceQuotas{
-			MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1,
-			MaxAssetSizeBytes: -1, MaxTablesPerWorkspace: -1, MaxColumnsPerTable: -1,
-		}
-		if err := q.Validate(); err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-	})
-	t.Run("disabled (0) valid", func(t *testing.T) {
-		q := ResourceQuotas{}
-		if err := q.Validate(); err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-	})
-	t.Run("positive valid", func(t *testing.T) {
-		q := DefaultResourceQuotas()
-		if err := q.Validate(); err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-	})
-	t.Run("below -1 pages invalid", func(t *testing.T) {
-		q := ResourceQuotas{MaxPages: -2}
-		if err := q.Validate(); err == nil {
-			t.Error("expected error for MaxPages < -1")
-		}
-	})
-	t.Run("below -1 storage invalid", func(t *testing.T) {
-		q := ResourceQuotas{MaxStorageBytes: -2}
-		if err := q.Validate(); err == nil {
-			t.Error("expected error for MaxStorageBytes < -1")
-		}
+func TestResourceQuotas(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("inherit (-1) valid", func(t *testing.T) {
+			q := ResourceQuotas{
+				MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1,
+				MaxAssetSizeBytes: -1, MaxTablesPerWorkspace: -1, MaxColumnsPerTable: -1,
+			}
+			if err := q.Validate(); err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+		})
+		t.Run("disabled (0) valid", func(t *testing.T) {
+			q := ResourceQuotas{}
+			if err := q.Validate(); err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+		})
+		t.Run("positive valid", func(t *testing.T) {
+			q := DefaultResourceQuotas()
+			if err := q.Validate(); err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+		})
+		t.Run("below -1 pages invalid", func(t *testing.T) {
+			q := ResourceQuotas{MaxPages: -2}
+			if err := q.Validate(); err == nil {
+				t.Error("expected error for MaxPages < -1")
+			}
+		})
+		t.Run("below -1 storage invalid", func(t *testing.T) {
+			q := ResourceQuotas{MaxStorageBytes: -2}
+			if err := q.Validate(); err == nil {
+				t.Error("expected error for MaxStorageBytes < -1")
+			}
+		})
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/maruel/ksid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestOrganizationMembership(t *testing.T) {
@@ -298,6 +299,7 @@ func TestOrganizationMembershipService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userService.SetBcryptCostForTesting(bcrypt.MinCost)
 	orgService, err := NewOrganizationService(filepath.Join(tempDir, "orgs.jsonl"))
 	if err != nil {
 		t.Fatal(err)
@@ -456,6 +458,7 @@ func TestWorkspaceMembershipService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	userService.SetBcryptCostForTesting(bcrypt.MinCost)
 	orgService, err := NewOrganizationService(filepath.Join(tempDir, "orgs.jsonl"))
 	if err != nil {
 		t.Fatal(err)

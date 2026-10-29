@@ -200,7 +200,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	// In an e2e build, use a fake handler that bypasses real OAuth providers.
 	loginRedirect := oh.LoginRedirect
 	if cfg.OAuth.TestOAuth {
-		toh := handlers.NewTestOAuthHandler(svc, hcfg, providers)
+		toh := handlers.NewFakeOAuthHandler(svc, hcfg, providers)
 		loginRedirect = toh.LoginRedirect
 	}
 

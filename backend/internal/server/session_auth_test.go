@@ -16,6 +16,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestValidateJWTAndSession(t *testing.T) {
@@ -24,6 +25,7 @@ func TestValidateJWTAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	users.SetBcryptCostForTesting(bcrypt.MinCost)
 	user, err := users.Create("session@example.com", "password123", "User")
 	if err != nil {
 		t.Fatal(err)

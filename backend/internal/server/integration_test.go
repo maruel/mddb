@@ -24,6 +24,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var testJWTSecret = []byte("test-secret-key-32-bytes-long!!!")
@@ -53,6 +54,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("NewUserService: %v", err)
 	}
+	userService.SetBcryptCostForTesting(bcrypt.MinCost)
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"))
 	if err != nil {

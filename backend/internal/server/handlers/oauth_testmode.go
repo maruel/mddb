@@ -11,24 +11,24 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// TestOAuthHandler bypasses real OAuth providers and logs in with fake accounts.
-type TestOAuthHandler struct {
+// FakeOAuthHandler bypasses real OAuth providers and logs in with fake accounts.
+type FakeOAuthHandler struct {
 	svc       *Services
 	cfg       *Config
 	providers map[identity.OAuthProvider]bool
 }
 
-// NewTestOAuthHandler creates a handler that fakes OAuth login for testing.
-func NewTestOAuthHandler(svc *Services, cfg *Config, providers []identity.OAuthProvider) *TestOAuthHandler {
+// NewFakeOAuthHandler creates a handler that fakes OAuth login for testing.
+func NewFakeOAuthHandler(svc *Services, cfg *Config, providers []identity.OAuthProvider) *FakeOAuthHandler {
 	m := make(map[identity.OAuthProvider]bool, len(providers))
 	for _, p := range providers {
 		m[p] = true
 	}
-	return &TestOAuthHandler{svc: svc, cfg: cfg, providers: m}
+	return &FakeOAuthHandler{svc: svc, cfg: cfg, providers: m}
 }
 
 // LoginRedirect bypasses real OAuth and immediately logs in with a fake account.
-func (h *TestOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
+func (h *FakeOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	provider := identity.OAuthProvider(r.PathValue("provider"))
 	if !h.providers[provider] {
 		writeErrorResponse(w, dto.InvalidProvider())

@@ -17,7 +17,6 @@ import (
 
 // testServices creates a Services struct with a FileStore for testing.
 func testServices(t *testing.T) (*Services, ksid.ID) {
-	t.Helper()
 	tmpDir := t.TempDir()
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
@@ -62,6 +61,26 @@ func testServices(t *testing.T) (*Services, ksid.ID) {
 	return &Services{FileStore: fs}, ws.ID
 }
 
+func createTestTable(t *testing.T, svc *Services, wsID ksid.ID) ksid.ID {
+	ctx := t.Context()
+	ws, err := svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	author := git.Author{Name: "Test User", Email: "test@example.com"}
+	props := []content.Property{
+		{Name: "Name", Type: content.PropertyTypeText},
+		{Name: "Age", Type: content.PropertyTypeNumber},
+	}
+
+	node, err := ws.CreateTableUnderParent(ctx, 0, "Test Table", props, author)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return node.ID
+}
+
 func TestNodeHandler(t *testing.T) {
 	t.Run("GetNodeVersion", func(t *testing.T) {
 		t.Run("NestedNode", func(t *testing.T) {
@@ -79,7 +98,6 @@ func TestNodeHandler(t *testing.T) {
 			}
 
 			// Create parent
-			// Note: 0 is used as ksid.ID zero value for root parent
 			var rootID ksid.ID
 			parent, err := wsStore.CreateNode(ctx, "Parent", content.NodeTypeDocument, rootID, author)
 			if err != nil {
@@ -92,7 +110,7 @@ func TestNodeHandler(t *testing.T) {
 				t.Fatalf("failed to create child: %v", err)
 			}
 
-			// Update child to generate more history (optional, but good)
+			// Update child to generate more history
 			_, err = wsStore.UpdatePage(ctx, child.ID, "Child Updated", "child content v2", author)
 			if err != nil {
 				t.Fatalf("failed to update child: %v", err)
@@ -114,7 +132,6 @@ func TestNodeHandler(t *testing.T) {
 				Cfg: &Config{},
 			}
 
-			// Test GetNodeVersion with nested node
 			req := &dto.GetNodeVersionRequest{
 				WsID: wsID,
 				ID:   child.ID,
@@ -126,14 +143,142 @@ func TestNodeHandler(t *testing.T) {
 				t.Fatalf("GetNodeVersion failed: %v", err)
 			}
 
-			// Ensure the content matches the body only (front matter should be stripped)
 			if resp.Content != "child content v2" {
 				t.Errorf("expected content 'child content v2', got %q", resp.Content)
 			}
-			// Ensure it does NOT contain front matter delimiters
 			if strings.Contains(resp.Content, "---") {
 				t.Errorf("content should not contain front matter, got %q", resp.Content)
 			}
+		})
+	})
+
+	t.Run("ListRecords", func(t *testing.T) {
+		t.Run("validation", func(t *testing.T) {
+			svc, wsID := testServices(t)
+			ctx := t.Context()
+			if err := svc.FileStore.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatal(err)
+			}
+			user := &identity.User{Name: "Test User", Email: "test@example.com"}
+			nodeID := createTestTable(t, svc, wsID)
+			nh := &NodeHandler{Svc: svc}
+
+			t.Run("InvalidViewID", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:   wsID,
+					ID:     nodeID,
+					ViewID: ksid.NewID(),
+					Limit:  100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for non-existent view ID")
+				}
+			})
+
+			t.Run("MalformedFiltersJSON", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:    wsID,
+					ID:      nodeID,
+					Filters: `{invalid json`,
+					Limit:   100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for malformed filters JSON")
+				}
+			})
+
+			t.Run("MalformedSortsJSON", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:  wsID,
+					ID:    nodeID,
+					Sorts: `not valid json`,
+					Limit: 100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for malformed sorts JSON")
+				}
+			})
+
+			t.Run("InvalidFilterOperator", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:    wsID,
+					ID:      nodeID,
+					Filters: `[{"property":"Name","operator":"invalid_op","value":"test"}]`,
+					Limit:   100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for invalid filter operator")
+				}
+			})
+
+			t.Run("UnknownFilterProperty", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:    wsID,
+					ID:      nodeID,
+					Filters: `[{"property":"NonExistent","operator":"equals","value":"test"}]`,
+					Limit:   100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for unknown filter property")
+				}
+			})
+
+			t.Run("UnknownSortProperty", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:  wsID,
+					ID:    nodeID,
+					Sorts: `[{"property":"NonExistent","direction":"asc"}]`,
+					Limit: 100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for unknown sort property")
+				}
+			})
+
+			t.Run("InvalidSortDirection", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:  wsID,
+					ID:    nodeID,
+					Sorts: `[{"property":"Name","direction":"invalid"}]`,
+					Limit: 100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for invalid sort direction")
+				}
+			})
+
+			t.Run("DuplicateFilterProperty", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:    wsID,
+					ID:      nodeID,
+					Filters: `[{"property":"Name","operator":"equals","value":"a"},{"property":"Name","operator":"contains","value":"b"}]`,
+					Limit:   100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for duplicate filter property")
+				}
+			})
+
+			t.Run("DuplicateSortProperty", func(t *testing.T) {
+				req := &dto.ListRecordsRequest{
+					WsID:  wsID,
+					ID:    nodeID,
+					Sorts: `[{"property":"Name","direction":"asc"},{"property":"Name","direction":"desc"}]`,
+					Limit: 100,
+				}
+				_, err := nh.ListRecords(ctx, wsID, user, req)
+				if err == nil {
+					t.Error("Expected error for duplicate sort property")
+				}
+			})
 		})
 	})
 }

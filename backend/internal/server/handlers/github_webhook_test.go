@@ -55,144 +55,147 @@ func TestVerifyWebhookSignature(t *testing.T) {
 	})
 }
 
-func TestHandleWebhook_MethodNotAllowed(t *testing.T) {
-	h := &GitHubWebhookHandler{}
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/webhooks/github", http.NoBody)
-	w := httptest.NewRecorder()
+func TestGitHubWebhookHandler(t *testing.T) {
+	t.Run("HandleWebhook", func(t *testing.T) {
+		t.Run("method not allowed", func(t *testing.T) {
+			h := &GitHubWebhookHandler{}
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/webhooks/github", http.NoBody)
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", w.Code)
-	}
-}
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("expected 405, got %d", w.Code)
+			}
+		})
 
-func TestHandleWebhook_InvalidSignature(t *testing.T) {
-	h := &GitHubWebhookHandler{WebhookSecret: "secret"}
-	body := `{"repository":{"full_name":"org/repo"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(body))
-	req.Header.Set("X-Hub-Signature-256", "sha256=invalid")
-	req.Header.Set("X-GitHub-Event", "push")
-	w := httptest.NewRecorder()
+		t.Run("invalid signature", func(t *testing.T) {
+			h := &GitHubWebhookHandler{WebhookSecret: "secret"}
+			body := `{"repository":{"full_name":"org/repo"}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(body))
+			req.Header.Set("X-Hub-Signature-256", "sha256=invalid")
+			req.Header.Set("X-GitHub-Event", "push")
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("expected 401, got %d", w.Code)
+			}
+		})
 
-func TestHandleWebhook_NonPushEvent(t *testing.T) {
-	h := &GitHubWebhookHandler{}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{}`))
-	req.Header.Set("X-GitHub-Event", "ping")
-	w := httptest.NewRecorder()
+		t.Run("non push event", func(t *testing.T) {
+			h := &GitHubWebhookHandler{}
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{}`))
+			req.Header.Set("X-GitHub-Event", "ping")
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	if !strings.Contains(w.Body.String(), `"action":"ignored"`) {
-		t.Fatalf("expected ignored action, got %s", w.Body.String())
-	}
-}
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", w.Code)
+			}
+			if !strings.Contains(w.Body.String(), `"action":"ignored"`) {
+				t.Fatalf("expected ignored action, got %s", w.Body.String())
+			}
+		})
 
-func TestHandleWebhook_InvalidJSON(t *testing.T) {
-	h := &GitHubWebhookHandler{}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`not json`))
-	req.Header.Set("X-GitHub-Event", "push")
-	w := httptest.NewRecorder()
+		t.Run("invalid JSON", func(t *testing.T) {
+			h := &GitHubWebhookHandler{}
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`not json`))
+			req.Header.Set("X-GitHub-Event", "push")
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
-	}
-}
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d", w.Code)
+			}
+		})
 
-func TestHandleWebhook_MissingRepoName(t *testing.T) {
-	h := &GitHubWebhookHandler{}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{"repository":{}}`))
-	req.Header.Set("X-GitHub-Event", "push")
-	w := httptest.NewRecorder()
+		t.Run("missing repo name", func(t *testing.T) {
+			h := &GitHubWebhookHandler{}
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{"repository":{}}`))
+			req.Header.Set("X-GitHub-Event", "push")
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", w.Code)
-	}
-}
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d", w.Code)
+			}
+		})
 
-func TestHandleWebhook_PushNoMatch(t *testing.T) {
-	tmpDir := t.TempDir()
-	h := setupWebhookHandler(t, tmpDir, "")
+		t.Run("push no match", func(t *testing.T) {
+			tmpDir := t.TempDir()
+			h := setupWebhookHandler(t, tmpDir, "")
 
-	body := `{"repository":{"full_name":"other/repo"}}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(body))
-	req.Header.Set("X-GitHub-Event", "push")
-	w := httptest.NewRecorder()
+			body := `{"repository":{"full_name":"other/repo"}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(body))
+			req.Header.Set("X-GitHub-Event", "push")
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	if !strings.Contains(w.Body.String(), `"matched_workspaces":0`) {
-		t.Fatalf("expected 0 matches, got %s", w.Body.String())
-	}
-}
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", w.Code)
+			}
+			if !strings.Contains(w.Body.String(), `"matched_workspaces":0`) {
+				t.Fatalf("expected 0 matches, got %s", w.Body.String())
+			}
+		})
 
-func TestHandleWebhook_PushWithSignature(t *testing.T) {
-	tmpDir := t.TempDir()
-	secret := "webhook-secret"
-	h := setupWebhookHandler(t, tmpDir, secret)
+		t.Run("push with signature", func(t *testing.T) {
+			tmpDir := t.TempDir()
+			secret := "webhook-secret"
+			h := setupWebhookHandler(t, tmpDir, secret)
 
-	body := []byte(`{"repository":{"full_name":"other/repo"}}`)
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(body)
-	sig := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+			body := []byte(`{"repository":{"full_name":"other/repo"}}`)
+			mac := hmac.New(sha256.New, []byte(secret))
+			mac.Write(body)
+			sig := "sha256=" + hex.EncodeToString(mac.Sum(nil))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(string(body)))
-	req.Header.Set("X-GitHub-Event", "push")
-	req.Header.Set("X-Hub-Signature-256", sig)
-	w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(string(body)))
+			req.Header.Set("X-GitHub-Event", "push")
+			req.Header.Set("X-Hub-Signature-256", sig)
+			w := httptest.NewRecorder()
 
-	h.HandleWebhook(w, req)
+			h.HandleWebhook(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-}
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", w.Code)
+			}
+		})
 
-func TestHandleWebhook_ShuttingDown(t *testing.T) {
-	h := setupWebhookHandler(t, t.TempDir(), "")
-	ws, err := h.WsSvc.Create(t.Context(), ksid.NewID(), "workspace")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.WsSvc.Modify(ws.ID, func(ws *identity.Workspace) error {
-		ws.GitRemote.RepoOwner = "org"
-		ws.GitRemote.RepoName = "repo"
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := h.Services.StopBackground(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{"repository":{"full_name":"org/repo"}}`))
-	req.Header.Set("X-GitHub-Event", "push")
-	w := httptest.NewRecorder()
-	h.HandleWebhook(w, req)
-	if w.Code != http.StatusServiceUnavailable {
-		t.Fatalf("got status %d, want 503", w.Code)
-	}
+		t.Run("shutting down", func(t *testing.T) {
+			h := setupWebhookHandler(t, t.TempDir(), "")
+			ws, err := h.WsSvc.Create(t.Context(), ksid.NewID(), "workspace")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := h.WsSvc.Modify(ws.ID, func(ws *identity.Workspace) error {
+				ws.GitRemote.RepoOwner = "org"
+				ws.GitRemote.RepoName = "repo"
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if err := h.Services.StopBackground(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{"repository":{"full_name":"org/repo"}}`))
+			req.Header.Set("X-GitHub-Event", "push")
+			w := httptest.NewRecorder()
+			h.HandleWebhook(w, req)
+			if w.Code != http.StatusServiceUnavailable {
+				t.Fatalf("got status %d, want 503", w.Code)
+			}
+		})
+	})
 }
 
 // setupWebhookHandler creates a GitHubWebhookHandler with a real WorkspaceService for testing.
 func setupWebhookHandler(t *testing.T, tmpDir, secret string) *GitHubWebhookHandler {
-	t.Helper()
 	wsSvc, err := identity.NewWorkspaceService(filepath.Join(tmpDir, "workspaces.jsonl"))
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +204,5 @@ func setupWebhookHandler(t *testing.T, tmpDir, secret string) *GitHubWebhookHand
 		WebhookSecret: secret,
 		WsSvc:         wsSvc,
 		Services:      &Services{},
-		// SyncService is nil — matching workspaces won't actually pull,
-		// but we can still verify matching/routing logic.
 	}
 }
