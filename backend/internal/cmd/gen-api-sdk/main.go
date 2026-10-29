@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -17,9 +18,14 @@ func main() {
 }
 
 func generate() error {
+	check := flag.Bool("check", false, "verify generated SDKs without writing them")
+	flag.Parse()
 	api := apisdkgen.NewAPI("dto", apisdkgen.OutputConfig{
 		TypeScriptDir: "../../../sdk",
 		MarkdownDir:   "../../../sdk",
 	}, dto.SDKAPI())
-	return apisdkgen.Generate(&api)
+	if *check {
+		return api.Verify()
+	}
+	return api.Generate()
 }
