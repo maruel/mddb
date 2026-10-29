@@ -61,8 +61,9 @@ dev:
 	@uv run --locked python scripts/run-dev.py
 
 test: $(FRONTEND_STAMP)
-	@go test -cover ./...
-	@$(FRONTEND_TEST) $(FRONTEND_TEST_FILES)
+	@./scripts/run-concurrently.sh go,frontend \
+		'go test -cover ./...' \
+		'$(FRONTEND_TEST) $(FRONTEND_TEST_FILES)'
 
 # Slow and opt-in: needs GEMINI_API_KEY and reachable WebRTC UDP. Runs one live
 # Gemini voice turn through the embedded gateway, executes the workspace MCP
