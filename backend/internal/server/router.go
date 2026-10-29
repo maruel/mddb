@@ -65,7 +65,7 @@ type OAuthConfig struct {
 	TestOAuth          bool // When true, OAuth login bypasses real providers and uses fake accounts.
 }
 
-// Router serves HTTP requests and owns the rate-limiter cleanup workers.
+// Router serves HTTP requests and owns rate-limiter cleanup workers.
 // Construct it with NewRouter and close it when the HTTP server shuts down.
 type Router struct {
 	handler  http.Handler
@@ -338,6 +338,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 			WebhookSecret: cfg.GitHubApp.WebhookSecret,
 			SyncService:   svc.SyncService,
 			WsSvc:         svc.Workspace,
+			Services:      svc,
 		}
 		mux.HandleFunc("POST /api/v1/webhooks/github", wh.HandleWebhook)
 	}
@@ -394,9 +395,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.handler.ServeHTTP(w, req)
 }
 
-// Close stops and waits for the owned rate-limiter cleanup workers. Call it once.
-// It does not stop HTTP serving or wait for request handlers. In-flight requests
-// can finish safely: rate-limit checks remain usable after cleanup stops.
+// Close stops the rate-limiter cleanup workers. Call it once after HTTP serving stops.
 func (r *Router) Close() {
 	r.limiters.Close()
 }

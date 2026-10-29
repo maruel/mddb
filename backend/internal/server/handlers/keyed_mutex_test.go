@@ -17,12 +17,13 @@ func TestKeyedMutex(t *testing.T) {
 	releaseFirst := sync.OnceFunc(locks.lock(firstID))
 	t.Cleanup(releaseFirst)
 
+	var wg sync.WaitGroup
 	otherAcquired := make(chan struct{})
-	go func() {
+	wg.Go(func() {
 		release := locks.lock(otherID)
-		close(otherAcquired)
 		release()
-	}()
+		close(otherAcquired)
+	})
 	select {
 	case <-otherAcquired:
 	case <-time.After(time.Second):
@@ -30,11 +31,11 @@ func TestKeyedMutex(t *testing.T) {
 	}
 
 	sameAcquired := make(chan struct{})
-	go func() {
+	wg.Go(func() {
 		release := locks.lock(firstID)
-		close(sameAcquired)
 		release()
-	}()
+		close(sameAcquired)
+	})
 	select {
 	case <-sameAcquired:
 		t.Fatal("the same key acquired the lock twice")
@@ -44,6 +45,7 @@ func TestKeyedMutex(t *testing.T) {
 	releaseFirst()
 	select {
 	case <-sameAcquired:
+		wg.Wait()
 	case <-time.After(time.Second):
 		t.Fatal("queued caller did not acquire the released lock")
 	}

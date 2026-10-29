@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -251,9 +252,11 @@ func (c *smokeVoiceClient) send(t *testing.T, msg any) {
 		t.Fatalf("marshal voice message: %v", err)
 	}
 	done := make(chan error, 1)
-	go func() { done <- c.dc.SendText(string(data)) }()
+	var wg sync.WaitGroup
+	wg.Go(func() { done <- c.dc.SendText(string(data)) })
 	select {
 	case err := <-done:
+		wg.Wait()
 		if err != nil {
 			t.Fatalf("send voice message: %v", err)
 		}

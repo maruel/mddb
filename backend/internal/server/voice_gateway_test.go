@@ -167,10 +167,11 @@ func TestVoiceGatewayCloseDuringReplacement(t *testing.T) {
 		err error
 	}
 	result := make(chan offerResult, 1)
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		_, id, err := g.HandleOffer(ctx, "m=audio 9")
 		result <- offerResult{id: id, err: err}
-	}()
+	})
 	select {
 	case <-bridge.started:
 	case <-time.After(3 * time.Second):
@@ -183,6 +184,7 @@ func TestVoiceGatewayCloseDuringReplacement(t *testing.T) {
 	close(bridge.proceed)
 	select {
 	case got := <-result:
+		wg.Wait()
 		if got.err != nil || got.id != "session-2" {
 			t.Fatalf("replacement result = %q, %v", got.id, got.err)
 		}
@@ -392,10 +394,11 @@ func TestVoiceGatewayTextSessions(t *testing.T) {
 	}
 	first := ticket()
 	done := make(chan struct{})
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		g.serveBrowserText(httptest.NewRecorder(), browser(first, "https://mddb.example.com"))
 		close(done)
-	}()
+	})
 	select {
 	case id := <-b.started:
 		if id != owner.ID {
@@ -456,6 +459,7 @@ func TestVoiceGatewayTextSessions(t *testing.T) {
 	g.Close(id)
 	select {
 	case <-done:
+		wg.Wait()
 	case <-time.After(5 * time.Second):
 		t.Fatal("text session did not close")
 	}

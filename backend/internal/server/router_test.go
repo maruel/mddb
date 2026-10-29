@@ -3,12 +3,14 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -42,5 +44,8 @@ func TestRouter(t *testing.T) {
 			}
 			// The bubble cannot complete if any owned cleanup worker remains alive.
 		})
+		if !env.services.StartBackground(t.Context(), time.Second, func(context.Context) {}) {
+			t.Fatal("closing one router stopped shared services")
+		}
 	})
 }

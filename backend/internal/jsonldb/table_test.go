@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -595,7 +596,8 @@ not valid json
 					continue
 				}
 				done := make(chan error, 1)
-				go func() {
+				var wg sync.WaitGroup
+				wg.Go(func() {
 					if _, err := table.Modify(ksid.ID(2), func(row *testRow) error {
 						row.Name = "Updated"
 						return nil
@@ -604,9 +606,10 @@ not valid json
 						return
 					}
 					done <- table.Append(&testRow{ID: 3, Name: "Third"})
-				}()
+				})
 				select {
 				case err := <-done:
+					wg.Wait()
 					if err != nil {
 						t.Fatal(err)
 					}

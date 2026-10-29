@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
@@ -54,6 +55,72 @@ type Services struct {
 
 	userCreationLocks     keyedMutex
 	rootPageCreationLocks keyedMutex
+
+	background sync.WaitGroup
+
+	backgroundMu     sync.Mutex
+	backgroundCancel context.CancelFunc
+	backgroundCtx    context.Context
+	backgroundDone   chan struct{}
+	// The count closes backgroundDone without starting another goroutine to wait.
+	backgroundCount  int
+	backgroundClosed bool
+}
+
+// StartBackground starts work owned by the services. It returns false after shutdown.
+func (s *Services) StartBackground(ctx context.Context, timeout time.Duration, fn func(context.Context)) bool {
+	s.backgroundMu.Lock()
+	defer s.backgroundMu.Unlock()
+	if s.backgroundClosed {
+		return false
+	}
+	if s.backgroundCtx == nil {
+		s.backgroundCtx, s.backgroundCancel = context.WithCancel(context.Background())
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	stop := context.AfterFunc(s.backgroundCtx, cancel) //nolint:contextcheck // Shutdown also cancels the task's request-derived context.
+	s.backgroundCount++
+	s.background.Go(func() {
+		defer func() {
+			stop()
+			cancel()
+			s.backgroundMu.Lock()
+			s.backgroundCount--
+			if s.backgroundClosed && s.backgroundCount == 0 {
+				close(s.backgroundDone)
+			}
+			s.backgroundMu.Unlock()
+		}()
+		fn(ctx)
+	})
+	return true
+}
+
+// StopBackground cancels owned work and waits until it completes or ctx expires.
+// No new work is accepted after this call starts.
+func (s *Services) StopBackground(ctx context.Context) error {
+	s.backgroundMu.Lock()
+	if !s.backgroundClosed {
+		s.backgroundClosed = true
+		if s.backgroundCancel != nil {
+			s.backgroundCancel()
+		}
+		if s.backgroundCount != 0 {
+			s.backgroundDone = make(chan struct{})
+		}
+	}
+	done := s.backgroundDone
+	s.backgroundMu.Unlock()
+	if done == nil {
+		return nil
+	}
+	select {
+	case <-done:
+		s.background.Wait()
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // PublishEvent publishes a workspace SSE event if the broker is configured.
@@ -124,7 +191,7 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 
 	// Web Push (async, fire-and-forget).
 	if channels.Web && vapid != nil && svc.PushSubscription != nil {
-		go func() {
+		if !svc.StartBackground(context.WithoutCancel(ctx), 30*time.Second, func(ctx context.Context) {
 			payload, _ := json.Marshal(map[string]string{
 				"id":    n.ID.String(),
 				"title": n.Title,
@@ -132,7 +199,7 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 				"type":  string(n.Type),
 			})
 			for sub := range svc.PushSubscription.ListByUser(userID) {
-				resp, err := webpush.SendNotification(payload, &webpush.Subscription{
+				resp, err := webpush.SendNotificationWithContext(ctx, payload, &webpush.Subscription{
 					Endpoint: sub.Endpoint,
 					Keys:     webpush.Keys{P256dh: sub.P256dh, Auth: sub.Auth},
 				}, &webpush.Options{
@@ -152,7 +219,9 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 					}
 				}
 			}
-		}()
+		}) {
+			slog.WarnContext(ctx, "Web push skipped during shutdown", "user_id", userID)
+		}
 	}
 }
 

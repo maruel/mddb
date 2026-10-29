@@ -66,10 +66,11 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 	w := newFlushRecorder()
 
 	done := make(chan struct{})
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		h.ServeHTTP(w, r)
 		close(done)
-	}()
+	})
 
 	// Wait for subscriber to be registered.
 	deadline := time.Now().Add(2 * time.Second)
@@ -95,7 +96,12 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 	}
 
 	cancel()
-	<-done
+	select {
+	case <-done:
+		wg.Wait()
+	case <-time.After(2 * time.Second):
+		t.Fatal("SSE handler did not stop")
+	}
 
 	body := w.Body()
 	if !strings.Contains(body, "event: server") {
@@ -153,16 +159,22 @@ func TestSSEHandler_BoundsWrites(t *testing.T) {
 	w := &deadlineRecorder{flushRecorder: newFlushRecorder()}
 
 	done := make(chan struct{})
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		h.ServeHTTP(w, r)
 		close(done)
-	}()
+	})
 	deadline := time.Now().Add(2 * time.Second)
 	for !strings.Contains(w.Body(), "event: server") && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	cancel()
-	<-done
+	select {
+	case <-done:
+		wg.Wait()
+	case <-time.After(2 * time.Second):
+		t.Fatal("SSE handler did not stop")
+	}
 
 	got := w.Deadlines()
 	if len(got) < 2 {

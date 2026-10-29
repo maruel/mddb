@@ -382,8 +382,7 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 // sendVerificationEmailAsync sends a verification email in the background.
 // Errors are logged but don't affect the caller.
 func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID ksid.ID, toEmail, name string, locale email.Locale) {
-	ctx = context.WithoutCancel(ctx)
-	go func() {
+	if !h.svc.StartBackground(context.WithoutCancel(ctx), 30*time.Second, func(ctx context.Context) {
 		// Create verification token
 		verification, err := h.svc.EmailVerif.Create(userID, toEmail)
 		if err != nil {
@@ -405,7 +404,9 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID ksi
 		}
 
 		slog.InfoContext(ctx, "Verification email sent", "user_id", userID, "email", toEmail, "locale", locale)
-	}()
+	}) {
+		slog.WarnContext(ctx, "Verification email not sent: server is shutting down", "user_id", userID)
+	}
 }
 
 // SetPassword sets or changes the user's password.

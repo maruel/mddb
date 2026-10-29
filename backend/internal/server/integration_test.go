@@ -4,6 +4,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -115,6 +117,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Email:         nil, // disabled
 		RootRepo:      rootRepo,
 	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := svc.StopBackground(ctx); err != nil {
+			t.Errorf("stop background work: %v", err)
+		}
+	})
 	serverCfg := &storage.ServerConfig{
 		JWTSecret:  testJWTSecret,
 		Quotas:     storage.DefaultServerQuotas(false),

@@ -100,6 +100,9 @@ func (s *Service) sendMail(ctx context.Context, to []string, subject, body strin
 		return fmt.Errorf("dial: %w", err)
 	}
 
+	stop := context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Now()) })
+	defer stop()
+
 	client, err := smtp.NewClient(conn, s.Config.Host)
 	if err != nil {
 		_ = conn.Close()

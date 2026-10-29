@@ -44,6 +44,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/syncsvc"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 	}
 }
 
-func mainImpl() error {
+func mainImpl() (result error) {
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		_, _ = fmt.Fprintf(w, `Usage: mddb [flags]
@@ -272,8 +273,15 @@ Flags:
 		}
 	}
 
+	workerCtx, cancelWorkers := context.WithCancel(ctx)
+	workers, workerCtx := errgroup.WithContext(workerCtx)
+	defer func() {
+		cancelWorkers()
+		_ = workers.Wait()
+	}()
+
 	// Watch own executable for modifications (for development restarts)
-	if err := watchExecutable(ctx, stop); err != nil {
+	if err := watchExecutable(workerCtx, stop, workers); err != nil {
 		return fmt.Errorf("failed to watch executable: %w", err)
 	}
 
@@ -371,6 +379,14 @@ Flags:
 		Broker:           sse.NewBroker(),
 	}
 
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := svc.StopBackground(shutdownCtx); err != nil {
+			result = errors.Join(result, fmt.Errorf("stop background work: %w", err))
+		}
+	}()
+
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	routerCfg := &server.Config{
 		ServerConfig:   serverCfg,
@@ -408,14 +424,18 @@ Flags:
 	}
 
 	// Start notification cleanup goroutine (runs once on startup, then daily).
-	go runNotificationCleanup(ctx, notificationService, rootRepo, &serverCfg.Quotas)
+	workers.Go(func() error {
+		runNotificationCleanup(workerCtx, notificationService, rootRepo, &serverCfg.Quotas)
+		return nil
+	})
 
 	// Run server in goroutine
 	serverErr := make(chan error, 1)
-	go func() {
+	workers.Go(func() error {
 		slog.InfoContext(ctx, "Starting server", "addr", addr, "baseURL", cfg.BaseURL, "version", buildVersion)
 		serverErr <- httpServer.ListenAndServe()
-	}()
+		return nil
+	})
 
 	// Wait for either context cancellation or server error
 	select {
@@ -658,7 +678,7 @@ func runNotificationCleanup(ctx context.Context, notifSvc *identity.Notification
 // watchExecutable watches the current executable for modifications and calls
 // stop to trigger graceful shutdown when detected. This enables seamless
 // restarts during development.
-func watchExecutable(ctx context.Context, stop context.CancelFunc) error {
+func watchExecutable(ctx context.Context, stop context.CancelFunc, workers *errgroup.Group) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -675,28 +695,28 @@ func watchExecutable(ctx context.Context, stop context.CancelFunc) error {
 		_ = w.Close()
 		return err
 	}
-	go func() {
+	workers.Go(func() error {
 		defer func() { _ = w.Close() }()
 		for {
 			select {
 			case <-ctx.Done():
-				return
+				return nil
 			case event, ok := <-w.Events:
 				if !ok {
-					return
+					return nil
 				}
 				if event.Has(fsnotify.Write) || event.Has(fsnotify.Chmod) {
 					slog.InfoContext(ctx, "Executable modified, initiating shutdown")
 					stop()
-					return
+					return nil
 				}
 			case err, ok := <-w.Errors:
 				if !ok {
-					return
+					return nil
 				}
 				slog.WarnContext(ctx, "Error watching executable", "err", err)
 			}
 		}
-	}()
+	})
 	return nil
 }

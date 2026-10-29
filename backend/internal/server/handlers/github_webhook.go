@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/syncsvc"
@@ -23,6 +24,7 @@ type GitHubWebhookHandler struct {
 	WebhookSecret string
 	SyncService   *syncsvc.Service
 	WsSvc         *identity.WorkspaceService
+	Services      *Services
 }
 
 // HandleWebhook processes GitHub webhook events.
@@ -87,12 +89,14 @@ func (h *GitHubWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 		if ws.GitRemote.RepoOwner == owner && ws.GitRemote.RepoName == name {
 			matched++
 			wsID := ws.ID
-			ctx := context.WithoutCancel(r.Context())
-			go func() {
+			if !h.Services.StartBackground(context.WithoutCancel(r.Context()), 5*time.Minute, func(ctx context.Context) {
 				if err := h.SyncService.Pull(ctx, wsID); err != nil {
 					slog.Error("Webhook pull failed", "wsID", wsID, "repo", repoFullName, "err", err)
 				}
-			}()
+			}) {
+				http.Error(w, "Server is shutting down", http.StatusServiceUnavailable)
+				return
+			}
 		}
 	}
 

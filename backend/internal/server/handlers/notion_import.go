@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -24,6 +25,13 @@ type importState struct {
 	stats     *notion.ExtractStats
 	cancel    context.CancelFunc
 	startTime time.Time
+}
+
+type importJob struct {
+	wsID   ksid.ID
+	token  string
+	state  *importState
+	cancel context.CancelFunc
 }
 
 // NotionImportHandler handles Notion import requests.
@@ -61,24 +69,45 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 		workspaceName = "Notion Import"
 	}
 
+	// Reserve a worker before publishing a workspace. The worker waits for setup
+	// to finish, so shutdown cannot reject the import after membership is visible.
+	jobs := make(chan importJob, 1)
+	importCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	if !h.Svc.StartBackground(importCtx, 24*time.Hour, func(ctx context.Context) {
+		job, ok := <-jobs
+		if ok {
+			defer job.cancel()
+			h.runImport(ctx, job.wsID, job.token, job.state)
+		}
+	}) {
+		cancel()
+		return nil, dto.InternalWithError("Failed to start import", context.Canceled)
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			cancel()
+		}
+		close(jobs)
+	}()
+
 	// Create workspace
 	ws, err := h.Svc.Workspace.Create(ctx, orgID, workspaceName)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create workspace", err)
 	}
 
-	// Create workspace membership (user becomes admin of new workspace)
+	// Initialize storage before publishing membership.
+	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
+		err = errors.Join(err, h.Svc.Workspace.Delete(ws.ID), h.Svc.FileStore.DiscardWorkspace(ws.ID))
+		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
+	}
 	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+		err = errors.Join(err, h.Svc.Workspace.Delete(ws.ID), h.Svc.FileStore.DiscardWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
-	// Initialize workspace storage
-	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
-		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
-	}
-
 	// Create import state with a context that outlives the HTTP request but preserves values.
-	importCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	state := &importState{
 		status:    "running",
 		cancel:    cancel,
@@ -89,8 +118,8 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 	h.states[ws.ID] = state
 	h.mu.Unlock()
 
-	// Start async import goroutine
-	go h.runImport(importCtx, ws.ID, req.NotionToken, state)
+	jobs <- importJob{wsID: ws.ID, token: req.NotionToken, state: state, cancel: cancel}
+	handedOff = true
 
 	return &dto.NotionImportResponse{
 		WorkspaceID:   ws.ID,
@@ -214,10 +243,14 @@ func (h *NotionImportHandler) runImport(ctx context.Context, wsID ksid.ID, notio
 	}
 
 	if err != nil {
-		if ctx.Err() != nil {
+		switch ctx.Err() {
+		case context.DeadlineExceeded:
+			state.status = "failed"
+			state.message = "Import exceeded the 24-hour time limit"
+		case context.Canceled:
 			state.status = "cancelled"
 			state.message = "Import cancelled"
-		} else {
+		default:
 			state.status = "failed"
 			state.message = err.Error()
 		}

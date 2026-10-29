@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -164,6 +165,31 @@ func TestHandleWebhook_PushWithSignature(t *testing.T) {
 	}
 }
 
+func TestHandleWebhook_ShuttingDown(t *testing.T) {
+	h := setupWebhookHandler(t, t.TempDir(), "")
+	ws, err := h.WsSvc.Create(t.Context(), ksid.NewID(), "workspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.WsSvc.Modify(ws.ID, func(ws *identity.Workspace) error {
+		ws.GitRemote.RepoOwner = "org"
+		ws.GitRemote.RepoName = "repo"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Services.StopBackground(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github", strings.NewReader(`{"repository":{"full_name":"org/repo"}}`))
+	req.Header.Set("X-GitHub-Event", "push")
+	w := httptest.NewRecorder()
+	h.HandleWebhook(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("got status %d, want 503", w.Code)
+	}
+}
+
 // setupWebhookHandler creates a GitHubWebhookHandler with a real WorkspaceService for testing.
 func setupWebhookHandler(t *testing.T, tmpDir, secret string) *GitHubWebhookHandler {
 	t.Helper()
@@ -174,6 +200,7 @@ func setupWebhookHandler(t *testing.T, tmpDir, secret string) *GitHubWebhookHand
 	return &GitHubWebhookHandler{
 		WebhookSecret: secret,
 		WsSvc:         wsSvc,
+		Services:      &Services{},
 		// SyncService is nil — matching workspaces won't actually pull,
 		// but we can still verify matching/routing logic.
 	}
