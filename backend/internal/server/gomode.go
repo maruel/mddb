@@ -105,13 +105,15 @@ func (m *workspaceRegistry) readSpecs() []mcp.ToolSpec {
 // never see them so an agent cannot advertise a tool it cannot call.
 func (m *workspaceRegistry) writeSpecs() []mcp.ToolSpec {
 	update := mcp.NewToolSpec("node_update", "Update page", "Replace a page's title and markdown content. Read the page first: the whole body is overwritten.", m.updateNode)
-	create := mcp.NewToolSpec("node_create", "Create page", "Create a page under a parent node, or at the workspace root when parentId is omitted.", m.createNode)
+	page := mcp.NewToolSpec("page_create", "Create text page", "Create a text page with a Markdown body under a parent node, or at the workspace root when parentId is omitted.", m.createPage)
+	table := mcp.NewToolSpec("table_create", "Create table", "Create a table with a column schema under a parent node, or at the workspace root when parentId is omitted.", m.createTable)
 	appendSpec := mcp.NewToolSpec("node_append", "Append to page", "Append markdown to the end of a page without replacing its body.", m.appendNode)
 	annotations := &mcp.ToolAnnotations{DestructiveHint: true}
 	update.Annotations = annotations
-	create.Annotations = annotations
+	page.Annotations = annotations
+	table.Annotations = annotations
 	appendSpec.Annotations = annotations
-	return []mcp.ToolSpec{update, create, appendSpec}
+	return []mcp.ToolSpec{update, page, table, appendSpec}
 }
 
 func (m *workspaceRegistry) allSpecs() []mcp.ToolSpec {
@@ -251,7 +253,7 @@ func (m *workspaceRegistry) updateNode(ctx context.Context, req *mcp.ToolRequest
 	return mcp.TypedToolResult(writeNodeOutput{Node: node})
 }
 
-func (m *workspaceRegistry) createNode(ctx context.Context, req *mcp.ToolRequest[createNodeInput]) mcp.ToolResult[writeNodeOutput] {
+func (m *workspaceRegistry) createPage(ctx context.Context, req *mcp.ToolRequest[createPageInput]) mcp.ToolResult[writeNodeOutput] {
 	in := req.Arguments
 	var parentID ksid.ID
 	if in.ParentID != "" {
@@ -262,6 +264,27 @@ func (m *workspaceRegistry) createNode(ctx context.Context, req *mcp.ToolRequest
 		parentID = id
 	}
 	resp, err := m.nodeH.CreatePage(ctx, m.wsID, m.user, &dto.CreatePageRequest{ParentID: parentID, Title: in.Title, Content: in.Content})
+	if err != nil {
+		return mcp.ToolError[writeNodeOutput](err.Error())
+	}
+	node, err := m.loadNode(ctx, resp.ID)
+	if err != nil {
+		return mcp.ToolError[writeNodeOutput](err.Error())
+	}
+	return mcp.TypedToolResult(writeNodeOutput{Node: node})
+}
+
+func (m *workspaceRegistry) createTable(ctx context.Context, req *mcp.ToolRequest[createTableInput]) mcp.ToolResult[writeNodeOutput] {
+	in := req.Arguments
+	var parentID ksid.ID
+	if in.ParentID != "" {
+		id, err := ksid.Parse(in.ParentID)
+		if err != nil || id.IsZero() {
+			return mcp.ToolError[writeNodeOutput]("invalid parentId")
+		}
+		parentID = id
+	}
+	resp, err := m.nodeH.CreateTable(ctx, m.wsID, m.user, &dto.CreateTableRequest{ParentID: parentID, Title: in.Title, Properties: in.Properties})
 	if err != nil {
 		return mcp.ToolError[writeNodeOutput](err.Error())
 	}
@@ -442,7 +465,8 @@ const mddbVoiceSystemInstruction = "You are the voice assistant for the authenti
 	"active mddb workspace.\n\n" +
 	"Use nodes_list to discover pages and tables. " +
 	"Use node_read before answering questions about a page's contents, and answer only from its result. " +
-	"Editors can create, update, and append pages. Read a page before updating it because node_update replaces " +
+	"Editors can use page_create for text pages with Markdown content and table_create for tables with a column schema. " +
+	"Editors can update and append pages. Read a page before updating it because node_update replaces " +
 	"both its title and its complete Markdown body. Every edit is committed to the workspace git history. " +
 	"Refer to pages and tables by title."
 
@@ -490,10 +514,16 @@ type updateNodeInput struct {
 	Content string `json:"content" jsonschema:"description=Full replacement markdown body"`
 }
 
-type createNodeInput struct {
+type createPageInput struct {
 	ParentID string `json:"parentId,omitempty" jsonschema:"description=Parent node ID; omit for workspace root"`
 	Title    string `json:"title" jsonschema:"description=Page title"`
 	Content  string `json:"content,omitempty" jsonschema:"description=Initial markdown body"`
+}
+
+type createTableInput struct {
+	ParentID   string         `json:"parentId,omitempty" jsonschema:"description=Parent node ID; omit for workspace root"`
+	Title      string         `json:"title" jsonschema:"description=Table title"`
+	Properties []dto.Property `json:"properties" jsonschema:"description=Table column schema"`
 }
 
 type appendNodeInput struct {

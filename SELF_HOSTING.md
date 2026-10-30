@@ -204,7 +204,8 @@ configuration. mddb does not store voice audio.
 
 Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, scoped to the
 user's active workspace. Every member can list and read nodes and node
-resources; editors additionally get `node_create`, `node_update`, and
+resources; editors additionally get `page_create` for Markdown text pages,
+`table_create` for tables with column schemas, `node_update`, and
 `node_append`, and each edit is committed to the workspace git history.
 
 To validate the live Gemini path (requires a voice API key and a reachable

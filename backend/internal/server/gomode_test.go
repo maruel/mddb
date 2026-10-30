@@ -431,11 +431,12 @@ func TestMCPToolSchemas(t *testing.T) {
 	// Every advertised tool carries no header-mirrored parameters; the empty
 	// expectations catch an accidental x-mcp-header or a renamed tool.
 	expectedHeaders := map[string]map[string]string{
-		"nodes_list":  {},
-		"node_read":   {},
-		"node_update": {},
-		"node_create": {},
-		"node_append": {},
+		"nodes_list":   {},
+		"node_read":    {},
+		"node_update":  {},
+		"page_create":  {},
+		"table_create": {},
+		"node_append":  {},
 	}
 	specs := registry.allSpecs()
 	if len(specs) != len(expectedHeaders) {
@@ -481,9 +482,9 @@ func TestGoModeMCPResourceSubscription(t *testing.T) {
 	env.services.Broker = sse.NewBroker()
 	token, wsID := setupGoModeWorkspace(t, env, "gomode-subscribe@example.com")
 
-	created := callMCPTool(t, env, token, "node_create", map[string]any{"title": "Watched", "content": "Before"})
+	created := callMCPTool(t, env, token, "page_create", map[string]any{"title": "Watched", "content": "Before"})
 	if created.IsError {
-		t.Fatalf("node_create = %#v", created)
+		t.Fatalf("page_create = %#v", created)
 	}
 	id := created.StructuredContent.Node.ID
 	uri := fmt.Sprintf("mddb://workspaces/%s/nodes/%s", wsID, id)
@@ -594,7 +595,7 @@ func setupGoModeWorkspace(t *testing.T, env *testEnv, email string) (string, ksi
 }
 
 // TestGoModeMCPWriteTools verifies that an editor can create, append to, and
-// replace a page through the MCP tools, and that the edits persist for reads.
+// replace a page and create a table through MCP, and that the edits persist for reads.
 func TestGoModeMCPWriteTools(t *testing.T) {
 	t.Parallel()
 	env := setupTestEnv(t)
@@ -609,17 +610,45 @@ func TestGoModeMCPWriteTools(t *testing.T) {
 	for _, tool := range tools.Tools {
 		names[tool.Name] = true
 	}
-	for _, want := range []string{"node_update", "node_create", "node_append"} {
+	for _, want := range []string{"node_update", "page_create", "table_create", "node_append"} {
 		if !names[want] {
 			t.Fatalf("tools/list missing %q: %v", want, names)
 		}
 	}
 
-	created := callMCPTool(t, env, token, "node_create", map[string]any{"title": "Agent page", "content": "First"})
-	if created.IsError || created.StructuredContent.Node.Content != "First" {
-		t.Fatalf("node_create = %#v, want created page", created)
+	created := callMCPTool(t, env, token, "page_create", map[string]any{"title": "Agent page", "content": "First"})
+	if created.IsError || created.StructuredContent.Node.Content != "First" || created.StructuredContent.Node.Type != "document" {
+		t.Fatalf("page_create = %#v, want created page", created)
 	}
 	id := created.StructuredContent.Node.ID
+
+	table := callMCPTool(t, env, token, "table_create", map[string]any{
+		"parentId": id, "title": "Tasks", "properties": []map[string]any{
+			{"name": "Task", "type": "text"},
+			{"name": "Done", "type": "checkbox"},
+		},
+	})
+	if node := table.StructuredContent.Node; table.IsError || node.Type != "table" || node.Title != "Tasks" || node.ParentID != id {
+		t.Fatalf("table_create = %#v, want child table", table)
+	}
+	tableRead := callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": table.StructuredContent.Node.ID})
+	if node := tableRead.StructuredContent.Node; tableRead.IsError || len(node.Properties) != 2 || node.Properties[0] != (nodeProperty{Name: "Task", Type: "text"}) || node.Properties[1] != (nodeProperty{Name: "Done", Type: "checkbox"}) {
+		t.Fatalf("node_read table = %#v, want persisted column schema", tableRead)
+	}
+	rootTable := callMCPTool(t, env, token, "table_create", map[string]any{"title": "Root table", "properties": []any{}})
+	if node := rootTable.StructuredContent.Node; rootTable.IsError || node.Type != "table" || node.ParentID != "0" {
+		t.Fatalf("table_create = %#v, want root table", rootTable)
+	}
+	for _, name := range []string{"page_create", "table_create"} {
+		args := map[string]any{"parentId": "invalid", "title": "Invalid"}
+		if name == "table_create" {
+			args["properties"] = []any{}
+		}
+		invalid := callMCPTool(t, env, token, name, args)
+		if !invalid.IsError {
+			t.Fatalf("%s with invalid parent = %#v, want a tool error", name, invalid)
+		}
+	}
 
 	appended := callMCPTool(t, env, token, "node_append", map[string]any{"nodeId": id, "content": "Second"})
 	if got := appended.StructuredContent.Node.Content; got != "First\n\nSecond" {
@@ -656,13 +685,15 @@ func TestGoModeMCPWriteToolsRequireEditor(t *testing.T) {
 	}
 	for _, tool := range tools {
 		switch tool.Name {
-		case "node_update", "node_create", "node_append":
+		case "node_update", "page_create", "table_create", "node_append":
 			t.Fatalf("viewer advertised write tool %q", tool.Name)
 		}
 	}
 	args := json.RawMessage(`{"nodeId":"` + ksid.ID(0).String() + `","title":"x","content":"y"}`)
-	if _, err := viewer.CallTool(t.Context(), &mcp.ToolsCallParams{Name: "node_update", Arguments: args}); err == nil {
-		t.Fatal("viewer CallTool(node_update) succeeded, want an error")
+	for _, name := range []string{"node_update", "page_create", "table_create", "node_append"} {
+		if _, err := viewer.CallTool(t.Context(), &mcp.ToolsCallParams{Name: name, Arguments: args}); err == nil {
+			t.Fatalf("viewer CallTool(%s) succeeded, want an error", name)
+		}
 	}
 
 	editor := &workspaceRegistry{svc: env.services, wsID: wsID, role: identity.WSRoleEditor}
