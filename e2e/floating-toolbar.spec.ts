@@ -1,6 +1,14 @@
 // Browser coverage for toolbar selection and undo across asynchronous editor metadata updates.
 
+import type { Route } from "@playwright/test";
 import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+
+// Reports whether Playwright already continued the route on our behalf.
+// Unregistering a route continues every handler still in flight, so a delayed
+// handler that resumes afterwards sees its route handled.
+function continuedByUnroute(error: unknown): boolean {
+  return error instanceof Error && /^route\.\w+: Route is already handled!$/.test(error.message);
+}
 
 test.describe("Floating Toolbar Visibility", () => {
   test("toolbar lifecycle: hidden -> visible on selection -> hidden on blur", async ({ page, request }) => {
@@ -83,17 +91,37 @@ test.describe("Floating Toolbar Visibility", () => {
         const released = new Promise<void>((resolve) => {
           releaseMetadata = resolve;
         });
-        await page.route("**/nodes/titles?*", async (route) => {
-          const ids = new URL(route.request().url()).searchParams.get("ids")?.split(",") ?? [];
-          if (!ids.includes(target.id)) {
-            await route.continue();
-            return;
+        // More than one titles request can be in flight: the editor re-requests
+        // titles while an earlier response is still held. Track every handler and
+        // await its response before unregistering the route, because Playwright
+        // continues a route whose handler has not settled yet.
+        let closing = false;
+        const inFlight = new Set<Promise<void>>();
+        const handleTitles = async (route: Route) => {
+          try {
+            const ids = new URL(route.request().url()).searchParams.get("ids")?.split(",") ?? [];
+            if (!ids.includes(target.id)) {
+              await route.continue();
+              return;
+            }
+            const response = await route.fetch();
+            metadataRequested();
+            await released;
+            await route.fulfill({ response });
+          } catch (error) {
+            // Only the teardown race is benign: the continued request already
+            // delivered its response, and every other error must still fail the test.
+            if (!closing || !continuedByUnroute(error)) throw error;
           }
-          const response = await route.fetch();
-          metadataRequested();
-          await released;
-          await route.fulfill({ response });
-        });
+        };
+        const routeTitles = (route: Route) => {
+          const handled = handleTitles(route);
+          inFlight.add(handled);
+          const settled = () => inFlight.delete(handled);
+          void handled.then(settled, settled);
+          return handled;
+        };
+        await page.route("**/nodes/titles?*", routeTitles);
         try {
           await page.getByTestId(`sidebar-node-${node.id}`).click();
           await requested;
@@ -135,7 +163,12 @@ test.describe("Floating Toolbar Visibility", () => {
           }
         } finally {
           releaseMetadata();
-          await page.unroute("**/nodes/titles?*");
+          closing = true;
+          // Drain before unregistering: unroute continues a handler that is still
+          // waiting, which would drop its held response. Handler failures still
+          // surface on their own through the route callback.
+          while (inFlight.size > 0) await Promise.allSettled([...inFlight]);
+          await page.unroute("**/nodes/titles?*", routeTitles);
         }
       });
     }

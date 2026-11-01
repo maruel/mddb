@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark
+.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
@@ -51,6 +51,11 @@ types: $(FRONTEND_STAMP)
 	@go generate ./backend/internal/server
 	@pnpm --silent exec prettier --log-level silent --write sdk/types.gen.ts
 
+# Rebuild backend/frontend/dist so a server compiled afterwards embeds the
+# current frontend sources instead of the committed dist snapshot.
+frontend-build: types
+	@go generate ./backend/frontend
+
 build: types
 	@go generate ./...
 	@go install -trimpath -ldflags="-s -w -buildid=" ./backend/cmd/...
@@ -77,7 +82,9 @@ benchmark:
 	@pnpm exec tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'
 
 # Run the complete browser suite and verify its saved data with normal pairing limits.
-# Focused diagnostics use pnpm exec playwright test e2e/file.spec.ts directly.
+# The embedded frontend is rebuilt before test-e2e-go compiles it, so a stale dist
+# never serves superseded browser code. Focused diagnostics use pnpm exec playwright
+# test e2e/file.spec.ts directly.
 test-e2e: $(FRONTEND_STAMP) test-e2e-go
 	@pnpm exec playwright install --no-shell chromium
 	@uv run --locked python scripts/clean_data_e2e.py
@@ -91,7 +98,7 @@ test-e2e: $(FRONTEND_STAMP) test-e2e-go
 # The e2e build tag also switches on the Go tests that only exist in that build,
 # which assert what a production binary must not do. Running the whole tagged
 # suite keeps every package honest about the tag: make test stays untagged.
-test-e2e-go:
+test-e2e-go: frontend-build
 	@go test -tags e2e ./backend/...
 
 coverage: $(FRONTEND_STAMP)

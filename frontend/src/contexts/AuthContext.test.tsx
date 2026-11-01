@@ -1,11 +1,12 @@
-// Tests in-place cookie identity refresh and the reload fallbacks that own a fresh document.
+// Tests the identity reconciliation policy, in-place cookie identity refresh, and the reload and logout-recovery fallbacks.
 
 import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { expect, vi } from "@tests/expect";
+import { APIError } from "@sdk/api.gen";
 import type { UserResponse } from "@sdk/types.gen";
 import { I18nProvider } from "../i18n";
-import { AuthProvider, useAuth } from "./AuthContext";
+import { AuthProvider, reconcileIdentity, useAuth } from "./AuthContext";
 
 const account = {
   id: "account-a",
@@ -15,8 +16,18 @@ const account = {
   settings: {},
 } as UserResponse;
 const messages: Record<string, unknown>[] = [];
+// Queued /auth/me responses: served to identity probes in the order they arrive.
 let responses: Array<Response | Error> = [];
+// Queued /auth/browser/logout responses.
+let logoutResponses: Array<Response | Error> = [];
 let auth: ReturnType<typeof useAuth> | null = null;
+
+function nextResponse(queue: Array<Response | Error>): Response {
+  const response = queue.shift();
+  if (response instanceof Error) throw response;
+  if (!response) throw new Error("No cookie identity response queued");
+  return response;
+}
 
 function currentAuth(): ReturnType<typeof useAuth> {
   if (auth === null) throw new Error("Auth context did not render");
@@ -41,6 +52,7 @@ function mount() {
 beforeEach(() => {
   messages.length = 0;
   responses = [];
+  logoutResponses = [];
   window.goModeFrontendDocument = Promise.resolve("auth-document");
   window.gomodeAuth = {
     postMessage(message) {
@@ -52,11 +64,9 @@ beforeEach(() => {
   };
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url === "/api/v1/auth/browser/logout") return nextResponse(logoutResponses);
     expect(url).toBe("/api/v1/auth/me");
-    const response = responses.shift();
-    if (response instanceof Error) throw response;
-    if (!response) throw new Error("No cookie identity response queued");
-    return response;
+    return nextResponse(responses);
   });
 });
 
@@ -122,4 +132,52 @@ it("keeps the rendered identity when an identity refresh fails", async () => {
   expect(currentAuth().user()?.id).toBe("account-a");
   expect(currentAuth().identity()).toBe(identity);
   expect(messages).toHaveLength(published);
+});
+
+it("reconciles a probe with the rendered account", () => {
+  const other = { ...account, id: "account-b", session_id: "session-b" };
+  expect(reconcileIdentity(account, { user: { ...account, session_id: "session-b" } })).toEqual({
+    status: "current",
+    user: { ...account, session_id: "session-b" },
+  });
+  expect(reconcileIdentity(account, { user: other })).toEqual({ status: "changed", user: other });
+  expect(reconcileIdentity(null, { user: account })).toEqual({ status: "changed", user: account });
+  expect(reconcileIdentity(account, { error: new APIError(401, "UNAUTHORIZED") })).toEqual({
+    status: "expired",
+    user: null,
+  });
+  expect(reconcileIdentity(account, { error: new APIError(404, "NOT_FOUND") })).toEqual({
+    status: "expired",
+    user: null,
+  });
+  const offline = new Error("network unavailable");
+  expect(reconcileIdentity(account, { error: offline })).toEqual({ status: "unavailable", user: null, error: offline });
+});
+
+it("keeps the recovered account when revoking the browser session fails", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  logoutResponses.push(Response.json({ error: { code: "BAD_REQUEST", message: "revoke failed" } }, { status: 400 }));
+  responses.push(Response.json({ ...account, session_id: "session-b" }));
+
+  await expect(currentAuth().logout()).rejects.toThrow("revoke failed");
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()?.session_id).toBe("session-b");
+  expect(document.querySelector('[role="alert"]')?.textContent).toBe("Sign-out failed. Try again.");
+});
+
+it("settles signed out when revocation fails and no cookie identity resolves", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  logoutResponses.push(Response.json({ error: { code: "BAD_REQUEST", message: "revoke failed" } }, { status: 400 }));
+  responses.push(Response.json({ error: { code: "UNAUTHORIZED", message: "gone" } }, { status: 401 }));
+
+  await expect(currentAuth().logout()).rejects.toThrow("revoke failed");
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()).toBeNull();
+  expect(document.querySelector('[role="alert"]')?.textContent).toBe("Sign-out failed. Try again.");
 });

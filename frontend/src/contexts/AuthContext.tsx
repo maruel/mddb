@@ -1,4 +1,4 @@
-// Owns cookie account state, page-bound frontend preparation, and in-place or reloading session transitions.
+// Owns cookie account state, identity reconciliation policy, page-bound frontend preparation, and in-place or reloading session transitions.
 
 import {
   createContext,
@@ -38,6 +38,33 @@ export interface AuthContextValue {
 }
 export const AuthContext = createContext<AuthContextValue>();
 const authEventKey = "mddb_auth_changed";
+
+// A probe of the cookie credential, either resolved to an account or failed.
+export type IdentityProbe = { user: UserResponse } | { error: unknown };
+
+// What a cookie identity probe means for the account the page is rendering.
+export type IdentityReconciliation =
+  | { status: "current"; user: UserResponse }
+  | { status: "changed"; user: UserResponse }
+  | { status: "expired"; user: null }
+  | { status: "unavailable"; user: null; error: unknown };
+
+// Reports whether the server answered for good that the credential has no usable account.
+function rejectedIdentity(error: unknown): boolean {
+  return error instanceof APIError && (error.status === 401 || error.status === 404);
+}
+
+// Decides how a probed cookie identity replaces the rendered one: the same account
+// refreshes in place, another account or a rejected identity needs a fresh document,
+// and any other failure leaves the rendered identity untouched.
+export function reconcileIdentity(shown: UserResponse | null, probe: IdentityProbe): IdentityReconciliation {
+  if ("error" in probe) {
+    return rejectedIdentity(probe.error)
+      ? { status: "expired", user: null }
+      : { status: "unavailable", user: null, error: probe.error };
+  }
+  return { status: shown !== null && probe.user.id === shown.id ? "current" : "changed", user: probe.user };
+}
 
 export const AuthProvider: ParentComponent = (props) => {
   const nativeFrontend = createFrontendPreparationClient();
@@ -117,6 +144,7 @@ export const AuthProvider: ParentComponent = (props) => {
     if (disposed) return false;
     const shown = user();
     const request = generation;
+    let probe: IdentityProbe;
     try {
       const fresh = await createApiClient(async (url, init) => {
         const response = await fetch(url, { ...init, signal, cache: "no-store", credentials: "same-origin" });
@@ -124,47 +152,48 @@ export const AuthProvider: ParentComponent = (props) => {
         if (response.status === 401) throw new APIError(401, "UNAUTHORIZED");
         return response;
       }).getMe();
-      if (disposed || signal?.aborted || generation !== request) return false;
-      if (!shown || fresh.id !== shown.id) {
-        reloadIdentity();
-        return false;
-      }
-      const id = ++generation;
-      batch(() => {
-        publishNativeAuth({ authChanging: true });
-        setIdentity(id);
-        settle(id, fresh);
-      });
-      return true;
-    } catch (err) {
-      if (disposed || signal?.aborted || generation !== request) return false;
-      if (err instanceof APIError && (err.status === 401 || err.status === 404)) {
-        reloadIdentity();
-        return false;
-      }
-      throw err;
+      probe = { user: fresh };
+    } catch (error) {
+      probe = { error };
     }
+    if (disposed || signal?.aborted || generation !== request) return false;
+    const reconciliation = reconcileIdentity(shown, probe);
+    if (reconciliation.status === "unavailable") throw reconciliation.error;
+    if (reconciliation.status !== "current") {
+      reloadIdentity();
+      return false;
+    }
+    const id = ++generation;
+    batch(() => {
+      publishNativeAuth({ authChanging: true });
+      setIdentity(id);
+      settle(id, reconciliation.user);
+    });
+    return true;
   };
   const logout = async () => {
     if (disposed) return;
     setLogoutFailed(false);
-    const sid = user()?.session_id;
+    const shown = user();
+    const sid = shown?.session_id;
     const id = changing();
     try {
       await createApi(undefined, sid).browserLogout();
     } catch (err) {
       console.error("Failed to revoke browser session", err);
-      // Discover the current cookie without revoking a possible replacement.
-      // If recovery also fails, settle signed out locally so login/retry stays
-      // usable; the surviving provider owns the visible uncertain-revoke error.
-      let recovered: UserResponse | null = null;
+      // Discover the current cookie without revoking a possible replacement. A
+      // rejected or unreachable probe leaves no account to adopt, so settle signed
+      // out locally and keep login and retry usable; the surviving provider owns the
+      // visible uncertain-revoke error.
+      let probe: IdentityProbe;
       try {
-        recovered = await createApi().getMe();
+        probe = { user: await createApi().getMe() };
       } catch (recoveryError) {
         console.error("Failed to recover browser session", recoveryError);
+        probe = { error: recoveryError };
       }
       if (id === generation) {
-        settle(id, recovered);
+        settle(id, reconcileIdentity(shown, probe).user);
         setLogoutFailed(true);
       }
       throw err;
