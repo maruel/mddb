@@ -66,6 +66,17 @@ export function reconcileIdentity(shown: UserResponse | null, probe: IdentityPro
   return { status: shown !== null && probe.user.id === shown.id ? "current" : "changed", user: probe.user };
 }
 
+function reconciledUser(reconciliation: IdentityReconciliation): UserResponse | null {
+  switch (reconciliation.status) {
+    case "current":
+    case "changed":
+      return reconciliation.user;
+    case "expired":
+    case "unavailable":
+      return null;
+  }
+}
+
 export const AuthProvider: ParentComponent = (props) => {
   const nativeFrontend = createFrontendPreparationClient();
   const { setLocale, t } = useI18n();
@@ -163,9 +174,14 @@ export const AuthProvider: ParentComponent = (props) => {
       reloadIdentity();
       return false;
     }
+    const sameSession = shown?.session_id === reconciliation.user.session_id;
+    if (sameSession && ready()) {
+      setUser(reconciliation.user);
+      return true;
+    }
     const id = ++generation;
     batch(() => {
-      publishNativeAuth({ authChanging: true });
+      if (!sameSession && ready()) publishNativeAuth({ authChanging: true });
       setIdentity(id);
       settle(id, reconciliation.user);
     });
@@ -193,7 +209,7 @@ export const AuthProvider: ParentComponent = (props) => {
         probe = { error: recoveryError };
       }
       if (id === generation) {
-        settle(id, reconcileIdentity(shown, probe).user);
+        settle(id, reconciledUser(reconcileIdentity(shown, probe)));
         setLogoutFailed(true);
       }
       throw err;

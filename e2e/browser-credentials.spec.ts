@@ -1,6 +1,6 @@
 // Exercises cookie authentication, cross-site protection, and delayed session/resource ownership in real browsers.
 
-import { test, expect } from "./helpers";
+import { test, expect, installAuthBridge } from "./helpers";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -12,23 +12,10 @@ test("browser credentials stay HttpOnly through registration, reload and logout"
     expect(typeof frontendRequest).toBe("string");
     messages.push(auth);
   });
-  await page.addInitScript(() => {
-    Object.defineProperty(window, "goModeHost", { value: {} });
-    Object.defineProperty(window, "goModeFrontendDocument", { value: Promise.resolve("device-document") });
-    Object.defineProperty(window, "gomodeAuth", {
-      value: {
-        postMessage: (value: string) => {
-          const { frontendDocument, frontendRequest, ...auth } = JSON.parse(value);
-          if (auth.authChanged === true && auth.nativeAccess === true) {
-            const bridge = window as unknown as { gomodeAuth: { onmessage?: (event: { data: string }) => void } };
-            bridge.gomodeAuth.onmessage?.({
-              data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken: "device-token" }),
-            });
-          }
-          void (window as unknown as { recordNativeAuth: (value: string) => Promise<void> }).recordNativeAuth(value);
-        },
-      },
-    });
+  await installAuthBridge(page, {
+    document: "device-document",
+    token: "device-token",
+    recordFunction: "recordNativeAuth",
   });
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Login to mddb" })).toBeVisible();

@@ -1,6 +1,6 @@
 // Pairs isolated display and approver browsers through normal mddb sessions and revocation.
 
-import { test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, gotoWithSession, installAuthBridge } from "./helpers";
 import type { UserResponse } from "../sdk/types.gen";
 
 test("another-device login preserves user permissions and supports individual revocation", async ({
@@ -471,27 +471,10 @@ test("a delayed signed-out probe rediscovers a replacement cookie before settlin
 }) => {
   const { token, email } = await registerUser(request, "device-late401");
   const context = await browser.newContext();
-  await context.addInitScript(() => {
-    Object.defineProperty(window, "goModeHost", { value: {} });
-    Object.defineProperty(window, "goModeFrontendDocument", { value: Promise.resolve("device-document") });
-    Object.defineProperty(window, "gomodeAuth", {
-      value: {
-        postMessage: (message: string) => {
-          const events: unknown[] = JSON.parse(sessionStorage.getItem("test-auth-events") ?? "[]");
-          const { frontendDocument, frontendRequest, ...auth } = JSON.parse(message);
-          if (frontendDocument !== "device-document" || typeof frontendRequest !== "string")
-            throw new Error("Invalid bridge owner");
-          events.push(auth);
-          if (auth.authChanged === true && auth.nativeAccess === true) {
-            const bridge = window as unknown as { gomodeAuth: { onmessage?: (event: { data: string }) => void } };
-            bridge.gomodeAuth.onmessage?.({
-              data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken: "device-token" }),
-            });
-          }
-          sessionStorage.setItem("test-auth-events", JSON.stringify(events));
-        },
-      },
-    });
+  await installAuthBridge(context, {
+    document: "device-document",
+    token: "device-token",
+    eventsKey: "test-auth-events",
   });
   try {
     const page = await context.newPage();

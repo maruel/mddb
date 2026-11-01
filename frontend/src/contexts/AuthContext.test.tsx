@@ -78,7 +78,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("refreshes a same-account session in place", async () => {
+it("refreshes a same-session account without native transitions", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  const previousIdentity = currentAuth().identity();
+  const published = messages.length;
+  responses.push(Response.json({ ...account, name: "Account A renamed" }));
+
+  await expect(currentAuth().refreshIdentity()).resolves.toBe(true);
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()?.name).toBe("Account A renamed");
+  expect(currentAuth().identity()).toBe(previousIdentity);
+  expect(messages).toHaveLength(published);
+});
+
+it("refreshes a replacement session in place", async () => {
   responses.push(Response.json(account));
   mount();
   await waitFor(() => expect(currentAuth().ready()).toBe(true));
@@ -166,6 +181,48 @@ it("keeps the recovered account when revoking the browser session fails", async 
   expect(currentAuth().ready()).toBe(true);
   expect(currentAuth().user()?.session_id).toBe("session-b");
   expect(document.querySelector('[role="alert"]')?.textContent).toBe("Sign-out failed. Try again.");
+});
+
+it("restores an unchanged session after a failed revocation", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const published = messages.length;
+  logoutResponses.push(Response.json({ error: { code: "BAD_REQUEST", message: "revoke failed" } }, { status: 400 }));
+  responses.push(Response.json(account));
+
+  await expect(currentAuth().logout()).rejects.toThrow("revoke failed");
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()?.session_id).toBe("session-a");
+  expect(messages.slice(published)).toEqual([{ authChanging: true }, { authChanged: true, nativeAccess: true }]);
+});
+
+it("adopts a different account after a failed revocation", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  logoutResponses.push(Response.json({ error: { code: "BAD_REQUEST", message: "revoke failed" } }, { status: 400 }));
+  responses.push(Response.json({ ...account, id: "account-b", session_id: "session-b" }));
+
+  await expect(currentAuth().logout()).rejects.toThrow("revoke failed");
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()?.id).toBe("account-b");
+  expect(currentAuth().user()?.session_id).toBe("session-b");
+});
+
+it("settles signed out when revocation recovery is unreachable", async () => {
+  responses.push(Response.json(account));
+  mount();
+  await waitFor(() => expect(currentAuth().ready()).toBe(true));
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  logoutResponses.push(Response.json({ error: { code: "BAD_REQUEST", message: "revoke failed" } }, { status: 400 }));
+  responses.push(new Error("network unavailable"));
+
+  await expect(currentAuth().logout()).rejects.toThrow("revoke failed");
+  expect(currentAuth().ready()).toBe(true);
+  expect(currentAuth().user()).toBeNull();
 });
 
 it("settles signed out when revocation fails and no cookie identity resolves", async () => {

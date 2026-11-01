@@ -1,6 +1,13 @@
-// Shared e2e test helpers for registration, workspace management, and screenshots.
+// Shared e2e helpers for registration, workspace management, screenshots, and host auth bridges.
 
-import { test as base, expect, type Page, type APIRequestContext, type TestInfo } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Page,
+  type APIRequestContext,
+  type TestInfo,
+} from "@playwright/test";
 import type {
   TestType,
   PlaywrightTestArgs,
@@ -9,6 +16,50 @@ import type {
   PlaywrightWorkerOptions,
 } from "@playwright/test";
 import { createApiClient, type APIClient } from "../sdk/api.gen";
+
+// Install the asynchronous native auth bridge used by host journeys.
+export interface AuthBridgeOptions {
+  document: string;
+  token: string;
+  appendRequest?: boolean;
+  eventsKey?: string;
+  recordFunction?: string;
+  voiceConnected?: boolean;
+}
+
+export async function installAuthBridge(target: Page | BrowserContext, options: AuthBridgeOptions) {
+  await target.addInitScript((config) => {
+    const bridge: {
+      onmessage?: ((event: { data: string }) => void) | null;
+      postMessage(message: string): void;
+    } = {
+      postMessage(message: string) {
+        const { frontendDocument, frontendRequest, ...auth } = JSON.parse(message) as Record<string, unknown>;
+        if (frontendDocument !== config.document || typeof frontendRequest !== "string")
+          throw new Error("Invalid bridge owner");
+        if (config.eventsKey) {
+          const events = JSON.parse(sessionStorage.getItem(config.eventsKey) ?? "[]") as unknown[];
+          events.push(auth);
+          sessionStorage.setItem(config.eventsKey, JSON.stringify(events));
+        }
+        if (config.recordFunction) {
+          const record = (window as unknown as Record<string, unknown>)[config.recordFunction];
+          if (typeof record !== "function") throw new Error(`Missing ${config.recordFunction}`);
+          void record(message);
+        }
+        if (auth.authChanged === true && auth.nativeAccess === true) {
+          const frontendToken = config.appendRequest === true ? `${config.token}${frontendRequest}` : config.token;
+          bridge.onmessage?.({ data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken }) });
+        }
+      },
+    };
+    Object.assign(window, {
+      goModeHost: config.voiceConnected === true ? { isVoiceConnected: () => true } : {},
+      goModeFrontendDocument: Promise.resolve(config.document),
+      gomodeAuth: bridge,
+    });
+  }, options);
+}
 
 // Helper to create a typed API client from Playwright's request context
 export function createClient(request: APIRequestContext, token?: string): APIClient {

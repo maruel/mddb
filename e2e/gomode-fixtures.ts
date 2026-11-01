@@ -1,7 +1,7 @@
 // Drives the production asynchronous native frontend-tool envelope in built-browser host journeys.
 
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect } from "./helpers";
+import { expect, installAuthBridge } from "./helpers";
 
 export interface NativeInvocation {
   document: string;
@@ -33,20 +33,16 @@ export async function installNativeTools(page: Page, request: APIRequestContext)
   const manifest = await request.get("/.well-known/gomode.json");
   expect(manifest.ok()).toBe(true);
   expect(await manifest.json()).toMatchObject({ apiVersion: 1, webShell: { bridgeVersion: 3 } });
+  await installAuthBridge(page, {
+    document: "focus-document",
+    token: "identity-",
+    appendRequest: true,
+    voiceConnected: true,
+  });
   await page.addInitScript(() => {
     const fixture: NativeFixture = { readiness: [], results: [] };
-    const bridge: { onmessage?: ((event: { data: string }) => void) | null; postMessage(message: string): void } = {
-      postMessage(message) {
-        const auth = JSON.parse(message) as Record<string, unknown>;
-        if (auth.authChanged === true && auth.nativeAccess === true)
-          bridge.onmessage?.({ data: JSON.stringify({ ...auth, frontendToken: `identity-${auth.frontendRequest}` }) });
-      },
-    };
     Object.assign(window, {
       nativeToolFixture: fixture,
-      goModeHost: { isVoiceConnected: () => true },
-      goModeFrontendDocument: Promise.resolve("focus-document"),
-      gomodeAuth: bridge,
       gomodeFrontendReadiness: { postMessage: (message: string) => fixture.readiness.push(JSON.parse(message)) },
       gomodeFrontendToolResult: { postMessage: (message: string) => fixture.results.push(JSON.parse(message)) },
     });
