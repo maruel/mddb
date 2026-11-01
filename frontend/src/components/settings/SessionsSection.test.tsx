@@ -55,6 +55,7 @@ it("a late revoke never refetches under replacement-session authority", async ()
     logout: async () => {},
     refreshUser: async () => {},
     reloadIdentity: () => {},
+    refreshIdentity: async () => false,
   };
   render(() => (
     <I18nProvider>

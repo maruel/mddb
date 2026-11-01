@@ -142,7 +142,15 @@ test("changed approving account clears the old decision and keeps the replacemen
     const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
     if (!cookie) throw new Error("Missing approver cookie");
     await context.addCookies([{ ...cookie, value: second.token }]);
+    await approver.evaluate(() => {
+      (window as unknown as { identityDocument?: string }).identityDocument = "rendered";
+    });
+    const reloaded = approver.waitForEvent("load");
     await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
+    await reloaded;
+    expect(
+      await approver.evaluate(() => (window as unknown as { identityDocument?: string }).identityDocument),
+    ).toBeUndefined();
     await expect(approver.getByText(second.email)).toBeVisible();
     await expect(approver.getByRole("textbox", { name: "Device code" })).toHaveValue("");
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toHaveCount(0);
@@ -206,8 +214,16 @@ test("approval cannot use a replacement session for the same account", async ({ 
     const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
     if (!cookie) throw new Error("Missing approver cookie");
     await context.addCookies([{ ...cookie, value: replacement.token }]);
+    await approver.evaluate(() => {
+      (window as unknown as { identityDocument?: string }).identityDocument = "rendered";
+    });
     await approver.getByRole("button", { name: "Approve sign-in", exact: true }).click();
     await expect(approver.getByRole("textbox", { name: "Device code" })).toHaveValue("");
+    await expect(approver.getByRole("textbox", { name: "Device code" })).toBeFocused();
+    await expect(approver.getByRole("status")).toHaveText("Your account or request changed. Check the code again.");
+    expect(await approver.evaluate(() => (window as unknown as { identityDocument?: string }).identityDocument)).toBe(
+      "rendered",
+    );
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toHaveCount(0);
     expect((await createClient(context.request).getMe()).session_id).toBe(replacement.user?.session_id);
     // Independently exercise the server pin boundary: bypassing the browser's
@@ -501,7 +517,9 @@ test("a delayed signed-out probe rediscovers a replacement cookie before settlin
       },
       { times: 1 },
     );
+    const reloaded = page.waitForEvent("load");
     await page.getByRole("button", { name: "Approve sign-in", exact: true }).click();
+    await reloaded;
     await expect(page.getByRole("textbox", { name: "Device code" })).toHaveValue("");
     await expect(page.getByText(email, { exact: false })).toBeVisible();
     const events = (await page.evaluate(() =>

@@ -1,4 +1,4 @@
-// Owns cookie account state, page-bound frontend preparation, and session-scoped identity transitions.
+// Owns cookie account state, page-bound frontend preparation, and in-place or reloading session transitions.
 
 import {
   createContext,
@@ -14,6 +14,7 @@ import {
   Show,
 } from "solid-js";
 import { createApi, APIError, type Api } from "../useApi";
+import { createApiClient } from "@sdk/api.gen";
 import type { UserResponse } from "@sdk/types.gen";
 import { createFrontendPreparationClient, type FrontendPreparation } from "@maruel/gomode/web/FrontendVoiceTools";
 import { useI18n, type Locale } from "../i18n";
@@ -30,6 +31,8 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
   /** Invalidate native identity before rediscovering the authoritative cookie. */
   reloadIdentity: () => void;
+  /** Refresh the cookie identity in place, or reload when the account or session is unusable. */
+  refreshIdentity: (signal?: AbortSignal) => Promise<boolean>;
   setUser: (user: UserResponse | null) => void;
   refreshUser: () => Promise<void>;
 }
@@ -109,6 +112,38 @@ export const AuthProvider: ParentComponent = (props) => {
     if (disposed) return;
     changing();
     window.location.reload();
+  };
+  const refreshIdentity = async (signal?: AbortSignal): Promise<boolean> => {
+    if (disposed) return false;
+    const shown = user();
+    const request = generation;
+    try {
+      const fresh = await createApiClient(async (url, init) => {
+        const response = await fetch(url, { ...init, signal, cache: "no-store", credentials: "same-origin" });
+        // Authentication middleware can reject before a JSON API response exists.
+        if (response.status === 401) throw new APIError(401, "UNAUTHORIZED");
+        return response;
+      }).getMe();
+      if (disposed || signal?.aborted || generation !== request) return false;
+      if (!shown || fresh.id !== shown.id) {
+        reloadIdentity();
+        return false;
+      }
+      const id = ++generation;
+      batch(() => {
+        publishNativeAuth({ authChanging: true });
+        setIdentity(id);
+        settle(id, fresh);
+      });
+      return true;
+    } catch (err) {
+      if (disposed || signal?.aborted || generation !== request) return false;
+      if (err instanceof APIError && (err.status === 401 || err.status === 404)) {
+        reloadIdentity();
+        return false;
+      }
+      throw err;
+    }
   };
   const logout = async () => {
     if (disposed) return;
@@ -209,6 +244,7 @@ export const AuthProvider: ParentComponent = (props) => {
     login,
     logout,
     reloadIdentity,
+    refreshIdentity,
     setUser,
     refreshUser,
   };

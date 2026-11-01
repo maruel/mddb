@@ -37,6 +37,7 @@ const authValue: AuthContextValue = {
   setUser: () => undefined,
   refreshUser: async () => undefined,
   reloadIdentity: () => undefined,
+  refreshIdentity: async () => false,
 };
 
 class MockEventSource {
