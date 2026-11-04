@@ -656,6 +656,12 @@ export const dict: Dictionary = {
     reconnecting: "Reconnexion",
   },
   voice: {
+    previousErrors: "Erreurs précédentes",
+    reasoning: "Raisonnement :",
+    browserSpeechLlm: "LLM",
+    cloudVoiceModel: "Modèle",
+    showReasoning: "Afficher le raisonnement de l’assistant",
+
     audioDevices: "Périphériques audio",
     callingTool: "Appel de l’outil :",
     credits: "Crédits",

@@ -104,7 +104,7 @@ type testTextVoiceBridge struct {
 }
 
 func (b *testTextVoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
-	return voicev1.VoiceChoicesResp{DefaultChoiceID: "text", Choices: []voicev1.VoiceChoice{{ID: "text", Label: "Local text", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportText}}}}
+	return voicev1.VoiceChoicesResp{Defaults: []voicev1.VoiceChoiceDefault{{Transport: voicev1.VoiceTransportText, ID: "text"}}, Choices: []voicev1.VoiceChoice{{ID: "text", Label: "Local text", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportText}}}}
 }
 
 func (b *testTextVoiceBridge) HandleChoiceOffer(ctx context.Context, sdp, id string) (answer, sessionID string, err error) {

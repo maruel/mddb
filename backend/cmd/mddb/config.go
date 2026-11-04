@@ -85,7 +85,7 @@ type tomlGitHubApp struct {
 }
 
 type tomlVoiceGateway struct {
-	APIKey               string                `toml:"api_key"`
+	Mode                 voiceGatewayMode      `toml:"mode"`
 	URL                  string                `toml:"url"`
 	InstanceID           string                `toml:"instance_id"`
 	TokenMode            server.VoiceTokenMode `toml:"token_mode"`
@@ -93,21 +93,14 @@ type tomlVoiceGateway struct {
 	Config               voicegateway.Config   `toml:"config"`
 }
 
-func (c *tomlVoiceGateway) embeddedEnabled() bool {
-	if c.URL != "" || c.Config.Server.WebRTCUDPPort < 0 {
-		return false
-	}
-	if c.APIKey != "" {
-		return true
-	}
-	choices, _ := c.Config.VoiceChoices()
-	for i := range choices {
-		if choices[i].Backend == voicegateway.BackendLocalStack {
-			return true
-		}
-	}
-	return false
-}
+// voiceGatewayMode selects the host transport without consulting provider credentials.
+type voiceGatewayMode string
+
+const (
+	voiceGatewayDisabled voiceGatewayMode = "disabled"
+	voiceGatewayEmbedded voiceGatewayMode = "embedded"
+	voiceGatewayExternal voiceGatewayMode = "external"
+)
 
 type tomlDebug struct {
 	LogLevel string `toml:"log_level"`
@@ -124,7 +117,7 @@ func defaultConfig() tomlConfig {
 
 			TrustedProxies: []string{},
 		},
-		VoiceGateway: tomlVoiceGateway{TokenMode: server.VoiceTokenModeScoped, Config: embeddedVoiceDefaults()},
+		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped},
 		Debug:        tomlDebug{LogLevel: "info"},
 	}
 }
@@ -204,9 +197,8 @@ type resolvedConfig struct {
 	TestOAuth      bool // set only in an e2e build, which fakes the OAuth providers
 	OAuth          oauthCredentialsSet
 	GitHubApp      githubAppSettings
-	VoiceAPIKey    string
+	VoiceMode      voiceGatewayMode
 	VoiceConfig    voicegateway.Config
-	VoiceEmbedded  bool
 	ExternalVoice  *server.ExternalVoiceGateway
 }
 
@@ -280,9 +272,8 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		TestOAuth:      testOAuth,
 		OAuth:          oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
 		GitHubApp:      ghApp,
-		VoiceAPIKey:    tc.VoiceGateway.APIKey,
+		VoiceMode:      tc.VoiceGateway.Mode,
 		VoiceConfig:    tc.VoiceGateway.Config,
-		VoiceEmbedded:  tc.VoiceGateway.embeddedEnabled(),
 		ExternalVoice:  voice,
 	}, nil
 }
@@ -404,40 +395,28 @@ func parseLogLevel(level string) (slog.Level, error) {
 	}
 }
 
-// embeddedVoiceDefaults leaves the HTTP listener under mddb's ownership.
-func embeddedVoiceDefaults() voicegateway.Config {
-	c := voicegateway.DefaultConfig()
-	c.Server.HTTP = ""
-	c.Choices = []voicegateway.ChoiceConfig{}
-	c.TrustedIssuers = []voicegateway.TrustedIssuerConfig{}
-	return c
-}
-
 // resolveVoiceGateway validates embedded options and loads external signing material.
 func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.ExternalVoiceGateway, error) {
-	if c.Config.Server.HTTP != "" {
-		return nil, errors.New("voice-gateway.config.server.http is controlled by server.http")
-	}
-	if c.URL == "" {
-		if err := c.TokenMode.Validate(); err != nil {
-			return nil, err
+	switch c.Mode {
+	case voiceGatewayDisabled:
+		return nil, nil //nolint:nilnil // Disabled mode has no external gateway.
+	case voiceGatewayEmbedded:
+		if c.Config.Server.HTTP != "" {
+			return nil, errors.New("voice-gateway.config.server.http is controlled by server.http")
 		}
-		if c.InstanceID != "" || c.SigningPrivateKeyPEM != "" {
-			return nil, errors.New("voice-gateway.url is required for instance_id and signing_private_key_pem")
+		if c.Config.Server.WebRTCUDPPort < 0 {
+			return nil, errors.New("voice-gateway.config.server.webrtc_udp_port must be nonnegative; use mode = disabled to disable voice")
 		}
 		if err := c.Config.ValidateEmbedded(); err != nil {
 			return nil, fmt.Errorf("voice-gateway.config: %w", err)
 		}
-
-		choices, _ := c.Config.VoiceChoices()
-		if c.embeddedEnabled() && c.APIKey == "" {
-			for i := range choices {
-				if choices[i].Backend == voicegateway.BackendGeminiLive {
-					return nil, errors.New("voice-gateway.api_key is required for Gemini choices in an enabled embedded gateway")
-				}
-			}
-		}
-		return nil, nil //nolint:nilnil // Absence selects the embedded or disabled gateway.
+		return nil, nil //nolint:nilnil // Embedded mode has no external gateway.
+	case voiceGatewayExternal:
+	default:
+		return nil, fmt.Errorf("voice-gateway.mode must be disabled, embedded, or external, got %q", c.Mode)
+	}
+	if err := c.TokenMode.Validate(); err != nil {
+		return nil, err
 	}
 	var key []byte
 	if c.TokenMode == server.VoiceTokenModeScoped {

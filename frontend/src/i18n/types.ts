@@ -658,6 +658,12 @@ export interface Dictionary {
   };
 
   voice: {
+    previousErrors: string;
+    reasoning: string;
+    browserSpeechLlm: string;
+    cloudVoiceModel: string;
+    showReasoning: string;
+
     audioDevices: string;
     callingTool: string;
     credits: string;

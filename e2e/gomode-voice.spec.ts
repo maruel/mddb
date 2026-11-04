@@ -44,7 +44,10 @@ for (const external of [true, false]) {
       } else if (gatewayRequest.url().endsWith("/voice/choices")) {
         await route.fulfill({
           headers,
-          json: { choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }], defaultChoiceID: "fake" },
+          json: {
+            choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }],
+            defaults: [{ transport: "webrtc", id: "fake" }],
+          },
         });
       } else if (gatewayRequest.url().endsWith("/voice/rtc/offer")) {
         const body = gatewayRequest.postDataJSON();
@@ -91,7 +94,10 @@ test("voice token failure stops the offer without forwarding login credentials",
     if (route.request().url().endsWith("/voice/choices")) {
       await route.fulfill({
         headers: { "Access-Control-Allow-Origin": "*" },
-        json: { choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }], defaultChoiceID: "fake" },
+        json: {
+          choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }],
+          defaults: [{ transport: "webrtc", id: "fake" }],
+        },
       });
     } else {
       offers++;
@@ -124,7 +130,10 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
   });
   await page.route("**/api/voicegateway/v1/voice/choices", (route) =>
     route.fulfill({
-      json: { choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }], defaultChoiceID: "fake" },
+      json: {
+        choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }],
+        defaults: [{ transport: "webrtc", id: "fake" }],
+      },
     }),
   );
   const originating = page.waitForRequest(

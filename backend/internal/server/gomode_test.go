@@ -58,8 +58,8 @@ type testVoiceChoiceBridge struct {
 
 func (b *testVoiceChoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
 	return voicev1.VoiceChoicesResp{
-		DefaultChoiceID: "live",
-		Choices:         []voicev1.VoiceChoice{{ID: "live", Label: "Live", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportWebRTC}}},
+		Defaults: []voicev1.VoiceChoiceDefault{{Transport: voicev1.VoiceTransportWebRTC, ID: "live"}},
+		Choices:  []voicev1.VoiceChoice{{ID: "live", Label: "Live", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportWebRTC}}},
 	}
 }
 
@@ -160,7 +160,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 						var choices voicev1.VoiceChoicesResp
 						if err := json.NewDecoder(resp.Body).Decode(&choices); err != nil {
 							t.Errorf("decode voice choices: %v", err)
-						} else if choices.DefaultChoiceID != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
+						} else if choices.DefaultChoiceID(voicev1.VoiceTransportWebRTC) != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
 							t.Errorf("voice choices = %+v", choices)
 						}
 					}

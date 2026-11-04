@@ -4,7 +4,7 @@
 // provides OAuth authentication (Google/Microsoft), and exposes a RESTful
 // HTTP API. Startup configuration is read from config.toml and mutable server
 // settings from settings.json, both in the config directory. Voice settings
-// select an embedded Gemini/local-stack bridge or an external voice gateway.
+// explicitly select disabled voice, embedded pipelines, or an external gateway.
 package main
 
 import (
@@ -324,7 +324,6 @@ Flags:
 
 	// Initialize sync service
 	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
-	geminiAPIKey := cfg.VoiceAPIKey
 	var voiceBridge voicegateway.MediaBridge
 	voiceCfg := cfg.VoiceConfig
 	if cfg.ExternalVoice != nil {
@@ -334,29 +333,29 @@ Flags:
 			slog.InfoContext(ctx, "voice gateway trusted issuer", "service", "mddb", "issuer", cfg.ExternalVoice.Issuer, "public_key", key)
 		}
 	}
-	if cfg.VoiceEmbedded {
+	if cfg.VoiceMode == voiceGatewayEmbedded {
+		voiceCfg = voiceCfg.Available(ctx)
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
+		if err := voiceCfg.ValidateEmbedded(); err != nil {
+			return fmt.Errorf("available voice choices: %w", err)
+		}
 		// Activity logs contain transcripts. Keep them outside the git-backed
 		// data directory and remove them after the bridge has closed.
-		activityDir, dirErr := os.MkdirTemp("", "mddb-voice-")
-		if dirErr != nil {
-			slog.WarnContext(ctx, "embedded voice gateway disabled: create activity directory", "err", dirErr)
-		} else {
-			bridge, err := voicertc.NewBridge(ctx, &voiceCfg, geminiAPIKey, voiceCfg.Server.WebRTCUDPPort, activityDir)
-			if err != nil {
-				slog.WarnContext(ctx, "embedded voice gateway disabled: startup failed", "err", err)
-				if removeErr := os.RemoveAll(activityDir); removeErr != nil {
-					slog.WarnContext(ctx, "remove voice activity directory", "err", removeErr)
-				}
-			} else {
-				voiceBridge = bridge
-				defer func() {
-					bridge.CloseAll(context.WithoutCancel(ctx))
-					if removeErr := os.RemoveAll(activityDir); removeErr != nil {
-						slog.Warn("remove voice activity directory", "err", removeErr)
-					}
-				}()
-			}
+		activityDir, err := os.MkdirTemp("", "mddb-voice-")
+		if err != nil {
+			return fmt.Errorf("create voice activity directory: %w", err)
 		}
+		bridge, err := voicertc.NewBridge(ctx, &voiceCfg, activityDir)
+		if err != nil {
+			return errors.Join(fmt.Errorf("start embedded voice gateway: %w", err), os.RemoveAll(activityDir))
+		}
+		voiceBridge = bridge
+		defer func() {
+			bridge.CloseAll(context.WithoutCancel(ctx))
+			result = errors.Join(result, os.RemoveAll(activityDir))
+		}()
 	}
 
 	svc := &handlers.Services{

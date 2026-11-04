@@ -197,7 +197,7 @@ export async function installBrowserTools(page: Page) {
       await route.fulfill({
         json: {
           choices: [{ id: "fixture", label: "Fixture voice", transports: ["webrtc"] }],
-          defaultChoiceID: "fixture",
+          defaults: [{ transport: "webrtc", id: "fixture" }],
         },
       });
     else if (url.endsWith("/voice/rtc/offer"))

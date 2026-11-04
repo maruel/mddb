@@ -27,10 +27,11 @@ var uncommentDirective = regexp.MustCompile(`(?m)^#([^ ])`)
 
 // TestContribConfigDefaults uncomments every default directive in the shipped
 // contrib/config.toml and verifies the result loads into exactly the built-in
-// defaults. This guards the real template (not a copy) on three axes at once:
+// defaults outside its explicit, disabled voice pipeline examples. This guards
+// the shipped template on three axes at once:
 //   - faithfulness: loadTOMLConfig uses DisallowUnknownFields, so an
 //     undocumented or misspelled key fails the load;
-//   - accuracy: the documented defaults must match defaultConfig();
+//   - accuracy: host defaults match defaultConfig() and voice pipelines validate;
 //   - coverage: every key defaultConfig() knows must appear in the example.
 func TestContribConfigDefaults(t *testing.T) {
 	t.Parallel()
@@ -48,6 +49,13 @@ func TestContribConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s documents a key mddb rejects, or a malformed default: %v", contribPath, err)
 	}
+	if got.VoiceGateway.Mode != voiceGatewayDisabled {
+		t.Fatal("shipped example enables voice")
+	}
+	if err := got.VoiceGateway.Config.ValidateEmbedded(); err != nil {
+		t.Fatalf("shipped voice pipelines: %v", err)
+	}
+	got.VoiceGateway.Config = voicegateway.Config{}
 	want := defaultConfig()
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("uncommenting %s does not reproduce the defaults:\n got = %+v\nwant = %+v", contribPath, got, want)
@@ -145,7 +153,7 @@ private_key_file = "github-app.pem"
 webhook_secret = "webhook-secret"
 
 [voice-gateway]
-api_key = "gemini-key"
+mode = "embedded"
 
 [debug]
 log_level = "debug"
@@ -173,7 +181,7 @@ log_level = "debug"
 				PrivateKeyFile: "github-app.pem",
 				WebhookSecret:  "webhook-secret",
 			}},
-			VoiceGateway: tomlVoiceGateway{APIKey: "gemini-key", TokenMode: server.VoiceTokenModeScoped, Config: embeddedVoiceDefaults()},
+			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped},
 			Debug:        tomlDebug{LogLevel: "debug"},
 		}
 		if !reflect.DeepEqual(got, want) {
@@ -252,8 +260,8 @@ func TestResolveConfig(t *testing.T) {
 		if got.ConfigDir != cfgDir || got.DataDir != "data" || got.HTTP != "localhost:8080" || got.BaseURL != "http://localhost" {
 			t.Errorf("got %+v", got)
 		}
-		if got.GeoDB != "" || got.VoiceAPIKey != "" || got.VoiceEmbedded {
-			t.Errorf("expected geo_db and voice api key to be off: %+v", got)
+		if got.GeoDB != "" || got.VoiceMode != voiceGatewayDisabled {
+			t.Errorf("expected geo_db and voice to be off: %+v", got)
 		}
 		if got.GitHubApp != (githubAppSettings{}) {
 			t.Errorf("expected no GitHub App: %+v", got)
@@ -516,18 +524,6 @@ func TestResolveConfig(t *testing.T) {
 			})
 		}
 	})
-
-	t.Run("voice api key passes through", func(t *testing.T) {
-		tc := defaultConfig()
-		tc.VoiceGateway.APIKey = "gemini-key"
-		got, err := resolveConfig(&tc, cfgDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got.VoiceAPIKey != "gemini-key" {
-			t.Errorf("got voice api key %q, want gemini-key", got.VoiceAPIKey)
-		}
-	})
 }
 
 func TestDefaultConfigDir(t *testing.T) {
@@ -628,27 +624,15 @@ func TestPathResolutionHelpers(t *testing.T) {
 
 func TestVoiceGatewayConfiguration(t *testing.T) {
 	t.Parallel()
-	t.Run("external OAuth and nested named choices", func(t *testing.T) {
+	t.Run("external OAuth signing identity", func(t *testing.T) {
 		dir := t.TempDir()
 		if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`[server]
 base_url = "https://mddb.example.com"
 [voice-gateway]
+mode = "external"
 url = "https://voice.example.com"
-api_key = "unused-gemini-key"
 instance_id = "mddb-main"
 token_mode = "oauth"
-[voice-gateway.config]
-default_choice_id = "local"
-[[voice-gateway.config.choices]]
-id = "local"
-label = "Local text"
-backend = "local-stack"
-[voice-gateway.config.choices.local_stack]
-text_only = true
-[voice-gateway.config.choices.local_stack.llm]
-provider = "llamacpp"
-remote = "http://localhost:8080"
-model = "gemma"
 `), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -660,17 +644,17 @@ model = "gemma"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.ExternalVoice == nil || cfg.VoiceEmbedded || cfg.ExternalVoice.InstanceID != "mddb-main" || cfg.VoiceConfig.Choices[0].LocalStack.LLM.Model != "gemma" || cfg.VoiceConfig.Server.WebRTCUDPPort != 0 {
+		if cfg.ExternalVoice == nil || cfg.VoiceMode != voiceGatewayExternal || cfg.ExternalVoice.InstanceID != "mddb-main" {
 			t.Fatalf("config: %+v", cfg)
 		}
-		first, err := os.ReadFile(filepath.Join(dir, "voice-oauth-key.pem")) //nolint:gosec // Test-owned temporary key.
+		first, err := os.ReadFile(filepath.Join(dir, "voice-oauth-key.pem")) //nolint:gosec // Test-owned temporary signing key.
 		if err != nil {
 			t.Fatal(err)
 		}
 		if _, err := resolveConfig(&tc, dir); err != nil {
 			t.Fatal(err)
 		}
-		second, err := os.ReadFile(filepath.Join(dir, "voice-oauth-key.pem")) //nolint:gosec // Test-owned temporary key.
+		second, err := os.ReadFile(filepath.Join(dir, "voice-oauth-key.pem")) //nolint:gosec // Test-owned temporary signing key.
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -685,32 +669,47 @@ model = "gemma"
 			t.Fatalf("private key permissions: %v", info.Mode())
 		}
 	})
-	t.Run("embedded local stack without key", func(t *testing.T) {
-		tc := defaultConfig()
-		tc.VoiceGateway.Config.Backend = "local-stack"
-		tc.VoiceGateway.Config.LocalStack.TextOnly = true
-		cfg, err := resolveConfig(&tc, t.TempDir())
+	t.Run("explicit embedded pipelines", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`[voice-gateway]
+mode = "embedded"
+[[voice-gateway.config.realtime]]
+label = "Gemini Live"
+provider = "gemini"
+model = "gemini-3.8-live"
+[[voice-gateway.config.chat]]
+label = "Local text"
+provider = "llamacpp"
+remote = "http://localhost:8080"
+model = "gemma"
+[[voice-gateway.config.local_stack]]
+label = "Local stack"
+text_only = true
+[voice-gateway.config.local_stack.llm]
+provider = "llamacpp"
+llamacppsrv = true
+model = "gemma-local"
+`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		tc, err := loadTOMLConfig(dir)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.ExternalVoice != nil || !cfg.VoiceEmbedded || cfg.VoiceAPIKey != "" || cfg.VoiceConfig.Backend != "local-stack" {
+		cfg, err := resolveConfig(&tc, dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.ExternalVoice != nil || cfg.VoiceMode != voiceGatewayEmbedded || len(cfg.VoiceConfig.Realtime) != 1 || len(cfg.VoiceConfig.Chat) != 1 || len(cfg.VoiceConfig.LocalStack) != 1 {
 			t.Fatalf("config: %+v", cfg)
 		}
-	})
-	t.Run("negative UDP port disables embedded voice", func(t *testing.T) {
-		tc := defaultConfig()
-		tc.VoiceGateway.APIKey = "gemini-key"
-		tc.VoiceGateway.Config.Server.WebRTCUDPPort = -1
-		cfg, err := resolveConfig(&tc, t.TempDir())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if cfg.VoiceEmbedded {
-			t.Fatal("disabled embedded gateway would start")
+		if cfg.VoiceConfig.Realtime[0].Provider != "gemini" || cfg.VoiceConfig.Chat[0].Remote != "http://localhost:8080" || !cfg.VoiceConfig.LocalStack[0].LLM.LlamaCPPServer {
+			t.Fatalf("pipeline settings lost: %+v", cfg.VoiceConfig)
 		}
 	})
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("invalid external", func(t *testing.T) {
 		for _, tc := range []struct{ name, url, issuer, id, mode, key string }{
+			{"missing URL", "", "https://mddb.example.com", "main", "oauth", ""},
 			{"insecure gateway", "http://voice.example.com", "https://mddb.example.com", "main", "oauth", ""},
 			{"insecure issuer", "https://voice.example.com", "http://mddb.example.com", "main", "oauth", ""},
 			{"URL credentials", "https://user:pass@voice.example.com", "https://mddb.example.com", "main", "oauth", ""},
@@ -718,12 +717,13 @@ model = "gemma"
 			{"URL path", "https://voice.example.com/path", "https://mddb.example.com", "main", "oauth", ""},
 			{"missing ID", "https://voice.example.com", "https://mddb.example.com", "", "oauth", ""},
 			{"missing key", "https://voice.example.com", "https://mddb.example.com", "main", "scoped", ""},
-			{"unknown mode", "https://voice.example.com", "https://mddb.example.com", "main", "unknown", ""},
+			{"unknown token mode", "https://voice.example.com", "https://mddb.example.com", "main", "unknown", ""},
 			{"unused key", "https://voice.example.com", "https://mddb.example.com", "main", "oauth", "key.pem"},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				c := defaultConfig()
 				c.Server.BaseURL = tc.issuer
+				c.VoiceGateway.Mode = voiceGatewayExternal
 				c.VoiceGateway.URL = tc.url
 				c.VoiceGateway.InstanceID = tc.id
 				c.VoiceGateway.TokenMode = server.VoiceTokenMode(tc.mode)
@@ -733,27 +733,56 @@ model = "gemma"
 				}
 			})
 		}
-		c := defaultConfig()
-		c.VoiceGateway.Config.Server.HTTP = ":9999"
-		if _, err := resolveConfig(&c, t.TempDir()); err == nil {
-			t.Fatal("embedded HTTP override accepted")
-		}
-		c = defaultConfig()
-		c.VoiceGateway.Config.Backend = "unknown"
-		if _, err := resolveConfig(&c, t.TempDir()); err == nil {
-			t.Fatal("unknown backend accepted")
+	})
+	t.Run("invalid embedded", func(t *testing.T) {
+		for _, tc := range []struct {
+			name   string
+			config voicegateway.Config
+		}{
+			{"missing pipelines", voicegateway.Config{}},
+			{"HTTP override", voicegateway.Config{Server: voicegateway.ServerConfig{HTTP: ":9999"}}},
+			{"negative UDP port", voicegateway.Config{Server: voicegateway.ServerConfig{WebRTCUDPPort: -1}}},
+			{"missing model", voicegateway.Config{Chat: []voicegateway.ChatConfig{{Label: "Model", ModelConfig: voicegateway.ModelConfig{Provider: "gemini"}}}}},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				c := defaultConfig()
+				c.VoiceGateway.Mode = voiceGatewayEmbedded
+				c.VoiceGateway.Config = tc.config
+				if _, err := resolveConfig(&c, t.TempDir()); err == nil {
+					t.Fatal("invalid config accepted")
+				}
+			})
 		}
 	})
-
-	t.Run("mixed choices require Gemini key", func(t *testing.T) {
-		tc := defaultConfig()
-		tc.VoiceGateway.Config.Choices = []voicegateway.ChoiceConfig{{ID: "local", Label: "Local", Backend: voicegateway.BackendLocalStack, LocalStack: voicegateway.LocalStackConfig{TextOnly: true}}, {ID: "gemini", Label: "Gemini", Backend: voicegateway.BackendGeminiLive}}
-		if _, err := resolveConfig(&tc, t.TempDir()); err == nil || !strings.Contains(err.Error(), "voice-gateway.api_key") {
-			t.Fatalf("missing Gemini credential: %v", err)
+	t.Run("unknown mode", func(t *testing.T) {
+		c := defaultConfig()
+		c.VoiceGateway.Mode = "unknown"
+		if _, err := resolveConfig(&c, t.TempDir()); err == nil {
+			t.Fatal("unknown mode accepted")
 		}
-		tc.VoiceGateway.APIKey = "explicit-key"
-		if _, err := resolveConfig(&tc, t.TempDir()); err != nil {
+	})
+	t.Run("disabled retains dormant pipelines", func(t *testing.T) {
+		c := defaultConfig()
+		c.VoiceGateway.Config.Chat = []voicegateway.ChatConfig{{Label: "Preconfigured", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-flash"}}}
+		cfg, err := resolveConfig(&c, t.TempDir())
+		if err != nil {
 			t.Fatal(err)
 		}
+		if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil {
+			t.Fatal("configured pipeline enabled disabled gateway")
+		}
 	})
+}
+
+func TestVoiceGatewayEnvironmentIsolation(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "test-key")
+	t.Setenv("OPENAI_API_KEY", "test-key")
+	tc := defaultConfig()
+	cfg, err := resolveConfig(&tc, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.Chat)+len(cfg.VoiceConfig.LocalStack) != 0 {
+		t.Fatal("provider credentials enabled voice or supplied implicit pipelines")
+	}
 }

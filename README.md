@@ -32,12 +32,11 @@ the Go Mode Android shell, the hosted
 frontend hands its validated bearer token to the native MCP client and clears
 it on logout.
 
-The frontend also hosts Go Mode's voice overlay. Configure an embedded Gemini
-Live gateway with `voice-gateway.api_key`, a keyless local stack under
-`[voice-gateway.config]`, or a standalone gateway with `url`, `instance_id`, and
-`token_mode = "scoped"` or `"oauth"`. Embedded configuration accepts models,
-WebRTC UDP settings, local ASR/LLM/TTS, text-only sessions, and named backend
-choices. See [voice setup](SELF_HOSTING.md#voice-overlay) for complete examples.
+The frontend also hosts Go Mode's voice overlay. Voice is disabled by default.
+Set `voice-gateway.mode = "embedded"` with explicit realtime, chat, or local-stack
+pipelines, or use `mode = "external"` with a standalone gateway. Provider
+credentials authenticate configured pipelines without enabling voice. See
+[voice setup](SELF_HOSTING.md#voice-overlay) for complete examples.
 
 Embedded signaling uses the signed-in user's mddb bearer token. A standalone
 gateway receives a short-lived service token; the login bearer stays on mddb's

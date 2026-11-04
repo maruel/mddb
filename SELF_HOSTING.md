@@ -40,79 +40,57 @@ data directory holds content only.
 
 ### Voice overlay
 
-Voice can run in mddb or on a standalone Go Mode gateway. All settings come
-from `config.toml`; mddb does not fall back to environment variables for the
-Gemini key. An external `url` takes precedence over embedded settings.
+Voice is disabled by default. Set `voice-gateway.mode` to `embedded` or
+`external` to start it. Provider credentials never select the mode.
 
 #### Embedded gateway
 
-For Gemini Live, add:
+For Gemini Live, set `GEMINI_API_KEY` in mddb's process environment and add:
 
 ```toml
 [voice-gateway]
-api_key = "YOUR_GEMINI_API_KEY"
-
-[voice-gateway.config]
-model = "gemini-3.8-live"
+mode = "embedded"
 
 [voice-gateway.config.server]
 webrtc_udp_port = 9000
+
+[[voice-gateway.config.realtime]]
+label = "Gemini Live"
+provider = "gemini"
+model = "gemini-3.8-live"
 ```
 
 The HTTP listener is mddb's `server.http`; leave
 `voice-gateway.config.server.http` empty. WebRTC media requires a reachable UDP
-port. `webrtc_udp_port = 0` selects an ephemeral port, a positive value fixes the
-port for firewall rules, and `-1` disables the embedded gateway entirely.
-Use `0` or a positive port for text-only gateways too. Text sessions use
-WebSockets on the HTTP listener. The browser's voice settings select the transport.
+port. `webrtc_udp_port = 0` selects an ephemeral port, and a positive value fixes
+the port for firewall rules. Use `mode = "disabled"` to disable voice.
+Text sessions use WebSockets on the HTTP listener and client-owned speech.
 
-`[voice-gateway.config]` accepts Go Mode's complete embedded runtime config,
-including `backend`, `model`, `local_stack`, `choices`, and `default_choice_id`.
-A local stack needs no Gemini key. For example, a text-only local model:
+`[voice-gateway.config]` uses Go Mode's explicit `realtime`, `chat`, and
+`local_stack` pipeline arrays. Models and engines are selected in configuration;
+there are no implicit host pipelines or local model defaults. Each provider uses
+its native credential environment variables. Embedded startup hides unavailable
+providers and requires at least one available choice.
 
-```toml
-[voice-gateway.config]
-backend = "local-stack"
-
-[voice-gateway.config.local_stack]
-text_only = true
-
-[voice-gateway.config.local_stack.llm]
-provider = "llamacpp"
-remote = "http://127.0.0.1:8081"
-model = "unsloth/gemma-4-E2B-it-GGUF:UD-Q4_K_XL"
-```
-
-Set `text_only = false` to use local ASR and TTS too. The `asr`, `llm`, and
-`tts` sections accept the engines, remote servers, and models shown in
-[contrib/config.toml](contrib/config.toml). Omitting remote servers lets Go Mode
-manage local models, which can require downloads and substantial memory.
-To offer named choices instead of a single backend:
+For a managed local model with browser-owned speech:
 
 ```toml
 [voice-gateway]
-api_key = "YOUR_GEMINI_API_KEY"
+mode = "embedded"
 
-[voice-gateway.config]
-default_choice_id = "local"
-
-[[voice-gateway.config.choices]]
-id = "local"
+[[voice-gateway.config.chat]]
 label = "Local text"
-backend = "local-stack"
-[voice-gateway.config.choices.local_stack]
-text_only = true
-[voice-gateway.config.choices.local_stack.llm]
 provider = "llamacpp"
-remote = "http://127.0.0.1:8081"
+llamacppsrv = true
 model = "unsloth/gemma-4-E2B-it-GGUF:UD-Q4_K_XL"
-
-[[voice-gateway.config.choices]]
-id = "gemini"
-label = "Gemini Live"
-backend = "gemini-live"
-model = "gemini-3.8-live"
 ```
+
+Use `[[voice-gateway.config.local_stack]]` with explicit `asr`, `llm`, and `tts`
+settings for gateway-owned speech. The complete selection of models and engine
+examples is in [contrib/config.toml](contrib/config.toml). Its gateway mode remains
+disabled until you opt in. Managed models can require downloads and substantial
+memory. Choices appear in realtime, chat, then local-stack order; the first
+compatible choice is the default for each transport.
 
 These examples are alternatives; do not repeat table declarations in one file.
 Embedded authentication is owned by mddb. Standalone `trusted_issuers` settings
@@ -134,6 +112,7 @@ except for loopback development. In mddb's config:
 base_url = "https://mddb.example.com"
 
 [voice-gateway]
+mode = "external"
 url = "https://voice.example.com"
 instance_id = "mddb-main"
 token_mode = "scoped"
@@ -193,8 +172,8 @@ and transcript storage.
 The browser shows the voice bar only when `/.well-known/gomode.json` advertises
 a non-empty `webShell.voiceGateway.url`. External gateways also advertise a
 same-origin `tokenEndpoint`. If the bar stays hidden, check the manifest and
-ensure the reverse proxy forwards `/.well-known/` to mddb. Embedded voice startup
-failures leave the main server running without the overlay.
+ensure the reverse proxy forwards `/.well-known/` to mddb. An explicitly enabled embedded gateway must initialize successfully before the
+main server starts. Startup errors report unavailable choices or failed runtimes.
 
 Connected Gemini sessions send microphone audio, session instructions, and
 client-executed MCP tool results to Google. Local-stack sessions send content to

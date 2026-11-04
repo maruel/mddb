@@ -164,7 +164,7 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 	catalog := choices.VoiceChoices()
 	choice := in.ChoiceID
 	if choice == "" {
-		choice = catalog.DefaultChoiceID
+		choice = catalog.DefaultChoiceID(voicev1.VoiceTransportText)
 	}
 	valid := false
 	for _, ch := range catalog.Choices {
