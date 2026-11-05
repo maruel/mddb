@@ -64,21 +64,16 @@ func newStaticHandler(dist fs.FS) http.HandlerFunc {
 			ct = "application/octet-stream"
 		}
 
-		accepted := parseAcceptEncoding(r.Header.Get("Accept-Encoding"))
-
-		// Fast path: serve .br directly.
-		if accepted["br"] {
-			serveBrotli(w, r, dist, clean, ct)
+		w.Header().Set("Vary", "Accept-Encoding")
+		enc, ok := negotiateEncoding(strings.Join(r.Header.Values("Accept-Encoding"), ","), []string{"br", "zstd", "gzip", "identity"})
+		if !ok {
+			http.Error(w, "no acceptable content encoding", http.StatusNotAcceptable)
 			return
 		}
-
-		// Pick best accepted encoding, falling back to identity.
-		enc := "identity"
-		for _, candidate := range []string{"zstd", "gzip"} {
-			if accepted[candidate] {
-				enc = candidate
-				break
-			}
+		// Fast path: serve .br directly.
+		if enc == "br" {
+			serveBrotli(w, r, dist, clean, ct)
+			return
 		}
 
 		data, err := transcode(&cache, dist, clean, enc)
@@ -252,18 +247,65 @@ func setCacheHeaders(w http.ResponseWriter, urlPath string) {
 	}
 }
 
-// parseAcceptEncoding returns the set of encodings the client accepts.
-func parseAcceptEncoding(header string) map[string]bool {
-	accepted := make(map[string]bool)
+type encodingPreference struct {
+	name    string
+	quality float64
+}
+
+// negotiateEncoding applies RFC 9110 quality weights and explicit exclusions.
+// preferred breaks equal-weight ties; identity is implicit only as a fallback.
+func negotiateEncoding(header string, preferred []string) (string, bool) {
+	var prefs []encodingPreference
 	for part := range strings.SplitSeq(header, ",") {
-		enc := strings.TrimSpace(part)
-		// Strip quality parameter (e.g. "gzip;q=0.5").
-		if i := strings.IndexByte(enc, ';'); i >= 0 {
-			enc = enc[:i]
+		name, params, _ := strings.Cut(part, ";")
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" {
+			continue
 		}
-		if enc != "" {
-			accepted[enc] = true
+		q := 1.0
+		for param := range strings.SplitSeq(params, ";") {
+			key, value, found := strings.Cut(param, "=")
+			if !found || !strings.EqualFold(strings.TrimSpace(key), "q") {
+				continue
+			}
+			value = strings.TrimSpace(value)
+			q = 0
+			if value == "" || len(value) > 5 || (value[0] != '0' && value[0] != '1') || (len(value) > 1 && value[1] != '.') {
+				break
+			}
+			if parsed, err := strconv.ParseFloat(value, 64); err == nil && parsed >= 0 && parsed <= 1 {
+				q = parsed
+			}
+		}
+		prefs = append(prefs, encodingPreference{name: name, quality: q})
+	}
+	quality := func(name string) (float64, bool) {
+		q, found := 1.0, false
+		for _, p := range prefs {
+			if p.name == name {
+				q, found = min(q, p.quality), true
+			}
+		}
+		return q, found
+	}
+	wildcard, hasWildcard := quality("*")
+	best, bestQuality := "", 0.0
+	for _, name := range preferred {
+		q, explicit := quality(name)
+		if !explicit {
+			q = 0
+			if hasWildcard {
+				q = wildcard
+			}
+			if name == "identity" && (!hasWildcard || wildcard > 0) {
+				// An unspecified identity preference permits fallback without
+				// outranking an explicitly accepted compression format.
+				q = 0.001
+			}
+		}
+		if q > bestQuality {
+			best, bestQuality = name, q
 		}
 	}
-	return accepted
+	return best, bestQuality > 0
 }
