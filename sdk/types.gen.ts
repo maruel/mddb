@@ -1287,4 +1287,3 @@ export interface WorkspaceEvent {
   /** RequestID correlates a change with an individual HTTP write, not authorization. */
   request_id?: string;
 }
-

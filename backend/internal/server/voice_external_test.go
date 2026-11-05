@@ -18,7 +18,7 @@ import (
 
 	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/oauth/oauthverify"
-	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -116,7 +116,7 @@ func TestExternalVoiceGateway(t *testing.T) {
 				if res.Header.Get("Cache-Control") != "no-store" {
 					t.Fatal("token response is cacheable")
 				}
-				var svc voicev1.ServiceAuthorization
+				var svc voicev2.ServiceAuthorization
 				if err := json.NewDecoder(res.Body).Decode(&svc); err != nil {
 					t.Fatal(err)
 				}

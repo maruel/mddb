@@ -21,7 +21,7 @@ import (
 
 	"github.com/maruel/gomode/voicegateway"
 	voiceapi "github.com/maruel/gomode/voicegateway/api"
-	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
@@ -98,19 +98,20 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if r.URL.Path == "/api/voicegateway/v1/voice/text/ticket" {
+	prefix := "/api/voicegateway/" + voiceProtocol(r).String() + "/voice"
+	if r.URL.Path == prefix+"/text/ticket" {
 		g.serveTextTicket(w, r, u)
 		return
 	}
-	if r.URL.Path == "/api/voicegateway/v1/voice/text" {
+	if r.URL.Path == prefix+"/text" {
 		g.handler.ServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path == "/api/voicegateway/v1/voice/choices" {
+	if r.URL.Path == prefix+"/choices" {
 		g.handler.ServeHTTP(w, r)
 		return
 	}
-	if r.URL.Path == "/api/voicegateway/v1/voice/rtc/offer" {
+	if r.URL.Path == prefix+"/rtc/offer" {
 		// Validate before replacing an existing session. A malformed retry must
 		// not evict a call that is still working.
 		body, err := io.ReadAll(io.LimitReader(r.Body, voiceMaxOffer+1))
@@ -122,7 +123,7 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeVoiceError(w, http.StatusRequestEntityTooLarge, "voice offer is too large")
 			return
 		}
-		var offer voicev1.VoiceRTCOfferReq
+		var offer voicev2.VoiceRTCOfferReq
 		if err := json.Unmarshal(body, &offer); err != nil || offer.SDP == "" {
 			writeVoiceError(w, http.StatusBadRequest, "invalid voice offer")
 			return
@@ -151,7 +152,7 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // serveTextTicket binds a single-use browser ticket to the authenticated owner.
 func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u *identity.User) {
-	var in voicev1.VoiceTextTicketReq
+	var in voicev2.VoiceTextTicketReq
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&in); err != nil {
 		writeVoiceError(w, http.StatusBadRequest, "invalid text ticket request")
 		return
@@ -164,13 +165,13 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 	catalog := choices.VoiceChoices()
 	choice := in.ChoiceID
 	if choice == "" {
-		choice = catalog.DefaultChoiceID(voicev1.VoiceTransportText)
+		choice = catalog.DefaultChoiceID(voicev2.VoiceTransportText)
 	}
 	valid := false
 	for _, ch := range catalog.Choices {
 		if ch.ID == choice {
 			for _, transport := range ch.Transports {
-				if transport == voicev1.VoiceTransportText {
+				if transport == voicev2.VoiceTransportText {
 					valid = true
 				}
 			}
@@ -193,23 +194,24 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 		return
 	}
 	ticket := rand.Text()
-	g.tickets[ticket] = voiceTextTicket{session: reqctx.Session(r.Context()), owner: u.ID, origin: r.Header.Get("Origin"), choice: choice, expiry: now.Add(30 * time.Second)}
+	g.tickets[ticket] = voiceTextTicket{session: reqctx.Session(r.Context()), owner: u.ID, origin: r.Header.Get("Origin"), choice: choice, protocol: voiceProtocol(r), expiry: now.Add(30 * time.Second)}
 	g.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	if err := json.NewEncoder(w).Encode(voicev1.VoiceTextTicketResp{Ticket: ticket}); err != nil {
+	if err := json.NewEncoder(w).Encode(voicev2.VoiceTextTicketResp{Ticket: ticket}); err != nil {
 		slog.WarnContext(r.Context(), "write voice ticket", "err", err)
 	}
 }
 
 // serveBrowserText redeems an owner-bound ticket without a login bearer in the URL.
 func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) {
+	version := voiceProtocol(r)
 	ticket := ""
 	valid := false
 	for _, header := range r.Header.Values("Sec-WebSocket-Protocol") {
 		for protocol := range strings.SplitSeq(header, ",") {
 			protocol = strings.TrimSpace(protocol)
-			if protocol == "gomode.text.v1" {
+			if protocol == version.TextSubprotocol() {
 				valid = true
 			}
 			if value, ok := strings.CutPrefix(protocol, "gomode.ticket."); ok {
@@ -225,7 +227,7 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 	entry, ok := g.tickets[ticket]
 	delete(g.tickets, ticket)
 	g.mu.Unlock()
-	if !valid || !ok || !time.Now().Before(entry.expiry) || entry.origin != r.Header.Get("Origin") {
+	if !valid || !ok || entry.protocol != version || !time.Now().Before(entry.expiry) || entry.origin != r.Header.Get("Origin") {
 		writeVoiceError(w, http.StatusUnauthorized, "invalid or expired voice ticket")
 		return
 	}
@@ -235,13 +237,20 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 		ctx = reqctx.WithSessionID(ctx, entry.session.ID)
 	}
 	r = r.Clone(ctx)
-	r.URL.Path = "/api/voicegateway/v1/voice/text"
+	r.URL.Path = "/api/voicegateway/" + version.String() + "/voice/text"
 	q := r.URL.Query()
 	q.Set("choiceID", entry.choice)
 	r.URL.RawQuery = q.Encode()
 	r.Header.Del("Origin")
-	r.Header.Set("Sec-WebSocket-Protocol", "gomode.text.v1")
+	r.Header.Set("Sec-WebSocket-Protocol", version.TextSubprotocol())
 	g.handler.ServeHTTP(w, r)
+}
+
+func voiceProtocol(r *http.Request) voiceapi.ProtocolVersion {
+	if strings.HasPrefix(r.URL.Path, "/api/voicegateway/v1/") {
+		return voiceapi.ProtocolV1
+	}
+	return voiceapi.ProtocolV2
 }
 
 func writeVoiceError(w http.ResponseWriter, status int, message string) {
@@ -406,14 +415,22 @@ func (g *voiceGateway) forget(id string) bool {
 	return ok
 }
 
-func (g *voiceGateway) DiagnoseVoiceRTC(ctx context.Context, sessionID string, client *voicev1.VoiceRTCClientDiagnostics) voicev1.VoiceRTCDiagnosticsResp {
+// VoiceRTCError forwards retained session errors for the published v1 diagnostics.
+func (g *voiceGateway) VoiceRTCError(sessionID string) string {
+	if provider, ok := g.bridge.(voicegateway.VoiceRTCErrorProvider); ok {
+		return provider.VoiceRTCError(sessionID)
+	}
+	return ""
+}
+
+func (g *voiceGateway) DiagnoseVoiceRTC(ctx context.Context, sessionID string, client *voicev2.VoiceRTCClientDiagnostics) voicev2.VoiceRTCDiagnosticsResp {
 	if diagnostic, ok := g.bridge.(voicegateway.DiagnosticMediaBridge); ok {
 		return diagnostic.DiagnoseVoiceRTC(ctx, sessionID, client)
 	}
-	return voicev1.VoiceRTCDiagnosticsResp{
+	return voicev2.VoiceRTCDiagnosticsResp{
 		SessionID: sessionID,
-		Issue:     voicev1.VoiceRTCConnectivityIssueVoiceBridgeUnavailable,
-		Side:      voicev1.VoiceRTCConnectivitySideServer,
+		Issue:     voicev2.VoiceRTCConnectivityIssueVoiceBridgeUnavailable,
+		Side:      voicev2.VoiceRTCConnectivitySideServer,
 		Message:   "voice diagnostics are unavailable on this server",
 		Client:    *client,
 	}
@@ -427,7 +444,7 @@ type voiceChoiceGateway struct {
 	choices voicegateway.ChoiceMediaBridge
 }
 
-func (g *voiceChoiceGateway) VoiceChoices() voicev1.VoiceChoicesResp {
+func (g *voiceChoiceGateway) VoiceChoices() voicev2.VoiceChoicesResp {
 	return g.choices.VoiceChoices()
 }
 
@@ -453,11 +470,12 @@ var _ voicegateway.MediaBridge = (*voiceGateway)(nil)
 var _ voicegateway.DiagnosticMediaBridge = (*voiceGateway)(nil)
 
 type voiceTextTicket struct {
-	session *identity.Session
-	owner   ksid.ID
-	origin  string
-	choice  string
-	expiry  time.Time
+	session  *identity.Session
+	owner    ksid.ID
+	origin   string
+	choice   string
+	protocol voiceapi.ProtocolVersion
+	expiry   time.Time
 }
 
 type voiceTextCancelKey struct{}
@@ -468,7 +486,7 @@ type voiceTextGateway struct {
 	backend voiceTextBackend
 }
 
-func (g *voiceTextGateway) VoiceChoices() voicev1.VoiceChoicesResp {
+func (g *voiceTextGateway) VoiceChoices() voicev2.VoiceChoicesResp {
 	return g.backend.VoiceChoices()
 }
 
@@ -489,7 +507,7 @@ func (g *voiceTextGateway) ServeTextChoice(ctx context.Context, w http.ResponseW
 	protocol := false
 	for _, header := range r.Header.Values("Sec-WebSocket-Protocol") {
 		for token := range strings.SplitSeq(header, ",") {
-			if strings.TrimSpace(token) == "gomode.text.v1" {
+			if strings.TrimSpace(token) == voiceapi.SessionProtocolFromContext(ctx).Version.TextSubprotocol() {
 				protocol = true
 			}
 		}

@@ -133,6 +133,7 @@ func TestLimiters(t *testing.T) {
 			{"POST", "/api/v1/search", "read"},                       // Search is a read operation
 			{"POST", "/api/v1/gomode/mcp", "read"},                   // MCP read transport
 			{"POST", "/api/voicegateway/v1/voice/rtc/offer", "read"}, // Voice offer has a dedicated limiter
+			{"POST", "/api/voicegateway/v2/voice/rtc/offer", "read"},
 		}
 
 		for _, tt := range tests {

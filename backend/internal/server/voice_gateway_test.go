@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -103,8 +103,8 @@ type testTextVoiceBridge struct {
 	started chan ksid.ID
 }
 
-func (b *testTextVoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
-	return voicev1.VoiceChoicesResp{Defaults: []voicev1.VoiceChoiceDefault{{Transport: voicev1.VoiceTransportText, ID: "text"}}, Choices: []voicev1.VoiceChoice{{ID: "text", Label: "Local text", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportText}}}}
+func (b *testTextVoiceBridge) VoiceChoices() voicev2.VoiceChoicesResp {
+	return voicev2.VoiceChoicesResp{Defaults: []voicev2.VoiceChoiceDefault{{Transport: voicev2.VoiceTransportText, ID: "text"}}, Choices: []voicev2.VoiceChoice{{ID: "text", Label: "Local text", Transports: []voicev2.VoiceTransport{voicev2.VoiceTransportText}}}}
 }
 
 func (b *testTextVoiceBridge) HandleChoiceOffer(ctx context.Context, sdp, id string) (answer, sessionID string, err error) {
@@ -364,26 +364,26 @@ func TestVoiceGateway(t *testing.T) {
 		g := newVoiceGateway(b)
 		owner := &identity.User{ID: ksid.NewID()}
 		ticket := func() string {
-			r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), owner), http.MethodPost, "/api/voicegateway/v1/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
+			r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), owner), http.MethodPost, "/api/voicegateway/v2/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
 			r.Header.Set("Origin", "https://mddb.example.com")
 			w := httptest.NewRecorder()
 			g.ServeHTTP(w, r)
 			if w.Code != http.StatusOK {
 				t.Fatalf("ticket: %d %s", w.Code, w.Body.String())
 			}
-			var out voicev1.VoiceTextTicketResp
+			var out voicev2.VoiceTextTicketResp
 			if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
 				t.Fatal(err)
 			}
 			return out.Ticket
 		}
 		browser := func(token, origin string) *http.Request {
-			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/voicegateway/v1/voice/text/browser", http.NoBody)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/voicegateway/v2/voice/text/browser", http.NoBody)
 			r.Header.Set("Connection", "Upgrade")
 			r.Header.Set("Upgrade", "websocket")
 			r.Header.Set("Sec-WebSocket-Version", "13")
 			r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-			r.Header.Set("Sec-WebSocket-Protocol", "gomode.text.v1, gomode.ticket."+token)
+			r.Header.Set("Sec-WebSocket-Protocol", "gomode.text.v2, gomode.ticket."+token)
 			r.Header.Set("Origin", origin)
 			return r
 		}
@@ -392,6 +392,21 @@ func TestVoiceGateway(t *testing.T) {
 		g.serveBrowserText(w, browser(wrong, "https://evil.example.com"))
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("wrong origin accepted: %d", w.Code)
+		}
+		for _, mismatch := range []string{"route", "subprotocol"} {
+			t.Run("ticket rejects mismatched "+mismatch, func(t *testing.T) {
+				token := ticket()
+				r := browser(token, "https://mddb.example.com")
+				if mismatch == "route" {
+					r.URL.Path = "/api/voicegateway/v1/voice/text/browser"
+				}
+				r.Header.Set("Sec-WebSocket-Protocol", "gomode.text.v1, gomode.ticket."+token)
+				w := httptest.NewRecorder()
+				g.serveBrowserText(w, r)
+				if w.Code != http.StatusUnauthorized {
+					t.Fatalf("mismatched %s accepted: %d", mismatch, w.Code)
+				}
+			})
 		}
 		first := ticket()
 		done := make(chan struct{})
@@ -424,7 +439,7 @@ func TestVoiceGateway(t *testing.T) {
 			t.Fatal("ticket replay accepted")
 		}
 		stranger := &identity.User{ID: ksid.NewID()}
-		r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), stranger), http.MethodPost, "/api/voicegateway/v1/voice/rtc/"+id, http.NoBody)
+		r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), stranger), http.MethodPost, "/api/voicegateway/v2/voice/rtc/"+id, http.NoBody)
 		r.SetPathValue("sessionID", id)
 		w = httptest.NewRecorder()
 		g.ServeHTTP(w, r)
@@ -436,7 +451,7 @@ func TestVoiceGateway(t *testing.T) {
 			badCtx, cancel := context.WithTimeout(t.Context(), time.Second)
 			malformed := browser("unused", "")
 			malformed = malformed.WithContext(reqctx.WithUser(badCtx, owner))
-			malformed.URL.Path = "/api/voicegateway/v1/voice/text"
+			malformed.URL.Path = "/api/voicegateway/v2/voice/text"
 			malformed.URL.RawQuery = "choiceID=text"
 			if protocol == "" {
 				malformed.Header.Del("Upgrade")

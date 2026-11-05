@@ -13,8 +13,8 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/klauspost/compress v1.20.3
 	github.com/lmittmann/tint v1.2.1
-	github.com/maruel/apisdkgen v0.2.0
-	github.com/maruel/gomode v0.3.1-0.20261105153929-8556b77e1c2e
+	github.com/maruel/apisdkgen v0.2.1-0.20261105163001-7f54d937d446
+	github.com/maruel/gomode v0.3.1-0.20261105194758-f93ca5dc24d3
 	github.com/maruel/ksid v0.1.1
 	github.com/mattn/go-colorable v0.1.16
 	github.com/mattn/go-isatty v0.0.24

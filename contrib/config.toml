@@ -96,7 +96,6 @@
 [voice-gateway.config]
 # Embedded authentication is owned by mddb.
 #trusted_issuers = []
-#local_stack = []
 
 [voice-gateway.config.server]
 # HTTP listener is controlled by server.http; leave this empty.
@@ -162,6 +161,17 @@ llamacppsrv = true
 model = "LiquidAI/LFM3-Audio-2B-GGUF/LFM3-Audio-2B-Q4_K_M.gguf"
 context_size = 65536
 # remote = "http://127.0.0.1:8080" directly on the choice.
+
+# Single-model alternative: speech input -> text thinking/tools -> LFM3 speech.
+# Chat generation completes before synthesis, sharing one loaded model and slot.
+[[voice-gateway.config.realtime]]
+label = "LFM3 audio thinking (staged)"
+provider = "llamacpp"
+llamacppsrv = true
+model = "LiquidAI/LFM3-Audio-2B-GGUF/LFM3-Audio-2B-Q4_K_M.gguf"
+staged = true
+effort = "medium"
+context_size = 65536
 
 # Remote LLMs
 # Clients transcribe and speak for all chat choices. Credentials are listed in
@@ -257,6 +267,16 @@ effort = "low"
 # remote = "https://llm.example/v1/chat/completions"
 # model = "your-model"
 # api_key_name = "REMOTE_LLM_API_KEY"
+
+# Local GGUF LLMs with client speech.
+[[voice-gateway.config.local_stack]]
+label = "Gemma 4 26B A4B"
+text_only = true
+[voice-gateway.config.local_stack.llm]
+provider = "llamacpp"
+llamacppsrv = true
+model = "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q4_K_XL"
+effort = "low"
 
 # Local ASR/LLM/TTS stack.
 # Set text_only = true on the local_stack entry and omit ASR/TTS to use client speech.

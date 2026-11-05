@@ -22,7 +22,7 @@ import (
 
 	"github.com/maruel/gomode/mcp"
 	"github.com/maruel/gomode/voicegateway"
-	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/gomode/voicegateway/voicertc"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -99,18 +99,18 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	tools := smokeToolDeclarations(t, env, auth.Token)
 
 	client, sessionID := newSmokeVoiceClient(t, server.URL, auth.Token)
-	client.send(t, voicev1.SessionSetup{
-		Kind:  voicev1.MessageKindSessionSetup,
-		Voice: voicev1.VoiceConfig{Name: "Orus", Language: "en"},
+	client.send(t, voicev2.SessionSetup{
+		Kind:  voicev2.MessageKindSessionSetup,
+		Voice: voicev2.VoiceConfig{Name: "Orus", Language: "en"},
 		Tools: tools,
-		Context: voicev1.Context{
+		Context: voicev2.Context{
 			SystemInstruction: mddbVoiceSystemInstruction,
 		},
 	})
-	client.wait(t, voicev1.MessageKindSessionReady)
+	client.wait(t, voicev2.MessageKindSessionReady)
 
 	ask := time.Now()
-	client.send(t, voicev1.UserMessage{Kind: voicev1.MessageKindUserMessage, Text: "List the documents in my workspace."})
+	client.send(t, voicev2.UserMessage{Kind: voicev2.MessageKindUserMessage, Text: "List the documents in my workspace."})
 	sawToolCall, answered, err := client.runTurn(t, env, auth.Token, ask)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 
 // smokeToolDeclarations fetches the workspace MCP tool catalog and converts it
 // to provider-neutral voice tool declarations, mirroring the browser client.
-func smokeToolDeclarations(t *testing.T, env *testEnv, token string) []voicev1.ToolDeclaration {
+func smokeToolDeclarations(t *testing.T, env *testEnv, token string) []voicev2.ToolDeclaration {
 	t.Helper()
 	raw := smokeMCPCall(t, env, token, "tools/list", "", map[string]any{})
 	var listed struct {
@@ -146,9 +146,9 @@ func smokeToolDeclarations(t *testing.T, env *testEnv, token string) []voicev1.T
 	if len(listed.Tools) == 0 {
 		t.Fatal("workspace MCP advertised no tools")
 	}
-	out := make([]voicev1.ToolDeclaration, 0, len(listed.Tools))
+	out := make([]voicev2.ToolDeclaration, 0, len(listed.Tools))
 	for _, tool := range listed.Tools {
-		out = append(out, voicev1.ToolDeclaration{
+		out = append(out, voicev2.ToolDeclaration{
 			Name:        tool.Name,
 			Description: tool.Description,
 			Parameters:  tool.InputSchema,
@@ -158,7 +158,7 @@ func smokeToolDeclarations(t *testing.T, env *testEnv, token string) []voicev1.T
 }
 
 type smokeVoiceMessage struct {
-	kind voicev1.MessageKind
+	kind voicev2.MessageKind
 	raw  []byte
 }
 
@@ -207,7 +207,7 @@ func newSmokeVoiceClient(t *testing.T, serverURL, token string) (client *smokeVo
 	c.dc = dc
 	dc.OnOpen(func() { close(c.opened) })
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		var env voicev1.MessageEnvelope
+		var env voicev2.MessageEnvelope
 		if err := json.Unmarshal(msg.Data, &env); err != nil {
 			return
 		}
@@ -266,13 +266,13 @@ func (c *smokeVoiceClient) send(t *testing.T, msg any) {
 	}
 }
 
-func (c *smokeVoiceClient) wait(t *testing.T, want voicev1.MessageKind) []byte {
+func (c *smokeVoiceClient) wait(t *testing.T, want voicev2.MessageKind) []byte {
 	t.Helper()
 	deadline := time.After(60 * time.Second)
 	for {
 		select {
 		case msg := <-c.messages:
-			if msg.kind == voicev1.MessageKindError {
+			if msg.kind == voicev2.MessageKindError {
 				t.Fatalf("gateway error: %s", msg.raw)
 			}
 			if msg.kind == want {
@@ -306,10 +306,10 @@ func (c *smokeVoiceClient) runTurn(t *testing.T, env *testEnv, token string, sen
 		select {
 		case msg := <-c.messages:
 			switch msg.kind {
-			case voicev1.MessageKindError:
+			case voicev2.MessageKindError:
 				return sawToolCall, answered, fmt.Errorf("gateway error: %s", msg.raw)
-			case voicev1.MessageKindToolCall:
-				var call voicev1.ToolCall
+			case voicev2.MessageKindToolCall:
+				var call voicev2.ToolCall
 				if err := json.Unmarshal(msg.raw, &call); err != nil {
 					return sawToolCall, answered, fmt.Errorf("decode tool.call: %w", err)
 				}
@@ -318,14 +318,14 @@ func (c *smokeVoiceClient) runTurn(t *testing.T, env *testEnv, token string, sen
 				result := smokeCallMCPTool(t, env, token, call.Name, call.Args)
 				toolResultAt = time.Now()
 				t.Logf("tool.call %s executed in %s", call.Name, toolResultAt.Sub(started))
-				c.send(t, voicev1.ToolResult{
-					Kind:   voicev1.MessageKindToolResult,
+				c.send(t, voicev2.ToolResult{
+					Kind:   voicev2.MessageKindToolResult,
 					ID:     call.ID,
 					Name:   call.Name,
 					Result: result,
 				})
-			case voicev1.MessageKindAssistantTextDelta:
-				var delta voicev1.AssistantTextDelta
+			case voicev2.MessageKindAssistantTextDelta:
+				var delta voicev2.AssistantTextDelta
 				if err := json.Unmarshal(msg.raw, &delta); err != nil {
 					return sawToolCall, answered, fmt.Errorf("decode assistant text: %w", err)
 				}
@@ -339,7 +339,7 @@ func (c *smokeVoiceClient) runTurn(t *testing.T, env *testEnv, token string, sen
 				if grace == nil && sawToolCall && strings.TrimSpace(assistant.String()) != "" {
 					grace = time.After(5 * time.Second)
 				}
-			case voicev1.MessageKindSpeechEnded:
+			case voicev2.MessageKindSpeechEnded:
 				if sawToolCall {
 					return finish()
 				}
@@ -360,13 +360,13 @@ func (c *smokeVoiceClient) close(t *testing.T) {
 	}
 }
 
-func postVoiceOffer(t *testing.T, serverURL, token, sdp string) voicev1.VoiceRTCAnswerResp {
+func postVoiceOffer(t *testing.T, serverURL, token, sdp string) voicev2.VoiceRTCAnswerResp {
 	t.Helper()
-	body, err := json.Marshal(voicev1.VoiceRTCOfferReq{SDP: sdp})
+	body, err := json.Marshal(voicev2.VoiceRTCOfferReq{SDP: sdp})
 	if err != nil {
 		t.Fatalf("marshal offer: %v", err)
 	}
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, serverURL+"/api/voicegateway/v1/voice/rtc/offer", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, serverURL+"/api/voicegateway/v2/voice/rtc/offer", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("new offer request: %v", err)
 	}
@@ -386,7 +386,7 @@ func postVoiceOffer(t *testing.T, serverURL, token, sdp string) voicev1.VoiceRTC
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("offer status = %d: %s", resp.StatusCode, data)
 	}
-	var answer voicev1.VoiceRTCAnswerResp
+	var answer voicev2.VoiceRTCAnswerResp
 	if err := json.Unmarshal(data, &answer); err != nil {
 		t.Fatalf("decode offer response: %v", err)
 	}
@@ -485,7 +485,7 @@ func smokeMCPCall(t *testing.T, env *testEnv, token, method, name string, params
 func waitVoiceSessionGone(t *testing.T, serverURL, token, sessionID string, timeout time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
-	path := "/api/voicegateway/v1/voice/rtc/" + sessionID + "/diagnostics"
+	path := "/api/voicegateway/v2/voice/rtc/" + sessionID + "/diagnostics"
 	for time.Now().Before(deadline) {
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, serverURL+path, strings.NewReader(`{"client":{}}`))
 		if err != nil {

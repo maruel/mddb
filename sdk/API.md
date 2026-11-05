@@ -1670,4 +1670,3 @@ PushUnsubscribeRequest removes a push subscription.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `endpoint` | `string` |  | yes |
-

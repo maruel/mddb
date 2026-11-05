@@ -22,6 +22,7 @@ import (
 	"github.com/maruel/gomode/mcp"
 	voiceapi "github.com/maruel/gomode/voicegateway/api"
 	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -31,9 +32,10 @@ import (
 )
 
 type testVoiceBridge struct {
-	mu     sync.Mutex
-	next   int
-	closed []string
+	mu        sync.Mutex
+	next      int
+	closed    []string
+	rtcErrors map[string]string
 }
 
 func (b *testVoiceBridge) HandleOffer(_ context.Context, sdp string) (answer, sessionID string, err error) {
@@ -52,14 +54,20 @@ func (b *testVoiceBridge) Close(id string) {
 	b.mu.Unlock()
 }
 
+func (b *testVoiceBridge) VoiceRTCError(id string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.rtcErrors[id]
+}
+
 type testVoiceChoiceBridge struct {
 	testVoiceBridge
 }
 
-func (b *testVoiceChoiceBridge) VoiceChoices() voicev1.VoiceChoicesResp {
-	return voicev1.VoiceChoicesResp{
-		Defaults: []voicev1.VoiceChoiceDefault{{Transport: voicev1.VoiceTransportWebRTC, ID: "live"}},
-		Choices:  []voicev1.VoiceChoice{{ID: "live", Label: "Live", Transports: []voicev1.VoiceTransport{voicev1.VoiceTransportWebRTC}}},
+func (b *testVoiceChoiceBridge) VoiceChoices() voicev2.VoiceChoicesResp {
+	return voicev2.VoiceChoicesResp{
+		Defaults: []voicev2.VoiceChoiceDefault{{Transport: voicev2.VoiceTransportWebRTC, ID: "live"}},
+		Choices:  []voicev2.VoiceChoice{{ID: "live", Label: "Live", Transports: []voicev2.VoiceTransport{voicev2.VoiceTransportWebRTC}}},
 	}
 }
 
@@ -99,7 +107,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		t.Fatalf("register status = %d", status)
 	}
 	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	bridge := &testVoiceChoiceBridge{}
+	bridge := &testVoiceChoiceBridge{testVoiceBridge: testVoiceBridge{rtcErrors: map[string]string{"session-1": "provider disconnected"}}}
 	router := NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge})
 	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
@@ -131,10 +139,11 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		name, method, path, body string
 		want                     int
 	}{
-		{name: "choices", method: http.MethodGet, path: "/api/voicegateway/v1/voice/choices", want: http.StatusOK},
-		{name: "offer", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/offer", body: `{}`, want: http.StatusBadRequest},
-		{name: "diagnostics", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/session/diagnostics", body: `{}`, want: http.StatusNotFound},
-		{name: "close", method: http.MethodPost, path: "/api/voicegateway/v1/voice/rtc/session", want: http.StatusNotFound},
+		{name: "published choices", method: http.MethodGet, path: "/api/voicegateway/v1/voice/choices", want: http.StatusOK},
+		{name: "choices", method: http.MethodGet, path: "/api/voicegateway/v2/voice/choices", want: http.StatusOK},
+		{name: "offer", method: http.MethodPost, path: "/api/voicegateway/v2/voice/rtc/offer", body: `{}`, want: http.StatusBadRequest},
+		{name: "diagnostics", method: http.MethodPost, path: "/api/voicegateway/v2/voice/rtc/session/diagnostics", body: `{}`, want: http.StatusNotFound},
+		{name: "close", method: http.MethodPost, path: "/api/voicegateway/v2/voice/rtc/session", want: http.StatusNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, authCase := range []struct {
@@ -156,11 +165,19 @@ func TestGoModeVoiceGateway(t *testing.T) {
 					if err != nil {
 						t.Fatalf("voice request: %v", err)
 					}
-					if tc.name == "choices" && authCase.token != "" {
+					if tc.name == "published choices" && authCase.token != "" {
 						var choices voicev1.VoiceChoicesResp
 						if err := json.NewDecoder(resp.Body).Decode(&choices); err != nil {
+							t.Errorf("decode published choices: %v", err)
+						} else if choices.DefaultChoiceID != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
+							t.Errorf("published choices = %+v", choices)
+						}
+					}
+					if tc.name == "choices" && authCase.token != "" {
+						var choices voicev2.VoiceChoicesResp
+						if err := json.NewDecoder(resp.Body).Decode(&choices); err != nil {
 							t.Errorf("decode voice choices: %v", err)
-						} else if choices.DefaultChoiceID(voicev1.VoiceTransportWebRTC) != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
+						} else if choices.DefaultChoiceID(voicev2.VoiceTransportWebRTC) != "live" || len(choices.Choices) != 1 || choices.Choices[0].ID != "live" {
 							t.Errorf("voice choices = %+v", choices)
 						}
 					}
@@ -196,7 +213,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		}
 		return resp.StatusCode
 	}
-	offer := "/api/voicegateway/v1/voice/rtc/offer"
+	offer := "/api/voicegateway/v2/voice/rtc/offer"
 	if status := voiceRequest(offer, `{"sdp":"m=audio 9"}`, auth.Token); status != http.StatusOK {
 		t.Fatalf("valid offer status = %d", status)
 	}
@@ -212,8 +229,26 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	if len(closed) != 0 {
 		t.Fatalf("rejected reconnect closed active session: %v", closed)
 	}
-	if status := voiceRequest("/api/voicegateway/v1/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusOK {
+	if status := voiceRequest("/api/voicegateway/v2/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusOK {
 		t.Fatalf("original session after rejected reconnect status = %d", status)
+	}
+	legacyReq, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+"/api/voicegateway/v1/voice/rtc/session-1/diagnostics", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyReq.Header.Set("Authorization", "Bearer "+auth.Token)
+	legacyResp, err := http.DefaultClient.Do(legacyReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var legacyReport voicev1.VoiceRTCDiagnosticsResp
+	decodeErr := json.NewDecoder(legacyResp.Body).Decode(&legacyReport)
+	closeErr := legacyResp.Body.Close()
+	if decodeErr != nil || closeErr != nil {
+		t.Fatalf("read v1 diagnostics: %v, %v", decodeErr, closeErr)
+	}
+	if legacyResp.StatusCode != http.StatusOK || legacyReport.Server.LastError != "provider disconnected" {
+		t.Fatalf("v1 diagnostics status=%d report=%+v", legacyResp.StatusCode, legacyReport)
 	}
 	if status := voiceRequest(offer, `{"sdp":"m=audio 9"}`, auth.Token); status != http.StatusOK {
 		t.Fatalf("replacement offer status = %d", status)
@@ -223,11 +258,11 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		t.Fatalf("replaced session closes = %v", bridge.closed)
 	}
 	bridge.mu.Unlock()
-	if status := voiceRequest("/api/voicegateway/v1/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusNotFound {
+	if status := voiceRequest("/api/voicegateway/v2/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusNotFound {
 		t.Fatalf("replaced session diagnostics status = %d", status)
 	}
-	diagnostics := "/api/voicegateway/v1/voice/rtc/session-2/diagnostics"
-	closeSession := "/api/voicegateway/v1/voice/rtc/session-2"
+	diagnostics := "/api/voicegateway/v2/voice/rtc/session-2/diagnostics"
+	closeSession := "/api/voicegateway/v2/voice/rtc/session-2"
 	for _, path := range []string{diagnostics, closeSession} {
 		if status := voiceRequest(path, `{}`, other.Token); status != http.StatusNotFound {
 			t.Fatalf("cross-user request %s status = %d", path, status)
@@ -784,7 +819,7 @@ func (b *websocketVoiceBridge) ServeTextChoice(ctx context.Context, w http.Respo
 	if r.Header.Get("Authorization") != "" {
 		return errors.New("browser upgrade unexpectedly forwarded a login bearer")
 	}
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"gomode.text.v1"}})
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"gomode.text.v2"}})
 	if err != nil {
 		return err
 	}
@@ -809,7 +844,7 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 	ts := httptest.NewServer(router)
 	t.Cleanup(ts.Close)
 	ticketRequest := func(token string) *http.Response {
-		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/api/voicegateway/v1/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL+"/api/voicegateway/v2/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -842,12 +877,12 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 	if authorized.StatusCode != http.StatusOK {
 		t.Fatalf("authenticated ticket status: %d", authorized.StatusCode)
 	}
-	var out voicev1.VoiceTextTicketResp
+	var out voicev2.VoiceTextTicketResp
 	if err := json.NewDecoder(authorized.Body).Decode(&out); err != nil {
 		t.Fatal(err)
 	}
 	dial := func(ticket string) (*websocket.Conn, *http.Response, error) {
-		return websocket.Dial(t.Context(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/api/voicegateway/v1/voice/text/browser", &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{ts.URL}, "Accept-Encoding": []string{"gzip"}}, Subprotocols: []string{"gomode.text.v1", "gomode.ticket." + ticket}})
+		return websocket.Dial(t.Context(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/api/voicegateway/v2/voice/text/browser", &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{ts.URL}, "Accept-Encoding": []string{"gzip"}}, Subprotocols: []string{"gomode.text.v2", "gomode.ticket." + ticket}})
 	}
 	conn, res, err := dial(out.Ticket)
 	if res != nil && res.Body != nil {
@@ -861,7 +896,7 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 		t.Fatalf("ticket-authenticated WebSocket upgrade without login header: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.CloseNow() })
-	if conn.Subprotocol() != "gomode.text.v1" {
+	if conn.Subprotocol() != "gomode.text.v2" {
 		t.Fatalf("selected protocol: %s", conn.Subprotocol())
 	}
 	if err := conn.Write(t.Context(), websocket.MessageText, []byte("ping")); err != nil {

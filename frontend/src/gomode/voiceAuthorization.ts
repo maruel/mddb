@@ -1,6 +1,6 @@
 // Validates voice endpoint URLs and exchanges mddb login credentials for scoped gateway authorization.
 
-import type { ServiceAuthorization } from "@maruel/gomode/sdk/voicegateway/types.gen.ts";
+import type { ServiceAuthorization } from "@maruel/gomode/sdk/voicegateway/v2/types.gen.ts";
 
 /** Gateway and issuer URLs are secure origins, allowing HTTP for loopback development. */
 export function voiceOrigin(value: string, origin: string): URL {

@@ -191,7 +191,7 @@ export async function installBrowserTools(page: Page) {
     manifest.webShell.voiceGateway = { url: "/" };
     await route.fulfill({ response, json: manifest });
   });
-  await page.route("**/api/voicegateway/v1/**", async (route) => {
+  await page.route("**/api/voicegateway/v2/**", async (route) => {
     const url = route.request().url();
     if (url.endsWith("/voice/choices"))
       await route.fulfill({

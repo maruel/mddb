@@ -125,16 +125,19 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 		}
 	} else if cfg.VoiceBridge != nil {
 		voice := newVoiceGateway(cfg.VoiceBridge)
-		mux.HandleFunc("GET /api/voicegateway/v1/voice/text/browser", voice.serveBrowserText)
-		for _, path := range []string{
-			"GET /api/voicegateway/v1/voice/choices",
-			"GET /api/voicegateway/v1/voice/text",
-			"POST /api/voicegateway/v1/voice/text/ticket",
-			"POST /api/voicegateway/v1/voice/rtc/offer",
-			"POST /api/voicegateway/v1/voice/rtc/{sessionID}/diagnostics",
-			"POST /api/voicegateway/v1/voice/rtc/{sessionID}",
-		} {
-			mux.Handle(path, WrapAuthReadRaw(voice.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters))
+		for _, version := range []string{"v1", "v2"} {
+			prefix := "/api/voicegateway/" + version + "/voice"
+			mux.HandleFunc("GET "+prefix+"/text/browser", voice.serveBrowserText)
+			for _, path := range []string{
+				"GET " + prefix + "/choices",
+				"GET " + prefix + "/text",
+				"POST " + prefix + "/text/ticket",
+				"POST " + prefix + "/rtc/offer",
+				"POST " + prefix + "/rtc/{sessionID}/diagnostics",
+				"POST " + prefix + "/rtc/{sessionID}",
+			} {
+				mux.Handle(path, WrapAuthReadRaw(voice.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters))
+			}
 		}
 	}
 

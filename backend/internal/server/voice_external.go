@@ -22,7 +22,7 @@ import (
 	"github.com/maruel/gomode/oauth"
 	"github.com/maruel/gomode/oauth/oauthserver"
 	"github.com/maruel/gomode/voicegateway"
-	voicev1 "github.com/maruel/gomode/voicegateway/api/v1"
+	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
 
@@ -124,7 +124,7 @@ func (c *ExternalVoiceGateway) serveToken(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(voicev1.ServiceAuthorization{Kind: "mddb", InstanceID: c.InstanceID, BaseURL: c.Issuer, Token: token}); err != nil {
+	if err := json.NewEncoder(w).Encode(voicev2.ServiceAuthorization{Kind: "mddb", InstanceID: c.InstanceID, BaseURL: c.Issuer, Token: token}); err != nil {
 		slog.WarnContext(r.Context(), "write voice token", "err", err)
 	}
 }

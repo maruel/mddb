@@ -30,7 +30,7 @@ for (const external of [true, false]) {
       expect(route.request().headers()["x-mddb-session"]).toBe(expectedSession);
       await route.fulfill({ json: service, headers: { "Cache-Control": "no-store" } });
     });
-    await page.route(`${gateway}/api/voicegateway/v1/**`, async (route) => {
+    await page.route(`${gateway}/api/voicegateway/v2/**`, async (route) => {
       const gatewayRequest = route.request();
       expect(gatewayRequest.headers().authorization).toBeUndefined();
       expect(gatewayRequest.headers()["x-mddb-session"]).toBe(external ? undefined : expectedSession);
@@ -66,7 +66,7 @@ for (const external of [true, false]) {
     });
     await gotoWithSession(page, token);
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
-    const offer = page.waitForRequest(`${gateway}/api/voicegateway/v1/voice/rtc/offer`);
+    const offer = page.waitForRequest(`${gateway}/api/voicegateway/v2/voice/rtc/offer`);
     await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
     await offer;
     await expect(page.getByRole("region", { name: "Voice assistant", exact: true }).getByRole("alert")).toHaveText(
@@ -128,7 +128,7 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
     manifest.webShell.voiceGateway = { url: baseURL! };
     await route.fulfill({ response, json: manifest });
   });
-  await page.route("**/api/voicegateway/v1/voice/choices", (route) =>
+  await page.route("**/api/voicegateway/v2/voice/choices", (route) =>
     route.fulfill({
       json: {
         choices: [{ id: "fake", label: "Test voice", transports: ["webrtc"] }],
@@ -181,7 +181,7 @@ test("logout aborts pending voice discovery and a late manifest cannot mount con
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   let gatewayRequests = 0;
-  await page.route("**/api/voicegateway/v1/**", (route) => {
+  await page.route("**/api/voicegateway/v2/**", (route) => {
     gatewayRequests++;
     return route.abort();
   });

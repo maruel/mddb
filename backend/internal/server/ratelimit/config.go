@@ -174,7 +174,7 @@ func (l *Limiters) MatchAuth(method, path string) *Tier {
 
 	// Search, MCP, and voice signaling have their own access controls. Voice
 	// offers also use a dedicated per-user and global limiter at the gateway.
-	if method == "POST" && (path == "/api/v1/gomode/mcp" || strings.HasSuffix(path, "/search") || strings.HasPrefix(path, "/api/voicegateway/v1/voice/rtc/")) {
+	if method == "POST" && (path == "/api/v1/gomode/mcp" || strings.HasSuffix(path, "/search") || strings.HasPrefix(path, "/api/voicegateway/v1/voice/rtc/") || strings.HasPrefix(path, "/api/voicegateway/v2/voice/rtc/")) {
 		return &l.ReadAuth
 	}
 
