@@ -13,7 +13,7 @@ require (
 	github.com/klauspost/compress v1.20.3
 	github.com/lmittmann/tint v1.2.1
 	github.com/maruel/apisdkgen v0.2.0
-	github.com/maruel/gomode v0.3.1-0.20261104190911-4ded89ae0536
+	github.com/maruel/gomode v0.3.1-0.20261104233135-1fa759e1fade
 	github.com/maruel/ksid v0.1.1
 	github.com/mattn/go-colorable v0.1.16
 	github.com/mattn/go-isatty v0.0.24
@@ -167,7 +167,7 @@ require (
 	github.com/manuelarte/funcorder v0.6.0 // indirect
 	github.com/maratori/testableexamples v1.0.1 // indirect
 	github.com/maratori/testpackage v1.1.2 // indirect
-	github.com/maruel/genai v0.10.3-0.20261104181854-b3b1acd3c1c0 // indirect
+	github.com/maruel/genai v0.10.3-0.20261104232619-ededc66c7e3a // indirect
 	github.com/maruel/genaipy v0.1.2 // indirect
 	github.com/maruel/httpjson v0.5.3 // indirect
 	github.com/maruel/roundtrippers v0.5.1 // indirect

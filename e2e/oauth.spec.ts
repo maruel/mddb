@@ -46,27 +46,22 @@ test.describe("OAuth Login", () => {
     await expect(googleButton).toHaveAttribute("href", "/api/v1/auth/oauth/google");
   });
 
-  test("clicking Microsoft logs in with the fake account", async ({ page }) => {
-    await page.goto("/");
+  for (const provider of ["Google", "Microsoft"]) {
+    test(`clicking ${provider} logs in with the fake account`, async ({ page }) => {
+      await page.goto("/");
 
-    const msButton = page.getByRole("link", { name: /microsoft/i });
-    await expect(msButton).toBeVisible({ timeout: 5000 });
+      const button = page.getByRole("link", { name: new RegExp(provider, "i") });
+      await expect(button).toBeVisible();
+      await button.click();
+      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    // The e2e build fakes the provider, so clicking the button should bypass
-    // real OAuth and log in with a fake account, landing on onboarding.
-    await msButton.click();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
-  });
-
-  test("clicking Google logs in with the fake account", async ({ page }) => {
-    await page.goto("/");
-
-    const googleButton = page.getByRole("link", { name: /google/i });
-    await expect(googleButton).toBeVisible({ timeout: 5000 });
-
-    await googleButton.click();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
-  });
+      // Fake providers share an account across runs. Release this login through
+      // the browser flow so repetitions don't exhaust its real session quota.
+      await page.getByRole("button", { name: "User menu", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Logout", exact: true }).click();
+      await expect(page.getByRole("heading", { name: /login|sign in/i })).toBeVisible();
+    });
+  }
 
   test("OAuth callback with token sets auth and redirects", async ({ page, context: _context }) => {
     // This test simulates what happens after Google redirects back with a token

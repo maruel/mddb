@@ -326,6 +326,55 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
+		t.Run("open reader keeps its snapshot", func(t *testing.T) {
+			table, path := setupTable(t)
+			if err := table.Append(&testRow{ID: 1, Name: "Original"}); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(path, 0o640); err != nil { //nolint:gosec // G302: verifies preservation of explicit permissions
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path) //nolint:gosec // G304: fixture path comes from t.TempDir
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader, err := os.Open(path) //nolint:gosec // G304: fixture path comes from t.TempDir
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := reader.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			if _, err := table.Update(&testRow{ID: 1, Name: "Updated"}); err != nil {
+				t.Fatal(err)
+			}
+			// Git can hold this descriptor or mmap while another request saves.
+			// Rewriting its inode can expose partial JSONL or trigger SIGBUS.
+			got, err := io.ReadAll(reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(got, before) {
+				t.Fatal("save changed the snapshot held by an open reader")
+			}
+			reloaded, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if row := reloaded.Get(ksid.ID(1)); row == nil || row.Name != "Updated" {
+				t.Fatalf("reloaded row = %+v", row)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode().Perm() != 0o640 {
+				t.Fatalf("permissions = %o, want 640", info.Mode().Perm())
+			}
+		})
+
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 

@@ -135,12 +135,10 @@ test.describe("Floating Toolbar Visibility", () => {
           if (input.newParagraph) {
             await page.keyboard.press("Enter");
             await expect(editor.locator("p")).toHaveCount(3);
-            await page.keyboard.press("ArrowUp");
           }
-          await page.keyboard.press("Home");
-          await page.keyboard.down("Shift");
-          await page.keyboard.press("End");
-          await page.keyboard.up("Shift");
+          // Wait for typing, then select the paragraph before releasing metadata.
+          await expect(paragraph).toHaveText("Hello world" + input.text);
+          await paragraph.selectText();
           const toolbar = page.getByTestId("floating-toolbar");
           await expect(toolbar).toBeVisible();
 

@@ -5,6 +5,7 @@ package jsonldb
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -483,7 +484,7 @@ func (t *Table[T]) Append(row T) (err error) {
 	} else {
 		// Normal case: append to end of file
 		if _, err := os.Stat(t.path); os.IsNotExist(err) {
-			if err := t.saveSchemaHeaderLocked(); err != nil {
+			if err := t.saveLocked(); err != nil {
 				return fmt.Errorf("failed to write schema header: %w", err)
 			}
 		}
@@ -519,47 +520,41 @@ func (t *Table[T]) Append(row T) (err error) {
 	return nil
 }
 
-// saveSchemaHeaderLocked writes just the schema header as the first line. Caller must hold t.mu.
-func (t *Table[T]) saveSchemaHeaderLocked() (err error) {
-	f, err := os.Create(t.path)
+// saveLocked writes the schema header and all rows to the file. Caller must hold t.mu.
+func (t *Table[T]) saveLocked() (err error) {
+	// Git reads tables concurrently with request mutations and may mmap them.
+	// Replace the file instead of truncating an inode another reader still owns.
+	tmp := filepath.Join(filepath.Dir(t.path), ".jsonldb-"+rand.Text())
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
 	if err != nil {
 		return fmt.Errorf("failed to create table file: %w", err)
 	}
 	defer func() {
-		if cerr := f.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close table file: %w", cerr)
+		if tmp != "" {
+			err = errors.Join(err, os.Remove(tmp))
 		}
 	}()
-
-	writer := bufio.NewWriter(f)
-	headerData, err := json.Marshal(t.schema)
-	if err != nil {
-		return fmt.Errorf("failed to marshal schema header: %w", err)
+	info, statErr := os.Stat(t.path)
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		err = statErr
+	} else if info != nil {
+		err = f.Chmod(info.Mode().Perm())
 	}
-	if _, err := writer.Write(headerData); err != nil {
-		return fmt.Errorf("failed to write schema header: %w", err)
+	if err == nil {
+		err = t.writeLocked(f)
 	}
-	if err := writer.WriteByte('\n'); err != nil {
-		return fmt.Errorf("failed to write newline: %w", err)
+	if err := errors.Join(err, f.Close()); err != nil {
+		return err
 	}
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("failed to flush writer: %w", err)
+	if err := os.Rename(tmp, t.path); err != nil {
+		return fmt.Errorf("failed to replace table file: %w", err)
 	}
+	tmp = ""
 	return nil
 }
 
-// saveLocked writes the schema header and all rows to the file. Caller must hold t.mu.
-func (t *Table[T]) saveLocked() (err error) {
-	f, err := os.Create(t.path)
-	if err != nil {
-		return fmt.Errorf("failed to create table file: %w", err)
-	}
-	defer func() {
-		if cerr := f.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close table file: %w", cerr)
-		}
-	}()
-
+// writeLocked encodes a complete table snapshot. Caller must hold t.mu.
+func (t *Table[T]) writeLocked(f *os.File) error {
 	writer := bufio.NewWriter(f)
 
 	// Write schema header as first line

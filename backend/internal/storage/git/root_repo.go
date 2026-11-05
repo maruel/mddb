@@ -64,7 +64,8 @@ func (rr *RootRepo) CommitDBChanges(ctx context.Context, author Author, msg stri
 	defer rr.repo.mu.Unlock()
 
 	// Stage db/
-	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/"); err != nil {
+	// JSONL rewrites publish by rename; never stage their in-progress files.
+	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/", ":(exclude,glob)db/**/.jsonldb-*"); err != nil {
 		return fmt.Errorf("failed to stage db changes: %w\nOutput: %s", err, string(out))
 	}
 

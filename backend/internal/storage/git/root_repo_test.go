@@ -124,14 +124,25 @@ func TestRootRepo(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dbDir, "users.jsonl"), []byte("{\"id\":1}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
+		// Another request can still be writing an unpublished table snapshot.
+		if err := os.WriteFile(filepath.Join(dbDir, ".jsonldb-in-progress"), []byte("partial JSON"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 
 		author := Author{Name: "User", Email: "user@example.com"}
 		if err := rr.CommitDBChanges(ctx, author, "POST /api/v1/auth/register"); err != nil {
 			t.Fatalf("CommitDBChanges() failed: %v", err)
 		}
+		out, err := gitOutput(dir, "ls-tree", "--name-only", "-r", "HEAD", "db/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(out) != "db/users.jsonl\n" {
+			t.Fatalf("committed database files = %q", out)
+		}
 
 		// Verify commit
-		out, err := gitOutput(dir, "log", "-1", "--format=%s")
+		out, err = gitOutput(dir, "log", "-1", "--format=%s")
 		if err != nil {
 			t.Fatal(err)
 		}
