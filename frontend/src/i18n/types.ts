@@ -689,6 +689,7 @@ export interface Dictionary {
     showTranscript: string;
     stopMusic: string;
     stopMusicLabel: string;
+    systemMicrophoneSettings: string;
     thinkingMusic: string;
     voiceActivity: string;
     voiceControls: string;

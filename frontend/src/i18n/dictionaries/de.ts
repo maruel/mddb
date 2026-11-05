@@ -688,6 +688,7 @@ export const dict: Dictionary = {
     showTranscript: "Transkript anzeigen",
     stopMusic: "Stoppen",
     stopMusicLabel: "Musik zum Nachdenken stoppen",
+    systemMicrophoneSettings: "Ändern Sie das Mikrofon in den Toneinstellungen Ihres Geräts.",
     thinkingMusic: "Musik beim Nachdenken",
     voiceActivity: "Sprachaktivität",
     voiceControls: "Sprachsteuerung",
