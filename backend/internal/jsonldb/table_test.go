@@ -8,9 +8,14 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"slices"
+	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -133,6 +138,27 @@ func (m *mockObserver) OnDelete(row *testRow) {
 
 // TestTable tests all Table methods using table-driven tests.
 func TestTable(t *testing.T) {
+	t.Run("SetProperties", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.SetProperties(json.RawMessage(`{"label":"after"}`)) })
+		})
+		t.Run("owns properties", func(t *testing.T) {
+			table, _ := setupTable(t)
+			props := json.RawMessage(`{"value":1}`)
+			if err := table.SetProperties(props); err != nil {
+				t.Fatal(err)
+			}
+			props[len(props)-2] = '2'
+			got := table.Properties()
+			if string(got) != `{"value":1}` {
+				t.Errorf("caller changed cached properties: %s", got)
+			}
+			got[len(got)-2] = '3'
+			if got := table.Properties(); string(got) != `{"value":1}` {
+				t.Errorf("reader changed cached properties: %s", got)
+			}
+		})
+	})
 	t.Run("Len", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			table, _ := setupTable(t)
@@ -213,6 +239,10 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error { _, err := table.Delete(10); return err })
+		})
+		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "Delete") })
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 
@@ -326,6 +356,13 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error {
+				_, err := table.Update(&testRow{ID: 10, Name: "changed"})
+				return err
+			})
+		})
+		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "Update") })
 		t.Run("open reader keeps its snapshot", func(t *testing.T) {
 			table, path := setupTable(t)
 			if err := table.Append(&testRow{ID: 1, Name: "Original"}); err != nil {
@@ -673,6 +710,76 @@ not valid json
 	})
 
 	t.Run("Append", func(t *testing.T) {
+		t.Run("partial write", func(t *testing.T) {
+			if os.Getenv("JSONLDB_LIMIT_APPEND") != "1" {
+				if runtime.GOOS == "windows" {
+					t.Skip("requires POSIX file size limits")
+				}
+				executable, err := os.Executable()
+				if err != nil {
+					t.Fatal(err)
+				}
+				cmd := exec.CommandContext(t.Context(), executable, "-test.run=^TestTable/Append/partial_write$", "-test.count=1") //nolint:gosec // G204: executes this test binary with fixed arguments.
+				cmd.Env = append(os.Environ(), "JSONLDB_LIMIT_APPEND=1")
+				if output, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("limited append: %v\n%s", err, output)
+				}
+				return
+			}
+			var original syscall.Rlimit
+			if err := syscall.Getrlimit(syscall.RLIMIT_FSIZE, &original); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := syscall.Setrlimit(syscall.RLIMIT_FSIZE, &original); err != nil {
+					t.Error(err)
+				}
+			})
+			limited := original
+			limited.Cur = 512
+			if err := syscall.Setrlimit(syscall.RLIMIT_FSIZE, &limited); err != nil {
+				t.Fatal(err)
+			}
+			table, path := setupTable(t)
+			if err := table.Append(&testRow{ID: 10, Name: "before"}); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
+			if err != nil {
+				t.Fatal(err)
+			}
+			row := &testRow{ID: 20, Name: strings.Repeat("large row", 512)}
+			if err := table.Append(row); err == nil {
+				t.Fatal("partial write unexpectedly succeeded")
+			}
+			after, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, after) {
+				t.Fatalf("failed append changed stored snapshot from %d to %d bytes", len(before), len(after))
+			}
+			if table.Len() != 1 || table.Get(20) != nil {
+				t.Fatal("failed append changed cached rows")
+			}
+			row.Name = "retry"
+			if err := table.Append(row); err != nil {
+				t.Fatalf("retry failed: %v", err)
+			}
+			reloaded, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reloaded.Len() != 2 || reloaded.Get(20).Name != "retry" {
+				t.Fatal("retry did not publish the complete row")
+			}
+		})
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 40, Name: "forty"}) })
+		})
+		t.Run("out-of-order failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 20, Name: "twenty"}) })
+		})
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 
@@ -1112,6 +1219,13 @@ not valid json
 	})
 
 	t.Run("Modify", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error {
+				_, err := table.Modify(10, func(row *testRow) error { row.Name = "changed"; return nil })
+				return err
+			})
+		})
+		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "Modify") })
 		t.Run("success", func(t *testing.T) {
 			table, _ := setupTable(t)
 			_ = table.Append(&testRow{ID: 1, Name: "original"})
@@ -1501,5 +1615,154 @@ func TestDeriveBlobDir(t *testing.T) {
 				t.Errorf("deriveBlobDir(%q) = %q, want %q", tt.path, got, tt.want)
 			}
 		})
+	}
+}
+
+// checkFailedPublication checks cached state, observers, stored bytes, and retry.
+func checkFailedPublication(t *testing.T, mutate func(*Table[*testRow]) error) {
+	table, path := setupTable(t)
+	for _, row := range []*testRow{{ID: 10, Name: "ten"}, {ID: 30, Name: "thirty"}} {
+		if err := table.Append(row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	props := json.RawMessage(`{"label":"before"}`)
+	if err := table.SetProperties(props); err != nil {
+		t.Fatal(err)
+	}
+	index := NewUniqueIndex(table, func(row *testRow) string { return row.Name })
+	observer := &mockObserver{}
+	table.AddObserver(observer)
+	observer.appends = nil
+	before, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
+	if err != nil {
+		t.Fatal(err)
+	}
+	backup := path + ".saved"
+	if err := os.Rename(path, backup); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	mutationErr := mutate(table)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(backup, path); err != nil {
+		t.Fatal(err)
+	}
+	if mutationErr == nil {
+		t.Fatal("mutation unexpectedly succeeded")
+	}
+	if table.Len() != 2 || !reflect.DeepEqual(table.Get(10), &testRow{ID: 10, Name: "ten"}) || !reflect.DeepEqual(table.Get(30), &testRow{ID: 30, Name: "thirty"}) || table.Get(20) != nil || table.Get(40) != nil {
+		t.Errorf("cached rows changed after failure: %v", table.rows)
+	}
+	if !bytes.Equal(table.Properties(), props) {
+		t.Errorf("properties changed after failure: %s", table.Properties())
+	}
+	if got := index.Get("ten"); got == nil || got.Name != "ten" {
+		t.Errorf("index no longer matches original row: %v", got)
+	}
+	if len(observer.appends)+len(observer.updates)+len(observer.deletes) != 0 {
+		t.Errorf("failed mutation notified observers: %+v", observer)
+	}
+	after, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Error("stored snapshot changed after failure")
+	}
+	if err := mutate(table); err != nil {
+		t.Fatalf("retry failed: %v", err)
+	}
+	reloaded, err := NewTable[*testRow](path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(table.rows, reloaded.rows) || !bytes.Equal(table.Properties(), reloaded.Properties()) {
+		t.Error("retry left cache and stored snapshot inconsistent")
+	}
+}
+
+// checkBlobCleanupFailure checks committed state despite failed garbage collection.
+func checkBlobCleanupFailure(t *testing.T, operation string) {
+	path := filepath.Join(t.TempDir(), "table.jsonl")
+	table, err := NewTable[*blobTestRow](path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer, err := table.NewBlob()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write([]byte("old content")); err != nil {
+		t.Fatal(err)
+	}
+	blob, err := writer.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := table.Append(&blobTestRow{ID: 10, Name: "before", Content: blob}); err != nil {
+		t.Fatal(err)
+	}
+	index := NewUniqueIndex(table, func(row *blobTestRow) string { return row.Name })
+	obstructBlobRemoval(t, table, blob)
+	var result *blobTestRow
+	switch operation {
+	case "Delete":
+		result, err = table.Delete(10)
+	case "Update":
+		result, err = table.Update(&blobTestRow{ID: 10, Name: "after"})
+	case "Modify":
+		result, err = table.Modify(10, func(row *blobTestRow) error { row.Name = "after"; row.Content = Blob{}; return nil })
+	}
+	if err == nil {
+		t.Fatal("cleanup failure was hidden")
+	}
+	if result == nil || !strings.Contains(err.Error(), "persisted") {
+		t.Errorf("cleanup failure did not report the persisted mutation: result=%v err=%v", result, err)
+	}
+	if _, exists := index.byKey["before"]; exists {
+		t.Error("observer retained removed index key after publication")
+	}
+	if operation != "Delete" && index.Get("after") == nil {
+		t.Error("observer missed published replacement")
+	}
+	if len(table.blobRefCount) != 0 {
+		t.Errorf("obsolete blob reference retained: %v", table.blobRefCount)
+	}
+	if err := os.RemoveAll(table.blobStore.pathForRef(blob.Ref)); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := NewTable[*blobTestRow](path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cachedJSON, marshalErr := json.Marshal(table.Get(10))
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
+	storedJSON, marshalErr := json.Marshal(reloaded.Get(10))
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
+	if !bytes.Equal(cachedJSON, storedJSON) {
+		t.Error("cache and stored row disagree after cleanup failure")
+	}
+}
+
+// obstructBlobRemoval makes removal fail without depending on filesystem permissions.
+func obstructBlobRemoval(t *testing.T, table *Table[*blobTestRow], blob Blob) {
+	path := table.blobStore.pathForRef(blob.Ref)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(path, "obstruction"), []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

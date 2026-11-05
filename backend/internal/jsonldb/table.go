@@ -141,7 +141,7 @@ func (t *Table[T]) Len() int {
 func (t *Table[T]) Properties() json.RawMessage {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.schema.Properties
+	return slices.Clone(t.schema.Properties)
 }
 
 // SetProperties sets the application-specific schema properties and persists the change.
@@ -149,8 +149,13 @@ func (t *Table[T]) Properties() json.RawMessage {
 func (t *Table[T]) SetProperties(props json.RawMessage) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.schema.Properties = props
-	return t.saveLocked()
+	prev := t.schema.Properties
+	t.schema.Properties = slices.Clone(props)
+	if err := t.saveLocked(); err != nil {
+		t.schema.Properties = prev
+		return err
+	}
+	return nil
 }
 
 // Get returns a clone of the row with the given ID, or nil if not found.
@@ -169,6 +174,8 @@ func (t *Table[T]) Get(id ksid.ID) T {
 // Returns the deleted row, or nil if no row with that ID exists.
 // The entire table is rewritten to disk on success.
 // Blobs are only deleted if no other rows reference them.
+// A blob cleanup error returns the deleted row with an error describing the
+// already persisted deletion; observers have received the deletion.
 func (t *Table[T]) Delete(id ksid.ID) (T, error) {
 	var zero T
 	t.mu.Lock()
@@ -181,26 +188,26 @@ func (t *Table[T]) Delete(id ksid.ID) (T, error) {
 
 	deleted := t.rows[idx]
 
-	// Remove from slice
-	t.rows = append(t.rows[:idx], t.rows[idx+1:]...)
-
-	// Rebuild index (indices shifted after removal)
-	t.byID = make(map[ksid.ID]int, len(t.rows))
-	for i, row := range t.rows {
-		t.byID[row.GetID()] = i
-	}
-
+	// Keep the original backing array intact until publication succeeds.
+	prevRows := t.rows
+	t.rows = slices.Delete(slices.Clone(t.rows), idx, idx+1)
 	if err := t.saveLocked(); err != nil {
+		t.rows = prevRows
 		return zero, err
 	}
-
-	// Decrement blob refcounts, delete blobs with refcount 0.
-	if err := t.untrackBlobRefsLocked(deleted); err != nil {
-		return zero, fmt.Errorf("failed to untrack blobs: %w", err)
+	for i := idx; i < len(t.rows); i++ {
+		t.byID[t.rows[i].GetID()] = i
 	}
+	delete(t.byID, id)
+
+	// Cleanup can fail after publication; observers must still see the deletion.
+	cleanupErr := t.untrackBlobRefsLocked(deleted)
 
 	for _, obs := range t.observers {
 		obs.OnDelete(deleted)
+	}
+	if cleanupErr != nil {
+		return deleted, fmt.Errorf("row deletion persisted, but blob cleanup failed: %w", cleanupErr)
 	}
 	return deleted, nil
 }
@@ -236,6 +243,8 @@ func (t *Table[T]) untrackBlobRefsLocked(row T) error {
 //
 // Returns the previous row value, or nil if no row with that ID exists.
 // Returns an error if validation fails. The entire table is rewritten to disk on success.
+// A blob cleanup error returns the previous row with an error describing the
+// already persisted update; observers have received the update.
 func (t *Table[T]) Update(row T) (T, error) {
 	var zero T
 	if err := row.Validate(); err != nil {
@@ -253,17 +262,19 @@ func (t *Table[T]) Update(row T) (T, error) {
 	prev := t.rows[idx]
 	t.rows[idx] = row
 	if err := t.saveLocked(); err != nil {
+		t.rows[idx] = prev
 		return zero, err
 	}
 
 	// Update blob refcounts: track new first to avoid deleting shared blobs.
 	t.trackBlobRefsLocked(row)
-	if err := t.untrackBlobRefsLocked(prev); err != nil {
-		return zero, fmt.Errorf("failed to untrack old blobs: %w", err)
-	}
+	cleanupErr := t.untrackBlobRefsLocked(prev)
 
 	for _, obs := range t.observers {
 		obs.OnUpdate(prev, row)
+	}
+	if cleanupErr != nil {
+		return prev, fmt.Errorf("row update persisted, but blob cleanup failed: %w", cleanupErr)
 	}
 	return prev, nil
 }
@@ -282,7 +293,8 @@ func (t *Table[T]) Update(row T) (T, error) {
 //
 // If fn returns an error, the row is not modified. If validation fails after
 // fn returns, the row is not modified. If the disk write fails, the in-memory
-// state is rolled back.
+// state is rolled back. A blob cleanup error returns the modified row with an
+// error describing the already persisted modification; observers have received it.
 func (t *Table[T]) Modify(id ksid.ID, fn func(row T) error) (T, error) {
 	var zero T
 	t.mu.Lock()
@@ -311,12 +323,13 @@ func (t *Table[T]) Modify(id ksid.ID, fn func(row T) error) (T, error) {
 
 	// Update blob refcounts: track new first to avoid deleting shared blobs.
 	t.trackBlobRefsLocked(row)
-	if err := t.untrackBlobRefsLocked(prev); err != nil {
-		return zero, fmt.Errorf("failed to untrack old blobs: %w", err)
-	}
+	cleanupErr := t.untrackBlobRefsLocked(prev)
 
 	for _, obs := range t.observers {
 		obs.OnUpdate(prev, row)
+	}
+	if cleanupErr != nil {
+		return row.Clone(), fmt.Errorf("row modification persisted, but blob cleanup failed: %w", cleanupErr)
 	}
 	return row.Clone(), nil
 }
@@ -449,6 +462,10 @@ func (t *Table[T]) Iter(startID ksid.ID) iter.Seq[T] {
 // Returns an error if the row fails validation, has a zero ID, or has a duplicate ID.
 // If the new row's ID is less than the last row's ID (e.g., clock drift), the row is
 // inserted at the correct position and the entire file is rewritten to maintain sorted order.
+// A close error after a successful append reports that the row was persisted;
+// cached rows and observers already include the row. Failed partial writes are
+// replaced with the previous snapshot; a failed rollback explicitly reports
+// incomplete stored state.
 func (t *Table[T]) Append(row T) (err error) {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
@@ -471,15 +488,15 @@ func (t *Table[T]) Append(row T) (err error) {
 		idx := sort.Search(len(t.rows), func(i int) bool {
 			return t.rows[i].GetID() >= id
 		})
-		// Insert at correct position
-		t.rows = slices.Insert(t.rows, idx, row)
-		// Update indices for shifted rows
+		prevRows := t.rows
+		t.rows = slices.Insert(slices.Clone(t.rows), idx, row)
+		if err := t.saveLocked(); err != nil {
+			t.rows = prevRows
+			return fmt.Errorf("failed to save table: %w", err)
+		}
+		// Update indices only after the new snapshot is published.
 		for i := idx; i < len(t.rows); i++ {
 			t.byID[t.rows[i].GetID()] = i
-		}
-		// Rewrite entire file in sorted order
-		if err := t.saveLocked(); err != nil {
-			return fmt.Errorf("failed to save table: %w", err)
 		}
 	} else {
 		// Normal case: append to end of file
@@ -498,14 +515,26 @@ func (t *Table[T]) Append(row T) (err error) {
 		if openErr != nil {
 			return fmt.Errorf("failed to open table file for append: %w", openErr)
 		}
+		published := false
 		defer func() {
-			if cerr := f.Close(); cerr != nil && err == nil {
-				err = fmt.Errorf("failed to close table file: %w", cerr)
+			if cerr := f.Close(); cerr != nil {
+				if published {
+					err = errors.Join(err, fmt.Errorf("row append persisted, but closing table file failed: %w", cerr))
+				} else {
+					err = errors.Join(err, fmt.Errorf("failed to close table file: %w", cerr))
+				}
 			}
 		}()
-		if _, err := f.Write(append(data, '\n')); err != nil {
-			return fmt.Errorf("failed to write row: %w", err)
+		if _, writeErr := f.Write(append(data, '\n')); writeErr != nil {
+			// A failed Write may have published a prefix of the row. Replace it
+			// with the cached snapshot without truncating a concurrent reader.
+			err := fmt.Errorf("failed to write row: %w", writeErr)
+			if rollbackErr := t.saveLocked(); rollbackErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to restore table after append; stored state may be incomplete: %w", rollbackErr))
+			}
+			return err
 		}
+		published = true
 
 		t.byID[id] = len(t.rows)
 		t.rows = append(t.rows, row)

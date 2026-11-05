@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func TestHealthHandler(t *testing.T) {
@@ -16,7 +17,11 @@ func TestHealthHandler(t *testing.T) {
 			Revision:  "abc1234",
 			Dirty:     true,
 		}
-		handler := &HealthHandler{Cfg: cfg}
+		root, err := git.NewRootRepo(t.Context(), t.TempDir(), "Test", "test@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+		handler := &HealthHandler{Cfg: cfg, RootRepo: root}
 		resp, err := handler.GetHealth(t.Context(), &dto.HealthRequest{})
 		if err != nil {
 			t.Fatalf("GetHealth() error = %v", err)

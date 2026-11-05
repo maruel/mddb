@@ -6,6 +6,7 @@ import {
   type BrowserContext,
   type Page,
   type APIRequestContext,
+  type APIResponse,
   type TestInfo,
 } from "@playwright/test";
 import type {
@@ -15,7 +16,9 @@ import type {
   PlaywrightWorkerArgs,
   PlaywrightWorkerOptions,
 } from "@playwright/test";
-import { createApiClient, type APIClient } from "../sdk/api.gen";
+import { randomUUID } from "node:crypto";
+import type { DeviceLoginCode, DeviceLoginRequest } from "@maruel/gomode/web/DeviceLogin";
+import { APIError, createApiClient, type APIClient } from "../sdk/api.gen";
 
 // Install the asynchronous native auth bridge used by host journeys.
 export interface AuthBridgeOptions {
@@ -113,36 +116,92 @@ export async function gotoWithSession(page: Page, token: string, path?: string) 
 
 // Helper to register a user and get token (with retry for rate limiting)
 export async function registerUser(request: APIRequestContext, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const maxRetries = 3;
+  const email = `${prefix}-${randomUUID()}@example.com`;
+  const client = createClient(request);
+  const maxAttempts = 3;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const registerResponse = await request.post("/api/v1/auth/register", {
-      data: {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const auth = await client.register({
         email,
         password: "testpassword123",
         name: `${prefix} Test User`,
-      },
-    });
-
-    if (registerResponse.ok()) {
-      const { token } = await registerResponse.json();
-      return { email, token };
-    }
-
-    // Retry on rate limiting (429)
-    if (registerResponse.status() === 429 && attempt < maxRetries) {
-      const retryBody = await registerResponse.json().catch(() => ({}));
-      const retryAfter = retryBody?.details?.retry_after_seconds || 1;
+      });
+      if (!auth || typeof auth.token !== "string" || !auth.token.trim()) {
+        throw new Error("Registration returned no usable token");
+      }
+      return { email, token: auth.token };
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        // eslint-disable-next-line preserve-caught-error -- JSON parser errors can quote private response data.
+        throw new Error("Registration returned invalid JSON");
+      }
+      if (!(err instanceof APIError)) throw err;
+      if (err.status !== 429 || attempt === maxAttempts) {
+        // eslint-disable-next-line preserve-caught-error -- SDK errors contain response data; report only HTTP status.
+        throw new Error(`Registration failed (HTTP ${err.status})`);
+      }
+      const retryAfter = err.details?.retry_after_seconds ?? 1;
+      // Bound fixture waits instead of letting a malformed or unexpectedly long
+      // server delay overflow setTimeout or conceal a setup failure.
+      if (typeof retryAfter !== "number" || !Number.isFinite(retryAfter) || retryAfter < 0 || retryAfter > 60) {
+        // eslint-disable-next-line preserve-caught-error -- SDK error details may contain private response data.
+        throw new Error("Registration rate limit returned an invalid retry delay");
+      }
       await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + 100));
-      continue;
     }
-
-    const errorBody = await registerResponse.text();
-    throw new Error(`Registration failed for ${email}: ${registerResponse.status()} - ${errorBody}`);
   }
 
-  throw new Error(`Registration failed for ${email} after ${maxRetries} retries`);
+  throw new Error(`Registration failed after ${maxAttempts} attempts`);
+}
+
+// Native device-login routes are owned by Go Mode and have no mddb SDK entry.
+// Validate only the owner-defined fields consumed by the fixture.
+export async function readDeviceLoginCode(
+  response: Pick<APIResponse, "ok" | "status" | "json">,
+): Promise<Pick<DeviceLoginCode, "user_code" | "device_code">> {
+  const body = await readFixtureResponse(response, "Device login start");
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("user_code" in body) ||
+    typeof body.user_code !== "string" ||
+    !body.user_code.trim() ||
+    !("device_code" in body) ||
+    typeof body.device_code !== "string" ||
+    !body.device_code.trim()
+  ) {
+    throw new Error("Device login start returned invalid user_code or device_code");
+  }
+  return { user_code: body.user_code, device_code: body.device_code };
+}
+
+export async function readDeviceLoginProof(
+  response: Pick<APIResponse, "ok" | "status" | "json">,
+): Promise<Pick<DeviceLoginRequest, "csrf_token">> {
+  const body = await readFixtureResponse(response, "Device login lookup");
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("csrf_token" in body) ||
+    typeof body.csrf_token !== "string" ||
+    !body.csrf_token.trim()
+  ) {
+    throw new Error("Device login lookup returned invalid csrf_token");
+  }
+  return { csrf_token: body.csrf_token };
+}
+
+async function readFixtureResponse(
+  response: Pick<APIResponse, "ok" | "status" | "json">,
+  operation: string,
+): Promise<unknown> {
+  if (!response.ok()) throw new Error(`${operation} failed (HTTP ${response.status()})`);
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(`${operation} returned invalid JSON`);
+  }
 }
 
 // Helper to get workspace ID from URL

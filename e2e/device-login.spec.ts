@@ -1,6 +1,15 @@
 // Pairs isolated display and approver browsers through normal mddb sessions and revocation.
 
-import { test, expect, registerUser, createClient, gotoWithSession, installAuthBridge } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  createClient,
+  gotoWithSession,
+  installAuthBridge,
+  readDeviceLoginCode,
+  readDeviceLoginProof,
+} from "./helpers";
 import type { UserResponse } from "../sdk/types.gen";
 
 test("another-device login preserves user permissions and supports individual revocation", async ({
@@ -201,13 +210,10 @@ test("approval cannot use a replacement session for the same account", async ({ 
   try {
     const approver = await context.newPage();
     await gotoWithSession(approver, token, "/device");
-    const started = (await (await request.post("/api/v1/auth/device/start", { data: {} })).json()) as {
-      user_code: string;
-      device_code: string;
-    };
+    const started = await readDeviceLoginCode(await request.post("/api/v1/auth/device/start", { data: {} }));
     const checked = approver.waitForResponse((response) => response.url().endsWith("/auth/device/lookup"));
     await approver.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
-    const proof = (await (await checked).json()) as { csrf_token: string };
+    const proof = await readDeviceLoginProof(await checked);
     await expect(approver.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     const original = await createClient(request, token).getMe();
     const replacement = await createClient(request).login({ email, password: "testpassword123" });
@@ -446,9 +452,7 @@ test("fresh approval probe losing its session returns to sign-in without a decis
   try {
     const page = await context.newPage();
     await gotoWithSession(page, token, "/device");
-    const started = (await (await request.post("/api/v1/auth/device/start", { data: {} })).json()) as {
-      user_code: string;
-    };
+    const started = await readDeviceLoginCode(await request.post("/api/v1/auth/device/start", { data: {} }));
     await page.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
     await expect(page.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     await context.clearCookies();
@@ -479,9 +483,7 @@ test("a delayed signed-out probe rediscovers a replacement cookie before settlin
   try {
     const page = await context.newPage();
     await gotoWithSession(page, token, "/device");
-    const started = (await (await request.post("/api/v1/auth/device/start", { data: {} })).json()) as {
-      user_code: string;
-    };
+    const started = await readDeviceLoginCode(await request.post("/api/v1/auth/device/start", { data: {} }));
     await page.getByRole("textbox", { name: "Device code" }).fill(started.user_code);
     await expect(page.getByRole("button", { name: "Approve sign-in", exact: true })).toBeVisible();
     await context.clearCookies();

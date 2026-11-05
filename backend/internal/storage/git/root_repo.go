@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -22,6 +24,7 @@ import (
 type RootRepo struct {
 	repo    *ExecRepo
 	dataDir string
+	pending atomic.Bool
 }
 
 // NewRootRepo initializes the root data directory as a git repository.
@@ -54,45 +57,79 @@ func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string)
 	if err := rr.migrateExistingWorkspaces(ctx); err != nil {
 		return nil, err
 	}
+	// Reconcile changes that survived a restart before reporting healthy.
+	// A root with no database is valid, including an empty first-time root.
+	if info, err := os.Stat(filepath.Join(dataDir, "db")); err == nil {
+		if !info.IsDir() {
+			return nil, errors.New("root database is not a directory")
+		}
+		// Startup belongs to its owner, so unlike a request history commit it
+		// must stop when that owner cancels initialization.
+		historyCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		rr.repo.mu.Lock()
+		err := rr.commitDBChangesLocked(historyCtx, Author{}, "recover database history")
+		rr.repo.mu.Unlock()
+		cancel()
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("reconcile database history: %w", ctx.Err())
+		}
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to reconcile database history", "err", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("inspect root database: %w", err)
+	}
 
 	return rr, nil
 }
 
 // CommitDBChanges stages db/ and commits if dirty.
+//
+// Failures mark history as pending for health reporting and background recovery.
+// The database mutation is already persisted and must not be replayed. History
+// recording outlives a disconnected request, bounded by a five-minute deadline.
 func (rr *RootRepo) CommitDBChanges(ctx context.Context, author Author, msg string) error {
 	rr.repo.mu.Lock()
 	defer rr.repo.mu.Unlock()
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
+	return rr.commitDBChangesLocked(ctx, author, msg)
+}
 
-	// Stage db/
-	// JSONL rewrites publish by rename; never stage their in-progress files.
-	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/", ":(exclude,glob)db/**/.jsonldb-*"); err != nil {
-		return fmt.Errorf("failed to stage db changes: %w\nOutput: %s", err, string(out))
-	}
+// HasPendingDBChanges reports whether the last attempt to record database history
+// failed. Reading it does not wait for an active Git command.
+func (rr *RootRepo) HasPendingDBChanges() bool {
+	return rr.pending.Load()
+}
 
-	// Check if there are staged changes
-	out, err := rr.repo.gitCombinedOutput(ctx, "diff", "--cached", "--quiet")
-	if err == nil {
-		// Exit code 0 means no staged changes
-		return nil
+// RunCommitRecovery retries pending database history until ctx is canceled.
+//
+// Recovery coalesces the current database snapshot into one commit. It does not
+// replay application mutations or promise one commit for each original request.
+// The caller owns its goroutine and must wait for it at shutdown.
+func (rr *RootRepo) RunCommitRecovery(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		// An active request already owns Git; never block shutdown behind it.
+		if rr.pending.Load() && rr.repo.mu.TryLock() {
+			attemptCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+			err := rr.commitDBChangesLocked(attemptCtx, Author{}, "recover database history")
+			cancel()
+			rr.repo.mu.Unlock()
+			if err != nil && ctx.Err() == nil {
+				slog.ErrorContext(ctx, "Failed to recover database history", "err", err)
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
 	}
-	if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != 1 {
-		return fmt.Errorf("failed to inspect staged db changes: %w\nOutput: %s", err, string(out))
-	}
-
-	name := author.Name
-	email := author.Email
-	if name == "" {
-		name = rr.repo.defaultName
-	}
-	if email == "" {
-		email = rr.repo.defaultEmail
-	}
-
-	authorStr := fmt.Sprintf("%s <%s>", name, email)
-	if err := rr.repo.gitRun(ctx, "commit", "-m", msg, "--author", authorStr); err != nil {
-		return fmt.Errorf("failed to commit db changes: %w", err)
-	}
-	return nil
 }
 
 // AddWorkspaceSubmodule registers an existing workspace git directory as a
@@ -145,6 +182,49 @@ func (rr *RootRepo) RemoveWorkspaceSubmodule(ctx context.Context, wsID string) e
 		return fmt.Errorf("failed to commit submodule removal: %w", err)
 	}
 	return nil
+}
+
+func (rr *RootRepo) commitDBChangesLocked(ctx context.Context, author Author, msg string) (err error) {
+	defer func() { rr.pending.Store(err != nil) }()
+
+	// Stage db/
+	// JSONL rewrites publish by rename; never stage their in-progress files.
+	if out, err := rr.dbGitOutput(ctx, "add", "--", "db/", ":(exclude,glob)db/**/.jsonldb-*"); err != nil {
+		return fmt.Errorf("failed to stage db changes: %w\nOutput: %s", err, string(out))
+	}
+
+	// Check if there are staged changes
+	out, err := rr.dbGitOutput(ctx, "diff", "--cached", "--quiet")
+	if err == nil {
+		// Exit code 0 means no staged changes
+		return nil
+	}
+	if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != 1 {
+		return fmt.Errorf("failed to inspect staged db changes: %w\nOutput: %s", err, string(out))
+	}
+
+	name := author.Name
+	email := author.Email
+	if name == "" {
+		name = rr.repo.defaultName
+	}
+	if email == "" {
+		email = rr.repo.defaultEmail
+	}
+
+	authorStr := fmt.Sprintf("%s <%s>", name, email)
+	if out, err := rr.dbGitOutput(ctx, "commit", "-m", msg, "--author", authorStr); err != nil {
+		return fmt.Errorf("failed to commit db changes: %w\nOutput: %s", err, out)
+	}
+	return nil
+}
+
+// dbGitOutput preserves cancellation and bounds pipe cleanup if Git descendants
+// retain stdout or stderr after cancellation kills the Git process.
+func (rr *RootRepo) dbGitOutput(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := rr.repo.gitCmd(ctx, args...)
+	cmd.WaitDelay = time.Second
+	return cmd.CombinedOutput()
 }
 
 // initialCommit commits the embedded root static files and db/ if no commits

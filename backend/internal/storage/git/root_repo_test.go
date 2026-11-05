@@ -3,17 +3,247 @@
 package git
 
 import (
+	"bufio"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"testing"
+	"testing/synctest"
+	"time"
 )
 
 func TestRootRepo(t *testing.T) {
 	t.Parallel()
 
+	t.Run("RunCommitRecovery", func(t *testing.T) {
+		t.Run("recovers pending snapshot without another mutation", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				dir := t.TempDir()
+				if err := os.Mkdir(filepath.Join(dir, "db"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(dir, "db", "rows.jsonl")
+				if err := os.WriteFile(path, []byte("original\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("persisted mutation\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				lock := filepath.Join(dir, ".git", "index.lock")
+				if err := os.WriteFile(lock, []byte("test owns lock"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := rr.CommitDBChanges(t.Context(), Author{}, "original mutation"); err == nil || !rr.HasPendingDBChanges() {
+					t.Fatalf("failed history: err=%v pending=%t", err, rr.HasPendingDBChanges())
+				}
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel() // Bubble workers must stop before synctest.Test returns.
+				var wg sync.WaitGroup
+				wg.Go(func() { rr.RunCommitRecovery(ctx) })
+				synctest.Wait()
+				if !rr.HasPendingDBChanges() {
+					t.Fatal("recovery cleared failure while Git lock remains")
+				}
+				if err := os.Remove(lock); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Minute)
+				synctest.Wait()
+				if rr.HasPendingDBChanges() {
+					t.Fatal("pending snapshot was not recovered")
+				}
+				out, err := gitOutput(dir, "show", "HEAD:db/rows.jsonl")
+				if err != nil || string(out) != "persisted mutation\n" {
+					t.Fatalf("recovered snapshot: %q %v", out, err)
+				}
+				out, err = gitOutput(dir, "rev-list", "--count", "HEAD")
+				if err != nil || string(out) != "2\n" {
+					t.Fatalf("history count: %q %v", out, err)
+				}
+				cancel()
+				wg.Wait()
+			})
+		})
+		t.Run("cancels active Git command", func(t *testing.T) {
+			for _, mode := range []string{"recovery", "startup"} {
+				t.Run(mode, func(t *testing.T) {
+					dir := t.TempDir()
+					if err := os.Mkdir(filepath.Join(dir, "db"), 0o700); err != nil {
+						t.Fatal(err)
+					}
+					rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(filepath.Join(dir, "db", "rows.jsonl"), []byte("persisted mutation\n"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					lock := filepath.Join(dir, ".git", "index.lock")
+					if err := os.WriteFile(lock, []byte("test owns lock"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					if err := rr.CommitDBChanges(t.Context(), Author{}, "failure"); err == nil {
+						t.Fatal("Git lock did not fail commit")
+					}
+					if err := os.Remove(lock); err != nil {
+						t.Fatal(err)
+					}
+					fifoPath := filepath.Join(dir, ".git", "recovery-started")
+					if err := syscall.Mkfifo(fifoPath, 0o600); err != nil {
+						t.Fatal(err)
+					}
+					fifo, err := os.OpenFile(fifoPath, os.O_RDWR, 0) //nolint:gosec // G304: test-owned FIFO in its temporary repository.
+					if err != nil {
+						t.Fatal(err)
+					}
+					var readers sync.WaitGroup
+					t.Cleanup(func() {
+						if err := fifo.Close(); err != nil {
+							t.Error(err)
+						}
+						readers.Wait()
+					})
+					// Retain the hook's pipe handles after Git is canceled. Its PID lets
+					// this test stop exactly the process it created during cleanup.
+					hook := "#!/bin/sh\nprintf '%s\\n' \"$$\" > .git/recovery-started\nexec sleep 300\n"
+					if err := os.WriteFile(filepath.Join(dir, ".git", "hooks", "pre-commit"), []byte(hook), 0o700); err != nil { //nolint:gosec // G306: Git requires an executable hook.
+						t.Fatal(err)
+					}
+					started := make(chan string, 1)
+					readers.Go(func() {
+						line, err := bufio.NewReader(fifo).ReadString('\n')
+						if err != nil && !errors.Is(err, os.ErrClosed) {
+							t.Error(err)
+						}
+						started <- line
+					})
+					ctx, cancel := context.WithCancel(t.Context())
+					done := make(chan struct{})
+					var workers sync.WaitGroup
+					t.Cleanup(func() { cancel(); workers.Wait() })
+					var startupErr error
+					workers.Go(func() {
+						if mode == "startup" {
+							_, startupErr = NewRootRepo(ctx, dir, "Test", "test@example.com")
+						} else {
+							rr.RunCommitRecovery(ctx)
+						}
+						close(done)
+					})
+					select {
+					case line := <-started:
+						pid, err := strconv.Atoi(strings.TrimSpace(line))
+						if err != nil {
+							t.Fatal(err)
+						}
+						hookProcess, err := os.FindProcess(pid)
+						if err != nil {
+							t.Fatal(err)
+						}
+						t.Cleanup(func() {
+							if err := hookProcess.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+								t.Error(err)
+							}
+						})
+					case <-time.After(5 * time.Second):
+						t.Fatal("recovery did not reach commit hook")
+					}
+					cancel()
+					select {
+					case <-done:
+					case <-time.After(5 * time.Second):
+						t.Fatal("recovery ignored cancellation")
+					}
+					workers.Wait()
+					readers.Wait()
+					if mode == "startup" && !errors.Is(startupErr, context.Canceled) {
+						t.Fatalf("startup cancellation: %v, want context.Canceled", startupErr)
+					}
+					if mode == "recovery" && !rr.HasPendingDBChanges() {
+						t.Fatal("canceled commit cleared pending history")
+					}
+				})
+			}
+		})
+		t.Run("stops while request owns repository", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				dir := t.TempDir()
+				if err := os.Mkdir(filepath.Join(dir, "db"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := rr.CommitDBChanges(t.Context(), Author{}, "failure"); err == nil {
+					t.Fatal("Git lock did not fail commit")
+				}
+				rr.repo.mu.Lock()
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel() // Bubble workers must stop before synctest.Test returns.
+				var wg sync.WaitGroup
+				wg.Go(func() { rr.RunCommitRecovery(ctx) })
+				synctest.Wait()
+				cancel()
+				wg.Wait()
+				rr.repo.mu.Unlock()
+			})
+		})
+	})
+	t.Run("restart reconciles database history", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "db"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com"); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "db", "rows.jsonl"), []byte("survives restart\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			lock := filepath.Join(dir, ".git", "index.lock")
+			if err := os.WriteFile(lock, []byte("test owns lock"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+			if err != nil || !rr.HasPendingDBChanges() {
+				t.Fatalf("restart while locked: pending=%t err=%v", rr != nil && rr.HasPendingDBChanges(), err)
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel() // Bubble workers must stop before synctest.Test returns.
+			var wg sync.WaitGroup
+			wg.Go(func() { rr.RunCommitRecovery(ctx) })
+			synctest.Wait()
+			if err := os.Remove(lock); err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Minute)
+			synctest.Wait()
+			cancel()
+			wg.Wait()
+			if rr.HasPendingDBChanges() {
+				t.Fatal("restart snapshot was not recovered")
+			}
+			out, err := gitOutput(dir, "show", "HEAD:db/rows.jsonl")
+			if err != nil || string(out) != "survives restart\n" {
+				t.Fatalf("restart snapshot: %q %v", out, err)
+			}
+		})
+	})
 	t.Run("Init", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -90,7 +320,9 @@ func TestRootRepo(t *testing.T) {
 		if err != nil {
 			t.Fatalf("second NewRootRepo() failed: %v", err)
 		}
-		_, _ = rr1, rr2
+		if rr1.HasPendingDBChanges() || rr2.HasPendingDBChanges() {
+			t.Fatal("empty root incorrectly reports pending history")
+		}
 
 		out, err := gitOutput(dir, "log", "--oneline")
 		if err != nil {

@@ -210,6 +210,39 @@ func (e *testEnv) doJSON(t *testing.T, method, path string, body, response any, 
 
 func TestIntegration(t *testing.T) {
 	t.Parallel()
+	t.Run("Health reports failed history without rejecting persisted registration", func(t *testing.T) {
+		t.Parallel()
+		env := setupTestEnv(t)
+		lock := filepath.Join(env.dataDir, ".git", "index.lock")
+		if err := os.WriteFile(lock, []byte("test owns this lock"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		var registered dto.AuthResponse
+		status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", &dto.RegisterRequest{Email: "history@example.com", Password: "password123", Name: "History"}, &registered, "")
+		if status != http.StatusOK || registered.Token == "" {
+			t.Fatalf("persisted registration: status=%d token present=%t", status, registered.Token != "")
+		}
+		var failure dto.ErrorResponse
+		if status := env.doJSON(t, http.MethodGet, "/api/v1/health", nil, &failure, ""); status != http.StatusServiceUnavailable {
+			t.Fatalf("health after failed history: %d, want503", status)
+		}
+		if failure.Error.Code != dto.ErrorCodeStorageError || strings.Contains(failure.Error.Message, env.dataDir) || strings.Contains(failure.Error.Message, "index.lock") {
+			t.Fatalf("public history error leaks Git details or has wrong code: %+v", failure)
+		}
+		if err := os.Remove(lock); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.services.RootRepo.CommitDBChanges(t.Context(), git.Author{}, "recover database history"); err != nil {
+			t.Fatal(err)
+		}
+		var health dto.HealthResponse
+		if status := env.doJSON(t, http.MethodGet, "/api/v1/health", nil, &health, ""); status != http.StatusOK || health.Status != "ok" {
+			t.Fatalf("recovered health: %d %+v", status, health)
+		}
+		if env.services.User.Count() != 1 || env.services.Session.CountActive() != 1 {
+			t.Fatal("history recovery replayed registration")
+		}
+	})
 	t.Run("Health", func(t *testing.T) {
 		t.Parallel()
 		env := setupTestEnv(t)

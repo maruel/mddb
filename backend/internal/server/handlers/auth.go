@@ -444,8 +444,6 @@ func (h *AuthHandler) VerifyEmailRedirect(w http.ResponseWriter, r *http.Request
 
 	if err := h.svc.RootRepo.CommitDBChanges(ctx, git.Author{}, "verify email"); err != nil {
 		slog.WarnContext(ctx, "Failed to commit email verification", "err", err)
-		http.Redirect(w, r, errorURL+"commit_failed", http.StatusFound)
-		return
 	}
 
 	http.Redirect(w, r, successURL, http.StatusFound)

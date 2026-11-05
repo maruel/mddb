@@ -163,7 +163,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	grh := &handlers.GitRemoteHandler{Svc: svc, GitHubApp: ghAppClient}
 
 	// Health check (public)
-	hh := &handlers.HealthHandler{Cfg: hcfg}
+	hh := &handlers.HealthHandler{Cfg: hcfg, RootRepo: svc.RootRepo}
 	mux.Handle("/api/v1/health", Wrap(hh.GetHealth, hcfg, limiters))
 
 	// Admin endpoints (requires IsGlobalAdmin)

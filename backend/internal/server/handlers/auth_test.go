@@ -3,6 +3,9 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,6 +18,34 @@ import (
 )
 
 func TestAuthHandler(t *testing.T) {
+	t.Run("VerifyEmailRedirect", func(t *testing.T) {
+		e := newOAuthTestEnv(t, "http://localhost:8080")
+		var err error
+		e.svc.EmailVerif, err = identity.NewEmailVerificationService(filepath.Join(e.dir, "db", "email_verifications.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		verification, err := e.svc.EmailVerif.Create(e.caller.ID, e.caller.Email)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		h := NewAuthHandler(e.svc, e.h.cfg)
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/verify-email?token="+verification.Token, http.NoBody)
+		w := httptest.NewRecorder()
+		h.VerifyEmailRedirect(w, r)
+		if w.Code != http.StatusFound || w.Header().Get("Location") != "http://localhost:8080/settings?email_verified=true" {
+			t.Fatalf("completed verification: %d %s", w.Code, w.Header().Get("Location"))
+		}
+		if u := e.get(t, e.caller); !u.EmailVerified {
+			t.Fatal("email was not persisted as verified")
+		}
+		if _, err := e.svc.EmailVerif.GetByToken(verification.Token); err == nil {
+			t.Fatal("verification token remains usable")
+		}
+	})
 	t.Run("Register", func(t *testing.T) {
 		ctx := t.Context()
 		tempDir := t.TempDir()

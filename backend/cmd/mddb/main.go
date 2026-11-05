@@ -422,6 +422,12 @@ Flags:
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	// Retry failed root history commits without replaying database mutations.
+	workers.Go(func() error {
+		rootRepo.RunCommitRecovery(workerCtx)
+		return nil
+	})
+
 	// Start notification cleanup goroutine (runs once on startup, then daily).
 	workers.Go(func() error {
 		runNotificationCleanup(workerCtx, notificationService, rootRepo, &serverCfg.Quotas)

@@ -432,9 +432,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := h.svc.RootRepo.CommitDBChanges(ctx, GitAuthor(linkingUser), "OAuth link "+string(provider)); err != nil {
-			slog.ErrorContext(ctx, "OAuth linking: failed to commit", "error", err)
-			writeErrorResponse(w, dto.Internal("commit"))
-			return
+			slog.ErrorContext(ctx, "OAuth linking: failed to commit", "err", err)
 		}
 
 		slog.InfoContext(ctx, "OAuth: linked identity", "userID", linkingUserID, "provider", provider)
@@ -651,8 +649,6 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 
 	if err := svc.RootRepo.CommitDBChanges(ctx, GitAuthor(user), "OAuth login "+string(provider)); err != nil {
 		slog.ErrorContext(ctx, "OAuth: failed to commit", "err", err, "userID", user.ID)
-		writeErrorResponse(w, dto.Internal("commit"))
-		return
 	}
 
 	if err := cfg.WriteSessionCookie(w, jwtToken); err != nil {

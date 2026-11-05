@@ -2,6 +2,7 @@
 
 import { test, expect, installAuthBridge } from "./helpers";
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
 
 test("browser credentials stay HttpOnly through registration, reload and logout", async ({ page, context }) => {
@@ -20,7 +21,7 @@ test("browser credentials stay HttpOnly through registration, reload and logout"
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Login to mddb" })).toBeVisible();
   await page.getByRole("button", { name: "Register", exact: true }).click();
-  await page.getByLabel("Email", { exact: true }).fill(`cookie-browser-${Date.now()}@example.com`);
+  await page.getByLabel("Email", { exact: true }).fill(`cookie-browser-${randomUUID()}@example.com`);
   await page.getByLabel("Name", { exact: true }).fill("Cookie Browser");
   await page.getByLabel("Password", { exact: true }).fill("testpassword123");
   const registered = page.waitForResponse((r) => r.url().endsWith("/auth/browser/register") && r.ok());

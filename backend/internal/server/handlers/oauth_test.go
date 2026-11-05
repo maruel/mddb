@@ -132,6 +132,7 @@ func (f *fakeProviders) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 type oauthTestEnv struct {
+	dir  string
 	h    *OAuthHandler
 	svc  *Services
 	fake *fakeProviders
@@ -178,7 +179,7 @@ func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &oauthTestEnv{h: h, svc: svc, fake: newFakeProviders(), caller: caller, victim: victim}
+	return &oauthTestEnv{dir: dir, h: h, svc: svc, fake: newFakeProviders(), caller: caller, victim: victim}
 }
 
 // loginRedirect starts a login with provider and returns the state sent to
@@ -534,6 +535,30 @@ func TestOAuthHandler(t *testing.T) {
 		})
 	})
 	t.Run("Callback", func(t *testing.T) {
+		t.Run("history failure preserves completed login", func(t *testing.T) {
+			e := newOAuthTestEnv(t, "http://localhost:8080")
+			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			u := e.wantLoggedIn(t, identity.OAuthProviderGoogle, e.login(t, identity.OAuthProviderGoogle))
+			if e.svc.User.Count() != 3 || e.sessions(u) != 1 {
+				t.Fatal("login did not persist exactly one account and session")
+			}
+		})
+		t.Run("history failure preserves completed link", func(t *testing.T) {
+			e := newOAuthTestEnv(t, "http://localhost:8080")
+			state, c := e.startLink(t, identity.OAuthProviderGoogle)
+			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			w := e.callback(t, identity.OAuthProviderGoogle, state, c)
+			if w.Code != http.StatusFound || w.Header().Get("Location") != "/?oauth_linked=true" {
+				t.Fatalf("completed link: %d %s", w.Code, w.Body)
+			}
+			if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != "google:"+fakeIDs[identity.OAuthProviderGoogle] {
+				t.Fatalf("persisted identities: %v", ids)
+			}
+		})
 		t.Run("valid", func(t *testing.T) {
 			t.Run("verified email creates an account", func(t *testing.T) {
 				for _, p := range providers {
