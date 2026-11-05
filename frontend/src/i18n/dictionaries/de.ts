@@ -697,6 +697,7 @@ export const dict: Dictionary = {
     choicesLoading: "Stimmen werden geladen…",
     choicesRetry: "Stimmen erneut laden",
     speakingVoice: "Sprechstimme",
+    speakingVoiceDefault: "Anbieterstandard",
     speakingVoiceUnavailable: "Wählen Sie eine verfügbare Sprechstimme",
     voiceChoice: "Stimmauswahl",
     assistant: "Assistent:",

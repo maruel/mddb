@@ -698,6 +698,7 @@ export interface Dictionary {
     choicesLoading: string;
     choicesRetry: string;
     speakingVoice: string;
+    speakingVoiceDefault: string;
     speakingVoiceUnavailable: string;
     voiceChoice: string;
     assistant: string;

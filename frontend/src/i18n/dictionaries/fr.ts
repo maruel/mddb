@@ -697,6 +697,7 @@ export const dict: Dictionary = {
     choicesLoading: "Chargement des options vocales…",
     choicesRetry: "Réessayer de charger les options vocales",
     speakingVoice: "Voix de synthèse",
+    speakingVoiceDefault: "Par défaut du fournisseur",
     speakingVoiceUnavailable: "Choisissez une voix de synthèse disponible",
     voiceChoice: "Option vocale",
     assistant: "Assistant :",
