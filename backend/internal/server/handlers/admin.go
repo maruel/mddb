@@ -4,7 +4,6 @@ package handlers
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -36,15 +35,14 @@ func (h *AdminHandler) GetServerDetail(ctx context.Context, _ *identity.User, _ 
 			wsCount++
 			wsMemberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)
 
-			var pageCount int
-			var storageBytes int64
-			var gitCommits int
 			store, err := h.Svc.FileStore.GetWorkspaceStore(ctx, ws.ID)
-			if err == nil {
-				pageCount, storageBytes, _ = store.GetWorkspaceUsage()
-				gitCommits, _ = store.CommitCount(ctx)
-			} else {
-				slog.Warn("admin dashboard: failed to get workspace store", "ws_id", ws.ID, "error", err)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to open workspace history", err)
+			}
+			pageCount, storageBytes, _ := store.GetWorkspaceUsage()
+			gitCommits, err := store.CommitCount(ctx)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to read workspace history", err)
 			}
 
 			workspaces = append(workspaces, dto.AdminWorkspaceDetail{

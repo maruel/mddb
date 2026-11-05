@@ -4,12 +4,17 @@ package content
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -97,6 +102,63 @@ func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, ksid.ID) {
 }
 
 func TestFileStoreService(t *testing.T) {
+	t.Run("SavedInitializationAndRestartRecovery", func(t *testing.T) {
+		for _, backend := range []git.Backend{git.BackendExec, git.BackendGoGit} {
+			t.Run(strconv.Itoa(int(backend)), func(t *testing.T) {
+				svc, id := testFileStore(t)
+				synctest.Test(t, func(t *testing.T) {
+					svc.git = git.NewManagerWithBackend(svc.rootDir, "Test", "test@example.com", backend)
+					if _, err := svc.git.Repo(t.Context(), id.String()); err != nil {
+						t.Fatal(err)
+					}
+					index := filepath.Join(svc.rootDir, id.String(), ".git", "index")
+					if err := os.Mkdir(index, 0o700); err != nil {
+						t.Fatal(err)
+					}
+					if err := svc.InitWorkspace(t.Context(), id); err != nil {
+						t.Fatalf("saved workspace initialization: %v", err)
+					}
+					if _, err := os.Stat(filepath.Join(svc.rootDir, id.String(), "AGENTS.md")); err != nil {
+						t.Fatal(err)
+					}
+					if !svc.HasPendingHistory() {
+						t.Fatal("initial history failure hidden")
+					}
+					restarted, err := NewFileStoreService(svc.rootDir, git.NewManagerWithBackend(svc.rootDir, "Test", "test@example.com", backend), svc.wsSvc, svc.orgSvc, svc.serverQuotas)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := restarted.ReconcileHistory(t.Context()); err != nil {
+						t.Fatal(err)
+					}
+					if !restarted.HasPendingHistory() {
+						t.Fatal("startup missed an unrequested workspace")
+					}
+					if err := os.Remove(index); err != nil {
+						t.Fatal(err)
+					}
+					ctx, cancel := context.WithCancel(t.Context())
+					var wg sync.WaitGroup
+					wg.Go(func() { restarted.RunCommitRecovery(ctx) })
+					synctest.Wait()
+					if restarted.HasPendingHistory() {
+						t.Fatal("workspace initialization did not recover")
+					}
+					store, err := restarted.GetWorkspaceStore(t.Context(), id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					count, err := store.Repo().CommitCount(t.Context())
+					if err != nil || count != 1 {
+						t.Fatalf("initial history count=%d err=%v", count, err)
+					}
+					cancel()
+					wg.Wait()
+				})
+			})
+		}
+	})
+
 	t.Run("InitWorkspace", func(t *testing.T) {
 		fs, wsID := testFileStore(t)
 		ctx := t.Context()
@@ -141,6 +203,38 @@ func TestFileStoreService(t *testing.T) {
 
 func TestWorkspaceFileStore(t *testing.T) {
 	author := git.Author{Name: "Test", Email: "test@test.com"}
+
+	t.Run("HeadVersionRejectsCorruptLooseReference", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := git.NewManagerWithBackend(dir, "Test", "test@example.com", git.BackendGoGit).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		quotas := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(dir, repo, &quotas)
+		id := ksid.NewID()
+		if _, err := ws.WritePage(t.Context(), id, 0, "Title", "saved body", author); err != nil {
+			t.Fatal(err)
+		}
+		cmd := exec.CommandContext(t.Context(), "git", "-C", dir, "pack-refs", "--all", "--prune") //nolint:gosec // G204: fixed Git command in a test-owned repository.
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("pack refs: %v %s", err, out)
+		}
+		if body, err := ws.GetPageContentAtCommit(t.Context(), "HEAD", id); err != nil || strings.TrimSpace(body) != "saved body" {
+			t.Fatalf("valid HEAD version=%q err=%v", body, err)
+		}
+		head, err := os.ReadFile(filepath.Join(dir, ".git", "HEAD")) //nolint:gosec // G304: test-owned repository metadata.
+		if err != nil {
+			t.Fatal(err)
+		}
+		ref := strings.TrimSpace(strings.TrimPrefix(string(head), "ref: "))
+		if err := os.WriteFile(filepath.Join(dir, ".git", ref), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if body, err := ws.GetPageContentAtCommit(t.Context(), "HEAD", id); err == nil || body != "" {
+			t.Fatalf("corrupt HEAD version leaked stale success: body=%q err=%v", body, err)
+		}
+	})
 
 	t.Run("PageOperations", func(t *testing.T) {
 		_, ws, _ := initWS(t)

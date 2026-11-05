@@ -235,6 +235,10 @@ Flags:
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
+	if err := fileStore.ReconcileHistory(ctx); err != nil {
+		return fmt.Errorf("reconcile workspace history: %w", err)
+	}
+
 	sessionService, err := identity.NewSessionService(filepath.Join(dbDir, "sessions.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize session service: %w", err)
@@ -425,6 +429,11 @@ Flags:
 	// Retry failed root history commits without replaying database mutations.
 	workers.Go(func() error {
 		rootRepo.RunCommitRecovery(workerCtx)
+		return nil
+	})
+
+	workers.Go(func() error {
+		fileStore.RunCommitRecovery(workerCtx)
 		return nil
 	})
 

@@ -5,11 +5,13 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +38,9 @@ func newExecRepo(ctx context.Context, dir, defaultName, defaultEmail string) (*E
 }
 
 func (r *ExecRepo) init(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	gitDir := filepath.Join(r.dir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(r.dir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
@@ -50,6 +55,8 @@ func (r *ExecRepo) init(ctx context.Context) error {
 		if err := r.gitRun(ctx, "config", "user.name", r.defaultName); err != nil {
 			return fmt.Errorf("failed to configure git user.name: %w", err)
 		}
+	} else if err != nil {
+		return fmt.Errorf("inspect git directory: %w", err)
 	}
 	return nil
 }
@@ -70,6 +77,10 @@ func (r *ExecRepo) CommitTx(ctx context.Context, author Author, fn func() (msg s
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	msg, files, err := fn()
 	if err != nil {
 		return err
@@ -78,23 +89,29 @@ func (r *ExecRepo) CommitTx(ctx context.Context, author Author, fn func() (msg s
 		return nil
 	}
 
+	// The callback has saved its changes; finish recording them even if its
+	// request disconnects, within one deadline for the complete commit.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
 	return r.commit(ctx, author, msg, files)
 }
 
 func (r *ExecRepo) commit(ctx context.Context, author Author, message string, files []string) error {
-	// Stage specified files
-	args := append([]string{"add", "--"}, files...)
-	if out, err := r.gitCombinedOutput(ctx, args...); err != nil {
-		return fmt.Errorf("failed to stage files: %w\nOutput: %s", err, string(out))
+	// Recovery can have only already-staged deletions and no remaining paths.
+	if len(files) > 0 {
+		args := append([]string{"add", "--"}, files...)
+		if out, err := r.gitCombinedOutput(ctx, args...); err != nil {
+			return fmt.Errorf("failed to stage files: %w\nOutput: %s", err, string(out))
+		}
 	}
 
 	// Check if there are staged changes
-	out, err := r.gitCombinedOutput(ctx, "status", "--porcelain")
-	if err != nil {
-		return err
-	}
-	if strings.TrimSpace(string(out)) == "" {
+	out, err := r.gitCombinedOutput(ctx, "diff", "--cached", "--quiet")
+	if err == nil {
 		return nil
+	}
+	if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != 1 {
+		return fmt.Errorf("inspect staged changes: %w: %s", err, out)
 	}
 
 	// Use defaults if not provided
@@ -119,15 +136,36 @@ func (r *ExecRepo) commit(ctx context.Context, author Author, message string, fi
 func (r *ExecRepo) CommitCount(ctx context.Context) (int, error) {
 	out, err := r.gitOutput(ctx, "rev-list", "--count", "HEAD")
 	if err != nil {
-		return 0, nil //nolint:nilerr // no commits yet is not an error
-	}
-	n := 0
-	for _, b := range out {
-		if b >= '0' && b <= '9' {
-			n = n*10 + int(b-'0')
+		if unborn, probeErr := r.isUnborn(ctx); probeErr == nil && unborn {
+			return 0, nil
 		}
+		return 0, fmt.Errorf("count commits: %w", err)
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil {
+		return 0, fmt.Errorf("invalid git commit count %q: %w", out, err)
+	}
+	if n < 0 {
+		return 0, errors.New("git returned a negative commit count")
 	}
 	return n, nil
+}
+
+// isUnborn distinguishes an absent current branch from broken or unavailable
+// repository metadata. A detached HEAD is never an unborn branch.
+func (r *ExecRepo) isUnborn(ctx context.Context) (bool, error) {
+	out, err := r.gitOutput(ctx, "symbolic-ref", "--quiet", "HEAD")
+	if err != nil {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
+			return false, nil
+		}
+		return false, err
+	}
+	_, err = r.gitOutput(ctx, "show-ref", "--verify", "--quiet", strings.TrimSpace(string(out)))
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
+		return true, nil
+	}
+	return false, err
 }
 
 // GetHistory returns commit history for a specific path, limited to n commits.
@@ -138,39 +176,38 @@ func (r *ExecRepo) GetHistory(ctx context.Context, path string, n int) ([]*Commi
 	}
 
 	// Use record separator (%x1e) between commits since body can contain newlines
-	format := "%H%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%b%x1e"
+	format := "%H%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%s%x00%b%x00"
 	args := []string{"log", "--pretty=format:" + format, fmt.Sprintf("-n%d", n), "--", path}
 	out, err := r.gitCombinedOutput(ctx, args...)
 	if err != nil {
-		return nil, nil //nolint:nilerr // git log returns error for paths with no history, which is not an error condition
+		if unborn, probeErr := r.isUnborn(ctx); probeErr == nil && unborn {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read commit history: %w", err)
 	}
 
 	var commits []*Commit
-	for record := range strings.SplitSeq(string(out), "\x1e") {
-		record = strings.TrimSpace(record)
-		if record == "" {
-			continue
+	fields := strings.Split(string(out), "\x00")
+	// NUL terminates each field, including the commit body. Commit messages may
+	// contain record separators, so their text cannot serve as a record delimiter.
+	if strings.TrimSpace(fields[len(fields)-1]) != "" {
+		return nil, errors.New("unterminated git history record")
+	}
+	fields = fields[:len(fields)-1]
+	if len(fields)%9 != 0 {
+		return nil, errors.New("invalid git history field count")
+	}
+	for i := 0; i < len(fields); i += 9 {
+		p := fields[i : i+9]
+		authorDate, err := time.Parse(time.RFC3339, p[3])
+		if err != nil {
+			return nil, fmt.Errorf("parse commit author date: %w", err)
 		}
-
-		parts := strings.Split(record, "\x00")
-		if len(parts) < 9 {
-			continue
+		commitDate, err := time.Parse(time.RFC3339, p[6])
+		if err != nil {
+			return nil, fmt.Errorf("parse commit committer date: %w", err)
 		}
-
-		authorDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
-		commitDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
-
-		commits = append(commits, &Commit{
-			Hash:           parts[0],
-			Author:         parts[1],
-			AuthorEmail:    parts[2],
-			AuthorDate:     authorDate,
-			Committer:      parts[4],
-			CommitterEmail: parts[5],
-			CommitDate:     commitDate,
-			Message:        parts[7],
-			Body:           strings.TrimSpace(parts[8]),
-		})
+		commits = append(commits, &Commit{Hash: strings.TrimSpace(p[0]), Author: p[1], AuthorEmail: p[2], AuthorDate: authorDate, Committer: p[4], CommitterEmail: p[5], CommitDate: commitDate, Message: p[7], Body: strings.TrimSpace(p[8])})
 	}
 
 	return commits, nil
@@ -191,13 +228,14 @@ func (r *ExecRepo) GetFileAtCommit(ctx context.Context, hash, filePath string) (
 func (r *ExecRepo) SetRemote(ctx context.Context, name, url string) error {
 	// Check if remote already exists
 	out, err := r.gitCombinedOutput(ctx, "remote")
+	if err != nil {
+		return fmt.Errorf("list remotes: %w", err)
+	}
 	exists := false
-	if err == nil {
-		for rem := range strings.SplitSeq(string(out), "\n") {
-			if strings.TrimSpace(rem) == name {
-				exists = true
-				break
-			}
+	for rem := range strings.SplitSeq(string(out), "\n") {
+		if strings.TrimSpace(rem) == name {
+			exists = true
+			break
 		}
 	}
 
@@ -217,12 +255,12 @@ func (r *ExecRepo) SetRemote(ctx context.Context, name, url string) error {
 // Push pushes changes to a remote repository.
 func (r *ExecRepo) Push(ctx context.Context, remoteName, branch string) error {
 	if branch == "" {
-		branch = "master"
 		// Check if current branch is different
 		out, err := r.gitCombinedOutput(ctx, "rev-parse", "--abbrev-ref", "HEAD")
-		if err == nil {
-			branch = strings.TrimSpace(string(out))
+		if err != nil {
+			return fmt.Errorf("resolve current branch: %w", err)
 		}
+		branch = strings.TrimSpace(string(out))
 	}
 
 	// Use HEAD:<branch> so the current local branch is pushed to the
@@ -252,15 +290,18 @@ func (r *ExecRepo) Fetch(ctx context.Context, remoteName, branch string) error {
 // Pull fetches and merges from a remote. Returns true if files changed.
 func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
 	if branch == "" {
-		branch = "master"
 		out, err := r.gitCombinedOutput(ctx, "rev-parse", "--abbrev-ref", "HEAD")
-		if err == nil {
-			branch = strings.TrimSpace(string(out))
+		if err != nil {
+			return false, fmt.Errorf("resolve current branch: %w", err)
 		}
+		branch = strings.TrimSpace(string(out))
 	}
 
 	// Get HEAD before merge.
-	headBefore, _ := r.gitOutput(ctx, "rev-parse", "HEAD")
+	headBefore, err := r.gitOutput(ctx, "rev-parse", "HEAD")
+	if err != nil {
+		return false, fmt.Errorf("resolve HEAD before pull: %w", err)
+	}
 
 	// Fetch first.
 	if err := r.Fetch(ctx, remoteName, branch); err != nil {
@@ -272,16 +313,21 @@ func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, e
 	out, err := r.gitCombinedOutput(ctx, "merge", ref, "--no-edit")
 	if err != nil {
 		// Check for conflicts.
-		hasConflicts, _ := r.HasUnmergedFiles(ctx)
+		hasConflicts, inspectErr := r.HasUnmergedFiles(ctx)
+		if inspectErr != nil {
+			return false, errors.Join(fmt.Errorf("merge failed: %w", err), inspectErr)
+		}
 		if hasConflicts {
-			_ = r.AbortMerge(ctx)
-			return false, fmt.Errorf("merge conflicts detected: %s", strings.TrimSpace(string(out)))
+			return false, errors.Join(fmt.Errorf("merge conflicts detected: %w: %s", err, strings.TrimSpace(string(out))), r.AbortMerge(ctx))
 		}
 		return false, fmt.Errorf("merge failed: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 
 	// Check if HEAD changed.
-	headAfter, _ := r.gitOutput(ctx, "rev-parse", "HEAD")
+	headAfter, err := r.gitOutput(ctx, "rev-parse", "HEAD")
+	if err != nil {
+		return false, fmt.Errorf("resolve HEAD after pull: %w", err)
+	}
 	changed := !bytes.Equal(headBefore, headAfter)
 	return changed, nil
 }
@@ -305,8 +351,11 @@ func (r *ExecRepo) gitCmd(ctx context.Context, args ...string) *exec.Cmd {
 	// Keep automatic maintenance inside the command's lifetime. Detached Git
 	// processes can otherwise keep writing after a commit returns or race with
 	// workspace deletion. Command-line settings also cover existing repositories.
-	args = append([]string{"-c", "gc.autoDetach=false", "-c", "maintenance.autoDetach=false"}, args...)
+	// Explicit paths prevent an unavailable child repository from silently
+	// resolving its parent's metadata. Git also resolves absorbed .git files here.
+	args = append([]string{"--git-dir=.git", "--work-tree=.", "-c", "gc.autoDetach=false", "-c", "maintenance.autoDetach=false"}, args...)
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // G204: args are internal, not user input
+	cmd.WaitDelay = time.Second
 	cmd.Dir = r.dir
 	cmd.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null",
@@ -315,34 +364,28 @@ func (r *ExecRepo) gitCmd(ctx context.Context, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// gitRun executes a git command using a detached context with timeout.
-//
-// The command is NOT tied to the HTTP request's cancellation, allowing git
-// operations to complete even if the client disconnects.
+// gitRun executes a command with the owner's cancellation and a bounded timeout.
 func (r *ExecRepo) gitRun(ctx context.Context, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	return r.gitCmd(ctx, args...).Run()
+	err := r.gitCmd(ctx, args...).Run()
+	return errors.Join(err, ctx.Err())
 }
 
-// gitOutput executes a git command and returns its stdout.
-//
-// The command is NOT tied to the HTTP request's cancellation, allowing git
-// operations to complete even if the client disconnects.
+// gitOutput reads stdout with the owner's cancellation and a bounded timeout.
 func (r *ExecRepo) gitOutput(ctx context.Context, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	return r.gitCmd(ctx, args...).Output()
+	out, err := r.gitCmd(ctx, args...).Output()
+	return out, errors.Join(err, ctx.Err())
 }
 
-// gitCombinedOutput executes a git command and returns combined stdout/stderr.
-//
-// The command is NOT tied to the HTTP request's cancellation, allowing git
-// operations to complete even if the client disconnects.
+// gitCombinedOutput reads output with the owner's cancellation and a bounded timeout.
 func (r *ExecRepo) gitCombinedOutput(ctx context.Context, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	return r.gitCmd(ctx, args...).CombinedOutput()
+	out, err := r.gitCmd(ctx, args...).CombinedOutput()
+	return out, errors.Join(err, ctx.Err())
 }
 
 // commitFS implements fs.FS for a specific commit using os/exec git.
@@ -362,14 +405,17 @@ func (c *commitFS) Open(name string) (fs.File, error) {
 	// Check if it's a directory using git ls-tree
 	out, err := c.repo.gitCombinedOutput(c.ctx, "ls-tree", c.hash, name)
 	if err != nil {
-		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+		return nil, &fs.PathError{Op: "open", Path: name, Err: err}
 	}
 
 	line := strings.TrimSpace(string(out))
 	if line == "" {
 		// Could be a directory - check with trailing slash
 		out, err = c.repo.gitCombinedOutput(c.ctx, "ls-tree", c.hash, name+"/")
-		if err != nil || strings.TrimSpace(string(out)) == "" {
+		if err != nil {
+			return nil, &fs.PathError{Op: "open", Path: name, Err: err}
+		}
+		if strings.TrimSpace(string(out)) == "" {
 			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 		}
 		// It's a directory
@@ -389,7 +435,7 @@ func (c *commitFS) Open(name string) (fs.File, error) {
 	// It's a file - get the content
 	data, err := c.repo.GetFileAtCommit(c.ctx, c.hash, name)
 	if err != nil {
-		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+		return nil, &fs.PathError{Op: "open", Path: name, Err: err}
 	}
 
 	return &memFile{name: filepath.Base(name), data: data}, nil

@@ -21,7 +21,8 @@ func TestHealthHandler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		handler := &HealthHandler{Cfg: cfg, RootRepo: root}
+		svc, _ := testServices(t)
+		handler := &HealthHandler{Cfg: cfg, RootRepo: root, FileStore: svc.FileStore}
 		resp, err := handler.GetHealth(t.Context(), &dto.HealthRequest{})
 		if err != nil {
 			t.Fatalf("GetHealth() error = %v", err)

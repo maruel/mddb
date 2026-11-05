@@ -243,6 +243,32 @@ func TestIntegration(t *testing.T) {
 			t.Fatal("history recovery replayed registration")
 		}
 	})
+	t.Run("AdminRejectsUnavailableHistory", func(t *testing.T) {
+		env := setupTestEnv(t)
+		var auth dto.AuthResponse
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "admin@example.com", Password: "testpassword123", Name: "Admin"}, &auth, ""); status != http.StatusOK {
+			t.Fatalf("register status=%d", status)
+		}
+		var org dto.OrganizationResponse
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations", dto.CreateOrganizationRequest{Name: "Org"}, &org, auth.Token); status != http.StatusOK {
+			t.Fatalf("organization status=%d", status)
+		}
+		var ws dto.WorkspaceResponse
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations/"+org.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{Name: "Workspace"}, &ws, auth.Token); status != http.StatusOK {
+			t.Fatalf("workspace status=%d", status)
+		}
+		if _, err := env.fileStore.GetWorkspaceStore(t.Context(), ws.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(filepath.Join(env.dataDir, ws.ID.String(), ".git"), filepath.Join(env.dataDir, ws.ID.String(), "unavailable-git")); err != nil {
+			t.Fatal(err)
+		}
+		var result dto.ErrorResponse
+		if status := env.doJSON(t, http.MethodGet, "/api/v1/admin/server", nil, &result, auth.Token); status != http.StatusInternalServerError {
+			t.Fatalf("admin hid unavailable workspace history: HTTP%d", status)
+		}
+	})
+
 	t.Run("Health", func(t *testing.T) {
 		t.Parallel()
 		env := setupTestEnv(t)

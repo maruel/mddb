@@ -63,6 +63,26 @@ func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.Wo
 	}, nil
 }
 
+// ReconcileHistory discovers published workspaces before serving requests. Missing
+// Git metadata degrades health and is retried without initializing new history.
+func (svc *FileStoreService) ReconcileHistory(ctx context.Context) error {
+	for ws := range svc.wsSvc.Iter(0) {
+		if _, err := svc.git.WorkspaceRepo(ctx, ws.ID.String(), false); err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			slog.ErrorContext(ctx, "Published workspace history is unavailable", "err", err)
+		}
+	}
+	return ctx.Err()
+}
+
+// HasPendingHistory reports workspace history health independently of store caches.
+func (svc *FileStoreService) HasPendingHistory() bool { return svc.git.HasPendingChanges() }
+
+// RunCommitRecovery owns workspace history retries until its caller cancels.
+func (svc *FileStoreService) RunCommitRecovery(ctx context.Context) { svc.git.RunCommitRecovery(ctx) }
+
 // GetWorkspaceStore returns a WorkspaceFileStore for the given workspace.
 // Creates and caches the store on first access.
 func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID) (*WorkspaceFileStore, error) {
@@ -98,7 +118,7 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID
 		return nil, fmt.Errorf("failed to get organization: %w", err)
 	}
 
-	repo, err := svc.git.Repo(ctx, wsID.String())
+	repo, err := svc.git.WorkspaceRepo(ctx, wsID.String(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get git repo: %w", err)
 	}
@@ -152,7 +172,7 @@ func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID ksid.ID) er
 	}
 
 	// Getting the repo initializes git if needed
-	repo, err := svc.git.Repo(ctx, wsID.String())
+	repo, err := svc.git.WorkspaceRepo(ctx, wsID.String(), true)
 	if err != nil {
 		return fmt.Errorf("failed to initialize git repo for workspace %s: %w", wsID, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -127,8 +128,11 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
-	// Register workspace as a git submodule of the root data repo.
-	if err := h.Svc.RootRepo.AddWorkspaceSubmodule(ctx, ws.ID.String()); err != nil {
+	// The workspace and membership are saved. Finish their history registration
+	// even if this request disconnects; startup calls retain owner cancellation.
+	historyCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
+	if err := h.Svc.RootRepo.AddWorkspaceSubmodule(historyCtx, ws.ID.String()); err != nil {
 		slog.ErrorContext(ctx, "Failed to add workspace submodule", "wsID", ws.ID, "err", err)
 	}
 

@@ -7,19 +7,21 @@ import (
 	"net/http"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 // HealthHandler handles health check requests.
 type HealthHandler struct {
-	Cfg      *Config
-	RootRepo *git.RootRepo
+	Cfg       *Config
+	RootRepo  *git.RootRepo
+	FileStore *content.FileStoreService
 }
 
 // GetHealth handles health check requests.
 func (h *HealthHandler) GetHealth(ctx context.Context, req *dto.HealthRequest) (*dto.HealthResponse, error) {
-	if h.RootRepo.HasPendingDBChanges() {
-		return nil, dto.NewAPIError(http.StatusServiceUnavailable, dto.ErrorCodeStorageError, "Database history is pending recovery")
+	if h.RootRepo.HasPendingDBChanges() || h.FileStore.HasPendingHistory() {
+		return nil, dto.NewAPIError(http.StatusServiceUnavailable, dto.ErrorCodeStorageError, "Storage history is pending recovery")
 	}
 	return &dto.HealthResponse{
 		Status:    "ok",

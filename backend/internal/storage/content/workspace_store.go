@@ -418,6 +418,12 @@ func (ws *WorkspaceFileStore) deletePage(id ksid.ID) error {
 
 	parentID := ws.getParent(id)
 	dir := ws.pageDir(id, parentID)
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			return errPageNotFound
+		}
+		return fmt.Errorf("inspect page before deletion: %w", err)
+	}
 	if err := os.RemoveAll(dir); err != nil {
 		if os.IsNotExist(err) {
 			return errPageNotFound

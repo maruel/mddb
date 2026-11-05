@@ -4,12 +4,17 @@ package git
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 var backends = []struct {
@@ -34,6 +39,257 @@ func TestRepo(t *testing.T) {
 
 func testRepoAll(t *testing.T, backend Backend) {
 	t.Helper()
+
+	t.Run("UnbornHistory", func(t *testing.T) {
+		repo, err := NewManagerWithBackend(t.TempDir(), "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		n, err := repo.CommitCount(t.Context())
+		if err != nil || n != 0 {
+			t.Fatalf("unborn count=%d err=%v", n, err)
+		}
+		h, err := repo.GetHistory(t.Context(), "row", 10)
+		if err != nil || len(h) != 0 {
+			t.Fatalf("unborn history=%v err=%v", h, err)
+		}
+	})
+
+	t.Run("HistoryReadFailures", func(t *testing.T) {
+		for _, mode := range []string{"canceled", "missing HEAD object", "missing ancestor object", "invalid HEAD"} {
+			t.Run(mode, func(t *testing.T) {
+				dir := t.TempDir()
+				repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+					return "first", []string{"row"}, os.WriteFile(filepath.Join(dir, "row"), []byte("first"), 0o600)
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				ctx := t.Context()
+				switch mode {
+				case "canceled":
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithCancel(ctx)
+					cancel()
+				case "missing HEAD object", "missing ancestor object":
+					out, err := gitOutput(dir, "rev-parse", "HEAD")
+					if err != nil {
+						t.Fatal(err)
+					}
+					hash := strings.TrimSpace(string(out))
+					if mode == "missing ancestor object" {
+						if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+							return "second", []string{"row"}, os.WriteFile(filepath.Join(dir, "row"), []byte("second"), 0o600)
+						}); err != nil {
+							t.Fatal(err)
+						}
+					}
+					if err := os.Remove(filepath.Join(dir, ".git", "objects", hash[:2], hash[2:])); err != nil {
+						t.Fatal(err)
+					}
+					// Reopen to avoid a previously loaded object's cache masking on-disk corruption.
+					repo, err = NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(ctx, "")
+					if err != nil {
+						t.Fatal(err)
+					}
+				case "invalid HEAD":
+					if err := os.WriteFile(filepath.Join(dir, ".git", "HEAD"), []byte("invalid reference\n"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				n, countErr := repo.CommitCount(ctx)
+				h, historyErr := repo.GetHistory(ctx, "row", 10)
+
+				if countErr == nil {
+					t.Errorf("CommitCount hid %s: count=%d", mode, n)
+				}
+				if historyErr == nil {
+					t.Errorf("GetHistory hid %s: history length=%d", mode, len(h))
+				}
+				if mode == "canceled" && (!errors.Is(countErr, context.Canceled) || !errors.Is(historyErr, context.Canceled)) {
+					t.Errorf("cancellation lost: %v / %v", countErr, historyErr)
+				}
+			})
+		}
+	})
+	t.Run("SavedWriteSurvivesCancellation", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		t.Cleanup(cancel)
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			err := os.WriteFile(filepath.Join(dir, "row"), []byte("saved"), 0o600)
+			cancel()
+			return "saved", []string{"row"}, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		out, err := repo.GetFileAtCommit(t.Context(), "HEAD", "row")
+		if err != nil || string(out) != "saved" {
+			t.Fatalf("saved write not committed: %q %v", out, err)
+		}
+	})
+	t.Run("CanceledInitialization", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		_, err := NewManagerWithBackend(t.TempDir(), "Test", "test@example.com", backend).Repo(ctx, "")
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("initialization lost cancellation: %v", err)
+		}
+	})
+	t.Run("CanceledRemoteOperations", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if err := repo.Fetch(ctx, "missing", ""); !errors.Is(err, context.Canceled) {
+			t.Errorf("Fetch lost cancellation: %v", err)
+		}
+		if err := repo.Push(ctx, "missing", ""); !errors.Is(err, context.Canceled) {
+			t.Errorf("Push lost cancellation: %v", err)
+		}
+		if _, err := repo.Pull(ctx, "missing", ""); !errors.Is(err, context.Canceled) {
+			t.Errorf("Pull lost cancellation: %v", err)
+		}
+	})
+
+	t.Run("ActiveRemoteCancellation", func(t *testing.T) {
+		for _, operation := range []string{"fetch", "push"} {
+			t.Run(operation, func(t *testing.T) {
+				dir := t.TempDir()
+				repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+					return "saved", []string{"row"}, os.WriteFile(filepath.Join(dir, "row"), []byte("saved"), 0o600)
+				}); err != nil {
+					t.Fatal(err)
+				}
+				started := make(chan struct{}, 1)
+				release := make(chan struct{})
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					select {
+					case started <- struct{}{}:
+					default:
+					}
+					<-release
+					w.WriteHeader(http.StatusServiceUnavailable)
+				}))
+				t.Cleanup(server.Close)
+				if err := repo.SetRemote(t.Context(), "origin", server.URL); err != nil {
+					t.Fatal(err)
+				}
+				ctx, cancel := context.WithCancel(t.Context())
+				t.Cleanup(cancel)
+				var wg sync.WaitGroup
+				t.Cleanup(func() { close(release); wg.Wait() })
+				done := make(chan error, 1)
+				wg.Go(func() {
+					if operation == "fetch" {
+						done <- repo.Fetch(ctx, "origin", "")
+					} else {
+						done <- repo.Push(ctx, "origin", "")
+					}
+				})
+				select {
+				case <-started:
+				case <-time.After(3 * time.Second):
+					t.Fatal("remote operation never reached server")
+				}
+				cancel()
+				select {
+				case err := <-done:
+					if !errors.Is(err, context.Canceled) {
+						t.Fatalf("remote cancellation was lost: %v", err)
+					}
+				case <-time.After(3 * time.Second):
+					t.Fatal("remote operation ignored active owner cancellation")
+				}
+			})
+		}
+	})
+	t.Run("UnavailableNestedRepository", func(t *testing.T) {
+		root := t.TempDir()
+		parent, err := NewManagerWithBackend(root, "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := parent.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			return "parent", []string{"parent"}, os.WriteFile(filepath.Join(root, "parent"), []byte("parent"), 0o600)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		repo, err := NewManagerWithBackend(root, "Test", "test@example.com", backend).Repo(t.Context(), "child")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(filepath.Join(root, "child", ".git"), filepath.Join(root, "child", "unavailable")); err != nil {
+			t.Fatal(err)
+		}
+		if n, err := repo.CommitCount(t.Context()); err == nil {
+			t.Errorf("unavailable child history count=%d, no error", n)
+		}
+		if h, err := repo.GetHistory(t.Context(), ".", 10); err == nil {
+			t.Errorf("unavailable child history=%v, no error", h)
+		}
+	})
+
+	t.Run("HistoryMessageSeparators", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		message := "record separator \x1e in subject\n\nBody with \x1e separator."
+		if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			return message, []string{"row"}, os.WriteFile(filepath.Join(dir, "row"), []byte("saved"), 0o600)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		h, err := repo.GetHistory(t.Context(), "row", 10)
+		if err != nil || len(h) != 1 {
+			t.Fatalf("history=%v err=%v", h, err)
+		}
+		if h[0].Message != "record separator \x1e in subject" || h[0].Body != "Body with \x1e separator." {
+			t.Fatalf("message changed: %+v", h[0])
+		}
+	})
+	t.Run("CanceledMutationDoesNotRunCallback", func(t *testing.T) {
+		repo, err := NewManagerWithBackend(t.TempDir(), "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		called := false
+		err = repo.CommitTx(ctx, Author{}, func() (string, []string, error) { called = true; return "", nil, nil })
+		if !errors.Is(err, context.Canceled) || called {
+			t.Fatalf("canceled mutation: callback=%v err=%v", called, err)
+		}
+	})
+	t.Run("CanceledCommitFS", func(t *testing.T) {
+		repo, err := NewManagerWithBackend(t.TempDir(), "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		_, err = repo.FSAtCommit(ctx, "HEAD").Open("row")
+		if !errors.Is(err, context.Canceled) || errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("commit filesystem lost cancellation: %v", err)
+		}
+	})
 
 	t.Run("Init", func(t *testing.T) {
 		t.Parallel()

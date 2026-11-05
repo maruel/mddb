@@ -144,7 +144,9 @@ func (rr *RootRepo) AddWorkspaceSubmodule(ctx context.Context, wsID string) erro
 	// Absorb the submodule's .git directory into .git/modules/ so that
 	// deinit works correctly on removal (some git versions leave a real
 	// .git dir after submodule add --force on an existing repo).
-	_ = rr.repo.gitRun(ctx, "submodule", "absorbgitdirs")
+	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs"); err != nil {
+		return fmt.Errorf("absorb workspace git directories: %w", err)
+	}
 	authorStr := fmt.Sprintf("%s <%s>", rr.repo.defaultName, rr.repo.defaultEmail)
 	if err := rr.repo.gitRun(ctx, "commit", "-m", "add workspace "+wsID, "--author", authorStr); err != nil {
 		return fmt.Errorf("failed to commit submodule add: %w", err)
@@ -159,7 +161,9 @@ func (rr *RootRepo) RemoveWorkspaceSubmodule(ctx context.Context, wsID string) e
 
 	// Absorb .git dir into parent if needed (handles repos added before
 	// absorbgitdirs was called in AddWorkspaceSubmodule).
-	_ = rr.repo.gitRun(ctx, "submodule", "absorbgitdirs")
+	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs"); err != nil {
+		return fmt.Errorf("absorb workspace git directories: %w", err)
+	}
 
 	// Deinit the submodule.
 	if out, err := rr.repo.gitCombinedOutput(ctx, "submodule", "deinit", "-f", wsID); err != nil {
@@ -189,12 +193,12 @@ func (rr *RootRepo) commitDBChangesLocked(ctx context.Context, author Author, ms
 
 	// Stage db/
 	// JSONL rewrites publish by rename; never stage their in-progress files.
-	if out, err := rr.dbGitOutput(ctx, "add", "--", "db/", ":(exclude,glob)db/**/.jsonldb-*"); err != nil {
+	if out, err := rr.repo.gitCombinedOutput(ctx, "add", "--", "db/", ":(exclude,glob)db/**/.jsonldb-*"); err != nil {
 		return fmt.Errorf("failed to stage db changes: %w\nOutput: %s", err, string(out))
 	}
 
 	// Check if there are staged changes
-	out, err := rr.dbGitOutput(ctx, "diff", "--cached", "--quiet")
+	out, err := rr.repo.gitCombinedOutput(ctx, "diff", "--cached", "--quiet")
 	if err == nil {
 		// Exit code 0 means no staged changes
 		return nil
@@ -213,18 +217,10 @@ func (rr *RootRepo) commitDBChangesLocked(ctx context.Context, author Author, ms
 	}
 
 	authorStr := fmt.Sprintf("%s <%s>", name, email)
-	if out, err := rr.dbGitOutput(ctx, "commit", "-m", msg, "--author", authorStr); err != nil {
+	if out, err := rr.repo.gitCombinedOutput(ctx, "commit", "-m", msg, "--author", authorStr); err != nil {
 		return fmt.Errorf("failed to commit db changes: %w\nOutput: %s", err, out)
 	}
 	return nil
-}
-
-// dbGitOutput preserves cancellation and bounds pipe cleanup if Git descendants
-// retain stdout or stderr after cancellation kills the Git process.
-func (rr *RootRepo) dbGitOutput(ctx context.Context, args ...string) ([]byte, error) {
-	cmd := rr.repo.gitCmd(ctx, args...)
-	cmd.WaitDelay = time.Second
-	return cmd.CombinedOutput()
 }
 
 // initialCommit commits the embedded root static files and db/ if no commits
@@ -233,7 +229,12 @@ func (rr *RootRepo) dbGitOutput(ctx context.Context, args ...string) ([]byte, er
 func (rr *RootRepo) initialCommit(ctx context.Context, staticFiles []string) error {
 	// Check if there are any commits
 	if _, err := rr.repo.gitCombinedOutput(ctx, "rev-parse", "HEAD"); err == nil {
-		return nil // Already has commits
+		return nil
+	} else {
+		unborn, probeErr := rr.repo.isUnborn(ctx)
+		if probeErr != nil || !unborn {
+			return fmt.Errorf("inspect root HEAD: %w", errors.Join(err, probeErr))
+		}
 	}
 
 	// Collect everything trackable
@@ -285,6 +286,9 @@ func (rr *RootRepo) migrateExistingWorkspaces(ctx context.Context) error {
 		// Unlock so AddWorkspaceSubmodule can take the lock.
 		// This is safe because migrateExistingWorkspaces runs only during init.
 		if err := rr.AddWorkspaceSubmodule(ctx, e.Name()); err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			slog.WarnContext(ctx, "Failed to migrate workspace submodule", "wsID", e.Name(), "err", err)
 		}
 	}

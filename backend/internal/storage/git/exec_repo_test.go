@@ -1,15 +1,31 @@
-// Tests that exec-backed commits wait for automatic Git maintenance.
+// Tests exec-backed Git failures and completion of automatic maintenance.
 
 package git
 
 import (
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestExecRepo(t *testing.T) {
+	t.Run("UnavailableExecutable", func(t *testing.T) {
+		repo, err := NewManager(t.TempDir(), "Test", "test@example.com").Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("PATH", t.TempDir())
+		if _, err := repo.CommitCount(t.Context()); !errors.Is(err, exec.ErrNotFound) {
+			t.Errorf("CommitCount lost missing git executable: %v", err)
+		}
+		if _, err := repo.GetHistory(t.Context(), "row", 10); !errors.Is(err, exec.ErrNotFound) {
+			t.Errorf("GetHistory lost missing git executable: %v", err)
+		}
+	})
+
 	t.Run("CommitTx", func(t *testing.T) {
 		t.Run("AutomaticMaintenance", func(t *testing.T) {
 			dir := t.TempDir()

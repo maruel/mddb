@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -76,7 +78,10 @@ type Manager struct {
 	defaultName  string
 	defaultEmail string
 	backend      Backend
+	mu           contextGate
 	repos        sync.Map // path -> Repository
+	workspaces   sync.Map // path -> *workspaceRepo
+	unavailable  sync.Map // path -> struct{}
 }
 
 // NewManager creates a new git repository manager using the exec backend.
@@ -97,12 +102,24 @@ func NewManagerWithBackend(rootDir, defaultName, defaultEmail string, backend Ba
 		defaultName:  defaultName,
 		defaultEmail: defaultEmail,
 		backend:      backend,
+		mu:           make(contextGate, 1),
 	}
 }
 
 // Repo returns or creates a repository for the given subdirectory.
 // The subdir is relative to the manager's root directory.
 func (m *Manager) Repo(ctx context.Context, subdir string) (Repository, error) {
+	if err := m.mu.LockContext(ctx); err != nil {
+		return nil, err
+	}
+	defer m.mu.Unlock()
+	if r, ok := m.workspaces.Load(filepath.Join(m.rootDir, subdir)); ok {
+		return r.(*workspaceRepo), nil
+	}
+	return m.repoLocked(ctx, subdir)
+}
+
+func (m *Manager) repoLocked(ctx context.Context, subdir string) (Repository, error) {
 	dir := filepath.Join(m.rootDir, subdir)
 	if r, ok := m.repos.Load(dir); ok {
 		return r.(Repository), nil
@@ -120,14 +137,156 @@ func (m *Manager) Repo(ctx context.Context, subdir string) (Repository, error) {
 		return nil, err
 	}
 
-	actual, _ := m.repos.LoadOrStore(dir, r)
-	return actual.(Repository), nil
+	m.repos.Store(dir, r)
+	return r, nil
 }
 
 // ForgetRepo removes a repository from the cache after its directory is discarded.
 func (m *Manager) ForgetRepo(subdir string) {
-	m.repos.Delete(filepath.Join(m.rootDir, subdir))
+	dir := filepath.Join(m.rootDir, subdir)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if r, ok := m.workspaces.LoadAndDelete(dir); ok {
+		r := r.(*workspaceRepo)
+		r.mu.Lock()
+		r.retired = true
+		r.pending.Store(false)
+		r.mu.Unlock()
+	}
+	m.unavailable.Delete(dir)
+	m.repos.Delete(dir)
 }
+
+// WorkspaceRepo returns the shared history owner for a workspace. Only explicit
+// creation may initialize Git; published storage must retain its existing metadata.
+func (m *Manager) WorkspaceRepo(ctx context.Context, subdir string, create bool) (Repository, error) {
+	if err := m.mu.LockContext(ctx); err != nil {
+		return nil, err
+	}
+	defer m.mu.Unlock()
+	return m.workspaceRepoLocked(ctx, subdir, create)
+}
+
+func (m *Manager) workspaceRepoLocked(ctx context.Context, subdir string, create bool) (Repository, error) {
+	dir := filepath.Join(m.rootDir, subdir)
+	if r, ok := m.workspaces.Load(dir); ok {
+		return r.(*workspaceRepo), nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if !create {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+			m.unavailable.Store(dir, struct{}{})
+			return nil, fmt.Errorf("workspace history unavailable: %w", err)
+		}
+	}
+	raw, err := m.repoLocked(ctx, subdir)
+	if err != nil {
+		m.unavailable.Store(dir, struct{}{})
+		return nil, err
+	}
+	r := &workspaceRepo{Repository: raw, dir: dir, mu: make(contextGate, 1)}
+	r.pending.Store(true)
+	m.workspaces.Store(dir, r)
+	m.unavailable.Delete(dir)
+	// Discover dirty state before serving, without holding a request-owned lock.
+	r.mu.Lock()
+	err = r.recoverLocked(ctx)
+	r.mu.Unlock()
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to reconcile workspace history", "err", err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return r, nil
+}
+
+// HasPendingChanges reports degraded workspace history without waiting for Git.
+func (m *Manager) HasPendingChanges() bool {
+	pending := false
+	m.unavailable.Range(func(_, _ any) bool { pending = true; return false })
+	if pending {
+		return true
+	}
+	m.workspaces.Range(func(_, value any) bool { pending = value.(*workspaceRepo).pending.Load(); return !pending })
+	return pending
+}
+
+// RunCommitRecovery retries current saved workspace snapshots on a bounded cadence.
+// The caller owns this worker and must cancel and wait for it at shutdown.
+func (m *Manager) RunCommitRecovery(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		// Do not wait behind request construction or writes during shutdown.
+		if m.mu.TryLock() {
+			m.unavailable.Range(func(key, _ any) bool {
+				subdir, err := filepath.Rel(m.rootDir, key.(string))
+				if err == nil {
+					attempt, cancel := context.WithTimeout(ctx, 5*time.Minute)
+					_, err = m.workspaceRepoLocked(attempt, subdir, false)
+					cancel()
+				}
+				if err != nil && ctx.Err() == nil {
+					slog.ErrorContext(ctx, "Workspace history remains unavailable", "err", err)
+				}
+				return ctx.Err() == nil
+			})
+			m.mu.Unlock()
+		}
+		m.workspaces.Range(func(_, value any) bool {
+			r := value.(*workspaceRepo)
+			if r.pending.Load() && r.mu.TryLock() {
+				if !r.retired {
+					attempt, cancel := context.WithTimeout(ctx, 5*time.Minute)
+					err := r.recoverLocked(attempt)
+					cancel()
+					if err != nil && ctx.Err() == nil {
+						slog.ErrorContext(ctx, "Failed to recover workspace history", "err", err)
+					}
+				}
+				r.mu.Unlock()
+			}
+			return ctx.Err() == nil
+		})
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+// contextGate serializes repository lifecycle operations while allowing queued
+// read, initialization, and remote callers to stop with their owners.
+type contextGate chan struct{}
+
+func (g contextGate) Lock() { g <- struct{}{} }
+func (g contextGate) LockContext(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case g <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+func (g contextGate) TryLock() bool {
+	select {
+	case g <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+func (g contextGate) Unlock() { <-g }
 
 // Author identifies who made a change for git commits.
 type Author struct {

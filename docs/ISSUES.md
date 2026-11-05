@@ -51,6 +51,7 @@ Outstanding issues identified during full-stack review.
 
 ## Low Priority
 
+- **Git in-memory reader EOF** — `backend/internal/storage/git/git.go` returns `fs.ErrClosed` at the end of valid in-memory file content; return `io.EOF` instead.
 - **Accessibility** — `FieldValue.tsx:134` user avatar has `alt=""` instead of the user's name.
 - **Editor.module.css is 727 lines** — Could split by feature (toolbar, blocks, etc.).
 - **Inconsistent backend error messages** — `DeleteNode` vs `GetNodeVersion` both use `"node"` but `notifications.go` uses `"notification not found"`.
