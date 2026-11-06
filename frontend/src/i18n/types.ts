@@ -699,6 +699,10 @@ export interface Dictionary {
     choicesLoading: string;
     choicesRetry: string;
     speakingVoice: string;
+    speakingSpeed: string;
+    speakingSpeedNormal: string;
+    browserVoiceDefault: string;
+    showUsageStats: string;
     speakingVoiceDefault: string;
     speakingVoiceUnavailable: string;
     voiceChoice: string;
