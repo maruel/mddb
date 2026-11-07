@@ -52,7 +52,7 @@ func TestContribConfigDefaults(t *testing.T) {
 	if got.VoiceGateway.Mode != voiceGatewayDisabled {
 		t.Fatal("shipped example enables voice")
 	}
-	if err := got.VoiceGateway.Config.ValidateEmbedded(); err != nil {
+	if _, err := got.VoiceGateway.Config.Resolve(); err != nil {
 		t.Fatalf("shipped voice pipelines: %v", err)
 	}
 	got.VoiceGateway.Config = voicegateway.Config{}
@@ -673,22 +673,50 @@ token_mode = "oauth"
 		dir := t.TempDir()
 		if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte(`[voice-gateway]
 mode = "embedded"
+webrtc_udp_port = 3478
 [[voice-gateway.config.realtime]]
 label = "Gemini Live"
 provider = "gemini"
 model = "gemini-3.8-live"
-[[voice-gateway.config.chat]]
+[[voice-gateway.config.llm]]
+id = "local_text"
 label = "Local text"
 provider = "llamacpp"
 remote = "http://localhost:8080"
 model = "gemma"
-[[voice-gateway.config.local_stack]]
+[[voice-gateway.config.llm]]
+id = "local_stack"
 label = "Local stack"
-text_only = true
-[voice-gateway.config.local_stack.llm]
 provider = "llamacpp"
 llamacppsrv = true
 model = "gemma-local"
+[[voice-gateway.config.voice]]
+label = "Local stack preset"
+asr = "remote"
+llm = "local_stack"
+tts = "remote"
+[[voice-gateway.config.asr]]
+id = "remote"
+engine = "openai-audio"
+remote = "http://localhost:8000"
+model = "whisper"
+[[voice-gateway.config.asr]]
+id = "alternate"
+engine = "openai-audio"
+remote = "http://localhost:8002"
+model = "alternate-asr"
+[[voice-gateway.config.tts]]
+id = "remote"
+engine = "openai-audio"
+remote = "http://localhost:8001"
+model = "tts"
+voice = "voice-name"
+[[voice-gateway.config.tts]]
+id = "alternate"
+engine = "openai-audio"
+remote = "http://localhost:8003"
+model = "alternate-tts"
+voice = "alternate-voice"
 `), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -700,10 +728,13 @@ model = "gemma-local"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.ExternalVoice != nil || cfg.VoiceMode != voiceGatewayEmbedded || len(cfg.VoiceConfig.Realtime) != 1 || len(cfg.VoiceConfig.Chat) != 1 || len(cfg.VoiceConfig.LocalStack) != 1 {
+		if cfg.ExternalVoice != nil || cfg.VoiceMode != voiceGatewayEmbedded || len(cfg.VoiceConfig.Realtime) != 1 || len(cfg.VoiceConfig.LLM) != 2 || len(cfg.VoiceConfig.Pipelines) != 1 {
 			t.Fatalf("config: %+v", cfg)
 		}
-		if cfg.VoiceConfig.Realtime[0].Provider != "gemini" || cfg.VoiceConfig.Chat[0].Remote != "http://localhost:8080" || !cfg.VoiceConfig.LocalStack[0].LLM.LlamaCPPServer {
+		if cfg.VoiceUDPPort != 3478 || len(cfg.VoiceConfig.Recognition) != 2 || len(cfg.VoiceConfig.Synthesis) != 2 || cfg.VoiceConfig.Pipelines[0].ASR.Model != "whisper" || cfg.VoiceConfig.Pipelines[0].TTS.Voice != "voice-name" || cfg.VoiceConfig.Recognition[0].Model != "whisper" || cfg.VoiceConfig.Recognition[1].Model != "alternate-asr" || cfg.VoiceConfig.Synthesis[0].Model != "tts" || cfg.VoiceConfig.Synthesis[1].Model != "alternate-tts" {
+			t.Fatalf("speech stages or listener settings lost: %+v", cfg)
+		}
+		if cfg.VoiceConfig.Realtime[0].Provider != "gemini" || cfg.VoiceConfig.LLM[1].Model != "gemma-local" || cfg.VoiceConfig.LLM[0].Remote != "http://localhost:8080" || !cfg.VoiceConfig.Pipelines[0].LLM.LlamaCPPServer {
 			t.Fatalf("pipeline settings lost: %+v", cfg.VoiceConfig)
 		}
 	})
@@ -740,9 +771,7 @@ model = "gemma-local"
 			config voicegateway.Config
 		}{
 			{"missing pipelines", voicegateway.Config{}},
-			{"HTTP override", voicegateway.Config{Server: voicegateway.ServerConfig{HTTP: ":9999"}}},
-			{"negative UDP port", voicegateway.Config{Server: voicegateway.ServerConfig{WebRTCUDPPort: -1}}},
-			{"missing model", voicegateway.Config{Chat: []voicegateway.ChatConfig{{Label: "Model", ModelConfig: voicegateway.ModelConfig{Provider: "gemini"}}}}},
+			{"missing model", voicegateway.Config{LLM: []voicegateway.NamedLLMConfig{{ID: "model", LLMConfig: voicegateway.LLMConfig{Label: "Model", ModelConfig: voicegateway.ModelConfig{Provider: "gemini"}}}}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				c := defaultConfig()
@@ -754,6 +783,17 @@ model = "gemma-local"
 			})
 		}
 	})
+	t.Run("embedded UDP port range", func(t *testing.T) {
+		for _, port := range []int{-1, 65536} {
+			c := defaultConfig()
+			c.VoiceGateway.Mode = voiceGatewayEmbedded
+			c.VoiceGateway.WebRTCUDPPort = port
+			c.VoiceGateway.Config.Realtime = []voicegateway.RealtimeConfig{{Label: "Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}
+			if _, err := resolveConfig(&c, t.TempDir()); err == nil {
+				t.Fatalf("invalid UDP port %d accepted", port)
+			}
+		}
+	})
 	t.Run("unknown mode", func(t *testing.T) {
 		c := defaultConfig()
 		c.VoiceGateway.Mode = "unknown"
@@ -761,9 +801,9 @@ model = "gemma-local"
 			t.Fatal("unknown mode accepted")
 		}
 	})
-	t.Run("disabled retains dormant pipelines", func(t *testing.T) {
+	t.Run("dormant declarations do not enable voice", func(t *testing.T) {
 		c := defaultConfig()
-		c.VoiceGateway.Config.Chat = []voicegateway.ChatConfig{{Label: "Preconfigured", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-flash"}}}
+		c.VoiceGateway.Config.LLM = []voicegateway.NamedLLMConfig{{ID: "preconfigured", LLMConfig: voicegateway.LLMConfig{Label: "Preconfigured", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-flash"}}}}
 		cfg, err := resolveConfig(&c, t.TempDir())
 		if err != nil {
 			t.Fatal(err)
@@ -782,7 +822,7 @@ func TestVoiceGatewayEnvironmentIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.Chat)+len(cfg.VoiceConfig.LocalStack) != 0 {
+	if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
 		t.Fatal("provider credentials enabled voice or supplied implicit pipelines")
 	}
 }

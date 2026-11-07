@@ -85,6 +85,7 @@ type tomlGitHubApp struct {
 }
 
 type tomlVoiceGateway struct {
+	WebRTCUDPPort        int                   `toml:"webrtc_udp_port"`
 	Mode                 voiceGatewayMode      `toml:"mode"`
 	URL                  string                `toml:"url"`
 	InstanceID           string                `toml:"instance_id"`
@@ -198,7 +199,8 @@ type resolvedConfig struct {
 	OAuth          oauthCredentialsSet
 	GitHubApp      githubAppSettings
 	VoiceMode      voiceGatewayMode
-	VoiceConfig    voicegateway.Config
+	VoiceConfig    voicegateway.ResolvedConfig
+	VoiceUDPPort   int
 	ExternalVoice  *server.ExternalVoiceGateway
 }
 
@@ -261,6 +263,13 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	var voiceConfig voicegateway.ResolvedConfig
+	if tc.VoiceGateway.Mode == voiceGatewayEmbedded {
+		voiceConfig, err = tc.VoiceGateway.Config.Resolve()
+		if err != nil {
+			return nil, fmt.Errorf("voice-gateway.config: %w", err)
+		}
+	}
 	return &resolvedConfig{
 		ConfigDir:      cfgDir,
 		HTTP:           tc.Server.HTTP,
@@ -273,7 +282,8 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		OAuth:          oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
 		GitHubApp:      ghApp,
 		VoiceMode:      tc.VoiceGateway.Mode,
-		VoiceConfig:    tc.VoiceGateway.Config,
+		VoiceConfig:    voiceConfig,
+		VoiceUDPPort:   tc.VoiceGateway.WebRTCUDPPort,
 		ExternalVoice:  voice,
 	}, nil
 }
@@ -401,14 +411,8 @@ func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.Exter
 	case voiceGatewayDisabled:
 		return nil, nil //nolint:nilnil // Disabled mode has no external gateway.
 	case voiceGatewayEmbedded:
-		if c.Config.Server.HTTP != "" {
-			return nil, errors.New("voice-gateway.config.server.http is controlled by server.http")
-		}
-		if c.Config.Server.WebRTCUDPPort < 0 {
-			return nil, errors.New("voice-gateway.config.server.webrtc_udp_port must be nonnegative; use mode = disabled to disable voice")
-		}
-		if err := c.Config.ValidateEmbedded(); err != nil {
-			return nil, fmt.Errorf("voice-gateway.config: %w", err)
+		if c.WebRTCUDPPort < 0 || c.WebRTCUDPPort > 65535 {
+			return nil, errors.New("voice-gateway.webrtc_udp_port must be between 0 and 65535; use mode = disabled to disable voice")
 		}
 		return nil, nil //nolint:nilnil // Embedded mode has no external gateway.
 	case voiceGatewayExternal:

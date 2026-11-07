@@ -132,32 +132,9 @@ Re-running the import on an existing workspace:
 
 ## View Manifest
 
-Since Notion API doesn't expose view definitions, configure views via YAML:
-
-```yaml
-version: 1
-databases:
-  - notion_id: "abc123def456"
-    views:
-      - name: "All Tasks"
-        type: table
-        default: true
-        columns:
-          - property: "Title"
-            width: 300
-          - property: "Status"
-        sorts:
-          - property: "Due Date"
-            direction: asc
-
-      - name: "By Status"
-        type: board
-        group_by: "Status"
-        filters:
-          - property: "Archived"
-            operator: not_equals
-            value: true
-```
+Since Notion API doesn't expose view definitions, configure views via a YAML
+manifest. The [manifest types](../../backend/internal/notion/manifest.go) define
+the supported view, column, sort, and filter settings.
 
 ## Future Work
 

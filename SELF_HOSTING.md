@@ -45,56 +45,33 @@ Voice is disabled by default. Set `voice-gateway.mode` to `embedded` or
 
 #### Embedded gateway
 
-For Gemini Live, set `GEMINI_API_KEY` in mddb's process environment and add:
+For Gemini Live, set `GEMINI_API_KEY` in mddb's process environment and enable
+the realtime choice in [contrib/config.toml](contrib/config.toml).
 
-```toml
-[voice-gateway]
-mode = "embedded"
-
-[voice-gateway.config.server]
-webrtc_udp_port = 9000
-
-[[voice-gateway.config.realtime]]
-label = "Gemini Live"
-provider = "gemini"
-model = "gemini-3.8-live"
-```
-
-The HTTP listener is mddb's `server.http`; leave
-`voice-gateway.config.server.http` empty. WebRTC media requires a reachable UDP
+The HTTP listener is mddb's `server.http`. WebRTC media requires a reachable UDP
 port. `webrtc_udp_port = 0` selects an ephemeral port, and a positive value fixes
 the port for firewall rules. Use `mode = "disabled"` to disable voice.
 Text sessions use WebSockets on the HTTP listener and client-owned speech.
 
-`[voice-gateway.config]` uses Go Mode's explicit `realtime`, `chat`, and
-`local_stack` pipeline arrays. Models and engines are selected in configuration;
-there are no implicit host pipelines or local model defaults. Each provider uses
-its native credential environment variables. Embedded startup hides unavailable
-providers and requires at least one available choice.
+`[voice-gateway.config]` declares Go Mode's realtime choices, named `asr`, `llm`,
+and `tts` stages, and `voice` presets referencing those stages. Models and engines
+are selected explicitly in configuration. Each provider uses its native
+credential environment variables. Embedded startup hides unavailable providers
+and requires at least one available choice.
 
-For a managed local model with browser-owned speech:
-
-```toml
-[voice-gateway]
-mode = "embedded"
-
-[[voice-gateway.config.chat]]
-label = "Local text"
-provider = "llamacpp"
-llamacppsrv = true
-model = "unsloth/gemma-4-E2B-it-GGUF:UD-Q4_K_XL"
-```
-
-Use `[[voice-gateway.config.local_stack]]` with explicit `asr`, `llm`, and `tts`
-settings for gateway-owned speech. The complete selection of models and engine
-examples is in [contrib/config.toml](contrib/config.toml). Its gateway mode remains
+Declare reusable stages with `[[voice-gateway.config.asr]]`,
+`[[voice-gateway.config.llm]]`, and `[[voice-gateway.config.tts]]`. Each entry has
+a unique `id` within its stage type. Each LLM supports independently selected
+browser or gateway recognition and speech output; optional
+`[[voice-gateway.config.voice]]` presets reference those IDs. The complete
+selection of models and engines is in
+[contrib/config.toml](contrib/config.toml). Its gateway mode remains
 disabled until you opt in. Managed models can require downloads and substantial
-memory. Choices appear in realtime, chat, then local-stack order; the first
-compatible choice is the default for each transport.
+memory. Choices appear in realtime, named LLM, then preset order; the first
+compatible choice is the default for each transport. ASR, LLM, and TTS
+choices retain their declaration order in the configuration file.
 
-These examples are alternatives; do not repeat table declarations in one file.
-Embedded authentication is owned by mddb. Standalone `trusted_issuers` settings
-do not change embedded authentication. The gateway allows one active session
+mddb owns embedded authentication. The gateway allows one active session
 per user, eight globally, and at most three new offers per minute per user and
 twenty globally. When capacity is available, a new offer replaces an existing
 session from the same user; sessions expire after two hours. Transcript activity
@@ -105,19 +82,8 @@ and are removed on normal shutdown.
 
 Use a stable public mddb origin and a stable instance ID. Both URLs must be
 origins without paths, queries, fragments, or credentials. HTTPS is required
-except for loopback development. In mddb's config:
-
-```toml
-[server]
-base_url = "https://mddb.example.com"
-
-[voice-gateway]
-mode = "external"
-url = "https://voice.example.com"
-instance_id = "mddb-main"
-token_mode = "scoped"
-signing_private_key_pem = "voice-signing-key.pem"
-```
+except for loopback development. Configure external voice mode, the gateway URL,
+instance ID, and signing key in [contrib/config.toml](contrib/config.toml).
 
 Generate the scoped signing key in the config directory:
 
@@ -128,24 +94,12 @@ openssl genpkey -algorithm Ed25519 -out ~/.config/mddb/voice-signing-key.pem
 
 The path is relative to mddb's config directory; it must contain a PKCS#8
 Ed25519 private key. Startup logs print the public key. Copy that public key
-into the standalone gateway's own config:
-
-```toml
-[[trusted_issuers]]
-service = "mddb"
-issuer = "https://mddb.example.com"
-public_key = "ed25519:PUBLIC_KEY_FROM_MDDB_STARTUP"
-```
+into the standalone gateway's `trusted_issuers` configuration. See
+[Go Mode's gateway configuration](https://github.com/maruel/gomode/blob/main/contrib/config.toml).
 
 Alternatively, set `token_mode = "oauth"` in mddb and omit
-`signing_private_key_pem`. Configure the standalone gateway with:
-
-```toml
-[[trusted_issuers]]
-service = "mddb"
-issuer = "https://mddb.example.com"
-oauth = true
-```
+`signing_private_key_pem`. Enable OAuth verification for the matching trusted
+issuer in the standalone gateway configuration.
 
 mddb creates `voice-oauth-key.pem` with mode 0600 in its config directory.
 Persist that file across restarts and deployments to retain signing identity.
@@ -366,5 +320,6 @@ A sample Caddyfile is provided in [contrib/mddb.caddyfile](contrib/mddb.caddyfil
 
 **HTTPS**: Caddy provides HTTPS automatically via Let's Encrypt TLS certificates.
 
-**Client IP**: Set `server.trusted_proxies = ["127.0.0.1/32", "::1/128"]` in `config.toml`. Without it, mddb
+**Client IP**: Configure `server.trusted_proxies` for the proxy addresses in
+[contrib/config.toml](contrib/config.toml). Without it, mddb
 ignores `X-Forwarded-For` and `X-Real-IP`, and every client shares Caddy's address for rate limits.

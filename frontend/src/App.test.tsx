@@ -513,7 +513,9 @@ describe("App", () => {
       await waitFor(() => {
         expect(screen.getByTestId("voice-overlay")).toBeTruthy();
       });
-      expect(screen.getByRole("button", { name: "Connect voice assistant" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Enable microphone" })).toHaveAccessibleDescription(
+        "Microphone requires HTTPS or a supported browser.",
+      );
       await waitFor(() => expect(subscriptionSignals).toHaveLength(1));
       view.unmount();
       expect(subscriptionSignals[0]?.aborted).toBe(true);

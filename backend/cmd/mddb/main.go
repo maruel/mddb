@@ -342,7 +342,7 @@ Flags:
 		if ctx.Err() != nil {
 			return context.Cause(ctx)
 		}
-		if err := voiceCfg.ValidateEmbedded(); err != nil {
+		if err := voiceCfg.Validate(); err != nil {
 			return fmt.Errorf("available voice choices: %w", err)
 		}
 		// Activity logs contain transcripts. Keep them outside the git-backed
@@ -351,7 +351,7 @@ Flags:
 		if err != nil {
 			return fmt.Errorf("create voice activity directory: %w", err)
 		}
-		bridge, err := voicertc.NewBridge(ctx, &voiceCfg, activityDir)
+		bridge, err := voicertc.NewBridge(ctx, &voiceCfg, cfg.VoiceUDPPort, activityDir)
 		if err != nil {
 			return errors.Join(fmt.Errorf("start embedded voice gateway: %w", err), os.RemoveAll(activityDir))
 		}

@@ -49,11 +49,18 @@ async function exerciseReservedViewport(page: Page, request: APIRequestContext, 
   });
   await page.route("**/api/voicegateway/v2/voice/choices", (route) =>
     route.fulfill({
-      json: { choices: [{ id: "layout", label: "Layout voice", transports: ["webrtc"] }], defaultChoiceID: "layout" },
+      json: {
+        choices: [{ id: "layout", label: "Layout voice", transports: ["webrtc"] }],
+        defaults: [{ transport: "webrtc", id: "layout" }],
+      },
     }),
   );
   await gotoWithSession(page, token);
   await expect(page.getByTestId("user-menu-button")).toBeVisible();
+  await page.getByRole("button", { name: "Voice settings", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Model", exact: true })).toHaveValue("layout");
+  await page.getByRole("button", { name: "Close voice settings", exact: true }).click();
+  await expect(page.getByTestId("voice-overlay").getByRole("alert")).toHaveCount(0);
   const workspaceId = await getWorkspaceId(page);
   const workspace = createClient(request, token).ws(workspaceId);
   const document = await workspace.createPage("0", {

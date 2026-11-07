@@ -75,15 +75,15 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 		t.Fatalf("switch workspace status = %d", status)
 	}
 
-	voiceCfg := voicegateway.DefaultConfig()
-	voiceCfg.Realtime = []voicegateway.RealtimeConfig{{Label: "Gemini Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}
-	if err := voiceCfg.ValidateEmbedded(); err != nil {
+	declarations := voicegateway.Config{Realtime: []voicegateway.RealtimeConfig{{Label: "Gemini Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}}
+	voiceCfg, err := declarations.Resolve()
+	if err != nil {
 		t.Fatalf("voice config: %v", err)
 	}
 	bridgeCtx, bridgeCancel := context.WithCancel(context.WithoutCancel(t.Context()))
 	t.Cleanup(bridgeCancel)
 	started := time.Now()
-	bridge, err := voicertc.NewBridge(bridgeCtx, &voiceCfg, t.TempDir())
+	bridge, err := voicertc.NewBridge(bridgeCtx, &voiceCfg, 0, t.TempDir())
 	if err != nil {
 		t.Fatalf("start voice bridge: %v", err)
 	}

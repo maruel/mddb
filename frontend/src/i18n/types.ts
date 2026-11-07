@@ -658,10 +658,17 @@ export interface Dictionary {
   };
 
   voice: {
+    voiceSetup: string;
+    allInOne: string;
+    selectParts: string;
+    languageModel: string;
+    browserSynthesisUnavailable: string;
+    browserRecognitionUnavailable: string;
+    synthesisModel: string;
+    gatewayModel: string;
+    recognition: string;
     previousErrors: string;
     reasoning: string;
-    browserSpeechLlm: string;
-    cloudVoiceModel: string;
     showReasoning: string;
 
     audioDevices: string;
@@ -671,6 +678,7 @@ export interface Dictionary {
     enableSound: string;
     hideTranscript: string;
     microphoneAccessOff: string;
+    microphoneUnavailable: string;
     microphoneFullyMuted: string;
     microphoneListening: string;
     microphoneMode: string;
@@ -705,7 +713,6 @@ export interface Dictionary {
     showUsageStats: string;
     speakingVoiceDefault: string;
     speakingVoiceUnavailable: string;
-    voiceChoice: string;
     assistant: string;
     cancel: string;
     cancelConnection: string;
@@ -733,17 +740,13 @@ export interface Dictionary {
     setupFailed: string;
     browserSpeech: string;
     browserSpeechPrivacy: string;
-    browserSpeechUnavailable: string;
     closeVoiceSettings: string;
-    cloudVoice: string;
-    cloudVoiceDescription: string;
     endSessionToChange: string;
     settingUpBrowserSpeech: string;
     systemAudioSettings: string;
     systemDefault: string;
     unavailableDevice: string;
     voiceLanguage: string;
-    voiceMode: string;
     voiceSettings: string;
   };
 }
