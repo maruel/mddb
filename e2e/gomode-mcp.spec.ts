@@ -35,7 +35,7 @@ test("Go Mode discovers mddb, reads its workspace, and updates the page open in 
   const call = async (method: string, params: Record<string, unknown>, name?: string) => {
     const { status, body } = await page.evaluate(
       async (input) => {
-        const response = await fetch("/api/v1/gomode/mcp", {
+        const response = await fetch(input.endpoint, {
           method: "POST",
           headers: input.headers,
           body: JSON.stringify(input.data),
@@ -43,6 +43,7 @@ test("Go Mode discovers mddb, reads its workspace, and updates the page open in 
         return { status: response.status, body: await response.json() };
       },
       {
+        endpoint: `/api/v1/gomode/mcp?workspaceId=${wsID}`,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -100,7 +101,12 @@ test("Go Mode discovers mddb, reads its workspace, and updates the page open in 
       "tools/call",
       {
         name: "node_update",
-        arguments: { nodeId: node.id, title: newTitle, content },
+        arguments: {
+          nodeId: node.id,
+          title: newTitle,
+          content,
+          expectedRevision: (await client.ws(wsID).getNode(node.id)).revision,
+        },
       },
       "node_update",
     );

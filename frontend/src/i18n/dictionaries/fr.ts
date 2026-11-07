@@ -135,6 +135,12 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    saveConflict:
+      "Cette page a été modifiée ailleurs. Votre brouillon est conservé. Copiez-le ou rechargez la version récente pour abandonner vos modifications.",
+    copyDraft: "Copier le brouillon",
+    reloadLatest: "Abandonner et recharger",
+    copyFailed: "Impossible de copier le brouillon",
+
     titlePlaceholder: "Titre",
     contentPlaceholder: "Tapez / pour les commandes...",
     unsaved: "Non enregistré",

@@ -72,7 +72,9 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/create` |  | `CreatePageRequest` | `CreatePageResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/page` |  |  | `GetPageResponse` |
+| POST | `/api/v1/workspaces/{wsID}/gomode/focus` |  | `UpdateVoiceFocusRequest` | `UpdateVoiceFocusResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page` |  | `UpdatePageRequest` | `UpdatePageResponse` |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/append` |  | `AppendPageRequest` | `UpdatePageResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter` |  | `UpdatePageFrontmatterRequest` | `UpdatePageFrontmatterResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/create` |  | `CreateTableRequest` | `CreateTableUnderParentResponse` |
@@ -1215,6 +1217,7 @@ NodeResponse is the API representation of a node.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `revision` | `string` |  |  |
 | `id` | `string` |  | yes |
 | `parent_id` | `string` |  |  |
 | `title` | `string` |  | yes |
@@ -1275,11 +1278,33 @@ GetPageResponse is a response containing page content.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `revision` | `string` |  | yes |
 | `id` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `content` | `string` |  | yes |
 | `created` | `number` |  | yes |
 | `modified` | `number` |  | yes |
+
+### UpdateVoiceFocusRequest
+
+UpdateVoiceFocusRequest publishes a validated selection for one conversation.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `openai/session` | `string` |  | yes |
+| `nodeId` | `string` |  | yes |
+| `version` | `uint64` |  | yes |
+| `browserSelection` | `boolean` | BrowserSelection reserves focus for the validated screen selection. |  |
+| `release` | `boolean` | Release clears this publisher's focus and relinquishes screen ownership. |  |
+
+### UpdateVoiceFocusResponse
+
+UpdateVoiceFocusResponse returns the current publication lease.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `version` | `uint64` |  | yes |
+| `applied` | `boolean` |  | yes |
 
 ### UpdatePageRequest
 
@@ -1287,6 +1312,7 @@ UpdatePageRequest is a request to update a page's content.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `expected_revision` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `content` | `string` |  | yes |
 
@@ -1296,9 +1322,16 @@ UpdatePageResponse is a response from updating a page.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `string` |  | yes |
-| `modified` | `number` | Modified is the node revision after the write. A client stores it to tell
-its own change apart from the matching workspace SSE event. | yes |
+| `node` | `NodeResponse` |  | yes |
+
+### AppendPageRequest
+
+AppendPageRequest appends markdown against a previously read content revision.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `content` | `string` |  | yes |
+| `expected_revision` | `string` |  | yes |
 
 ### UpdatePageFrontmatterRequest
 

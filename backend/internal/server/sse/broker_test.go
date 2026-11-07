@@ -32,7 +32,7 @@ func TestSubscribeAndPublish(t *testing.T) {
 		ActorID:  userID,
 		Modified: storage.Now(),
 	}
-	b.Publish(wsID, evt)
+	b.Publish(wsID, &evt)
 
 	select {
 	case msg := <-sub.C:
@@ -97,7 +97,7 @@ func TestPublishToEmptyWorkspace(t *testing.T) {
 	b := NewBroker()
 	wsID := ksid.NewID()
 	// Should not panic.
-	b.Publish(wsID, dto.WorkspaceEvent{
+	b.Publish(wsID, &dto.WorkspaceEvent{
 		Type:     dto.EventNodeCreated,
 		NodeID:   ksid.NewID(),
 		ActorID:  ksid.NewID(),
@@ -125,10 +125,10 @@ func TestPublishDropsWhenFull(t *testing.T) {
 
 	// Fill the buffer.
 	for range subscriberBufSize {
-		b.Publish(wsID, evt)
+		b.Publish(wsID, &evt)
 	}
 	// This should be dropped, not block.
-	b.Publish(wsID, evt)
+	b.Publish(wsID, &evt)
 
 	// Drain and count.
 	var count int
@@ -164,7 +164,7 @@ func TestMultipleWorkspaces(t *testing.T) {
 	defer cleanup2()
 
 	// Publish to ws1 only.
-	b.Publish(ws1, dto.WorkspaceEvent{
+	b.Publish(ws1, &dto.WorkspaceEvent{
 		Type:     dto.EventNodeCreated,
 		NodeID:   ksid.NewID(),
 		ActorID:  user1,
@@ -197,7 +197,7 @@ func TestSubscribeEvents(t *testing.T) {
 		ActorID:  ksid.NewID(),
 		Modified: storage.Now(),
 	}
-	b.Publish(wsID, evt)
+	b.Publish(wsID, &evt)
 
 	select {
 	case got := <-events:
@@ -209,7 +209,7 @@ func TestSubscribeEvents(t *testing.T) {
 	}
 
 	// Another workspace's events are not delivered.
-	b.Publish(ksid.NewID(), evt)
+	b.Publish(ksid.NewID(), &evt)
 	select {
 	case got := <-events:
 		t.Fatalf("received event for another workspace: %#v", got)

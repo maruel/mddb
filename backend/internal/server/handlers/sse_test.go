@@ -84,7 +84,7 @@ func TestSSEHandler(t *testing.T) {
 			}
 
 			// Publish an event.
-			broker.Publish(wsID, dto.WorkspaceEvent{
+			broker.Publish(wsID, &dto.WorkspaceEvent{
 				Type:     dto.EventNodeUpdated,
 				NodeID:   ksid.NewID(),
 				ActorID:  ksid.NewID(),

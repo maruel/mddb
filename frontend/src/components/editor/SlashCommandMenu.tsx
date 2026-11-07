@@ -25,7 +25,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const navigate = useNavigate();
   const { user, wsApi } = useAuth();
   const captureScope = useAuthScope();
-  const { loadNode, fetchNodeChildren } = useWorkspace();
+  const { fetchNodeChildren } = useWorkspace();
   const { flushAutoSave } = useEditor();
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [adjustedPosition, setAdjustedPosition] = createSignal<{ top: number; left: number } | null>(null);
@@ -206,16 +206,13 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         props.view.dispatch(insertTr);
 
         // Flush auto-save to persist the link immediately
-        flushAutoSave();
+        if (!(await flushAutoSave())) return;
 
         // Refresh parent's children in sidebar to show new subpage
         // (loadNodes only refreshes root nodes, fetchNodeChildren refreshes the parent's children)
         await fetchNodeChildren(parentId);
         if (!isCurrent() || props.nodeId !== parentId) return;
 
-        // Load the new page data and navigate to it
-        await loadNode(newPage.id, { refresh: false });
-        if (!isCurrent()) return;
         navigate(url);
       } catch (err) {
         console.error("Failed to create subpage:", err);

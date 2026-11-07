@@ -1024,6 +1024,7 @@ function hello() {
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {
       await client.ws(wsID).updatePage(pageData.id, {
+        expected_revision: (await client.ws(wsID).getNode(pageData.id)).revision ?? "",
         title: "History Test",
         content: `Content version ${i}`,
       });

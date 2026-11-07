@@ -22,6 +22,41 @@ import (
 )
 
 func TestWorkspaceRepo(t *testing.T) {
+	t.Run("ReadTx", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			dir := t.TempDir()
+			repo, err := NewManagerWithBackend(dir, "test", "test@example.com", BackendGoGit).WorkspaceRepo(t.Context(), "ws", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			done := make(chan error, 1)
+			go func() { done <- repo.ReadTx(t.Context(), func() error { close(entered); <-release; return nil }) }()
+			<-entered
+			wrote := make(chan error, 1)
+			go func() {
+				wrote <- repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) { return "", nil, nil })
+			}()
+			synctest.Wait()
+			select {
+			case e := <-wrote:
+				if e != nil {
+					t.Fatal(e)
+				}
+				t.Fatal("write entered during snapshot")
+			default:
+			}
+			close(release)
+			if err := <-done; err != nil {
+				t.Fatal(err)
+			}
+			if err := <-wrote; err != nil {
+				t.Fatal(err)
+			}
+		})
+	})
+
 	for _, b := range backends {
 		t.Run(b.name, func(t *testing.T) {
 			node := ksid.NewID().String()

@@ -25,6 +25,7 @@ import (
 	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -81,10 +82,7 @@ func (b *testVoiceChoiceBridge) HandleChoiceOffer(ctx context.Context, sdp, choi
 func TestWorkspaceRegistryInstructions(t *testing.T) {
 	t.Parallel()
 
-	instructions, err := (&workspaceRegistry{}).Instructions(t.Context())
-	if err != nil {
-		t.Fatalf("Instructions() error: %v", err)
-	}
+	instructions := mddbVoiceSystemInstruction
 	for _, want := range []string{
 		"authenticated user's active mddb workspace",
 		"Use nodes_list to discover pages and tables",
@@ -350,12 +348,12 @@ func TestGoModeMCPUsesDefaultWorkspaceAfterLRUClear(t *testing.T) {
 		t.Fatalf("clear active workspaces: %v", err)
 	}
 
-	result := callMCP(t, env, auth.Token, "resources/list", map[string]any{})
+	result := callMCPNamedAt(t, env, auth.Token, goModeMCPEndpoint+"?workspaceId="+ws.ID.String(), "resources/list", map[string]any{}, "")
 	var listed mcp.ResourcesListResult
 	if err := json.Unmarshal(result, &listed); err != nil {
 		t.Fatalf("decode resources/list: %v", err)
 	}
-	if len(listed.Resources) != 1 || listed.Resources[0].Name != page.ID.String() {
+	if len(listed.Resources) != 2 || listed.Resources[0].URI != voiceItemsURI || listed.Resources[1].Name != page.ID.String() {
 		t.Fatalf("resources = %#v, want the default workspace page", listed.Resources)
 	}
 }
@@ -401,12 +399,13 @@ func TestGoModeMCP(t *testing.T) {
 
 	// MCP is a POST transport for reads; no database commit is allowed.
 	env.services.RootRepo = nil
-	result := callMCP(t, env, auth.Token, "resources/list", map[string]any{})
+	result := callMCPNamedAt(t, env, auth.Token, goModeMCPEndpoint+"?workspaceId="+ws.ID.String(), "resources/list", map[string]any{}, "")
 	var listed mcp.ResourcesListResult
 	if err := json.Unmarshal(result, &listed); err != nil {
 		t.Fatalf("decode resources/list: %v", err)
 	}
 	want := map[string]string{
+		"items":                "Workspace nodes and current selection",
 		root.ID.String():       "Root",
 		child.ID.String():      "Child",
 		grandchild.ID.String(): "Grandchild",
@@ -466,12 +465,14 @@ func TestMCPToolSchemas(t *testing.T) {
 	// Every advertised tool carries no header-mirrored parameters; the empty
 	// expectations catch an accidental x-mcp-header or a renamed tool.
 	expectedHeaders := map[string]map[string]string{
-		"nodes_list":   {},
-		"node_read":    {},
-		"node_update":  {},
-		"page_create":  {},
-		"table_create": {},
-		"node_append":  {},
+		"workspaces_list":  {},
+		"workspace_select": {},
+		"nodes_list":       {},
+		"node_read":        {},
+		"node_update":      {},
+		"page_create":      {},
+		"table_create":     {},
+		"node_append":      {},
 	}
 	specs := registry.allSpecs()
 	if len(specs) != len(expectedHeaders) {
@@ -562,7 +563,7 @@ func TestGoModeMCPResourceSubscription(t *testing.T) {
 	reader := bufio.NewReader(resp.Body)
 	readSSEUntil(t, reader, "subscriptions/acknowledged")
 
-	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "title": "Watched", "content": "After"})
+	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "expectedRevision": callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": id}).StructuredContent.Node.Revision, "title": "Watched", "content": "After"})
 	if updated.IsError {
 		t.Fatalf("node_update = %#v", updated)
 	}
@@ -592,8 +593,8 @@ func readSSEUntil(t *testing.T, r *bufio.Reader, substr string) string {
 type mcpToolOutcome struct {
 	IsError           bool `json:"isError"`
 	StructuredContent struct {
-		Error string     `json:"error"`
-		Node  nodeDetail `json:"node"`
+		Error string               `json:"error"`
+		Node  mcpschema.NodeDetail `json:"node"`
 	} `json:"structuredContent"`
 }
 
@@ -667,7 +668,7 @@ func TestGoModeMCPWriteTools(t *testing.T) {
 		t.Fatalf("table_create = %#v, want child table", table)
 	}
 	tableRead := callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": table.StructuredContent.Node.ID})
-	if node := tableRead.StructuredContent.Node; tableRead.IsError || len(node.Properties) != 2 || node.Properties[0] != (nodeProperty{Name: "Task", Type: "text"}) || node.Properties[1] != (nodeProperty{Name: "Done", Type: "checkbox"}) {
+	if node := tableRead.StructuredContent.Node; tableRead.IsError || len(node.Properties) != 2 || node.Properties[0] != (mcpschema.NodeProperty{Name: "Task", Type: "text"}) || node.Properties[1] != (mcpschema.NodeProperty{Name: "Done", Type: "checkbox"}) {
 		t.Fatalf("node_read table = %#v, want persisted column schema", tableRead)
 	}
 	rootTable := callMCPTool(t, env, token, "table_create", map[string]any{"title": "Root table", "properties": []any{}})
@@ -685,12 +686,12 @@ func TestGoModeMCPWriteTools(t *testing.T) {
 		}
 	}
 
-	appended := callMCPTool(t, env, token, "node_append", map[string]any{"nodeId": id, "content": "Second"})
+	appended := callMCPTool(t, env, token, "node_append", map[string]any{"nodeId": id, "content": "Second", "expectedRevision": callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": id}).StructuredContent.Node.Revision})
 	if got := appended.StructuredContent.Node.Content; got != "First\n\nSecond" {
 		t.Fatalf("node_append content = %q, want %q", got, "First\n\nSecond")
 	}
 
-	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "title": "Renamed", "content": "Replaced"})
+	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "expectedRevision": callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": id}).StructuredContent.Node.Revision, "title": "Renamed", "content": "Replaced"})
 	if node := updated.StructuredContent.Node; node.Title != "Renamed" || node.Content != "Replaced" {
 		t.Fatalf("node_update node = %#v, want renamed and replaced", node)
 	}
@@ -763,16 +764,24 @@ func callMCPTool(t *testing.T, e *testEnv, token, name string, args map[string]a
 }
 
 func callMCPNamed(t *testing.T, e *testEnv, token, method string, params map[string]any, name string) json.RawMessage {
+	return callMCPNamedAt(t, e, token, goModeMCPEndpoint, method, params, name)
+}
+
+func callMCPNamedAt(t *testing.T, e *testEnv, token, endpoint, method string, params map[string]any, name string) json.RawMessage {
+	meta, _ := params["_meta"].(map[string]any)
 	params["_meta"] = map[string]any{
 		"io.modelcontextprotocol/protocolVersion":    mcp.ProtocolVersion,
 		"io.modelcontextprotocol/clientInfo":         map[string]string{"name": "mddb-test", "version": "1"},
 		"io.modelcontextprotocol/clientCapabilities": map[string]any{},
 	}
+	for key, value := range meta {
+		params["_meta"].(map[string]any)[key] = value
+	}
 	body, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": "1", "method": method, "params": params})
 	if err != nil {
 		t.Fatalf("marshal MCP request: %v", err)
 	}
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, e.server.URL+goModeMCPEndpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, e.server.URL+endpoint, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("create MCP request: %v", err)
 	}

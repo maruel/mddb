@@ -24,7 +24,11 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
   await expect(editor).toContainText("Initial content");
   const mountedNode = await sidebarNode.elementHandle();
 
-  await ws.updatePage(node.id, { title: "Updated elsewhere", content: "Live content" });
+  await ws.updatePage(node.id, {
+    expected_revision: (await ws.getNode(node.id)).revision ?? "",
+    title: "Updated elsewhere",
+    content: "Live content",
+  });
   await expect(title).toHaveValue("Updated elsewhere");
   await expect(editor).toContainText("Live content");
   await expect(sidebarNode).toContainText("Updated elsewhere");
@@ -61,7 +65,11 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
   await expect(title).toHaveValue("Unsaved draft");
   await expect(notice).not.toBeVisible();
 
-  await ws.updatePage(node.id, { title: "Concurrent edit", content: "Concurrent content" });
+  await ws.updatePage(node.id, {
+    expected_revision: (await ws.getNode(node.id)).revision ?? "",
+    title: "Concurrent edit",
+    content: "Concurrent content",
+  });
   await expect(notice).toBeVisible();
   await expect(title).toHaveValue("Unsaved draft");
   await expect(editor).toContainText("Live content");
@@ -87,7 +95,11 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
     await refreshGate;
     await route.fulfill({ response });
   });
-  await ws.updatePage(node.id, { title: "Delayed refresh", content: "Fetched content" });
+  await ws.updatePage(node.id, {
+    expected_revision: (await ws.getNode(node.id)).revision ?? "",
+    title: "Delayed refresh",
+    content: "Fetched content",
+  });
   await refreshing;
   await title.fill("Typed during refresh");
   releaseRefresh();

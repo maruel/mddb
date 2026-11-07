@@ -128,7 +128,7 @@ func (s *Services) PublishEvent(ctx context.Context, wsID ksid.ID, eventType dto
 	if s.Broker == nil {
 		return
 	}
-	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
 		Type:      eventType,
 		NodeID:    nodeID,
 		ActorID:   actorID,
@@ -143,11 +143,12 @@ func (s *Services) PublishNodeEvent(ctx context.Context, wsID ksid.ID, eventType
 	if s.Broker == nil {
 		return
 	}
-	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
 		Type:      eventType,
 		NodeID:    node.ID,
 		ActorID:   actorID,
 		Modified:  node.Modified,
+		Revision:  node.Revision,
 		RequestID: reqctx.RequestID(ctx),
 	})
 }
@@ -157,7 +158,7 @@ func (s *Services) PublishRecordEvent(ctx context.Context, wsID, nodeID, recordI
 	if s.Broker == nil {
 		return
 	}
-	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
 		Type:      dto.EventRecordsChanged,
 		NodeID:    nodeID,
 		RecordID:  recordID,

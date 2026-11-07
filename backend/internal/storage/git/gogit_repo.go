@@ -85,7 +85,17 @@ func (r *GoGitRepo) FSAtCommit(ctx context.Context, hash string) fs.FS {
 	return &goGitCommitFS{repo: r, ctx: ctx, hash: hash}
 }
 
-// CommitTx executes fn while holding a lock and commits the returned files atomically.
+// ReadTx reads saved files while excluding repository-owned mutations, independently of Git metadata.
+func (r *GoGitRepo) ReadTx(ctx context.Context, fn func() error) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return fn()
+}
+
+// CommitTx executes a serialized mutation and records its changed files.
 func (r *GoGitRepo) CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -595,6 +605,8 @@ func (r *GoGitRepo) Fetch(ctx context.Context, remoteName, branch string) error 
 // Pull fetches and merges from a remote. go-git doesn't support merge natively,
 // so this is a limited implementation that only works for fast-forward merges.
 func (r *GoGitRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}

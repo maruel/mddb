@@ -36,6 +36,9 @@ type Repository interface {
 	FS() fs.FS
 	// FSAtCommit returns a read-only filesystem view at a specific commit.
 	FSAtCommit(ctx context.Context, hash string) fs.FS
+	// ReadTx executes a saved-file snapshot read under the mutation gate.
+	// It does not refresh or require Git metadata. The callback must not call repository methods.
+	ReadTx(ctx context.Context, fn func() error) error
 	// CommitTx executes fn while holding a lock and commits the returned files atomically.
 	// If fn returns an error or no files, no commit is made.
 	CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error

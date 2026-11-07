@@ -28,6 +28,18 @@ type workspaceRepo struct {
 	retired    bool
 }
 
+// ReadTx reads saved files while excluding repository-owned mutations, independently of Git metadata.
+func (r *workspaceRepo) ReadTx(ctx context.Context, fn func() error) error {
+	if err := r.mu.LockContext(ctx); err != nil {
+		return err
+	}
+	defer r.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return r.Repository.ReadTx(ctx, fn)
+}
+
 func (r *workspaceRepo) CommitTx(ctx context.Context, author Author, fn func() (string, []string, error)) error {
 	if err := r.mu.LockContext(ctx); err != nil {
 		return err

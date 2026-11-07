@@ -135,6 +135,12 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    saveConflict:
+      "Esta página cambió en otro lugar. Se conserva tu borrador. Cópialo o carga la última versión para descartar tus cambios.",
+    copyDraft: "Copiar borrador",
+    reloadLatest: "Descartar cambios y recargar",
+    copyFailed: "No se pudo copiar el borrador",
+
     titlePlaceholder: "Título",
     contentPlaceholder: "Escribe / para comandos...",
     unsaved: "Sin guardar",

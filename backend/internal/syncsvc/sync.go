@@ -160,7 +160,11 @@ func (s *Service) Pull(ctx context.Context, wsID ksid.ID) error {
 	}
 
 	branch := ws.GitRemote.Branch
-	_, err = repo.Pull(ctx, "origin", branch)
+	changed, pullErr := repo.Pull(ctx, "origin", branch)
+	if changed || pullErr != nil {
+		s.fileStore.InvalidateWorkspaceStore(wsID)
+	}
+	err = pullErr
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "conflict") {

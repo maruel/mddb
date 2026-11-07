@@ -18,6 +18,25 @@ import {
   waitNativeReady,
 } from "./gomode-fixtures";
 
+test("legacy bridge3 focus navigates without inventing a conversation identity", async ({ page, request }) => {
+  const { token } = await registerUser(request, "focus-legacy");
+  await installNativeTools(page, request);
+  await gotoWithSession(page, token);
+  await waitNativeReady(page);
+  const workspaceId = await getWorkspaceId(page);
+  const target = await createClient(request, token)
+    .ws(workspaceId)
+    .createPage("0", { title: "Legacy native target", content: "Legacy content" });
+  let publications = 0;
+  page.on("request", (outgoing) => {
+    if (outgoing.url().endsWith("/gomode/focus")) publications++;
+  });
+  await invokeNativeFocus(page, target.id, "legacy", null);
+  expect(await nativeResult(page, "legacy")).toEqual({ nodeId: target.id, status: "focused" });
+  await expect(page.getByTestId("wysiwyg-editor")).toContainText("Legacy content");
+  expect(publications).toBe(0);
+});
+
 for (const fromSettings of [false, true]) {
   test(`native focus opens an unloaded nested node from ${fromSettings ? "settings" : "workspace"}`, async ({
     page,
@@ -41,7 +60,7 @@ for (const fromSettings of [false, true]) {
       await expect(page).toHaveURL(/\/settings\/user$/);
     }
     await expect(page.getByTestId(`sidebar-node-${nested.id}`)).toHaveCount(0);
-    await invokeNativeFocus(page, nested.id, "nested");
+    await invokeNativeFocus(page, nested.id, "nested", "native-focus-conversation");
     expect(await nativeResult(page, "nested")).toEqual({ nodeId: nested.id, status: "focused" });
     await expect(page).toHaveURL(new RegExp(`/@${nested.id}(?:\\+|$)`));
     await expect(page.getByTestId("wysiwyg-editor")).toContainText("Nested focus content");
@@ -72,12 +91,12 @@ test("invalid and forbidden native targets leave the draft and route intact", as
         json: { error: { code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", message: "Private target details" } },
       }),
     );
-    await invokeNativeFocus(page, id, id);
+    await invokeNativeFocus(page, id, id, "native-focus-conversation");
     expect(await nativeResult(page, id)).toEqual({ error: "Node unavailable." });
     await expect(page).toHaveURL(original);
     await expect(editor).toHaveValue("Unsaved draft remains selected");
   }
-  await invokeNativeFocus(page, "", "invalid");
+  await invokeNativeFocus(page, "", "invalid", "native-focus-conversation");
   expect(await nativeResult(page, "invalid")).toEqual({ error: "Invalid node ID." });
   await expect(page).toHaveURL(original);
 });
@@ -102,7 +121,7 @@ test("canceling or choosing another route during validation prevents a late focu
       completed.resolve();
     });
     const original = page.url();
-    const envelope = await invokeNativeFocus(page, target.id, cancellation);
+    const envelope = await invokeNativeFocus(page, target.id, cancellation, "native-focus-conversation");
     await requested.promise;
     if (cancellation === "native") await cancelNativeFocus(page, envelope);
     else {
@@ -124,10 +143,7 @@ test("canceling or choosing another route during validation prevents a late focu
   }
 });
 
-test("late source autosave cannot rewrite a committed focus URL before target loading completes", async ({
-  page,
-  request,
-}) => {
+test("native focus awaits source save acknowledgement before loading the target", async ({ page, request }) => {
   const { token } = await registerUser(request, "focus-save");
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
@@ -162,12 +178,13 @@ test("late source autosave cannot rewrite a committed focus URL before target lo
     await route.fulfill({ response });
   });
   try {
-    await invokeNativeFocus(page, target.id, "save-race");
+    await invokeNativeFocus(page, target.id, "save-race", "native-focus-conversation");
     await saved.promise;
-    await targetRequested.promise;
-    await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
+    await expect(page).toHaveURL(new RegExp(`/@${source.id}(?:\\+|$)`));
     saveReply.resolve();
     await saveFinished.promise;
+    await targetRequested.promise;
+    await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
     await expect(page.getByRole("status").filter({ hasText: /^Saved$/ })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
     targetReply.resolve();
@@ -202,7 +219,7 @@ test("a replacement route owns the view while a committed focus target is still 
     await route.fulfill({ response });
     if (reads === 2) completed.resolve();
   });
-  await invokeNativeFocus(page, target.id, "route-replaced");
+  await invokeNativeFocus(page, target.id, "route-replaced", "native-focus-conversation");
   await requested.promise;
   await page.getByTestId("user-menu-button").click();
   await page.getByRole("menuitem", { name: "Profile" }).click();
@@ -239,7 +256,7 @@ for (const replacement of ["session", "workspace"] as const) {
       await route.fulfill({ response });
       completed.resolve();
     });
-    const envelope = await invokeNativeFocus(page, target.id, "replaced");
+    const envelope = await invokeNativeFocus(page, target.id, "replaced", "native-focus-conversation");
     await requested.promise;
     let expectedWorkspace = workspaceId;
     if (replacement === "session") {
@@ -286,7 +303,7 @@ test("a target disappearing after validation reports failure without repeatedly 
     if (++reads === 1) await route.continue();
     else await route.fulfill({ status: 404, json: { error: { code: "NOT_FOUND", message: "Removed" } } });
   });
-  await invokeNativeFocus(page, target.id, "removed");
+  await invokeNativeFocus(page, target.id, "removed", "native-focus-conversation");
   expect(await nativeResult(page, "removed")).toEqual({ error: "Node unavailable." });
   await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
   expect(reads).toBe(2);

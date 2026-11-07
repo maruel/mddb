@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -552,8 +553,9 @@ func TestIntegration(t *testing.T) {
 
 		// Update page
 		updatePageReq := dto.UpdatePageRequest{
-			Title:   "Updated Title",
-			Content: "# Updated Content\n\nThis page has been updated.",
+			ExpectedRevision: pageRevisionHTTP(t, env, token, wsID, nodeID),
+			Title:            "Updated Title",
+			Content:          "# Updated Content\n\nThis page has been updated.",
 		}
 		var updateResp dto.UpdatePageResponse
 		status = env.doJSON(t, http.MethodPost, "/api/v1/workspaces/"+wsID.String()+"/nodes/"+nodeID.String()+"/page", updatePageReq, &updateResp, token)
@@ -561,8 +563,8 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("POST /api/v1/workspaces/%s/nodes/%s/page: got status %d", wsID, nodeID, status)
 		}
 
-		if updateResp.ID != nodeID {
-			t.Errorf("Updated page ID: got %v, want %v", updateResp.ID, nodeID)
+		if updateResp.Node.ID != nodeID {
+			t.Errorf("Updated page ID: got %v, want %v", updateResp.Node.ID, nodeID)
 		}
 
 		// Verify update by getting the node again
@@ -952,4 +954,12 @@ func TestIntegration(t *testing.T) {
 			t.Errorf("cookies = %v, want the signed state %q", cookies, state)
 		}
 	})
+}
+
+func pageRevisionHTTP(t *testing.T, env *testEnv, token string, wsID, id ksid.ID) string {
+	var node dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, "/api/v1/workspaces/"+wsID.String()+"/nodes/"+id.String(), nil, &node, token); status != http.StatusOK {
+		t.Fatalf("read baseline: %d", status)
+	}
+	return node.Revision
 }

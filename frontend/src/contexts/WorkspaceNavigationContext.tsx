@@ -1,4 +1,4 @@
-// Validates voice focus before navigation and observes completion in the current route-owned view.
+// Gates workspace and voice navigation on saved drafts and observes route-owned focus completion.
 
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
 import { useLocation, useNavigate } from "@solidjs/router";
 import type { NodeResponse } from "@sdk/types.gen";
 import type { FrontendVoiceToolContext } from "@maruel/gomode/web/FrontendVoiceTools";
+import { useI18n } from "../i18n";
 import { useAuth } from "./AuthContext";
 import { nodeUrl, parseNodeUrl } from "../utils/urls";
 
@@ -23,16 +24,19 @@ export interface WorkspaceNavigationView {
   selectedNodeId: Accessor<string | null>;
   selectedNodeData: Accessor<NodeResponse | null>;
   failedNodeId: Accessor<string | null>;
-  beforeNavigate(): void;
+  beforeNavigate(): Promise<boolean>;
 }
 interface WorkspaceNavigationContextValue {
+  beforeNavigate(): Promise<boolean>;
   registerView(view: WorkspaceNavigationView): void;
+  selectedNode: Accessor<NodeResponse | null>;
   focusNode(id: string, context: FrontendVoiceToolContext): Promise<void>;
 }
 const WorkspaceNavigationContext = createContext<WorkspaceNavigationContextValue>();
 
 export const WorkspaceNavigationProvider: ParentComponent = (props) => {
   const auth = useAuth();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const owner = createMemo(
@@ -40,6 +44,7 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
       `${auth.identity()}:${auth.user()?.id ?? ""}:${auth.user()?.session_id ?? ""}:${auth.user()?.workspace_id ?? ""}`,
   );
   const [view, setView] = createSignal<WorkspaceNavigationView | null>(null);
+  const [viewOwner, setViewOwner] = createSignal("");
   let pending: { controller: AbortController; target: string; wsId: string; navigating: boolean } | null = null;
   let disposed = false;
   const matches = (wsId: string, id: string) => {
@@ -64,7 +69,23 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
   });
 
   const value: WorkspaceNavigationContextValue = {
+    async beforeNavigate() {
+      const captured = owner();
+      const active = view();
+      if (viewOwner() !== captured || !active) return true;
+      const saved = await active.beforeNavigate();
+      return saved && !disposed && owner() === captured && view() === active;
+    },
+    selectedNode() {
+      const current = view();
+      const node = current?.selectedNodeData();
+      const wsId = auth.user()?.workspace_id;
+      return viewOwner() === owner() && node && wsId && current?.selectedNodeId() === node.id && matches(wsId, node.id)
+        ? node
+        : null;
+    },
     registerView(current) {
+      setViewOwner(owner());
       setView(current);
       onCleanup(() => {
         if (untrack(view) === current) setView(null);
@@ -96,7 +117,7 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
         const active = view();
         if (matches(user.workspace_id, id) && active?.selectedNodeId() === id && active.selectedNodeData()?.id === id)
           return;
-        active?.beforeNavigate();
+        if (active && !(await active.beforeNavigate())) throw new Error(t("errors.autoSaveFailed"));
         if (!current()) throw new Error("Focus canceled.");
         operation.navigating = true;
         navigate(nodeUrl(user.workspace_id, user.workspace_name, node.id, node.title));

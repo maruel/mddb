@@ -8,6 +8,12 @@ import (
 
 // --- Common Responses ---
 
+// UpdateVoiceFocusResponse returns the current publication lease.
+type UpdateVoiceFocusResponse struct {
+	Version uint64 `json:"version"`
+	Applied bool   `json:"applied"`
+}
+
 // OkResponse is a simple success response.
 type OkResponse struct {
 	Ok bool `json:"ok"`
@@ -427,6 +433,7 @@ type PullGitResponse = OkResponse
 
 // NodeResponse is the API representation of a node.
 type NodeResponse struct {
+	Revision    string            `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
 	ID          ksid.ID           `json:"id" jsonschema:"description=Unique node identifier"`
 	ParentID    ksid.ID           `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
 	Title       string            `json:"title" jsonschema:"description=Node title"`
@@ -449,6 +456,7 @@ type NodeResponse struct {
 
 // GetPageResponse is a response containing page content.
 type GetPageResponse struct {
+	Revision string  `json:"revision" jsonschema:"description=Canonical page content revision"`
 	ID       ksid.ID `json:"id" jsonschema:"description=Node identifier"`
 	Title    string  `json:"title" jsonschema:"description=Page title"`
 	Content  string  `json:"content" jsonschema:"description=Markdown content"`
@@ -463,10 +471,7 @@ type CreatePageResponse struct {
 
 // UpdatePageResponse is a response from updating a page.
 type UpdatePageResponse struct {
-	ID ksid.ID `json:"id" jsonschema:"description=Node identifier"`
-	// Modified is the node revision after the write. A client stores it to tell
-	// its own change apart from the matching workspace SSE event.
-	Modified Time `json:"modified" jsonschema:"description=Node revision after the update"`
+	Node NodeResponse `json:"node" jsonschema:"description=Saved canonical snapshot captured inside the write transaction"`
 }
 
 // UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.

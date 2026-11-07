@@ -911,6 +911,7 @@ export interface BacklinkInfo {
 
 /** NodeResponse is the API representation of a node. */
 export interface NodeResponse {
+  revision?: string;
   id: string;
   parent_id?: string;
   title: string;
@@ -959,6 +960,7 @@ export interface CreatePageResponse {
 
 /** GetPageResponse is a response containing page content. */
 export interface GetPageResponse {
+  revision: string;
   id: string;
   title: string;
   content: string;
@@ -966,20 +968,39 @@ export interface GetPageResponse {
   modified: number;
 }
 
+/** UpdateVoiceFocusRequest publishes a validated selection for one conversation. */
+export interface UpdateVoiceFocusRequest {
+  "openai/session": string;
+  nodeId: string;
+  version: number /* uint64 */;
+  /** BrowserSelection reserves focus for the validated screen selection. */
+  browserSelection?: boolean;
+  /** Release clears this publisher's focus and relinquishes screen ownership. */
+  release?: boolean;
+}
+
+/** UpdateVoiceFocusResponse returns the current publication lease. */
+export interface UpdateVoiceFocusResponse {
+  version: number /* uint64 */;
+  applied: boolean;
+}
+
 /** UpdatePageRequest is a request to update a page's content. */
 export interface UpdatePageRequest {
+  expected_revision: string;
   title: string;
   content: string;
 }
 
 /** UpdatePageResponse is a response from updating a page. */
 export interface UpdatePageResponse {
-  id: string;
-  /**
-   * Modified is the node revision after the write. A client stores it to tell
-   * its own change apart from the matching workspace SSE event.
-   */
-  modified: number;
+  node: NodeResponse;
+}
+
+/** AppendPageRequest appends markdown against a previously read content revision. */
+export interface AppendPageRequest {
+  content: string;
+  expected_revision: string;
 }
 
 /**
@@ -1279,6 +1300,8 @@ export interface UploadNodeAssetResponse {
 
 /** WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates. */
 export interface WorkspaceEvent {
+  /** Revision identifies canonical page content; metadata-only events omit it. */
+  revision?: string;
   type: EventType;
   node_id: string;
   record_id?: string;

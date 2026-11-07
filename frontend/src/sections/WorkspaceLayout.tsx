@@ -55,7 +55,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     removeNode,
     moveNode,
   } = useWorkspace();
-  const { connected } = useEventSource();
+  const { connected, lastEvent } = useEventSource();
   const { flushAutoSave, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
   const { undo: recordsUndo, redo: recordsRedo } = useRecords();
 
@@ -63,7 +63,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   // changes underneath it.
   const voiceResourceSubscriptions = (): string[] => {
     const wsId = user()?.workspace_id;
-    const nodeId = selectedNodeId();
+    const nodeId = selectedNodeData()?.id === selectedNodeId() ? selectedNodeId() : null;
     return wsId && nodeId ? [`mddb://workspaces/${wsId}/nodes/${nodeId}`] : [];
   };
 
@@ -71,7 +71,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const voiceOwner = createMemo(() => `${authIdentity()}:${user()?.workspace_id ?? ""}`);
   createEffect(
     on(voiceOwner, () => {
-      goMode.watchResources(voiceResourceSubscriptions);
+      goMode.watchResources(voiceResourceSubscriptions, lastEvent);
     }),
   );
 
@@ -135,9 +135,10 @@ const WorkspaceLayout: ParentComponent = (props) => {
     selectedNodeId,
     selectedNodeData,
     failedNodeId,
-    beforeNavigate() {
-      flushAutoSave();
+    async beforeNavigate() {
+      if (!(await flushAutoSave())) return false;
       if (isMobileLayout()) setMobileSidebarOpen(false);
+      return true;
     },
   });
 
@@ -327,6 +328,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
   // Create node helper
   async function createNode(type: "document" | "table" = "document", parentId?: string) {
+    if (!(await navigation.beforeNavigate())) return;
     const identity = authIdentity();
     const initialWorkspace = user()?.workspace_id;
     const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;
@@ -371,7 +373,6 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   const handleNodeClick = (node: NodeResponse) => {
-    flushAutoSave();
     const u = user();
     const wsId = u?.workspace_id;
     const wsName = u?.workspace_name;
@@ -385,6 +386,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   };
 
   async function handleDeleteNode(nodeId: string) {
+    if (nodeId === selectedNodeId() && !(await navigation.beforeNavigate())) return;
     const identity = authIdentity();
     const initialWorkspace = user()?.workspace_id;
     const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;

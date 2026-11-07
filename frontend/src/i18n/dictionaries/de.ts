@@ -135,6 +135,12 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    saveConflict:
+      "Diese Seite wurde anderswo geändert. Ihr Entwurf bleibt erhalten. Kopieren Sie ihn oder laden Sie die aktuelle Version, um Ihre Änderungen zu verwerfen.",
+    copyDraft: "Entwurf kopieren",
+    reloadLatest: "Änderungen verwerfen und neu laden",
+    copyFailed: "Entwurf konnte nicht kopiert werden",
+
     titlePlaceholder: "Titel",
     contentPlaceholder: "Tippe / für Befehle...",
     unsaved: "Nicht gespeichert",

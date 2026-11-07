@@ -11,6 +11,7 @@ import (
 
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
+	Revision    string       `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
 	ID          ksid.ID      `json:"id" jsonschema:"description=Unique node identifier"`
 	ParentID    ksid.ID      `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
 	Title       string       `json:"title" jsonschema:"description=Node title"`

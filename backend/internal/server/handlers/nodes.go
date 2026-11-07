@@ -1,4 +1,4 @@
-// Handles hierarchical node operations (documents, tables, hybrid, records).
+// Handles hierarchical nodes and revision-conditional page replacement and append.
 
 package handlers
 
@@ -28,7 +28,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identity.Use
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	node, err := ws.ReadNode(req.ID)
+	node, err := ws.ReadNode(ctx, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("node")
 	}
@@ -47,7 +47,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identity.Use
 	}
 
 	// Add backlinks (pages that link to this page)
-	backlinks, err := ws.GetBacklinks(req.ID)
+	backlinks, err := ws.GetBacklinks(ctx, req.ID)
 	if err == nil && len(backlinks) > 0 {
 		resp.Backlinks = make([]dto.BacklinkInfo, len(backlinks))
 		for i, bl := range backlinks {
@@ -89,7 +89,7 @@ func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID ksid.ID, _ *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	titles, err := ws.GetNodeTitles(req.IDs)
+	titles, err := ws.GetNodeTitles(ctx, req.IDs)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get node titles", err)
 	}
@@ -235,12 +235,13 @@ func (h *NodeHandler) GetPage(ctx context.Context, wsID ksid.ID, _ *identity.Use
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	node, err := ws.ReadNode(req.ID)
+	node, err := ws.ReadNode(ctx, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
 
 	return &dto.GetPageResponse{
+		Revision: node.Revision,
 		ID:       node.ID,
 		Title:    node.Title,
 		Content:  node.Content,
@@ -249,19 +250,61 @@ func (h *NodeHandler) GetPage(ctx context.Context, wsID ksid.ID, _ *identity.Use
 	}, nil
 }
 
-// UpdatePage updates a page's title and content.
+// UpdatePage handles conditional HTTP page replacement.
 func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+	node, err := h.ReplacePage(ctx, wsID, user, req)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.UpdatePageResponse{Node: *nodeToResponse(node)}, nil
+}
+
+// AppendPage handles conditional HTTP page append.
+func (h *NodeHandler) AppendPage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.AppendPageRequest) (*dto.UpdatePageResponse, error) {
+	node, err := h.AppendToPage(ctx, wsID, user, req)
+	if err != nil {
+		return nil, err
+	}
+	return &dto.UpdatePageResponse{Node: *nodeToResponse(node)}, nil
+}
+
+// ReplacePage conditionally replaces content and publishes its transaction snapshot.
+func (h *NodeHandler) ReplacePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageRequest) (*content.Node, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	node, err := ws.UpdatePage(ctx, req.ID, req.Title, req.Content, author)
+	node, err := ws.UpdatePage(ctx, req.ID, req.Title, req.Content, req.ExpectedRevision, author)
 	if err != nil {
-		return nil, dto.NotFound("page")
+		return nil, pageMutationError(err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, node, user.ID)
-	return &dto.UpdatePageResponse{ID: node.ID, Modified: node.Modified}, nil
+	return node, nil
+}
+
+// AppendToPage conditionally appends content and publishes its transaction snapshot.
+func (h *NodeHandler) AppendToPage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.AppendPageRequest) (*content.Node, error) {
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	node, err := ws.AppendPage(ctx, req.ID, req.Content, req.ExpectedRevision, GitAuthor(user))
+	if err != nil {
+		return nil, pageMutationError(err)
+	}
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, node, user.ID)
+	return node, nil
+}
+
+func pageMutationError(err error) error {
+	if errors.Is(err, content.ErrRevisionConflict) {
+		return dto.NewAPIError(409, dto.ErrorCodeConflict, "Page changed; reload before saving")
+	}
+	if errors.Is(err, content.ErrNodeNotFound) {
+		return dto.NotFound("page")
+	}
+	return dto.InternalWithError("Failed to save page", err)
 }
 
 // UpdatePageFrontmatter updates the icon and cover of a page.
@@ -335,7 +378,7 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identity.Us
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	node, err := ws.ReadNode(req.ID)
+	node, err := ws.ReadNode(ctx, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}

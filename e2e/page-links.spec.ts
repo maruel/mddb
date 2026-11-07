@@ -27,6 +27,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     // Format: [DisplayText](/w/@{wsId}+{slug}/@{nodeId}+{slug})
     const linkContent = `Check out [Original Child Title](/w/@${wsID}+workspace/@${childData.id}+original-child-title)`;
     await client.ws(wsID).updatePage(parentData.id, {
+      expected_revision: (await client.ws(wsID).getNode(parentData.id)).revision ?? "",
       title: "Parent Page",
       content: linkContent,
     });
@@ -56,6 +57,7 @@ test.describe("Page Links with Dynamic Titles", () => {
 
     // Now rename the child page
     await client.ws(wsID).updatePage(childData.id, {
+      expected_revision: (await client.ws(wsID).getNode(childData.id)).revision ?? "",
       title: "Updated Child Title",
       content: "Child content",
     });
@@ -233,7 +235,17 @@ test.describe("Page Links with Dynamic Titles", () => {
       const linkContent = `Link to [Target Page](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
       const updateResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${parentData.id}/page`, {
         headers: { Authorization: `Bearer ${token}` },
-        data: { title: "Page with Link", content: linkContent },
+        data: {
+          title: "Page with Link",
+          content: linkContent,
+          expected_revision: (
+            (await (
+              await request.get(`/api/v1/workspaces/${wsID}/nodes/${parentData.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+            ).json()) as { revision: string }
+          ).revision,
+        },
       });
       expect(updateResponse.ok()).toBe(true);
 
@@ -304,6 +316,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     // Update source page with a link to target
     const linkContent = `Click here: [Go to Target](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
     await client.ws(wsID).updatePage(sourceData.id, {
+      expected_revision: (await client.ws(wsID).getNode(sourceData.id)).revision ?? "",
       title: "Source Page",
       content: linkContent,
     });

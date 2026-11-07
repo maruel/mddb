@@ -329,6 +329,10 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
   );
   await gotoWithSession(page, token);
   await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  // Workspace views reuse their screen event stream. Settings exercises the
+  // independent MCP subscription and its captured session/workspace authority.
+  await page.getByTestId("user-menu-button").click();
+  await page.getByRole("menuitem", { name: "Profile", exact: true }).click();
   const queued = await originating;
   const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
   if (!cookie) throw new Error("Missing host cookie");

@@ -136,6 +136,7 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	hasTable := n.Type == content.NodeTypeTable || n.Type == content.NodeTypeHybrid
 
 	resp := &dto.NodeResponse{
+		Revision:    n.Revision,
 		ID:          n.ID,
 		ParentID:    n.ParentID,
 		Title:       n.Title,

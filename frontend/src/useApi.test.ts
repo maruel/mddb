@@ -31,9 +31,11 @@ describe("UI write request IDs", () => {
     });
     vi.stubGlobal("fetch", fetch);
     const api = createApi();
-    const pending = api.ws("workspace").updatePage("node", { title: "One", content: "Body" });
+    const pending = api
+      .ws("workspace")
+      .updatePage("node", { title: "One", content: "Body", expected_revision: "1".repeat(64) });
     await firstAttempt;
-    await api.ws("workspace").updatePage("node", { title: "Two", content: "Body" });
+    await api.ws("workspace").updatePage("node", { title: "Two", content: "Body", expected_revision: "2".repeat(64) });
     await vi.advanceTimersByTimeAsync(1000);
     await pending;
     expect(seen).toHaveLength(3);

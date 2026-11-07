@@ -356,6 +356,8 @@ const (
 
 // WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates.
 type WorkspaceEvent struct {
+	// Revision identifies canonical page content; metadata-only events omit it.
+	Revision string    `json:"revision,omitempty"`
 	Type     EventType `json:"type"`
 	NodeID   ksid.ID   `json:"node_id"`
 	RecordID ksid.ID   `json:"record_id,omitempty"`

@@ -147,10 +147,12 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	sh := &handlers.SearchHandler{Svc: svc}
 
 	// Go Mode MCP: workspace-scoped reads for every member, writes for editors.
+	focus := newVoiceFocusState()
+	mux.Handle("POST /api/v1/workspaces/{wsID}/gomode/focus", WrapAuthReadRaw(goModeFocus(svc, hcfg, focus), svc, hcfg, identity.WSRoleViewer, limiters))
 	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
 		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
 	} else {
-		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version, nh), svc, hcfg, identity.WSRoleViewer, limiters))
+		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version, nh, focus), svc, hcfg, identity.WSRoleViewer, limiters))
 	}
 
 	// Other handlers
@@ -287,6 +289,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/create", WrapWSAuth(nh.CreatePage, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.GetPage, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.UpdatePage, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/append", WrapWSAuth(nh.AppendPage, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(nh.DeletePage, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter", WrapWSAuth(nh.UpdatePageFrontmatter, svc, hcfg, identity.WSRoleEditor, limiters))
 	// Tables (under nodes)

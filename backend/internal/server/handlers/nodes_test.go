@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -111,7 +112,7 @@ func TestNodeHandler(t *testing.T) {
 			}
 
 			// Update child to generate more history
-			_, err = wsStore.UpdatePage(ctx, child.ID, "Child Updated", "child content v2", author)
+			_, err = wsStore.UpdatePage(ctx, child.ID, "Child Updated", "child content v2", pageRevision(t, ctx, wsStore, child.ID), author)
 			if err != nil {
 				t.Fatalf("failed to update child: %v", err)
 			}
@@ -281,4 +282,12 @@ func TestNodeHandler(t *testing.T) {
 			})
 		})
 	})
+}
+
+func pageRevision(t *testing.T, ctx context.Context, ws *content.WorkspaceFileStore, id ksid.ID) string {
+	node, err := ws.ReadNode(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return node.Revision
 }

@@ -46,7 +46,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.GetBacklinks(target.ID); err != nil {
+	if _, err := store.GetBacklinks(t.Context(), target.ID); err != nil {
 		t.Fatal(err)
 	}
 	events, unsubscribe := env.services.Broker.SubscribeEvents(ws.ID)
@@ -63,7 +63,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	}
 	content := "[Target](../" + target.ID.String() + "/index.md)"
 	var updated dto.UpdatePageResponse
-	if status := env.doJSON(t, http.MethodPost, base+source.ID.String()+"/page", dto.UpdatePageRequest{Title: "Saved", Content: content}, &updated, auth.Token); status != http.StatusOK {
+	if status := env.doJSON(t, http.MethodPost, base+source.ID.String()+"/page", dto.UpdatePageRequest{Title: "Saved", Content: content, ExpectedRevision: pageRevision(t, t.Context(), store, source.ID)}, &updated, auth.Token); status != http.StatusOK {
 		t.Fatalf("saved page=%d", status)
 	}
 	select {
@@ -74,7 +74,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	default:
 		t.Fatal("missing page event")
 	}
-	links, err := store.GetBacklinks(target.ID)
+	links, err := store.GetBacklinks(t.Context(), target.ID)
 	if err != nil || len(links) != 1 || links[0].NodeID != source.ID {
 		t.Fatalf("backlinks=%+v err=%v", links, err)
 	}

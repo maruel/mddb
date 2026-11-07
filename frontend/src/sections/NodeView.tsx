@@ -48,11 +48,12 @@ export default function NodeView() {
     assetUrls,
     showHistory,
     history,
-    flushAutoSave,
     handleTitleChange,
     handleContentChange,
     linkedNodeTitles,
     externalChange,
+    saveConflict,
+    copyDraft,
     dismissExternalChange,
     refreshFromServer,
     icon,
@@ -164,7 +165,6 @@ export default function NodeView() {
       () => stripSlug(params.nodeId),
       (nodeId) => {
         if (nodeId && nodeId !== selectedNodeId()) {
-          flushAutoSave();
           void loadNode(nodeId, { refresh: false, canApply: () => stripSlug(params.nodeId) === nodeId });
         }
       },
@@ -295,7 +295,6 @@ export default function NodeView() {
 
   // Handle navigation to another node from editor links
   const handleNavigateToNode = (nodeId: string) => {
-    flushAutoSave();
     const u = user();
     const wsId = u?.workspace_id;
     const wsName = u?.workspace_name;
@@ -308,11 +307,18 @@ export default function NodeView() {
     <>
       <Show when={selectedNodeId()}>
         <div class={styles.editor}>
-          <Show when={externalChange()}>
+          <Show when={externalChange() || saveConflict()}>
             <div class={styles.conflictBanner}>
-              <span>{t("sse.externalChange")}</span>
-              <button onClick={refreshFromServer}>{t("sse.refreshContent")}</button>
-              <button onClick={dismissExternalChange}>{t("sse.dismissNotice")}</button>
+              <span>{saveConflict() ? t("editor.saveConflict") : t("sse.externalChange")}</span>
+              <Show when={saveConflict()}>
+                <button onClick={copyDraft}>{t("editor.copyDraft")}</button>
+              </Show>
+              <button onClick={refreshFromServer}>
+                {saveConflict() ? t("editor.reloadLatest") : t("sse.refreshContent")}
+              </button>
+              <Show when={!saveConflict()}>
+                <button onClick={dismissExternalChange}>{t("sse.dismissNotice")}</button>
+              </Show>
             </div>
           </Show>
           <Show when={!previewCommit()}>

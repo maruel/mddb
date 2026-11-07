@@ -132,7 +132,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Verify node exists before saving asset
-	if _, err := ws.ReadNode(nodeID); err != nil {
+	if _, err := ws.ReadNode(r.Context(), nodeID); err != nil {
 		writeErrorResponse(w, dto.NotFound("node"))
 		return
 	}

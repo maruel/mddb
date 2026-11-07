@@ -12,6 +12,60 @@ import (
 )
 
 func TestExecRepo(t *testing.T) {
+	t.Run("Pull", func(t *testing.T) {
+		t.Run("error", func(t *testing.T) {
+			t.Run("Conflict", func(t *testing.T) {
+				root := t.TempDir()
+				ctx := t.Context()
+				a := Author{Name: "Test", Email: "test@example.com"}
+				remote, err := NewManager(root, a.Name, a.Email).Repo(ctx, "remote")
+				if err != nil {
+					t.Fatal(err)
+				}
+				write := func(repo Repository, dir, body string) {
+					if err := repo.CommitTx(ctx, a, func() (string, []string, error) {
+						return "change", []string{"row"}, os.WriteFile(filepath.Join(dir, "row"), []byte(body), 0o600)
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				remoteDir := filepath.Join(root, "remote")
+				write(remote, remoteDir, "base\n")
+				localDir := filepath.Join(root, "local")
+				if out, err := gitOutput(root, "clone", remoteDir, localDir); err != nil {
+					t.Fatalf("clone: %v %s", err, out)
+				}
+				local, err := NewManager(root, a.Name, a.Email).Repo(ctx, "local")
+				if err != nil {
+					t.Fatal(err)
+				}
+				for key, value := range map[string]string{"user.name": a.Name, "user.email": a.Email} {
+					if out, err := gitOutput(localDir, "config", key, value); err != nil {
+						t.Fatalf("config: %v %s", err, out)
+					}
+				}
+				write(local, localDir, "local\n")
+				write(remote, remoteDir, "remote\n")
+				if _, err := local.Pull(ctx, "origin", ""); err == nil {
+					t.Fatal("conflicting pull succeeded")
+				}
+				if err := local.ReadTx(ctx, func() error {
+					body, err := os.ReadFile(filepath.Join(localDir, "row")) //nolint:gosec // Test-owned temporary workspace path.
+					if err != nil {
+						return err
+					}
+					if string(body) != "local\n" {
+						t.Fatalf("conflict changed saved body: %q", body)
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+				write(local, localDir, "after\n")
+			})
+		})
+	})
+
 	t.Run("UnavailableExecutable", func(t *testing.T) {
 		repo, err := NewManager(t.TempDir(), "Test", "test@example.com").Repo(t.Context(), "")
 		if err != nil {

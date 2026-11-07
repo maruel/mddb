@@ -8,6 +8,7 @@ export interface NativeInvocation {
   token: string;
   scope: string;
   invocation: string;
+  sessionID?: string;
 }
 export interface NativeResult extends NativeInvocation {
   result: Record<string, unknown>;
@@ -55,19 +56,30 @@ export async function waitNativeReady(page: Page) {
     .toMatchObject({ ready: true, tools: [{ name: "focus_node" }] });
 }
 
-export async function invokeNativeFocus(page: Page, nodeId: unknown, invocation: string): Promise<NativeInvocation> {
+export async function invokeNativeFocus(
+  page: Page,
+  nodeId: unknown,
+  invocation: string,
+  sessionID: string | null,
+): Promise<NativeInvocation> {
   return page.evaluate(
-    ({ id, call }) => {
+    ({ id, call, conversation }) => {
       const ready = window.nativeToolFixture.readiness.slice(-1)[0];
       if (!ready?.ready) throw new Error("Frontend preparation is incomplete");
-      const envelope = { document: ready.document, token: ready.token, scope: ready.scope, invocation: call };
+      const envelope = {
+        document: ready.document,
+        token: ready.token,
+        scope: ready.scope,
+        invocation: call,
+        ...(conversation === null ? {} : { sessionID: conversation }),
+      };
       const host = window as unknown as {
         dispatchGoModeVoiceTool(request: NativeInvocation & { name: string; args: Record<string, unknown> }): void;
       };
       host.dispatchGoModeVoiceTool({ ...envelope, name: "focus_node", args: { nodeId: id } });
       return envelope;
     },
-    { id: nodeId, call: invocation },
+    { id: nodeId, call: invocation, conversation: sessionID },
   );
 }
 
@@ -131,6 +143,9 @@ export async function installBrowserTools(page: Page) {
         const frame = JSON.parse(raw) as Record<string, unknown>;
         fixture.sent.push(frame);
         if (frame.kind === "session.setup") queueMicrotask(() => this.receive({ kind: "session.ready" }));
+        // Complete the fixture's greeting turn, just as a gateway with no
+        // generated audio does, so passive context can flush when idle.
+        if (frame.kind === "user.message") queueMicrotask(() => this.receive({ kind: "turn.status", state: "idle" }));
       }
       receive(frame: Record<string, unknown>) {
         this.onmessage?.(new MessageEvent("message", { data: JSON.stringify(frame) }));

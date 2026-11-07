@@ -3,8 +3,10 @@
 package dto
 
 import (
+	"encoding/hex"
 	"net/mail"
 	"strconv"
+	"strings"
 	"unicode"
 
 	"github.com/maruel/ksid"
@@ -233,12 +235,39 @@ func (r *GetPageRequest) Validate() error {
 	return nil
 }
 
+// UpdateVoiceFocusRequest publishes a validated selection for one conversation.
+type UpdateVoiceFocusRequest struct {
+	WsID    ksid.ID `path:"wsID" json:"-"`
+	Session string  `json:"openai/session"`
+	NodeID  ksid.ID `json:"nodeId"`
+	Version uint64  `json:"version"`
+	// BrowserSelection reserves focus for the validated screen selection.
+	BrowserSelection bool `json:"browserSelection,omitempty"`
+	// Release clears this publisher's focus and relinquishes screen ownership.
+	Release bool `json:"release,omitempty"`
+}
+
+// Validate checks the conversation identity and workspace scope.
+func (r *UpdateVoiceFocusRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.Session == "" || strings.TrimSpace(r.Session) != r.Session || len(r.Session) > 256 {
+		return InvalidField("openai/session", "must contain 1 to 256 bytes")
+	}
+	if r.Release && (!r.NodeID.IsZero() || r.BrowserSelection) {
+		return InvalidField("release", "requires an empty node and no browser selection")
+	}
+	return nil
+}
+
 // UpdatePageRequest is a request to update a page's content.
 type UpdatePageRequest struct {
-	WsID    ksid.ID `path:"wsID" json:"-"`
-	ID      ksid.ID `path:"id" json:"-"`
-	Title   string  `json:"title"`
-	Content string  `json:"content"`
+	ExpectedRevision string  `json:"expected_revision"`
+	WsID             ksid.ID `path:"wsID" json:"-"`
+	ID               ksid.ID `path:"id" json:"-"`
+	Title            string  `json:"title"`
+	Content          string  `json:"content"`
 }
 
 // Validate validates the update page request fields.
@@ -249,6 +278,38 @@ func (r *UpdatePageRequest) Validate() error {
 	// ID can be zero (root)
 	if r.Title == "" {
 		return MissingField("title")
+	}
+	return validatePageRevision(r.ExpectedRevision)
+}
+
+// AppendPageRequest appends markdown against a previously read content revision.
+type AppendPageRequest struct {
+	WsID             ksid.ID `path:"wsID" json:"-"`
+	ID               ksid.ID `path:"id" json:"-"`
+	Content          string  `json:"content"`
+	ExpectedRevision string  `json:"expected_revision"`
+}
+
+// Validate validates the append request.
+func (r *AppendPageRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if strings.TrimSpace(r.Content) == "" {
+		return MissingField("content")
+	}
+	return validatePageRevision(r.ExpectedRevision)
+}
+
+func validatePageRevision(revision string) error {
+	if revision == "" {
+		return MissingField("expected_revision")
+	}
+	if len(revision) != 64 {
+		return InvalidField("expected_revision", "must be a SHA256 revision")
+	}
+	if _, err := hex.DecodeString(revision); err != nil {
+		return InvalidField("expected_revision", "must be a SHA256 revision")
 	}
 	return nil
 }

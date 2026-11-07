@@ -128,7 +128,7 @@ func (b *Broker) SubscribeEvents(wsID ksid.ID) (events <-chan dto.WorkspaceEvent
 // Publish sends an event to all subscribers of the given workspace.
 // The event is JSON-serialized once and wrapped as an SSE frame. Slow
 // subscribers whose buffers are full will have the event dropped.
-func (b *Broker) Publish(wsID ksid.ID, event dto.WorkspaceEvent) {
+func (b *Broker) Publish(wsID ksid.ID, event *dto.WorkspaceEvent) {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return
@@ -149,7 +149,7 @@ func (b *Broker) Publish(wsID ksid.ID, event dto.WorkspaceEvent) {
 	}
 	for ch := range b.events[wsID] {
 		select {
-		case ch <- event:
+		case ch <- *event:
 		default:
 		}
 	}

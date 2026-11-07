@@ -132,6 +132,7 @@ func TestLimiters(t *testing.T) {
 			{"DELETE", "/api/v1/pages/123", "write"},                 // Write tier (DELETE)
 			{"POST", "/api/v1/search", "read"},                       // Search is a read operation
 			{"POST", "/api/v1/gomode/mcp", "read"},                   // MCP read transport
+			{"POST", "/api/v1/workspaces/123/gomode/focus", "read"},  // Ephemeral conversation selection
 			{"POST", "/api/voicegateway/v1/voice/rtc/offer", "read"}, // Voice offer has a dedicated limiter
 			{"POST", "/api/voicegateway/v2/voice/rtc/offer", "read"},
 		}

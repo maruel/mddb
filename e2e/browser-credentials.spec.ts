@@ -259,7 +259,11 @@ test.describe("History preview ownership", () => {
     await expect(page.locator("aside")).toBeVisible();
     const ws = createClient(request, token).ws(await getWorkspaceId(page));
     const origin = await ws.createPage("0", { title: "History A", content: "Historical origin A" });
-    await ws.updatePage(origin.id, { title: "History A", content: "Current origin A" });
+    await ws.updatePage(origin.id, {
+      expected_revision: (await ws.getNode(origin.id)).revision ?? "",
+      title: "History A",
+      content: "Current origin A",
+    });
     const target = await ws.createPage("0", { title: "Destination B", content: "Current destination B" });
     await page.reload();
     await page.getByTestId(`sidebar-node-${origin.id}`).click();

@@ -98,6 +98,14 @@ func TestBrowserSessions(t *testing.T) {
 		t.Fatal("workspace response exposed HttpOnly credential")
 	}
 	// Native requests have no browser Origin, fetch metadata or JS nonce.
+	focusPath := "/api/v1/workspaces/" + ws.ID.String() + "/gomode/focus"
+	focus := dto.UpdateVoiceFocusRequest{Session: "browser-conversation"}
+	if got, _, _ := request("POST", focusPath, focus, cookie, "", "https://attacker.example", "cross-site"); got != 403 {
+		t.Fatalf("cross-site focus: %d", got)
+	}
+	if got, _, _ := request("POST", focusPath, focus, cookie, "", e.server.URL, "same-origin"); got != 200 {
+		t.Fatalf("same-origin focus: %d", got)
+	}
 	native := map[string]any{"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": map[string]any{"_meta": map[string]any{"io.modelcontextprotocol/protocolVersion": mcp.ProtocolVersion, "io.modelcontextprotocol/clientInfo": map[string]string{"name": "gomode-android", "version": "1"}, "io.modelcontextprotocol/clientCapabilities": map[string]any{}}}}
 	if got, _, _ := request("POST", goModeMCPEndpoint, native, cookie, "", "", ""); got != 200 {
 		t.Fatalf("native cookie MCP: %d", got)

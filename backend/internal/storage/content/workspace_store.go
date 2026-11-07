@@ -1,4 +1,4 @@
-// Handles file operations within a specific workspace directory.
+// Owns atomic conditional page mutations, indexed node discovery, and canonical document snapshots.
 
 // Package content provides versioned file storage for the mddb system.
 package content
@@ -7,9 +7,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"iter"
 	"log/slog"
+	"maps"
 	"mime"
 	"os"
 	"path/filepath"
@@ -18,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -36,22 +40,30 @@ var relativeLinkRe = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+/index\.md)\)`)
 //   - Tables: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type WorkspaceFileStore struct {
-	wsDir  string                  // Pre-computed: rootDir/wsID
-	repo   git.Repository          // Cached git repository
-	quotas *storage.ResourceQuotas // Effective quotas (min of server/org/ws)
-	mu     sync.RWMutex            // Protects cache
-	cache  map[ksid.ID]ksid.ID     // nodeID -> parentID
-	links  linkCache               // In-memory backlink index
+	wsDir        string                  // Pre-computed: rootDir/wsID
+	repo         git.Repository          // Cached git repository
+	quotas       *storage.ResourceQuotas // Effective quotas (min of server/org/ws)
+	mu           sync.RWMutex            // Protects ancestry and discovery indexes
+	cache        map[ksid.ID]ksid.ID     // path identity -> parent, including retained containers
+	pathChildren map[ksid.ID][]ksid.ID
+	discoverable map[ksid.ID]struct{}
+	indexParents map[ksid.ID]ksid.ID // Published ancestry; legacy refreshes never mutate it.
+	indexReady   bool
+	nodeIDs      []ksid.ID
+	childIDs     map[ksid.ID][]ksid.ID
+	links        linkCache // In-memory backlink index
 }
 
 // newWorkspaceFileStore creates a new workspace store.
 // This is called internally by FileStoreService.GetWorkspaceStore.
 func newWorkspaceFileStore(wsDir string, repo git.Repository, quotas *storage.ResourceQuotas) *WorkspaceFileStore {
 	return &WorkspaceFileStore{
-		wsDir:  wsDir,
-		repo:   repo,
-		quotas: quotas,
-		cache:  make(map[ksid.ID]ksid.ID),
+		wsDir:        wsDir,
+		repo:         repo,
+		quotas:       quotas,
+		cache:        make(map[ksid.ID]ksid.ID),
+		pathChildren: make(map[ksid.ID][]ksid.ID),
+		discoverable: make(map[ksid.ID]struct{}),
 	}
 }
 
@@ -60,38 +72,32 @@ func (ws *WorkspaceFileStore) EffectiveQuotas() storage.ResourceQuotas {
 	return *ws.quotas
 }
 
-// refreshCache rebuilds the parent map for the workspace.
+// refreshCache rebuilds only the legacy parent cache. It must never change
+// the published bounded index or the ancestry used by bounded readers.
 func (ws *WorkspaceFileStore) refreshCache() error {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-	ws.cache = make(map[ksid.ID]ksid.ID)
-	return ws.walkDirForCache(ws.wsDir, 0)
-}
-
-func (ws *WorkspaceFileStore) walkDirForCache(dir string, parentID ksid.ID) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
+	paths := newNodePathIndex(false)
+	if err := paths.scan(func() error { return nil }, ws.wsDir, 0); err != nil {
 		return err
 	}
+	ws.cache = paths.parents
+	return nil
+}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		id, err := ksid.Parse(entry.Name())
-		if err != nil {
-			continue
-		}
-
-		ws.cache[id] = parentID
-		if err := ws.walkDirForCache(filepath.Join(dir, entry.Name()), id); err != nil {
-			return err
-		}
+// scanIndex publishes complete identity/ancestry data from a repository read transaction.
+func (ws *WorkspaceFileStore) scanIndex(check func() error) error {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	paths := newNodePathIndex(true)
+	if err := paths.scan(check, ws.wsDir, 0); err != nil {
+		return err
 	}
+	ws.cache = maps.Clone(paths.parents)
+	ws.indexParents = paths.parents
+	ws.pathChildren = paths.children
+	ws.discoverable = paths.discoverable
+	ws.rebuildIndexLocked()
 	return nil
 }
 
@@ -121,14 +127,14 @@ func (ws *WorkspaceFileStore) getParent(id ksid.ID) ksid.ID {
 func (ws *WorkspaceFileStore) setParent(id, parentID ksid.ID) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-	ws.cache[id] = parentID
+	ws.setIndexParentLocked(id, parentID)
 }
 
 // deleteFromCache removes a node from the cache.
 func (ws *WorkspaceFileStore) deleteFromCache(id ksid.ID) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-	delete(ws.cache, id)
+	ws.deleteIndexSubtreeLocked(id)
 }
 
 // checkPageQuota returns an error if creating a new page would exceed quota.
@@ -221,7 +227,7 @@ func (ws *WorkspaceFileStore) ReadPage(id ksid.ID) (*Node, error) {
 	data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, errPageNotFound
+			return nil, ErrNodeNotFound
 		}
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
@@ -238,24 +244,6 @@ func (ws *WorkspaceFileStore) ReadPage(id ksid.ID) (*Node, error) {
 		Icon:     p.icon,
 		Cover:    p.cover,
 	}, nil
-}
-
-// WritePage writes a page and commits to git.
-func (ws *WorkspaceFileStore) WritePage(ctx context.Context, id, parentID ksid.ID, title, content string, author git.Author) (*Node, error) {
-	var node *Node
-	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
-		var err error
-		node, err = ws.writePage(id, parentID, title, content)
-		if err != nil {
-			return "", nil, err
-		}
-		files := []string{ws.gitPath(parentID, id, "index.md")}
-		return "update: page " + id.String(), files, nil
-	})
-	if err == nil {
-		ws.links.update(id, node.Content)
-	}
-	return node, err
 }
 
 // writePage writes a page without committing.
@@ -294,62 +282,70 @@ func (ws *WorkspaceFileStore) writePageFile(id, parentID ksid.ID, p *page) error
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+	if err := storage.WriteFile(filePath, data); err != nil {
 		return fmt.Errorf("failed to write page: %w", err)
 	}
 	return nil
 }
 
-// UpdatePage updates a page and commits to git.
-func (ws *WorkspaceFileStore) UpdatePage(ctx context.Context, id ksid.ID, title, content string, author git.Author) (*Node, error) {
+// UpdatePage replaces a page only when expectedRevision matches its canonical content.
+func (ws *WorkspaceFileStore) UpdatePage(ctx context.Context, id ksid.ID, title, body, expectedRevision string, author git.Author) (*Node, error) {
+	return ws.mutatePage(ctx, id, expectedRevision, author, func(p *page) { p.title = title; p.content = body })
+}
+
+// AppendPage appends markdown atomically against the revision the caller read.
+func (ws *WorkspaceFileStore) AppendPage(ctx context.Context, id ksid.ID, body, expectedRevision string, author git.Author) (*Node, error) {
+	return ws.mutatePage(ctx, id, expectedRevision, author, func(p *page) {
+		if p.content == "" {
+			p.content = body
+		} else {
+			p.content = strings.TrimRight(p.content, "\n") + "\n\n" + body
+		}
+	})
+}
+
+func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expectedRevision string, author git.Author, mutate func(*page)) (*Node, error) {
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
-		var err error
-		node, err = ws.updatePage(id, title, content)
+		parent := ws.getParent(id)
+		current, p, err := ws.readNodeFromPath(ws.pageDir(id, parent), id, parent)
 		if err != nil {
 			return "", nil, err
 		}
-		parentID := ws.getParent(id)
-		files := []string{ws.gitPath(parentID, id, "index.md")}
-		return "update: page " + id.String(), files, nil
-	})
-	if err == nil {
-		ws.links.update(id, node.Content)
-	}
-	return node, err
-}
-
-// updatePage updates a page without committing.
-func (ws *WorkspaceFileStore) updatePage(id ksid.ID, title, content string) (*Node, error) {
-	parentID := ws.getParent(id)
-	filePath := ws.pageIndexFile(id, parentID)
-
-	data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated id
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, errPageNotFound
+		if p == nil {
+			return "", nil, ErrNodeNotFound
 		}
-		return nil, fmt.Errorf("failed to read page: %w", err)
-	}
-
-	p := ParseMarkdown(data)
-	p.title = title
-	p.content = content
-	p.modified = storage.Now()
-
-	if err := ws.writePageFile(id, parentID, p); err != nil {
-		return nil, err
-	}
-
-	return &Node{
-		ID:       id,
-		ParentID: parentID,
-		Title:    title,
-		Type:     NodeTypeDocument,
-		Content:  content,
-		Created:  p.created,
-		Modified: p.modified,
-	}, nil
+		revision, err := Revision(ctx, p.title, strings.NewReader(p.content), int64(len(p.content)))
+		if err != nil {
+			return "", nil, err
+		}
+		if expectedRevision == "" || revision != expectedRevision {
+			return "", nil, ErrRevisionConflict
+		}
+		mutate(p)
+		p.modified = storage.Now()
+		// Parse the exact bytes being persisted so normalization and the returned
+		// revision describe one saved snapshot, without a post-transaction read.
+		data := formatMarkdownFile(p)
+		canonical := ParseMarkdown(data)
+		revision, err = Revision(ctx, canonical.title, strings.NewReader(canonical.content), int64(len(canonical.content)))
+		if err != nil {
+			return "", nil, err
+		}
+		if err := storage.WriteFile(ws.pageIndexFile(id, parent), data); err != nil {
+			return "", nil, err
+		}
+		node = current
+		if node.Type == NodeTypeDocument {
+			node.Title = canonical.title
+		}
+		node.Content, node.Revision = canonical.content, revision
+		node.Created, node.Modified = canonical.created, canonical.modified
+		node.Icon, node.Cover = canonical.icon, canonical.cover
+		ws.links.update(id, node.Content)
+		return "update: page " + id.String(), []string{ws.gitPath(parent, id, "index.md")}, nil
+	})
+	return node, err
 }
 
 // UpdatePageFrontmatter updates the icon and cover fields of a page and commits to git.
@@ -363,7 +359,7 @@ func (ws *WorkspaceFileStore) UpdatePageFrontmatter(ctx context.Context, id ksid
 		data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated id
 		if err != nil {
 			if os.IsNotExist(err) {
-				return "", nil, errPageNotFound
+				return "", nil, ErrNodeNotFound
 			}
 			return "", nil, fmt.Errorf("failed to read page: %w", err)
 		}
@@ -413,20 +409,20 @@ func (ws *WorkspaceFileStore) DeletePage(ctx context.Context, id ksid.ID, author
 // deletePage deletes a page without committing.
 func (ws *WorkspaceFileStore) deletePage(id ksid.ID) error {
 	if id.IsZero() {
-		return errPageNotFound // No node with ID 0 exists
+		return ErrNodeNotFound // No node with ID 0 exists
 	}
 
 	parentID := ws.getParent(id)
 	dir := ws.pageDir(id, parentID)
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
-			return errPageNotFound
+			return ErrNodeNotFound
 		}
 		return fmt.Errorf("inspect page before deletion: %w", err)
 	}
 	if err := os.RemoveAll(dir); err != nil {
 		if os.IsNotExist(err) {
-			return errPageNotFound
+			return ErrNodeNotFound
 		}
 		return fmt.Errorf("failed to delete page: %w", err)
 	}
@@ -471,12 +467,19 @@ func (ws *WorkspaceFileStore) iterPagesRecursive(dir string, parentID ksid.ID, y
 }
 
 // ReadNode reads a node (page or table or hybrid) by ID.
-func (ws *WorkspaceFileStore) ReadNode(id ksid.ID) (*Node, error) {
+func (ws *WorkspaceFileStore) ReadNode(ctx context.Context, id ksid.ID) (*Node, error) {
 	parentID := ws.getParent(id)
 	nodeDir := ws.pageDir(id, parentID)
-	node, err := ws.ReadNodeFromPath(nodeDir, id, parentID)
+	node, p, err := ws.readNodeFromPath(nodeDir, id, parentID)
 	if err != nil {
 		return nil, err
+	}
+
+	if p != nil {
+		node.Revision, err = Revision(ctx, p.title, strings.NewReader(p.content), int64(len(p.content)))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Detect children for UI to show expand arrow
@@ -493,8 +496,8 @@ func (ws *WorkspaceFileStore) ReadNode(id ksid.ID) (*Node, error) {
 	return node, nil
 }
 
-// ReadNodeFromPath reads a node from a specific path.
-func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID) (*Node, error) {
+// readNodeFromPath reads a node and its canonical page from a specific path.
+func (ws *WorkspaceFileStore) readNodeFromPath(path string, id, parentID ksid.ID) (*Node, *page, error) {
 	indexFile := filepath.Join(path, "index.md")
 	metadataFile := filepath.Join(path, "metadata.json")
 
@@ -505,7 +508,7 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 	hasMetadata := metadataErr == nil
 
 	if !hasIndex && !hasMetadata {
-		return nil, errPageNotFound
+		return nil, nil, ErrNodeNotFound
 	}
 
 	var nodeType NodeType
@@ -524,8 +527,9 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 		Type:     nodeType,
 	}
 
+	var p *page
 	if hasIndex {
-		p := ParseMarkdown(indexData)
+		p = ParseMarkdown(indexData)
 		node.Title = p.title
 		node.Content = p.content
 		node.Created = p.created
@@ -537,7 +541,7 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 	if hasMetadata {
 		var metadata map[string]any
 		if err := json.Unmarshal(metadataData, &metadata); err != nil {
-			return nil, fmt.Errorf("failed to parse table metadata: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse table metadata: %w", err)
 		}
 		if title, ok := metadata["title"].(string); ok {
 			node.Title = title
@@ -555,7 +559,7 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 		}
 	}
 
-	return node, nil
+	return node, p, nil
 }
 
 // GetWorkspaceUsage returns the page count and storage usage for the workspace.
@@ -717,7 +721,7 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := os.WriteFile(metadataFile, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+	if err := storage.WriteFile(metadataFile, data); err != nil {
 		return fmt.Errorf("failed to write metadata: %w", err)
 	}
 	return nil
@@ -1084,7 +1088,7 @@ func (ws *WorkspaceFileStore) IterAssets(nodeID ksid.ID) (iter.Seq[*Asset], erro
 		}
 
 		for _, entry := range entries {
-			if entry.IsDir() || entry.Name() == "index.md" || entry.Name() == "metadata.json" || entry.Name() == "data.jsonl" || strings.HasSuffix(entry.Name(), ".blobs") {
+			if entry.IsDir() || strings.HasPrefix(entry.Name(), storage.AtomicFilePrefix) || entry.Name() == "index.md" || entry.Name() == "metadata.json" || entry.Name() == "data.jsonl" || strings.HasSuffix(entry.Name(), ".blobs") {
 				continue
 			}
 
@@ -1115,7 +1119,7 @@ func (ws *WorkspaceFileStore) IterAssets(nodeID ksid.ID) (iter.Seq[*Asset], erro
 // n is capped at 1000. If n <= 0, defaults to 1000.
 func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id ksid.ID, n int) ([]*git.Commit, error) {
 	if id.IsZero() {
-		return nil, errPageNotFound // No node with ID 0 exists
+		return nil, ErrNodeNotFound // No node with ID 0 exists
 	}
 	// Use the full relative path including parent chain, otherwise nested nodes won't find their history.
 	parentID := ws.getParent(id)
@@ -1142,7 +1146,7 @@ func (ws *WorkspaceFileStore) GetPageContentAtCommit(ctx context.Context, hash s
 func (ws *WorkspaceFileStore) CreateNode(ctx context.Context, title string, nodeType NodeType, parentID ksid.ID, author git.Author) (*Node, error) {
 	// Verify parent exists if specified.
 	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
-		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
+		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
 	}
 
 	var node *Node
@@ -1256,18 +1260,18 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 // and that the move would not create a cycle in the tree.
 func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID ksid.ID, author git.Author) error {
 	if id.IsZero() {
-		return errPageNotFound
+		return ErrNodeNotFound
 	}
 
 	// Verify node exists.
 	oldParentID := ws.getParent(id)
 	if !ws.PageExists(id) && !ws.TableExists(id) {
-		return errPageNotFound
+		return ErrNodeNotFound
 	}
 
 	// Verify new parent exists (unless root).
 	if !newParentID.IsZero() && !ws.PageExists(newParentID) && !ws.TableExists(newParentID) {
-		return fmt.Errorf("new parent not found: %w", errPageNotFound)
+		return fmt.Errorf("new parent not found: %w", ErrNodeNotFound)
 	}
 
 	// No-op if already under the requested parent.
@@ -1331,7 +1335,7 @@ func (ws *WorkspaceFileStore) HasTable(id ksid.ID) bool {
 func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentID ksid.ID, title, content string, author git.Author) (*Node, error) {
 	// Verify parent exists if specified.
 	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
-		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
+		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
 	}
 
 	if err := ws.checkPageQuota(); err != nil {
@@ -1391,7 +1395,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 // The node directory is kept if table content exists.
 func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID, author git.Author) error {
 	if id.IsZero() {
-		return errPageNotFound // No node with ID 0 exists
+		return ErrNodeNotFound // No node with ID 0 exists
 	}
 
 	parentID := ws.getParent(id)
@@ -1399,7 +1403,7 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID
 		filePath := ws.pageIndexFile(id, parentID)
 		if err := os.Remove(filePath); err != nil {
 			if os.IsNotExist(err) {
-				return "", nil, errPageNotFound
+				return "", nil, ErrNodeNotFound
 			}
 			return "", nil, fmt.Errorf("failed to delete page: %w", err)
 		}
@@ -1412,6 +1416,8 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID
 			if len(entries) == 0 {
 				_ = os.Remove(dir)
 				ws.deleteFromCache(id)
+			} else {
+				ws.hideNode(id)
 			}
 		}
 
@@ -1431,7 +1437,7 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID
 func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parentID ksid.ID, title string, properties []Property, author git.Author) (*Node, error) {
 	// Verify parent exists if parentID is specified (non-root)
 	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
-		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
+		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
 	}
 
 	if err := ws.checkPageQuota(); err != nil {
@@ -1524,6 +1530,8 @@ func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id ksid.I
 			if len(entries) == 0 {
 				_ = os.Remove(dir)
 				ws.deleteFromCache(id)
+			} else {
+				ws.hideNode(id)
 			}
 		}
 
@@ -1565,7 +1573,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID ksid.ID) ([]*Node, error) {
 		}
 
 		nodePath := filepath.Join(dir, entry.Name())
-		node, err := ws.ReadNodeFromPath(nodePath, id, parentID)
+		node, _, err := ws.readNodeFromPath(nodePath, id, parentID)
 		if err != nil {
 			continue
 		}
@@ -1694,14 +1702,14 @@ func ExtractLinkedNodeIDs(content string) []ksid.ID {
 // GetBacklinks returns all nodes that link to the given node.
 // Uses an in-memory cache that is lazily built on first call and
 // incrementally updated on page mutations.
-func (ws *WorkspaceFileStore) GetBacklinks(targetID ksid.ID) ([]BacklinkInfo, error) {
+func (ws *WorkspaceFileStore) GetBacklinks(ctx context.Context, targetID ksid.ID) ([]BacklinkInfo, error) {
 	if err := ws.links.ensureBuilt(ws.IterPages); err != nil {
 		return nil, err
 	}
 	sourceIDs := ws.links.backlinks(targetID)
 	backlinks := make([]BacklinkInfo, 0, len(sourceIDs))
 	for _, srcID := range sourceIDs {
-		node, err := ws.ReadNode(srcID)
+		node, err := ws.ReadNode(ctx, srcID)
 		if err != nil {
 			continue // node may have been deleted between cache and read
 		}
@@ -1710,46 +1718,11 @@ func (ws *WorkspaceFileStore) GetBacklinks(targetID ksid.ID) ([]BacklinkInfo, er
 	return backlinks, nil
 }
 
-// InvalidLink describes an internal link whose target node does not exist.
-type InvalidLink struct {
-	SourceID ksid.ID
-	Target   string
-}
-
-// ValidateLinks checks every internal link in the workspace and returns those
-// pointing to non-existent nodes.
-func (ws *WorkspaceFileStore) ValidateLinks() ([]InvalidLink, error) {
-	if err := ws.refreshCache(); err != nil {
-		return nil, fmt.Errorf("refresh cache: %w", err)
-	}
-	if err := ws.links.ensureBuilt(ws.IterPages); err != nil {
-		return nil, fmt.Errorf("build link cache: %w", err)
-	}
-
-	// Snapshot of existing node IDs.
-	ws.mu.RLock()
-	existing := make(map[ksid.ID]struct{}, len(ws.cache))
-	for id := range ws.cache {
-		existing[id] = struct{}{}
-	}
-	ws.mu.RUnlock()
-
-	var invalid []InvalidLink
-	for srcID, targets := range ws.links.forwardAll() {
-		for _, tgtID := range targets {
-			if _, ok := existing[tgtID]; !ok {
-				invalid = append(invalid, InvalidLink{SourceID: srcID, Target: tgtID.String()})
-			}
-		}
-	}
-	return invalid, nil
-}
-
 // GetNodeTitles returns a map of node IDs to their titles for the given IDs.
-func (ws *WorkspaceFileStore) GetNodeTitles(ids []ksid.ID) (map[ksid.ID]string, error) {
+func (ws *WorkspaceFileStore) GetNodeTitles(ctx context.Context, ids []ksid.ID) (map[ksid.ID]string, error) {
 	titles := make(map[ksid.ID]string)
 	for _, id := range ids {
-		node, err := ws.ReadNode(id)
+		node, err := ws.ReadNode(ctx, id)
 		if err != nil {
 			// Node might have been deleted, skip it
 			continue
@@ -1757,4 +1730,301 @@ func (ws *WorkspaceFileStore) GetNodeTitles(ids []ksid.ID) (map[ksid.ID]string, 
 		titles[id] = node.Title
 	}
 	return titles, nil
+}
+
+// ReadPageSnapshot returns a complete schema and at most limit UTF-8 body bytes.
+// Each request streams the whole body to verify its revision. App-owned Git
+// mutations are excluded; arbitrary external in-place file writers are not.
+func (ws *WorkspaceFileStore) ReadPageSnapshot(ctx context.Context, id ksid.ID, offset int64, limit int) (out PageSnapshot, err error) {
+	if err := validateContentWindow(offset, limit); err != nil {
+		return out, err
+	}
+	err = ws.repo.ReadTx(ctx, func() (snapshotErr error) {
+		parent, dir, e := ws.indexedNodePath(ctx, id)
+		if e != nil {
+			return e
+		}
+		n, p, e := ws.readSummary(ctx, dir, id, parent)
+		if e != nil {
+			return e
+		}
+		out.Node = *n
+		if p == nil {
+			if offset != 0 {
+				return errors.New("table has no content continuation")
+			}
+			return nil
+		}
+		f, e := os.Open(filepath.Join(dir, "index.md")) //nolint:gosec // Validated node IDs construct the owned path.
+		if e != nil {
+			return e
+		}
+		defer func() { snapshotErr = errors.Join(snapshotErr, f.Close()) }()
+		// Parse the same opened file used for hashing, including its canonical title.
+		p, start, size, e := pageHeader(ctx, f)
+		if e != nil {
+			return e
+		}
+		out.Node.Content = ""
+		out.ContentBytes = size - start
+		if offset > out.ContentBytes {
+			return errors.New("content offset is outside document")
+		}
+		out.Revision, e = Revision(ctx, p.title, io.NewSectionReader(f, start, out.ContentBytes), out.ContentBytes)
+		if e != nil {
+			return e
+		}
+		chunk := make([]byte, min(int64(limit+utf8.UTFMax), out.ContentBytes-offset))
+		_, e = f.ReadAt(chunk, start+offset)
+		if e != nil {
+			return e
+		}
+		out.Node.Content, out.NextOffset, e = contentWindow(string(chunk), offset, limit)
+		if e != nil {
+			return e
+		}
+		out.Node.Created = p.created
+		out.Node.Modified = p.modified
+		out.Node.Icon = p.icon
+		out.Node.Cover = p.cover
+		if n.Type == NodeTypeDocument {
+			out.Node.Title = p.title
+		}
+		return nil
+	})
+	return out, err
+}
+
+// ListNodeSummaries pages all nodes when parent is nil, otherwise direct children.
+// Ordering is stable ascending node ID. Only the selected headers are opened.
+func (ws *WorkspaceFileStore) ListNodeSummaries(ctx context.Context, parent *ksid.ID, after ksid.ID, limit int) (out NodeSummaryPage, err error) {
+	err = ws.repo.ReadTx(ctx, func() error { var e error; out, e = ws.listNodeSummaries(ctx, parent, after, limit); return e })
+	return out, err
+}
+
+func (ws *WorkspaceFileStore) listNodeSummaries(ctx context.Context, parent *ksid.ID, after ksid.ID, limit int) (out NodeSummaryPage, err error) {
+	if limit < 1 || limit > 100 {
+		return out, errors.New("invalid node page size")
+	}
+	if err := ctx.Err(); err != nil {
+		return out, err
+	}
+	ws.mu.RLock()
+	ready := ws.indexReady
+	ws.mu.RUnlock()
+	if !ready {
+		if err := ws.scanIndex(ctx.Err); err != nil {
+			return out, err
+		}
+	}
+	ws.mu.RLock()
+	ids := ws.nodeIDs
+	if parent != nil {
+		ids = ws.childIDs[*parent]
+	}
+	out.Total = len(ids)
+	at, _ := slices.BinarySearch(ids, after)
+	for at < len(ids) && ids[at] <= after {
+		at++
+	}
+	selected := slices.Clone(ids[at:min(at+limit, len(ids))])
+	more := at+len(selected) < len(ids)
+	ws.mu.RUnlock()
+	out.Nodes = make([]*Node, 0, len(selected))
+	for _, id := range selected {
+		if err := ctx.Err(); err != nil {
+			return out, err
+		}
+		n, e := ws.readNodeSummary(ctx, id)
+		if e != nil {
+			return out, fmt.Errorf("read node %s summary: %w", id, e)
+		}
+		out.Nodes = append(out.Nodes, n)
+	}
+	if more && len(selected) > 0 {
+		out.Next = selected[len(selected)-1]
+	}
+	return out, nil
+}
+
+// ReadNodeSummary reads bounded metadata without loading or hashing the body.
+func (ws *WorkspaceFileStore) ReadNodeSummary(ctx context.Context, id ksid.ID) (out *Node, err error) {
+	err = ws.repo.ReadTx(ctx, func() error { out, err = ws.readNodeSummary(ctx, id); return err })
+	return out, err
+}
+
+func (ws *WorkspaceFileStore) readNodeSummary(ctx context.Context, id ksid.ID) (*Node, error) {
+	p, dir, err := ws.indexedNodePath(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	n, _, err := ws.readSummary(ctx, dir, id, p)
+	return n, err
+}
+
+func (ws *WorkspaceFileStore) readSummary(ctx context.Context, dir string, id, parent ksid.ID) (node *Node, header *page, resultErr error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+	n := &Node{ID: id, ParentID: parent, Type: NodeTypeDocument}
+	var p *page
+	f, err := os.Open(filepath.Join(dir, "index.md")) //nolint:gosec // The node directory is constructed from validated IDs.
+	if err == nil {
+		p, _, _, err = pageHeader(ctx, f)
+		err = errors.Join(err, f.Close())
+		if err != nil {
+			return nil, nil, err
+		}
+		n.Title = p.title
+		n.Created = p.created
+		n.Modified = p.modified
+		n.Icon = p.icon
+		n.Cover = p.cover
+	} else if !os.IsNotExist(err) {
+		return nil, nil, err
+	}
+	f, err = os.Open(filepath.Join(dir, "metadata.json")) //nolint:gosec // The node directory is constructed from validated IDs.
+	switch {
+	case err == nil:
+		data, e := io.ReadAll(io.LimitReader(f, MaxSnapshotMetadataBytes+1))
+		e = errors.Join(e, f.Close())
+		if e != nil {
+			return nil, nil, e
+		}
+		if len(data) > MaxSnapshotMetadataBytes {
+			return nil, nil, errors.New("table metadata exceeds snapshot limit")
+		}
+		var m map[string]json.RawMessage
+		if e := json.Unmarshal(data, &m); e != nil {
+			return nil, nil, e
+		}
+		if b := m["title"]; b != nil {
+			if e := json.Unmarshal(b, &n.Title); e != nil {
+				return nil, nil, e
+			}
+		}
+		if b := m["properties"]; b != nil {
+			if e := json.Unmarshal(b, &n.Properties); e != nil {
+				return nil, nil, e
+			}
+		}
+		if b := m["views"]; b != nil {
+			if e := json.Unmarshal(b, &n.Views); e != nil {
+				return nil, nil, e
+			}
+		}
+		n.Type = NodeTypeTable
+		if p != nil {
+			n.Type = NodeTypeHybrid
+		}
+	case !os.IsNotExist(err):
+		return nil, nil, err
+	case p == nil:
+		return nil, nil, ErrNodeNotFound
+	}
+	ws.mu.RLock()
+	n.HasChildren = len(ws.childIDs[id]) > 0
+	ws.mu.RUnlock()
+	return n, p, nil
+}
+
+func (ws *WorkspaceFileStore) rebuildIndexLocked() {
+	ws.nodeIDs = make([]ksid.ID, 0, len(ws.discoverable))
+	ws.childIDs = make(map[ksid.ID][]ksid.ID)
+	for id := range ws.discoverable {
+		p := ws.indexParents[id]
+		ws.nodeIDs = append(ws.nodeIDs, id)
+		ws.childIDs[p] = append(ws.childIDs[p], id)
+	}
+	slices.Sort(ws.nodeIDs)
+	for _, ids := range ws.childIDs {
+		slices.Sort(ids)
+	}
+	ws.indexReady = true
+}
+
+func (ws *WorkspaceFileStore) setIndexParentLocked(id, parent ksid.ID) {
+	ws.cache[id] = parent
+	if !ws.indexReady {
+		return
+	}
+	old, ok := ws.indexParents[id]
+	ws.indexParents[id] = parent
+	ws.discoverable[id] = struct{}{}
+	if ok {
+		ws.pathChildren[old] = removeID(ws.pathChildren[old], id)
+		ws.childIDs[old] = removeID(ws.childIDs[old], id)
+	}
+	ws.pathChildren[parent] = insertID(ws.pathChildren[parent], id)
+	ws.nodeIDs = insertID(ws.nodeIDs, id)
+	ws.childIDs[parent] = insertID(ws.childIDs[parent], id)
+}
+
+// hideNode keeps directory ancestry while withdrawing its missing content.
+func (ws *WorkspaceFileStore) hideNode(id ksid.ID) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	if !ws.indexReady {
+		return
+	}
+	delete(ws.discoverable, id)
+	ws.nodeIDs = removeID(ws.nodeIDs, id)
+	p := ws.indexParents[id]
+	ws.childIDs[p] = removeID(ws.childIDs[p], id)
+}
+
+func (ws *WorkspaceFileStore) deleteIndexSubtreeLocked(id ksid.ID) {
+	if !ws.indexReady {
+		children := make(map[ksid.ID][]ksid.ID)
+		for child, p := range ws.cache {
+			children[p] = append(children[p], child)
+		}
+		pending := []ksid.ID{id}
+		for len(pending) > 0 {
+			at := len(pending) - 1
+			node := pending[at]
+			pending = pending[:at]
+			pending = append(pending, children[node]...)
+			delete(ws.cache, node)
+		}
+		return
+	}
+	for len(ws.pathChildren[id]) > 0 {
+		ws.deleteIndexSubtreeLocked(ws.pathChildren[id][0])
+	}
+	p := ws.indexParents[id]
+	delete(ws.cache, id)
+	delete(ws.indexParents, id)
+	delete(ws.discoverable, id)
+	delete(ws.pathChildren, id)
+	ws.pathChildren[p] = removeID(ws.pathChildren[p], id)
+	delete(ws.childIDs, id)
+	ws.childIDs[p] = removeID(ws.childIDs[p], id)
+	ws.nodeIDs = removeID(ws.nodeIDs, id)
+}
+
+// indexedNodePath resolves exclusively through published ancestry while the
+// caller holds the repository read transaction. Legacy misses cannot change it.
+func (ws *WorkspaceFileStore) indexedNodePath(ctx context.Context, id ksid.ID) (parent ksid.ID, dir string, err error) {
+	ws.mu.RLock()
+	ready := ws.indexReady
+	ws.mu.RUnlock()
+	if !ready {
+		if err := ws.scanIndex(ctx.Err); err != nil {
+			return 0, "", err
+		}
+	}
+	ws.mu.RLock()
+	p, found := ws.indexParents[id]
+	if !found {
+		ws.mu.RUnlock()
+		return 0, "", ErrNodeNotFound
+	}
+	var parts []string
+	for node := id; node != 0; node = ws.indexParents[node] {
+		parts = append(parts, node.String())
+	}
+	ws.mu.RUnlock()
+	slices.Reverse(parts)
+	return p, filepath.Join(ws.wsDir, filepath.Join(parts...)), nil
 }

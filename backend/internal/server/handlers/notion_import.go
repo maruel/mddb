@@ -203,6 +203,8 @@ func (h *NotionImportHandler) CancelImport(_ context.Context, wsID ksid.ID, _ *i
 
 // runImport performs the actual Notion import in the background.
 func (h *NotionImportHandler) runImport(ctx context.Context, wsID ksid.ID, notionToken string, state *importState) {
+	// Imports bypass content mutations; retire indexes after every outcome.
+	defer h.Svc.FileStore.InvalidateWorkspaceStore(wsID)
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("Notion import panic", "wsID", wsID, "err", r)

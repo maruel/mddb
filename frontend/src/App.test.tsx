@@ -13,6 +13,7 @@ import { I18nProvider, useI18n } from "./i18n";
 import { HostModeProvider } from "@maruel/gomode/web/HostMode";
 import { WorkspaceDataProvider } from "./contexts/WorkspaceDataContext";
 import { AuthProvider, useAuth, type AuthContextValue } from "./contexts/AuthContext";
+import { WorkspaceNavigationProvider } from "./contexts/WorkspaceNavigationContext";
 import { WorkspaceProvider, useWorkspace } from "./contexts/WorkspaceContext";
 import { EventSourceProvider } from "./contexts/EventSourceContext";
 import { NotificationProvider, useNotifications } from "./contexts/NotificationContext";
@@ -301,7 +302,9 @@ describe("App", () => {
               <AuthProvider>
                 <WorkspaceDataProvider>
                   <EventSourceProvider>
-                    <WorkspaceProvider>{props.children}</WorkspaceProvider>
+                    <WorkspaceNavigationProvider>
+                      <WorkspaceProvider>{props.children}</WorkspaceProvider>
+                    </WorkspaceNavigationProvider>
                   </EventSourceProvider>
                 </WorkspaceDataProvider>
               </AuthProvider>
@@ -317,6 +320,9 @@ describe("App", () => {
             : operation === "organization"
               ? workspace.createOrganization({ name: "Old org" })
               : workspace.createWorkspace({ name: "Old workspace" });
+        await waitFor(() =>
+          expect(fetchCalls.some(({ url, init }) => url === path && init?.method === "POST")).toBe(true),
+        );
         const count = fetchCalls.length;
         auth.login({ ...mockUser, id: "replacement", session_id: "session-B" });
         resolveOperation(
@@ -495,7 +501,8 @@ describe("App", () => {
         },
       }));
       const subscriptionSignals: AbortSignal[] = [];
-      api("POST", "/api/v1/gomode/mcp", (_url, init) => {
+      api("POST", /\/api\/v1\/gomode\/mcp\?/, (url, init) => {
+        expect(new URL(url, "http://localhost").searchParams.get("workspaceId")).toBe(mockUser.workspace_id);
         expect(new Headers(init?.headers).get("Mcp-Method")).toBe("subscriptions/listen");
         const signal = init?.signal;
         if (!signal) throw new Error("Missing MCP subscription lifetime");
@@ -516,6 +523,11 @@ describe("App", () => {
       expect(screen.getByRole("button", { name: "Enable microphone" })).toHaveAccessibleDescription(
         "Microphone requires HTTPS or a supported browser.",
       );
+      // The mounted workspace already owns its event stream. Settings has no
+      // screen stream, so the route-independent overlay uses MCP there.
+      expect(subscriptionSignals).toHaveLength(0);
+      fireEvent.click(screen.getByTestId("user-menu-button"));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Profile" }));
       await waitFor(() => expect(subscriptionSignals).toHaveLength(1));
       view.unmount();
       expect(subscriptionSignals[0]?.aborted).toBe(true);

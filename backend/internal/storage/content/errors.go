@@ -5,9 +5,12 @@ package content
 import "errors"
 
 var (
-	errWSIDRequired  = errors.New("workspace ID is required")
-	errOrgIDRequired = errors.New("organization ID is required")
-	errPageNotFound  = errors.New("page not found")
+	// ErrRevisionConflict means the page changed since the supplied revision.
+	ErrRevisionConflict = errors.New("page changed; read the latest revision before writing")
+	errWSIDRequired     = errors.New("workspace ID is required")
+	errOrgIDRequired    = errors.New("organization ID is required")
+	// ErrNodeNotFound identifies missing node content, distinct from I/O failures.
+	ErrNodeNotFound  = errors.New("page not found")
 	errTableNotFound = errors.New("table not found")
 	errAssetNotFound = errors.New("asset not found")
 	errIDRequired    = errors.New("ID is required")

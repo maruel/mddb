@@ -14,6 +14,7 @@ import {
 } from "solid-js";
 import { produce } from "solid-js/store";
 import { useNavigate } from "@solidjs/router";
+import { useWorkspaceNavigation } from "./WorkspaceNavigationContext";
 import { useAuth } from "./AuthContext";
 import { useWorkspaceData } from "./WorkspaceDataContext";
 import { useEventSource } from "./EventSourceContext";
@@ -100,6 +101,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>();
 export const WorkspaceProvider: ParentComponent = (props) => {
   const { t, ready: i18nReady } = useI18n();
   const navigate = useNavigate();
+  const navigation = useWorkspaceNavigation();
   const { user, identity: authIdentity, setUser, api, wsApi } = useAuth();
 
   const rootData = useWorkspaceData();
@@ -317,6 +319,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
   async function switchWorkspace(wsId: string) {
     const initialIdentity = authIdentity();
+    if (!(await navigation.beforeNavigate()) || authIdentity() !== initialIdentity) return;
     const client = api();
     try {
       setSwitchingWorkspace(true);

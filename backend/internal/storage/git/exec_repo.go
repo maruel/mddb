@@ -71,8 +71,17 @@ func (r *ExecRepo) FSAtCommit(ctx context.Context, hash string) fs.FS {
 	return &commitFS{repo: r, ctx: ctx, hash: hash}
 }
 
-// CommitTx executes fn while holding a lock and commits the returned files atomically.
-// If fn returns an error or no files, no commit is made.
+// ReadTx reads saved files while excluding repository-owned mutations, independently of Git metadata.
+func (r *ExecRepo) ReadTx(ctx context.Context, fn func() error) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return fn()
+}
+
+// CommitTx executes a serialized mutation and records its changed files.
 func (r *ExecRepo) CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -289,6 +298,8 @@ func (r *ExecRepo) Fetch(ctx context.Context, remoteName, branch string) error {
 
 // Pull fetches and merges from a remote. Returns true if files changed.
 func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if branch == "" {
 		out, err := r.gitCombinedOutput(ctx, "rev-parse", "--abbrev-ref", "HEAD")
 		if err != nil {
@@ -318,7 +329,7 @@ func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, e
 			return false, errors.Join(fmt.Errorf("merge failed: %w", err), inspectErr)
 		}
 		if hasConflicts {
-			return false, errors.Join(fmt.Errorf("merge conflicts detected: %w: %s", err, strings.TrimSpace(string(out))), r.AbortMerge(ctx))
+			return false, errors.Join(fmt.Errorf("merge conflicts detected: %w: %s", err, strings.TrimSpace(string(out))), r.abortMergeLocked(ctx))
 		}
 		return false, fmt.Errorf("merge failed: %w: %s", err, strings.TrimSpace(string(out)))
 	}
@@ -343,6 +354,12 @@ func (r *ExecRepo) HasUnmergedFiles(ctx context.Context) (bool, error) {
 
 // AbortMerge aborts an in-progress merge.
 func (r *ExecRepo) AbortMerge(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.abortMergeLocked(ctx)
+}
+
+func (r *ExecRepo) abortMergeLocked(ctx context.Context) error {
 	return r.gitRun(ctx, "merge", "--abort")
 }
 

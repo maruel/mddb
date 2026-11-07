@@ -135,6 +135,10 @@ export interface Dictionary {
   };
 
   editor: {
+    saveConflict: string;
+    copyDraft: string;
+    reloadLatest: string;
+    copyFailed: string;
     titlePlaceholder: string;
     contentPlaceholder: string;
     unsaved: string;

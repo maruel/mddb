@@ -4,7 +4,6 @@ package content
 
 import (
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/maruel/ksid"
@@ -111,17 +110,6 @@ func (c *linkCache) backlinks(targetID ksid.ID) []ksid.ID {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.backward[targetID]
-}
-
-// forwardAll returns a snapshot of all forward links (source → targets).
-func (c *linkCache) forwardAll() map[ksid.ID][]ksid.ID {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	out := make(map[ksid.ID][]ksid.ID, len(c.forward))
-	for src, targets := range c.forward {
-		out[src] = slices.Clone(targets)
-	}
-	return out
 }
 
 // removeBackwardLocked removes sourceID from the backward entry for targetID. Caller must hold mu for writing.

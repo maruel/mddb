@@ -79,7 +79,7 @@ func (w *Writer) writeMarkdown(nodeDir, title, mdContent string) error {
 	// Create markdown with YAML front matter
 	md := fmt.Sprintf("---\ntitle: %q\n---\n\n%s", title, mdContent)
 
-	return os.WriteFile(path, []byte(md), 0o644) //nolint:gosec // G306: 0o644 is intentional for readable files
+	return storage.WriteFile(path, []byte(md))
 }
 
 // writeMetadata writes the metadata.json file (views only, properties go in data.jsonl).
@@ -99,7 +99,7 @@ func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0o644) //nolint:gosec // G306: 0o644 is intentional for readable files
+	return storage.WriteFile(path, data)
 }
 
 // TableMetadata is the structure stored in metadata.json.

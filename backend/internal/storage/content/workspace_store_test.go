@@ -1,4 +1,4 @@
-// Tests for the workspace store.
+// Tests and benchmarks workspace storage, canonical snapshots, and concurrent conditional writes.
 
 package content
 
@@ -10,11 +10,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
+	"unicode/utf8"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -102,6 +104,39 @@ func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, ksid.ID) {
 }
 
 func TestFileStoreService(t *testing.T) {
+	t.Run("ColdDiscovery", func(t *testing.T) {
+		fs, ws, id := initWS(t)
+		node := ksid.NewID()
+		path := filepath.Join(ws.wsDir, node.String())
+		if err := os.Mkdir(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(path, "index.md"), []byte("---\ntitle: Large\n---\n\n"+strings.Repeat("x", 4<<20)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		fs.InvalidateWorkspaceStore(id)
+		fresh, err := fs.GetWorkspaceStore(t.Context(), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fresh.links.built {
+			t.Fatal("opening a store eagerly scanned page bodies")
+		}
+		page, err := fresh.ListNodeSummaries(t.Context(), new(ksid.ID), 0, 50)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Nodes) != 1 || page.Nodes[0].ID != node || page.Nodes[0].Content != "" || fresh.links.built {
+			t.Fatalf("cold discovery initialized content: %#v", page)
+		}
+		if _, err := fresh.GetBacklinks(t.Context(), node); err != nil {
+			t.Fatal(err)
+		}
+		if !fresh.links.built {
+			t.Fatal("backlink query did not initialize its index")
+		}
+	})
+
 	t.Run("SavedInitializationAndRestartRecovery", func(t *testing.T) {
 		for _, backend := range []git.Backend{git.BackendExec, git.BackendGoGit} {
 			t.Run(strconv.Itoa(int(backend)), func(t *testing.T) {
@@ -202,6 +237,452 @@ func TestFileStoreService(t *testing.T) {
 }
 
 func TestWorkspaceFileStore(t *testing.T) {
+	t.Run("ConditionalPageWrites", func(t *testing.T) {
+		for _, appendOnly := range []bool{false, true} {
+			name := "Replace"
+			if appendOnly {
+				name = "Append"
+			}
+			t.Run(name, func(t *testing.T) {
+				_, ws, _ := initWS(t)
+				a := git.Author{Name: "Writer", Email: "writer@example.com"}
+				created, err := ws.CreatePageUnderParent(t.Context(), 0, " Original ", "\n\nBase", a)
+				if err != nil {
+					t.Fatal(err)
+				}
+				baseline, err := ws.ReadNode(t.Context(), created.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				before, err := ws.repo.CommitCount(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+				start := make(chan struct{})
+				results := make(chan error, 2)
+				var wg sync.WaitGroup
+				for i := range 2 {
+					wg.Go(func() {
+						<-start
+						var err error
+						if appendOnly {
+							_, err = ws.AppendPage(t.Context(), created.ID, fmt.Sprintf("body-%d", i), baseline.Revision, a)
+						} else {
+							_, err = ws.UpdatePage(t.Context(), created.ID, "Changed", fmt.Sprintf("body-%d", i), baseline.Revision, a)
+						}
+						results <- err
+					})
+				}
+				close(start)
+				wg.Wait()
+				close(results)
+				successes, conflicts := 0, 0
+				for err := range results {
+					switch {
+					case err == nil:
+						successes++
+					case errors.Is(err, ErrRevisionConflict):
+						conflicts++
+					default:
+						t.Fatal(err)
+					}
+				}
+				if successes != 1 || conflicts != 1 {
+					t.Fatalf("success=%d conflict=%d", successes, conflicts)
+				}
+				after, err := ws.repo.CommitCount(t.Context())
+				if err != nil || after != before+1 {
+					t.Fatalf("commits %d -> %d: %v", before, after, err)
+				}
+				latest, err := ws.ReadNode(t.Context(), created.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw, err := os.ReadFile(ws.pageIndexFile(created.ID, 0))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ws.AppendPage(t.Context(), created.ID, "stale", baseline.Revision, a); !errors.Is(err, ErrRevisionConflict) {
+					t.Fatalf("stale append: %v", err)
+				}
+				unchanged, err := os.ReadFile(ws.pageIndexFile(created.ID, 0))
+				if err != nil || !bytes.Equal(raw, unchanged) {
+					t.Fatal("rejected append changed file", err)
+				}
+				reread, err := ws.ReadNode(t.Context(), created.ID)
+				if err != nil || reread.Revision != latest.Revision {
+					t.Fatal("rejected write changed revision", err)
+				}
+			})
+		}
+		t.Run("CanonicalSnapshotAndMetadata", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			a := git.Author{Name: "Writer", Email: "writer@example.com"}
+			page, err := ws.CreatePageUnderParent(t.Context(), 0, "Before", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			revision := pageRevision(t, t.Context(), ws, page.ID)
+			if _, err := ws.UpdatePageFrontmatter(t.Context(), page.ID, "🌳", "cover.png", a); err != nil {
+				t.Fatal(err)
+			}
+			saved, err := ws.UpdatePage(t.Context(), page.ID, "  Canonical  ", "\n\nnormalized", revision, a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			read, err := ws.ReadNode(t.Context(), page.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if saved.Title != "Canonical" || saved.Content != "normalized" || saved.Icon != "🌳" || saved.Cover != "cover.png" || saved.Revision != read.Revision || saved.Revision == revision {
+				t.Fatalf("saved=%+v read=%+v", saved, read)
+			}
+			snap, err := ws.ReadPageSnapshot(t.Context(), page.ID, 0, 4096)
+			if err != nil || snap.Revision != saved.Revision || snap.Node.Content != saved.Content {
+				t.Fatalf("snapshot mismatch %+v %v", snap, err)
+			}
+			next, err := ws.AppendPage(t.Context(), page.ID, "next", saved.Revision, a)
+			if err != nil || next.Revision == saved.Revision || next.Content != "normalized\n\nnext" {
+				t.Fatalf("append=%+v %v", next, err)
+			}
+		})
+	})
+
+	t.Run("ConcurrentLegacyRefresh", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx, cancel := context.WithCancel(t.Context())
+			var wg sync.WaitGroup
+			t.Cleanup(func() { cancel(); wg.Wait() })
+			a := git.Author{Name: "Test", Email: "test@example.com"}
+			root, err := ws.CreatePageUnderParent(ctx, 0, "Parent", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			child, err := ws.CreatePageUnderParent(ctx, root.ID, "Child", "child", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			other, err := ws.CreatePageUnderParent(ctx, 0, "Other", "other", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.ListNodeSummaries(ctx, nil, 0, 50); err != nil {
+				t.Fatal(err)
+			}
+			start := make(chan struct{})
+			for range 4 {
+				wg.Go(func() {
+					<-start
+					for ctx.Err() == nil {
+						_, _ = ws.ReadNode(ctx, ksid.NewID())
+					}
+				})
+			}
+			close(start)
+			for range 500 {
+				page, err := ws.ListNodeSummaries(ctx, nil, 0, 50)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if page.Total != 3 || len(page.Nodes) != 3 || page.Next != 0 {
+					t.Fatalf("legacy refresh changed inventory: total=%d nodes=%d next=%s", page.Total, len(page.Nodes), page.Next)
+				}
+				summary, err := ws.ReadNodeSummary(ctx, root.ID)
+				if err != nil || !summary.HasChildren {
+					t.Fatalf("legacy refresh changed summary: %#v %v", summary, err)
+				}
+				snap, err := ws.ReadPageSnapshot(ctx, root.ID, 0, 4096)
+				if err != nil || snap.Node.Content != "body" || !snap.Node.HasChildren {
+					t.Fatalf("legacy refresh changed snapshot: %#v %v", snap, err)
+				}
+			}
+			// Mutation hooks publish ancestry and child flags together while
+			// legacy cache misses continue independently.
+			moved := make(chan error, 1)
+			wg.Go(func() {
+				for i := range 20 {
+					parent := root.ID
+					if i%2 == 1 {
+						parent = other.ID
+					}
+					if err := ws.MoveNode(ctx, child.ID, parent, a); err != nil {
+						moved <- err
+						return
+					}
+				}
+				moved <- nil
+			})
+			for range 100 {
+				snap, err := ws.ReadPageSnapshot(ctx, child.ID, 0, 4096)
+				if err != nil || snap.Node.Content != "child" || (snap.Node.ParentID != root.ID && snap.Node.ParentID != other.ID) {
+					t.Fatalf("concurrent move lost published ancestry: %#v %v", snap, err)
+				}
+			}
+			if err := <-moved; err != nil {
+				t.Fatal(err)
+			}
+		})
+	})
+
+	t.Run("IterAssets", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			a := git.Author{Name: "Test", Email: "test@example.com"}
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Assets", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, ".user-note", []byte("user"), a); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(ws.pageDir(n.ID, 0), storage.AtomicFilePrefix+"interrupted"), []byte("temporary"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			assets, err := ws.IterAssets(n.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var names []string
+			for asset := range assets {
+				names = append(names, asset.Name)
+			}
+			if len(names) != 1 || names[0] != ".user-note" {
+				t.Fatalf("asset listing = %v", names)
+			}
+		})
+	})
+
+	t.Run("ReadPageSnapshot", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := git.NewManagerWithBackend(dir, "test", "test@example.com", git.BackendGoGit).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		quotas := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(dir, repo, &quotas)
+		author := git.Author{Name: "Test", Email: "test@example.com"}
+		body := strings.Repeat("🌳 alpha\n", 13000)
+		node, err := ws.CreatePageUnderParent(t.Context(), 0, "  Canonical title  ", "\n\n"+body, author)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run("valid", func(t *testing.T) {
+			var all strings.Builder
+			var offset int64
+			revision := ""
+			for {
+				snap, err := ws.ReadPageSnapshot(t.Context(), node.ID, offset, 4096)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(snap.Node.Content) > 4096 || !utf8.ValidString(snap.Node.Content) {
+					t.Fatal("invalid bounded chunk")
+				}
+				if snap.Node.Title != "Canonical title" {
+					t.Fatalf("title = %q", snap.Node.Title)
+				}
+				if revision != "" && snap.Revision != revision {
+					t.Fatal("revision changed across chunks")
+				}
+				revision = snap.Revision
+				all.WriteString(snap.Node.Content)
+				if snap.NextOffset == snap.ContentBytes {
+					break
+				}
+				if snap.NextOffset <= offset {
+					t.Fatal("continuation made no progress")
+				}
+				offset = snap.NextOffset
+			}
+			if all.String() != body || revision != "885611606f0f6841069f8252b5057aa6fa53486ebcd80e9bed4de02e3a5af935" {
+				t.Fatal("canonical content/revision mismatch")
+			}
+			if _, err := ws.UpdatePageFrontmatter(t.Context(), node.ID, "🙂", "cover", author); err != nil {
+				t.Fatal(err)
+			}
+			snap, err := ws.ReadPageSnapshot(t.Context(), node.ID, 0, 4096)
+			if err != nil || snap.Revision != revision {
+				t.Fatalf("metadata changed content revision: %v", err)
+			}
+			if _, err := ws.UpdatePage(t.Context(), node.ID, "Canonical title", body+"updated", pageRevision(t, t.Context(), ws, node.ID), author); err != nil {
+				t.Fatal(err)
+			}
+			snap, err = ws.ReadPageSnapshot(t.Context(), node.ID, 0, 4096)
+			if err != nil || snap.Revision == revision {
+				t.Fatalf("content change missing: %v", err)
+			}
+			// A read remains available after Git metadata disappears.
+			if err := os.Rename(filepath.Join(dir, ".git"), filepath.Join(dir, "history-unavailable")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.ReadPageSnapshot(t.Context(), node.ID, 0, 4096); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+			if _, err := ws.ReadPageSnapshot(ctx, node.ID, 0, 4096); !errors.Is(err, context.Canceled) {
+				t.Fatalf("cancellation: %v", err)
+			}
+			if _, err := ws.ReadPageSnapshot(t.Context(), node.ID, 1, 4096); err == nil {
+				t.Fatal("accepted split UTF-8 offset")
+			}
+		})
+	})
+	t.Run("ListNodeSummaries", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			dir := t.TempDir()
+			repo, err := git.NewManager(dir, "test", "test@example.com").Repo(t.Context(), "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			quotas := storage.DefaultResourceQuotas()
+			ws := newWorkspaceFileStore(dir, repo, &quotas)
+			a := git.Author{Name: "Test", Email: "test@example.com"}
+			root, err := ws.CreatePageUnderParent(t.Context(), 0, "Root", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			child, err := ws.CreatePageUnderParent(t.Context(), root.ID, "Child", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			leaf, err := ws.CreatePageUnderParent(t.Context(), child.ID, "Leaf", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var ids []ksid.ID
+			var after ksid.ID
+			for {
+				p, err := ws.ListNodeSummaries(t.Context(), nil, after, 1)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(p.Nodes) != 1 || p.Total != 3 {
+					t.Fatalf("page = %#v", p)
+				}
+				ids = append(ids, p.Nodes[0].ID)
+				if p.Next == 0 {
+					break
+				}
+				after = p.Next
+			}
+			if len(ids) != 3 || !slices.IsSorted(ids) {
+				t.Fatalf("traversal = %v", ids)
+			}
+			if err := ws.MoveNode(t.Context(), leaf.ID, 0, a); err != nil {
+				t.Fatal(err)
+			}
+			p, err := ws.ListNodeSummaries(t.Context(), &child.ID, 0, 2)
+			if err != nil || p.Total != 0 {
+				t.Fatalf("move index: %#v %v", p, err)
+			}
+			if err := ws.DeletePage(t.Context(), root.ID, a); err != nil {
+				t.Fatal(err)
+			}
+			p, err = ws.ListNodeSummaries(t.Context(), nil, 0, 2)
+			if err != nil || p.Total != 1 || p.Nodes[0].ID != leaf.ID {
+				t.Fatalf("subtree retirement: %#v %v", p, err)
+			}
+			// Huge body lines do not enter summary parsing. Huge metadata fails explicitly.
+			if err := os.WriteFile(ws.pageIndexFile(leaf.ID, 0), []byte("---\ntitle: Leaf\n---\n\n"+strings.Repeat("x", 4<<20)), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			p, err = ws.ListNodeSummaries(t.Context(), new(ksid.ID), 0, 1)
+			if err != nil || p.Nodes[0].Content != "" {
+				t.Fatalf("summary: %#v %v", p, err)
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			a := git.Author{Name: "Test", Email: "test@example.com"}
+			leaf, err := ws.CreatePageUnderParent(t.Context(), 0, "Leaf", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := os.WriteFile(ws.tableMetadataFile(leaf.ID, 0), []byte(strings.Repeat("x", MaxSnapshotMetadataBytes+1)), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.ReadPageSnapshot(t.Context(), leaf.ID, 0, 4096); err == nil {
+				t.Fatal("accepted oversized metadata")
+			}
+		})
+	})
+
+	t.Run("RetainedContainerDiscovery", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			fs, ws, wsID := initWS(t)
+			a := git.Author{Name: "Test", Email: "test@example.com"}
+			ctx := t.Context()
+			parent, err := ws.CreatePageUnderParent(ctx, 0, "Parent", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			child, err := ws.CreatePageUnderParent(ctx, parent.ID, "Child", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			table, err := ws.CreateTableUnderParent(ctx, 0, "Table", nil, a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tableChild, err := ws.CreatePageUnderParent(ctx, table.ID, "Table child", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assetNode, err := ws.CreatePageUnderParent(ctx, 0, "Asset only", "body", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.SaveAsset(ctx, assetNode.ID, "retained.txt", []byte("asset"), a); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.ListNodeSummaries(ctx, nil, 0, 50); err != nil {
+				t.Fatal(err)
+			}
+			if err := ws.DeletePageFromNode(ctx, parent.ID, a); err != nil {
+				t.Fatal(err)
+			}
+			if err := ws.DeleteTableFromNode(ctx, table.ID, a); err != nil {
+				t.Fatal(err)
+			}
+			if err := ws.DeletePageFromNode(ctx, assetNode.ID, a); err != nil {
+				t.Fatal(err)
+			}
+			page, err := ws.ListNodeSummaries(ctx, nil, 0, 50)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if page.Total != 2 {
+				t.Fatalf("warm retained containers advertised: %#v", page)
+			}
+			fs.InvalidateWorkspaceStore(wsID)
+			cold, err := fs.GetWorkspaceStore(ctx, wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range []ksid.ID{child.ID, tableChild.ID} {
+				if _, err := cold.ReadNode(t.Context(), id); err != nil {
+					t.Fatalf("cold child %s hidden: %v", id, err)
+				}
+			}
+			// Context-free legacy ancestry refresh cannot publish ordered discovery.
+			cold.mu.RLock()
+			published := cold.indexReady
+			cold.mu.RUnlock()
+			if published {
+				t.Fatal("legacy parent lookup published an ungated discovery index")
+			}
+			page, err = cold.ListNodeSummaries(ctx, nil, 0, 50)
+			if err != nil || page.Total != 2 {
+				t.Fatalf("cold inventory: %#v, %v", page, err)
+			}
+		})
+	})
+
 	author := git.Author{Name: "Test", Email: "test@test.com"}
 
 	t.Run("HeadVersionRejectsCorruptLooseReference", func(t *testing.T) {
@@ -213,7 +694,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		quotas := storage.DefaultResourceQuotas()
 		ws := newWorkspaceFileStore(dir, repo, &quotas)
 		id := ksid.NewID()
-		if _, err := ws.WritePage(t.Context(), id, 0, "Title", "saved body", author); err != nil {
+		if _, err := writePageFixture(ws, t.Context(), id, "Title", "saved body", author); err != nil {
 			t.Fatal(err)
 		}
 		cmd := exec.CommandContext(t.Context(), "git", "-C", dir, "pack-refs", "--all", "--prune") //nolint:gosec // G204: fixed Git command in a test-owned repository.
@@ -241,8 +722,8 @@ func TestWorkspaceFileStore(t *testing.T) {
 		ctx := t.Context()
 		nodeID := ksid.NewID()
 
-		t.Run("WritePage", func(t *testing.T) {
-			page, err := ws.WritePage(ctx, nodeID, 0, "Test Title", "# Test Content", author)
+		t.Run("PageFixture", func(t *testing.T) {
+			page, err := writePageFixture(ws, ctx, nodeID, "Test Title", "# Test Content", author)
 			if err != nil {
 				t.Fatalf("failed to write page: %v", err)
 			}
@@ -268,7 +749,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("UpdatePage", func(t *testing.T) {
-			updated, err := ws.UpdatePage(ctx, nodeID, "Updated Title", "# Updated Content", author)
+			updated, err := ws.UpdatePage(ctx, nodeID, "Updated Title", "# Updated Content", pageRevision(t, ctx, ws, nodeID), author)
 			if err != nil {
 				t.Fatalf("failed to update page: %v", err)
 			}
@@ -309,7 +790,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		for i := range 3 {
 			id := ksid.NewID()
 			nodeIDs = append(nodeIDs, id)
-			if _, err := ws.WritePage(ctx, id, 0, "Page "+string(rune(48+i)), "content", author); err != nil {
+			if _, err := writePageFixture(ws, ctx, id, "Page "+string(rune(48+i)), "content", author); err != nil {
 				t.Fatalf("failed to write page %d: %v", i, err)
 			}
 		}
@@ -398,7 +879,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if err := ws.WriteTable(ctx, selectNode, true, author); err != nil {
 				t.Fatalf("failed to write table: %v", err)
 			}
-			read, err := ws.ReadNode(selectID)
+			read, err := ws.ReadNode(ctx, selectID)
 			if err != nil {
 				t.Fatalf("failed to read node: %v", err)
 			}
@@ -628,7 +1109,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		ctx := t.Context()
 
 		nodeID := ksid.NewID()
-		if _, err := ws.WritePage(ctx, nodeID, 0, "With Assets", "content", author); err != nil {
+		if _, err := writePageFixture(ws, ctx, nodeID, "With Assets", "content", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
 
@@ -757,10 +1238,10 @@ func TestWorkspaceFileStore(t *testing.T) {
 		ctx := t.Context()
 		nodeID := ksid.NewID()
 
-		if _, err := ws.WritePage(ctx, nodeID, 0, "Initial", "initial content", author); err != nil {
+		if _, err := writePageFixture(ws, ctx, nodeID, "Initial", "initial content", author); err != nil {
 			t.Fatalf("failed to write initial page: %v", err)
 		}
-		if _, err := ws.UpdatePage(ctx, nodeID, "Updated", "updated content", author); err != nil {
+		if _, err := ws.UpdatePage(ctx, nodeID, "Updated", "updated content", pageRevision(t, ctx, ws, nodeID), author); err != nil {
 			t.Fatalf("failed to update page: %v", err)
 		}
 
@@ -787,7 +1268,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		}
 
 		for i := 1; i <= 3; i++ {
-			if _, err := ws.UpdatePage(ctx, child.ID, "Child", "content v"+string(rune(48+i)), author); err != nil {
+			if _, err := ws.UpdatePage(ctx, child.ID, "Child", "content v"+string(rune(48+i)), pageRevision(t, ctx, ws, child.ID), author); err != nil {
 				t.Fatalf("failed to update child page (v%d): %v", i, err)
 			}
 		}
@@ -830,11 +1311,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Fatalf("failed to create node 2: %v", err)
 		}
 
-		if _, err = ws.ReadNode(0); err == nil {
+		if _, err = ws.ReadNode(t.Context(), 0); err == nil {
 			t.Fatalf("expected error reading node 0, got nil")
 		}
 
-		readNode1, err := ws.ReadNode(node1.ID)
+		readNode1, err := ws.ReadNode(t.Context(), node1.ID)
 		if err != nil {
 			t.Fatalf("failed to read node 1: %v", err)
 		}
@@ -945,11 +1426,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Errorf("expected page at %s, got error: %v", page2Path, err)
 		}
 
-		if _, err = ws.ReadNode(0); err == nil {
+		if _, err = ws.ReadNode(t.Context(), 0); err == nil {
 			t.Fatalf("expected error reading node 0")
 		}
 
-		readPage1, err := ws.ReadNode(page1.ID)
+		readPage1, err := ws.ReadNode(t.Context(), page1.ID)
 		if err != nil {
 			t.Fatalf("failed to read page1: %v", err)
 		}
@@ -984,7 +1465,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Errorf("expected page at %s, got error: %v", pagePath, err)
 		}
 
-		readPage, err := ws.ReadNode(page.ID)
+		readPage, err := ws.ReadNode(t.Context(), page.ID)
 		if err != nil {
 			t.Fatalf("failed to read page: %v", err)
 		}
@@ -1121,7 +1602,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Errorf("expected no children under A, got %d", len(children))
 			}
 
-			node, err := ws.ReadNode(child.ID)
+			node, err := ws.ReadNode(t.Context(), child.ID)
 			if err != nil {
 				t.Fatalf("read child after move: %v", err)
 			}
@@ -1256,7 +1737,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("move: %v", err)
 			}
 
-			node, err := ws.ReadNode(grandchild.ID)
+			node, err := ws.ReadNode(t.Context(), grandchild.ID)
 			if err != nil {
 				t.Fatalf("read grandchild after move: %v", err)
 			}
@@ -1316,11 +1797,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			cLink := fmt.Sprintf("See [B](../%s/index.md)", pageB.ID)
-			if _, err := ws.UpdatePage(ctx, pageC.ID, "C", cLink, author); err != nil {
+			if _, err := ws.UpdatePage(ctx, pageC.ID, "C", cLink, pageRevision(t, ctx, ws, pageC.ID), author); err != nil {
 				t.Fatalf("update C: %v", err)
 			}
 			bLink := fmt.Sprintf("See [C](../%s/index.md)", pageC.ID)
-			if _, err := ws.UpdatePage(ctx, pageB.ID, "B", bLink, author); err != nil {
+			if _, err := ws.UpdatePage(ctx, pageB.ID, "B", bLink, pageRevision(t, ctx, ws, pageB.ID), author); err != nil {
 				t.Fatalf("update B: %v", err)
 			}
 
@@ -1366,17 +1847,17 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			id1 := ksid.NewID()
-			if _, err := ws.WritePage(ctx, id1, 0, "Page 1", "content", author); err != nil {
+			if _, err := writePageFixture(ws, ctx, id1, "Page 1", "content", author); err != nil {
 				t.Fatalf("failed to create page 1: %v", err)
 			}
 
 			id2 := ksid.NewID()
-			if _, err := ws.WritePage(ctx, id2, 0, "Page 2", "content", author); err != nil {
+			if _, err := writePageFixture(ws, ctx, id2, "Page 2", "content", author); err != nil {
 				t.Fatalf("failed to create page 2: %v", err)
 			}
 
 			id3 := ksid.NewID()
-			_, err = ws.WritePage(ctx, id3, 0, "Page 3", "content", author)
+			_, err = writePageFixture(ws, ctx, id3, "Page 3", "content", author)
 			if err != nil {
 				t.Logf("Got error creating page 3: %v (quota may be enforced)", err)
 			}
@@ -1414,7 +1895,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			id := ksid.NewID()
-			_, err = ws.WritePage(ctx, id, 0, "Large", string(largeContent), author)
+			_, err = writePageFixture(ws, ctx, id, "Large", string(largeContent), author)
 			if err == nil {
 				t.Logf("WritePage succeeded - quota enforcement might not be strict")
 			} else if !errors.Is(err, errQuotaExceeded) {
@@ -1541,7 +2022,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		ctx := t.Context()
 
 		nodeID := ksid.NewID()
-		if _, err := ws.WritePage(ctx, nodeID, 0, "Format Test", "# Content\n\nWith multiple lines", author); err != nil {
+		if _, err := writePageFixture(ws, ctx, nodeID, "Format Test", "# Content\n\nWith multiple lines", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
 
@@ -1597,7 +2078,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		t.Run("RoundTrip", func(t *testing.T) {
 			relLink := fmt.Sprintf("[B](../%s/index.md)", pageB.ID)
 			content := "See " + relLink + " for details."
-			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, author); err != nil {
+			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, pageRevision(t, ctx, ws, pageA.ID), author); err != nil {
 				t.Fatalf("update: %v", err)
 			}
 			node, err := ws.ReadPage(pageA.ID)
@@ -1611,7 +2092,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 
 		t.Run("NoLinksPassthrough", func(t *testing.T) {
 			content := "Plain text with no links."
-			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, author); err != nil {
+			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, pageRevision(t, ctx, ws, pageA.ID), author); err != nil {
 				t.Fatalf("update: %v", err)
 			}
 			node, err := ws.ReadPage(pageA.ID)
@@ -1657,7 +2138,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		}
 
 		t.Run("Found", func(t *testing.T) {
-			backlinks, err := ws.GetBacklinks(target.ID)
+			backlinks, err := ws.GetBacklinks(ctx, target.ID)
 			if err != nil {
 				t.Fatalf("failed to get backlinks: %v", err)
 			}
@@ -1673,7 +2154,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("None", func(t *testing.T) {
-			backlinks, err := ws.GetBacklinks(source.ID)
+			backlinks, err := ws.GetBacklinks(t.Context(), source.ID)
 			if err != nil {
 				t.Fatalf("failed to get backlinks: %v", err)
 			}
@@ -1683,91 +2164,15 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("AfterLinkRemoved", func(t *testing.T) {
-			if _, err := ws.UpdatePage(ctx, source.ID, "Source", "no more links", author); err != nil {
+			if _, err := ws.UpdatePage(ctx, source.ID, "Source", "no more links", pageRevision(t, ctx, ws, source.ID), author); err != nil {
 				t.Fatalf("failed to update page: %v", err)
 			}
-			backlinks, err := ws.GetBacklinks(target.ID)
+			backlinks, err := ws.GetBacklinks(ctx, target.ID)
 			if err != nil {
 				t.Fatalf("failed to get backlinks: %v", err)
 			}
 			if len(backlinks) != 0 {
 				t.Errorf("expected 0 backlinks after link removed, got %d", len(backlinks))
-			}
-		})
-	})
-
-	t.Run("ValidateLinks", func(t *testing.T) {
-		t.Run("AllValid", func(t *testing.T) {
-			_, ws, _ := initWS(t)
-			ctx := t.Context()
-
-			a, err := ws.CreatePageUnderParent(ctx, 0, "A", "", author)
-			if err != nil {
-				t.Fatalf("create A: %v", err)
-			}
-			linkToA := fmt.Sprintf("[A](../%s/index.md)", a.ID)
-			if _, err := ws.CreatePageUnderParent(ctx, 0, "B", linkToA, author); err != nil {
-				t.Fatalf("create B: %v", err)
-			}
-
-			invalid, err := ws.ValidateLinks()
-			if err != nil {
-				t.Fatalf("ValidateLinks: %v", err)
-			}
-			if len(invalid) != 0 {
-				t.Errorf("expected 0 invalid links, got %d: %v", len(invalid), invalid)
-			}
-		})
-
-		t.Run("DanglingLink", func(t *testing.T) {
-			_, ws, _ := initWS(t)
-			ctx := t.Context()
-
-			ghost := ksid.NewID()
-			linkToGhost := fmt.Sprintf("[Ghost](../%s/index.md)", ghost)
-			src, err := ws.CreatePageUnderParent(ctx, 0, "Src", linkToGhost, author)
-			if err != nil {
-				t.Fatalf("create Src: %v", err)
-			}
-
-			invalid, err := ws.ValidateLinks()
-			if err != nil {
-				t.Fatalf("ValidateLinks: %v", err)
-			}
-			if len(invalid) != 1 {
-				t.Fatalf("expected 1 invalid link, got %d: %v", len(invalid), invalid)
-			}
-			if invalid[0].SourceID != src.ID {
-				t.Errorf("expected source=%s, got %s", src.ID, invalid[0].SourceID)
-			}
-			if invalid[0].Target != ghost.String() {
-				t.Errorf("expected target=%s, got %s", ghost, invalid[0].Target)
-			}
-		})
-
-		t.Run("MixedValidAndInvalid", func(t *testing.T) {
-			_, ws, _ := initWS(t)
-			ctx := t.Context()
-
-			existing, err := ws.CreatePageUnderParent(ctx, 0, "Real", "", author)
-			if err != nil {
-				t.Fatalf("create Real: %v", err)
-			}
-			ghost := ksid.NewID()
-			content := fmt.Sprintf("[Real](../%s/index.md) and [Ghost](../%s/index.md)", existing.ID, ghost)
-			if _, err := ws.CreatePageUnderParent(ctx, 0, "Linker", content, author); err != nil {
-				t.Fatalf("create Linker: %v", err)
-			}
-
-			invalid, err := ws.ValidateLinks()
-			if err != nil {
-				t.Fatalf("ValidateLinks: %v", err)
-			}
-			if len(invalid) != 1 {
-				t.Fatalf("expected 1 invalid link, got %d: %v", len(invalid), invalid)
-			}
-			if invalid[0].Target != ghost.String() {
-				t.Errorf("expected target=%s, got %s", ghost, invalid[0].Target)
 			}
 		})
 	})
@@ -1785,7 +2190,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Fatalf("failed to create page: %v", err)
 		}
 
-		titles, err := ws.GetNodeTitles([]ksid.ID{a.ID, b.ID})
+		titles, err := ws.GetNodeTitles(t.Context(), []ksid.ID{a.ID, b.ID})
 		if err != nil {
 			t.Fatalf("failed to get node titles: %v", err)
 		}
@@ -1807,7 +2212,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 
 			for i := range 3 {
 				nodeID := ksid.NewID()
-				if _, err := ws.WritePage(ctx, nodeID, 0, "Page "+string(rune(49+i)), "content", author); err != nil {
+				if _, err := writePageFixture(ws, ctx, nodeID, "Page "+string(rune(49+i)), "content", author); err != nil {
 					t.Fatalf("failed to create page: %v", err)
 				}
 			}
@@ -1859,7 +2264,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			ctx := t.Context()
 
 			nodeID := ksid.NewID()
-			if _, err := ws.WritePage(ctx, nodeID, 0, "Hybrid", "content", author); err != nil {
+			if _, err := writePageFixture(ws, ctx, nodeID, "Hybrid", "content", author); err != nil {
 				t.Fatalf("failed to create page: %v", err)
 			}
 
@@ -1963,4 +2368,64 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 			}
 		})
 	}
+}
+
+// writePageFixture creates exact-ID legacy fixtures; production creates pages through CreatePageUnderParent.
+func writePageFixture(ws *WorkspaceFileStore, ctx context.Context, id ksid.ID, title, content string, author git.Author) (*Node, error) {
+	var node *Node
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		var err error
+		node, err = ws.writePage(id, 0, title, content)
+		if err != nil {
+			return "", nil, err
+		}
+		files := []string{ws.gitPath(0, id, "index.md")}
+		return "update: page " + id.String(), files, nil
+	})
+	if err == nil {
+		ws.links.update(id, node.Content)
+	}
+	return node, err
+}
+
+func pageRevision(t *testing.T, ctx context.Context, ws *WorkspaceFileStore, id ksid.ID) string {
+	node, err := ws.ReadNode(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return node.Revision
+}
+
+func BenchmarkWorkspaceFileStore(b *testing.B) {
+	b.Run("Replace4MiB", func(b *testing.B) {
+		dir := b.TempDir()
+		repo, err := git.NewManagerWithBackend(dir, "Bench", "bench@example.com", git.BackendGoGit).Repo(b.Context(), "")
+		if err != nil {
+			b.Fatal(err)
+		}
+		quotas := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(dir, repo, &quotas)
+		author := git.Author{Name: "Bench", Email: "bench@example.com"}
+		body := strings.Repeat("x", 4<<20)
+		page, err := ws.CreatePageUnderParent(b.Context(), 0, "Initial", body, author)
+		if err != nil {
+			b.Fatal(err)
+		}
+		read, err := ws.ReadNode(b.Context(), page.ID)
+		if err != nil {
+			b.Fatal(err)
+		}
+		revision := read.Revision
+		b.ReportAllocs()
+		b.SetBytes(int64(len(body)))
+		i := 0
+		for b.Loop() {
+			saved, err := ws.UpdatePage(b.Context(), page.ID, strconv.Itoa(i), body, revision, author)
+			if err != nil {
+				b.Fatal(err)
+			}
+			revision = saved.Revision
+			i++
+		}
+	})
 }

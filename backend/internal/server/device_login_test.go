@@ -291,7 +291,7 @@ func TestDeviceLogin(t *testing.T) {
 			if status := env.doJSON(t, "POST", "/api/v1/workspaces/"+ws.ID.String()+"/nodes/0/page/create", dto.CreatePageRequest{Title: "Device write", Content: "Original"}, &page, display.Token); status != 200 {
 				t.Fatal("device write", status)
 			}
-			outcome := callMCPTool(t, env, display.Token, "node_update", map[string]any{"nodeId": page.ID.String(), "title": "Device MCP", "content": "Updated by device MCP"})
+			outcome := callMCPTool(t, env, display.Token, "node_update", map[string]any{"nodeId": page.ID.String(), "expectedRevision": callMCPTool(t, env, display.Token, "node_read", map[string]any{"nodeId": page.ID.String()}).StructuredContent.Node.Revision, "title": "Device MCP", "content": "Updated by device MCP"})
 			if outcome.IsError || outcome.StructuredContent.Error != "" {
 				t.Fatalf("device MCP write: %+v", outcome)
 			}

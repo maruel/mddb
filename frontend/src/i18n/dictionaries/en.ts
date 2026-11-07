@@ -134,6 +134,12 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    saveConflict:
+      "This page changed elsewhere. Your draft is kept. Copy it or reload the latest version to discard your edits.",
+    copyDraft: "Copy draft",
+    reloadLatest: "Discard edits and reload",
+    copyFailed: "Could not copy the draft",
+
     titlePlaceholder: "Title",
     contentPlaceholder: "Type / for commands...",
     unsaved: "Unsaved",
