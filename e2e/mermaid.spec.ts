@@ -1,5 +1,33 @@
 // Browser coverage for lazy Pele diagrams, editable source, safe fallback, and history disclosure.
 import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import type { Locator } from "@playwright/test";
+import type { EditorView } from "prosemirror-view";
+
+// Native navigation changes DOM selection before ProseMirror receives the
+// browser's selectionchange notification. Require both owners to agree before
+// typing, without changing either selection from the test.
+async function sourceCaret(source: Locator, offset: number) {
+  return source.evaluate((code, expectedOffset) => {
+    const selection = document.getSelection();
+    const editor = code.closest(".ProseMirror") as (HTMLElement & { pmView?: EditorView }) | null;
+    const view = editor?.pmView;
+    let native = false;
+    if (selection?.isCollapsed && selection.focusNode && code.contains(selection.focusNode)) {
+      const prefix = document.createRange();
+      prefix.selectNodeContents(code);
+      prefix.setEnd(selection.focusNode, selection.focusOffset);
+      native = prefix.toString().length === expectedOffset;
+    }
+    return {
+      native,
+      model: Boolean(
+        view?.hasFocus() &&
+        view.state.selection.empty &&
+        view.state.selection.head === view.posAtDOM(code, 0) + expectedOffset,
+      ),
+    };
+  }, offset);
+}
 
 // Isolate application imports from the service worker's background asset precache.
 test.use({ serviceWorkers: "block" });
@@ -60,10 +88,38 @@ for (const width of [390, 1280]) {
     expect(new Set(ids).size).toBe(ids.length);
 
     const editableSource = editor.locator("pre code").first();
-    const sourceBounds = (await editableSource.boundingBox())!;
-    // Click the final rendered source line; ArrowDown follows visual wrapping.
-    await editableSource.click({ position: { x: 5, y: sourceBounds.height - 5 } });
-    await page.keyboard.press("End");
+    await editableSource.click();
+    await page.keyboard.press("Control+Home");
+    await expect.poll(() => sourceCaret(editableSource, 0)).toEqual({ native: true, model: true });
+    let lineStart = 0;
+    for (const line of flowchart.split("\n").slice(0, -1)) {
+      await page.keyboard.press("ArrowDown");
+      lineStart += line.length + 1;
+      await expect.poll(() => sourceCaret(editableSource, lineStart)).toEqual({ native: true, model: true });
+    }
+
+    // Hold selectionchange so End moves the native caret before the editor
+    // receives its notification, then replay it. Neither selection is set here.
+    const releaseSelection = await page.evaluateHandle(() => {
+      let held: Event | null = null;
+      const hold = (event: Event) => {
+        held = event;
+        event.stopImmediatePropagation();
+      };
+      document.addEventListener("selectionchange", hold, true);
+      return () => {
+        document.removeEventListener("selectionchange", hold, true);
+        if (held) document.dispatchEvent(held);
+      };
+    });
+    try {
+      await page.keyboard.press("End");
+      await expect.poll(() => sourceCaret(editableSource, flowchart.length)).toEqual({ native: true, model: false });
+    } finally {
+      await releaseSelection.evaluate((release) => release());
+      await releaseSelection.dispose();
+    }
+    await expect.poll(() => sourceCaret(editableSource, flowchart.length)).toEqual({ native: true, model: true });
     await page.keyboard.type("ing");
     await expect(editableSource).toContainText("Build --> Testing");
     await expect(editor.locator(".mermaid-diagram > svg").first()).toContainText("Testing");

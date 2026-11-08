@@ -19,10 +19,13 @@ interface NativeReadiness {
   scope: string;
   ready: boolean;
   tools: Array<{ name: string }>;
+  voiceSessionVersion?: number;
+  voiceSessionPrepared?: string | null;
 }
 interface NativeFixture {
   readiness: NativeReadiness[];
   results: NativeResult[];
+  sessionID: string | null;
 }
 declare global {
   interface Window {
@@ -30,7 +33,7 @@ declare global {
   }
 }
 
-export async function installNativeTools(page: Page, request: APIRequestContext) {
+export async function installNativeTools(page: Page, request: APIRequestContext, sessionID?: string) {
   const manifest = await request.get("/.well-known/gomode.json");
   expect(manifest.ok()).toBe(true);
   expect(await manifest.json()).toMatchObject({ apiVersion: 1, webShell: { bridgeVersion: 3 } });
@@ -39,15 +42,39 @@ export async function installNativeTools(page: Page, request: APIRequestContext)
     token: "identity-",
     appendRequest: true,
     voiceConnected: true,
+    voiceSessionVersion: sessionID === undefined ? undefined : 1,
   });
-  await page.addInitScript(() => {
-    const fixture: NativeFixture = { readiness: [], results: [] };
+  await page.addInitScript((initialSessionID) => {
+    const fixture: NativeFixture = { readiness: [], results: [], sessionID: initialSessionID ?? null };
+    const readiness: { onmessage?: ((event: { data: string }) => void) | null; postMessage(message: string): void } = {
+      postMessage(message) {
+        const value: NativeReadiness = JSON.parse(message);
+        fixture.readiness.push(value);
+        if (value.ready && value.voiceSessionVersion === 1)
+          queueMicrotask(() =>
+            readiness.onmessage?.({
+              data: JSON.stringify({ ...value, sessionID: fixture.sessionID }),
+            }),
+          );
+      },
+    };
     Object.assign(window, {
       nativeToolFixture: fixture,
-      gomodeFrontendReadiness: { postMessage: (message: string) => fixture.readiness.push(JSON.parse(message)) },
+      gomodeFrontendReadiness: readiness,
       gomodeFrontendToolResult: { postMessage: (message: string) => fixture.results.push(JSON.parse(message)) },
     });
-  });
+  }, sessionID);
+}
+
+export async function changeNativeVoiceSession(page: Page, sessionID: string | null) {
+  await page.evaluate((nextSessionID) => {
+    const fixture = window.nativeToolFixture;
+    fixture.sessionID = nextSessionID;
+    const bound = fixture.readiness.at(-1);
+    const bridge = (window as unknown as { gomodeFrontendReadiness: { onmessage(event: { data: string }): void } })
+      .gomodeFrontendReadiness;
+    bridge.onmessage({ data: JSON.stringify({ ...bound, sessionID: nextSessionID }) });
+  }, sessionID);
 }
 
 export async function waitNativeReady(page: Page) {

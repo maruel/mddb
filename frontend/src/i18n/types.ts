@@ -1,5 +1,7 @@
 // Type definitions for internationalization (dictionaries and locales).
 
+import type { VoiceMessages } from "@maruel/gomode/web/VoiceMessages";
+
 // Supported locales
 export type Locale = "en" | "fr" | "de" | "es";
 
@@ -135,6 +137,26 @@ export interface Dictionary {
   };
 
   editor: {
+    previousRecovery: string;
+    compareChanges: string;
+    compareHelp: string;
+    yourDraft: string;
+    latestSaved: string;
+    acknowledgedBase: string;
+    manualRecovery: string;
+    independentChanges: string;
+    overlapHelp: string;
+    overlap: string;
+    useDraft: string;
+    useSaved: string;
+    recoveredResult: string;
+    recoveredBody: string;
+    saveRecovered: string;
+    loadLatest: string;
+    recoveryWorking: string;
+    compareFailed: string;
+    draftChanged: string;
+    recoveryRetry: string;
     saveConflict: string;
     copyDraft: string;
     reloadLatest: string;
@@ -661,96 +683,8 @@ export interface Dictionary {
     reconnecting: string;
   };
 
-  voice: {
-    voiceSetup: string;
-    allInOne: string;
-    selectParts: string;
-    languageModel: string;
-    browserSynthesisUnavailable: string;
-    browserRecognitionUnavailable: string;
-    synthesisModel: string;
-    gatewayModel: string;
-    recognition: string;
-    previousErrors: string;
-    reasoning: string;
-    showReasoning: string;
-
-    audioDevices: string;
-    callingTool: string;
-    credits: string;
-    enableMicrophone: string;
-    enableSound: string;
-    hideTranscript: string;
-    microphoneAccessOff: string;
-    microphoneUnavailable: string;
-    microphoneFullyMuted: string;
-    microphoneListening: string;
-    microphoneMode: string;
-    microphoneMuteNextReplyHelp: string;
-    microphoneMuteOnce: string;
-    microphoneMuteOnceHelp: string;
-    microphoneMutedHelp: string;
-    microphoneNextState: string;
-    musicArranger: string;
-    musicComposer: string;
-    musicPlaybackError: string;
-    nextServer: string;
-    playMusic: string;
-    playMusicLabel: string;
-    requestingMicrophone: string;
-    showTranscript: string;
-    stopMusic: string;
-    stopMusicLabel: string;
-    systemMicrophoneSettings: string;
-    thinkingMusic: string;
-    voiceActivity: string;
-    voiceControls: string;
-    dismiss: string;
+  voice: VoiceMessages & {
     authorizationFailed: string;
-    choiceUnavailable: string;
-    choicesLoading: string;
-    choicesRetry: string;
-    speakingVoice: string;
-    speakingSpeed: string;
-    speakingSpeedNormal: string;
-    browserVoiceDefault: string;
-    showUsageStats: string;
-    speakingVoiceDefault: string;
-    speakingVoiceUnavailable: string;
-    assistant: string;
-    cancel: string;
-    cancelConnection: string;
-    clearTranscript: string;
-    connect: string;
-    connectionFailed: string;
-    endSession: string;
-    listening: string;
-    microphone: string;
-    enableMicrophoneMeter: string;
-    muted: string;
-    reconnecting: string;
-    retry: string;
-    signaling: string;
-    speaker: string;
-    speaking: string;
-    thinking: string;
-    transcribing: string;
-    transcript: string;
-    transcriptPlaceholder: string;
-    voiceAssistant: string;
-    waitingForServer: string;
-    settingUpWebRTC: string;
-    you: string;
     setupFailed: string;
-    browserSpeech: string;
-    browserSpeechPrivacy: string;
-    closeVoiceSettings: string;
-    endSessionToChange: string;
-    settingUpBrowserSpeech: string;
-    systemAudioSettings: string;
-    systemDefault: string;
-    unavailableDevice: string;
-    voiceLanguage: string;
-    voiceSettings: string;
   };
 }

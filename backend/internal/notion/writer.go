@@ -1,8 +1,9 @@
-// Writes extracted Notion data to mddb storage format.
+// Writes extracted Notion nodes through host-owned saved-file transactions or standalone exports.
 
 package notion
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,15 +21,19 @@ type Writer struct {
 	OutputDir   string
 	WorkspaceID string
 
+	writeTx func(context.Context, func() error) error
+
 	mu     sync.Mutex
 	tables map[ksid.ID]*jsonldb.Table[*content.DataRecord]
 }
 
-// NewWriter creates a new writer for the given output directory and workspace.
-func NewWriter(outputDir, workspaceID string) *Writer {
+// NewWriter creates an import writer. App hosts supply their workspace import
+// transaction; nil selects standalone CLI exports without a running repository.
+func NewWriter(outputDir, workspaceID string, writeTx func(context.Context, func() error) error) *Writer {
 	return &Writer{
 		OutputDir:   outputDir,
 		WorkspaceID: workspaceID,
+		writeTx:     writeTx,
 		tables:      make(map[ksid.ID]*jsonldb.Table[*content.DataRecord]),
 	}
 }
@@ -48,8 +53,18 @@ func (w *Writer) EnsureWorkspace() error {
 	return os.MkdirAll(w.workspacePath(), 0o755) //nolint:gosec // G301: 0o755 is intentional for data directories
 }
 
-// WriteNode writes a node (page or table) to the filesystem.
-func (w *Writer) WriteNode(node *content.Node, markdownContent string) error {
+// WriteNode writes a node within the host's saved-file transaction, when hosted.
+func (w *Writer) WriteNode(ctx context.Context, node *content.Node, markdownContent string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if w.writeTx != nil {
+		return w.writeTx(ctx, func() error { return w.writeNode(node, markdownContent) })
+	}
+	return w.writeNode(node, markdownContent)
+}
+
+func (w *Writer) writeNode(node *content.Node, markdownContent string) error {
 	nodeDir := w.nodePath(node.ID)
 	if err := os.MkdirAll(nodeDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create node directory: %w", err)

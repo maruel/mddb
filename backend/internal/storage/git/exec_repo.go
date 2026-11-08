@@ -82,6 +82,17 @@ func (r *ExecRepo) ReadTx(ctx context.Context, fn func(*SavedFiles) error) error
 	return fn(&r.saved)
 }
 
+// WriteTx replaces imported saved files under the snapshot mutation gate.
+func (r *ExecRepo) WriteTx(ctx context.Context, fn func() error) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	defer r.saved.invalidate(nil, true)
+	return fn()
+}
+
 // CommitTx executes a serialized mutation and records its changed files.
 func (r *ExecRepo) CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error {
 	r.mu.Lock()

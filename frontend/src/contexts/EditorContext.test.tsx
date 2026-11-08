@@ -1,7 +1,7 @@
-// Tests serialized canonical revisions, conflict draft retention, and awaited route/workspace/voice departure.
+// Tests serialized saves, bounded conflict recovery ownership, preserved drafts, and gated editor departure.
 
 import { afterEach, beforeEach, it } from "node:test";
-import { cleanup, render, waitFor } from "@solidjs/testing-library";
+import { cleanup, render, waitFor, screen, fireEvent } from "@solidjs/testing-library";
 import { createEffect, on, Show, type ParentComponent } from "solid-js";
 import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
 import { HostModeProvider } from "@maruel/gomode/web/HostMode";
@@ -13,6 +13,7 @@ import { WorkspaceNavigationProvider, useWorkspaceNavigation } from "./Workspace
 import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 import { EventSourceProvider } from "./EventSourceContext";
 import { EditorProvider, useEditor } from "./EditorContext";
+import { ConflictRecovery } from "../components/editor/ConflictRecovery";
 import { I18nProvider } from "../i18n";
 
 const firstRevision = "a".repeat(64);
@@ -58,6 +59,9 @@ let navigate!: ReturnType<typeof useNavigate>;
 let currentPath = "";
 let calls: Array<{ body: UpdatePageRequest; resolve: (response: Response) => void }>;
 let switches: number;
+let latest: NodeResponse | null;
+let latestReply: Promise<Response> | null;
+let accountLocale = "en";
 
 function Probe() {
   editor = useEditor();
@@ -84,16 +88,17 @@ function Probe() {
       },
     ),
   );
-  return null;
+  return <ConflictRecovery onSaved={() => undefined} />;
 }
 const Ready: ParentComponent = (props) => {
   const currentAuth = useAuth();
   return <Show when={currentAuth.user()}>{props.children}</Show>;
 };
-function mount() {
+function mount(locale?: "en" | "fr" | "de" | "es") {
+  accountLocale = locale ?? "en";
   window.history.replaceState(null, "", "/w/workspace/one");
   render(() => (
-    <I18nProvider initialLocale="en">
+    <I18nProvider initialLocale={locale ?? "en"}>
       <AuthProvider>
         <Router
           root={(props) => (
@@ -126,11 +131,14 @@ const saved = (title: string, revision: string) => Response.json({ node: node("o
 beforeEach(() => {
   calls = [];
   switches = 0;
+  latest = null;
+  latestReply = null;
   localStorage.clear();
   delete window.goModeHost;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
-    if (url.endsWith("/auth/me")) return Response.json(account);
+    if (url.endsWith("/auth/me"))
+      return Response.json({ ...account, settings: { ...account.settings, language: accountLocale } });
     if (url.endsWith("/auth/browser/logout")) return Response.json({ ok: true });
     if (url.endsWith("/switch-workspace")) {
       switches++;
@@ -142,6 +150,8 @@ beforeEach(() => {
       return new Promise<Response>((resolve) =>
         calls.push({ body: JSON.parse(String(init.body)) as UpdatePageRequest, resolve }),
       );
+    if (url.endsWith("/nodes/one") && latestReply) return latestReply;
+    if (url.endsWith("/nodes/one") && latest) return Response.json(latest);
     if (/\/nodes\/(one|two)$/.test(url))
       return Response.json(
         node(url.endsWith("one") ? "one" : "two", url.endsWith("one") ? "Original" : "Other", firstRevision),
@@ -255,3 +265,178 @@ for (const outcome of ["success", "conflict"] as const) {
     expect(editor.hasUnsavedChanges()).toBe(false);
   });
 }
+
+async function conflictDraft() {
+  editor.handleTitleChange("Draft");
+  const saving = editor.flushAutoSave();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  calls[0]!.resolve(Response.json({ error: "conflict" }, { status: 409 }));
+  expect(await saving).toBe(false);
+}
+
+it("combines an independent saved body with a draft title and saves against the fetched revision", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = { ...node("one", "Original", "b".repeat(64)), content: "saved body" };
+  await editor.compareChanges();
+  const session = editor.recovery()!;
+  expect(session.base).toEqual({ title: "Original", content: "body" });
+  expect(session.titleMerge.parts).toEqual([{ text: "Draft" }]);
+  expect(session.contentMerge.parts).toEqual([{ text: "saved body" }]);
+  expect(editor.content()).toBe("body");
+  const saving = editor.saveRecovery(session, { title: "Draft", content: "saved body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body).toEqual({ title: "Draft", content: "saved body", expected_revision: latest.revision });
+  calls[1]!.resolve(Response.json({ node: { ...latest, title: "Draft", revision: "c".repeat(64) } }));
+  expect(await saving).toBe(true);
+  expect(editor.content()).toBe("saved body");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.recovery()).toBe(null);
+});
+
+it("incorporates edits during latest fetch and recomputes instead of discarding later local edits", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  let reply!: (response: Response) => void;
+  latestReply = new Promise((resolve) => {
+    reply = resolve;
+  });
+  const comparing = editor.compareChanges();
+  editor.handleContentChange("typed while loading");
+  reply(Response.json(node("one", "Saved title", "b".repeat(64))));
+  await comparing;
+  const session = editor.recovery()!;
+  expect(session.local.content).toBe("typed while loading");
+  editor.handleTitleChange("new keystrokes");
+  expect(await editor.saveRecovery(session, { title: "obsolete", content: "obsolete" })).toBe(false);
+  expect(editor.title()).toBe("new keystrokes");
+  expect(editor.content()).toBe("typed while loading");
+  expect(editor.recovery()?.local.title).toBe("new keystrokes");
+  expect(editor.recovery()?.previousResult).toEqual({ title: "obsolete", content: "obsolete" });
+  expect(screen.getByRole("textbox", { name: /Previous recovery result/ })).toHaveValue("# obsolete\n\nobsolete");
+  expect(editor.recoveryError()).toContain("draft changed");
+  expect(calls).toHaveLength(1);
+});
+
+it("retains edits during recovery saves and the acknowledged canonical base for subsequent comparisons", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  await editor.compareChanges();
+  const saving = editor.saveRecovery(editor.recovery()!, { title: "  Recovered  ", content: "body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  editor.handleContentChange("new body");
+  calls[1]!.resolve(saved("Recovered", "c".repeat(64)));
+  expect(await saving).toBe(true);
+  expect(workspace.saveError()).toBe(null);
+  expect(editor.content()).toBe("new body");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  await editor.compareChanges();
+  expect(editor.recovery()?.base).toEqual({ title: "Recovered", content: "body" });
+  expect(editor.recovery()?.local.content).toBe("new body");
+});
+
+it("preserves a recovered draft after another writer wins again and requires a new comparison", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  await editor.compareChanges();
+  const saving = editor.saveRecovery(editor.recovery()!, { title: "Reviewed draft", content: "reviewed body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  calls[1]!.resolve(Response.json({ error: "conflict" }, { status: 409 }));
+  expect(await saving).toBe(false);
+  expect(editor.title()).toBe("Reviewed draft");
+  expect(editor.content()).toBe("reviewed body");
+  expect(editor.saveConflict()).toBe(true);
+  expect(editor.recovery()).toBe(null);
+  latest = { ...latest, content: "even newer", revision: "d".repeat(64) };
+  await editor.compareChanges();
+  expect(editor.recovery()?.saved.content).toBe("even newer");
+  expect(editor.recovery()?.base.title).toBe("Original");
+});
+
+it("ignores retired latest responses without exposing the previous account draft", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  const retired = editor;
+  let reply!: (response: Response) => void;
+  latestReply = new Promise((resolve) => {
+    reply = resolve;
+  });
+  const comparing = editor.compareChanges();
+  await auth.logout();
+  await waitFor(() => expect(retired.title()).toBe(""));
+  reply(Response.json(node("one", "Private saved title", "b".repeat(64))));
+  await comparing;
+  expect(retired.recovery()).toBe(null);
+  expect(retired.recoveryError()).toBe(null);
+  expect(retired.recoveryLoading()).toBe(false);
+});
+
+for (const [locale, compare, save] of [
+  ["en", "Compare changes", "Save recovered page"],
+  ["fr", "Comparer les modifications", "Enregistrer la page récupérée"],
+  ["de", "Änderungen vergleichen", "Wiederhergestellte Seite speichern"],
+  ["es", "Comparar cambios", "Guardar página recuperada"],
+] as const) {
+  it(`presents translated explicit overlap choices in ${locale}`, async () => {
+    mount(locale);
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    await conflictDraft();
+    latest = node("one", "Different title", "b".repeat(64));
+    await editor.compareChanges();
+    await waitFor(() => expect(screen.getByRole("dialog", { name: compare })).toBeTruthy());
+    const saving = screen.getByRole("button", { name: save });
+    expect(saving).toBeDisabled();
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole("radio")[0]!);
+    expect(saving).not.toBeDisabled();
+    expect(screen.getAllByRole("textbox")[0]).toHaveValue("Draft");
+    if (locale === "en") {
+      fireEvent.input(screen.getAllByRole("textbox")[0]!, { target: { value: "Manually reviewed title" } });
+      fireEvent.click(screen.getAllByRole("radio")[1]!);
+      expect(screen.getByRole("textbox", { name: /Previous recovery result/ })).toHaveValue(
+        "# Manually reviewed title\n\nbody",
+      );
+    }
+  });
+}
+
+it("converts latest relative links for review and writes the reviewed result in canonical disk form", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = { ...node("one", "Original", "b".repeat(64)), content: "[linked](../TARGET/index.md)" };
+  await editor.compareChanges();
+  const session = editor.recovery()!;
+  expect(session.saved.content).toBe("[linked](/w/@workspace/@TARGET)");
+  const saving = editor.saveRecovery(session, { title: "  Reviewed  ", content: session.saved.content });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body.content).toBe("[linked](../TARGET/index.md)");
+  calls[1]!.resolve(Response.json({ node: { ...latest, title: "Reviewed", revision: "c".repeat(64) } }));
+  expect(await saving).toBe(true);
+  expect(editor.title()).toBe("Reviewed");
+  expect(editor.content()).toBe("[linked](/w/@workspace/@TARGET)");
+});
+
+it("cancels pending comparisons and ignores their eventual response", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  let reply!: (response: Response) => void;
+  latestReply = new Promise((resolve) => {
+    reply = resolve;
+  });
+  const comparing = editor.compareChanges();
+  editor.closeRecovery();
+  reply(Response.json(node("one", "Late version", "b".repeat(64))));
+  await comparing;
+  expect(editor.recovery()).toBe(null);
+  expect(editor.recoveryLoading()).toBe(false);
+  expect(editor.title()).toBe("Draft");
+});

@@ -40,6 +40,9 @@ type Repository interface {
 	// It does not refresh or require Git metadata. The callback must not call repository methods.
 	// SavedFiles is valid only during the callback and tracks repository-owned saved-file mutations.
 	ReadTx(ctx context.Context, fn func(*SavedFiles) error) error
+	// WriteTx serializes imported saved-file replacements without recording history.
+	// It invalidates file versions even after a partial failed write.
+	WriteTx(ctx context.Context, fn func() error) error
 	// CommitTx executes fn while holding a lock and commits the returned files atomically.
 	// If fn returns an error or no files, no commit is made.
 	CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error

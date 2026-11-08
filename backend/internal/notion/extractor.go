@@ -146,7 +146,7 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 		e.mapper.ResolveRelations(data.node)
 
 		// Write node and manifest entry
-		if err := e.writer.WriteNode(data.node, ""); err != nil {
+		if err := e.writer.WriteNode(ctx, data.node, ""); err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: failed to write node: %w", data.db.ID, err))
 			stats.Errors++
 			continue
@@ -327,7 +327,7 @@ func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOpt
 	}
 
 	// Write node and manifest entry
-	if err := e.writer.WriteNode(node, markdown); err != nil {
+	if err := e.writer.WriteNode(ctx, node, markdown); err != nil {
 		return fmt.Errorf("failed to write node: %w", err)
 	}
 	if err := e.writer.WriteNodeEntry(node); err != nil {
@@ -398,7 +398,7 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 	e.mapper.ResolveRelations(node)
 
 	// Write node and manifest entry
-	if err := e.writer.WriteNode(node, ""); err != nil {
+	if err := e.writer.WriteNode(ctx, node, ""); err != nil {
 		return fmt.Errorf("failed to write node: %w", err)
 	}
 	if err := e.writer.WriteNodeEntry(node); err != nil {

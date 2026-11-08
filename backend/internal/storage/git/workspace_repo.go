@@ -40,6 +40,19 @@ func (r *workspaceRepo) ReadTx(ctx context.Context, fn func(*SavedFiles) error) 
 	return r.Repository.ReadTx(ctx, fn)
 }
 
+// WriteTx owns imported saved-file writes; history recovery records them later.
+func (r *workspaceRepo) WriteTx(ctx context.Context, fn func() error) error {
+	if err := r.mu.LockContext(ctx); err != nil {
+		return err
+	}
+	defer r.mu.Unlock()
+	if r.retired {
+		return errors.New("workspace storage was discarded")
+	}
+	r.pending.Store(true)
+	return r.Repository.WriteTx(ctx, fn)
+}
+
 func (r *workspaceRepo) CommitTx(ctx context.Context, author Author, fn func() (string, []string, error)) error {
 	if err := r.mu.LockContext(ctx); err != nil {
 		return err

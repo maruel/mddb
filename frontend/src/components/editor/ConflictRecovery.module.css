@@ -1,0 +1,114 @@
+/* Responsive draft comparison, explicit overlap choices, and editable recovery results. */
+.dialog {
+  max-width: 64rem;
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.comparison > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.comparison pre,
+.base {
+  max-height: 15rem;
+  padding: var(--s-2);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  background: var(--c-surface-subtle);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.conflict,
+.result {
+  min-width: 0;
+  padding: var(--s-2);
+  margin-block: var(--s-3);
+  border: 1px solid var(--c-border);
+}
+
+.previous,
+.result label {
+  display: block;
+  margin-block: var(--s-2);
+}
+
+.result input,
+.result textarea,
+.previous textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: var(--s-2);
+  margin-top: var(--s-1);
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.result textarea,
+.previous textarea {
+  min-height: 12rem;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  margin-top: var(--s-3);
+}
+
+@media (width <= 600px) {
+  .comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dialog h2 {
+  margin-bottom: var(--s-2);
+  font-size: 1.25rem;
+}
+
+.dialog h3 {
+  margin-block: var(--s-3) var(--s-2);
+  font-size: 1rem;
+}
+
+.dialog p {
+  margin-block: var(--s-2);
+  line-height: 1.5;
+}
+
+.dialog details {
+  margin-block: var(--s-3);
+}
+
+.actions button {
+  padding: var(--s-2) var(--s-3);
+  color: var(--c-text);
+  cursor: pointer;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+}
+
+.actions button:last-child {
+  color: var(--c-text-inverse);
+  background: var(--c-action-primary);
+  border-color: var(--c-action-primary);
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

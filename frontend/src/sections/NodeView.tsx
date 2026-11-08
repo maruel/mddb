@@ -1,4 +1,4 @@
-// Node view component displaying editor or table based on node type.
+// Displays page/table editing with preserved-draft conflict comparison and recovery.
 
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from "solid-js";
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
@@ -10,6 +10,7 @@ import RecordDetail from "../components/RecordDetail";
 import ViewTabs from "../components/table/ViewTabs";
 import { AddColumnDropdown } from "../components/table/AddColumnDropdown";
 import MarkdownPreview from "../components/MarkdownPreview";
+import { ConflictRecovery } from "../components/editor/ConflictRecovery";
 import { PageHeader } from "../components/editor/PageHeader";
 import { useAssetUpload } from "../components/editor/useAssetUpload";
 import { useAuthScope, useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from "../contexts";
@@ -26,6 +27,7 @@ const Editor = lazy(() => import("../components/editor/Editor"));
 
 export default function NodeView() {
   const { t } = useI18n();
+  let titleInput: HTMLInputElement | undefined;
   const navigate = useNavigate();
   const params = useParams<{ wsId: string; nodeId: string }>();
   const { user, wsApi } = useAuth();
@@ -54,6 +56,7 @@ export default function NodeView() {
     externalChange,
     saveConflict,
     copyDraft,
+    compareChanges,
     dismissExternalChange,
     refreshFromServer,
     icon,
@@ -305,11 +308,15 @@ export default function NodeView() {
 
   return (
     <>
+      <ConflictRecovery onSaved={() => titleInput?.focus()} />
       <Show when={selectedNodeId()}>
         <div class={styles.editor}>
           <Show when={externalChange() || saveConflict()}>
             <div class={styles.conflictBanner}>
               <span>{saveConflict() ? t("editor.saveConflict") : t("sse.externalChange")}</span>
+              <Show when={hasUnsavedChanges()}>
+                <button onClick={compareChanges}>{t("editor.compareChanges")}</button>
+              </Show>
               <Show when={saveConflict()}>
                 <button onClick={copyDraft}>{t("editor.copyDraft")}</button>
               </Show>
@@ -335,6 +342,7 @@ export default function NodeView() {
             <div class={styles.editorHeader}>
               <input
                 type="text"
+                ref={(el) => (titleInput = el)}
                 placeholder={t("editor.titlePlaceholder") || "Title"}
                 value={title()}
                 onInput={(e) => handleTitleChange(e.target.value)}

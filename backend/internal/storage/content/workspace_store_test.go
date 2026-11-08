@@ -454,6 +454,47 @@ func TestWorkspaceFileStore(t *testing.T) {
 	})
 
 	t.Run("ReadPageSnapshot", func(t *testing.T) {
+		t.Run("PulledRevision", func(t *testing.T) {
+			for _, backend := range []git.Backend{git.BackendExec, git.BackendGoGit} {
+				t.Run(strconv.Itoa(int(backend)), func(t *testing.T) {
+					root := t.TempDir()
+					remoteDir, localDir := filepath.Join(root, "remote"), filepath.Join(root, "local")
+					remoteRepo, err := git.NewManagerWithBackend(remoteDir, "test", "test@example.com", backend).Repo(t.Context(), "")
+					if err != nil {
+						t.Fatal(err)
+					}
+					quotas := storage.DefaultResourceQuotas()
+					remote := newWorkspaceFileStore(remoteDir, remoteRepo, &quotas)
+					node, err := remote.CreatePageUnderParent(t.Context(), 0, "Before pull", "original body", git.Author{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if out, err := exec.CommandContext(t.Context(), "git", "clone", "--quiet", remoteDir, localDir).CombinedOutput(); err != nil { //nolint:gosec // Both paths belong to this test's temporary directory.
+						t.Fatalf("clone fixture: %v: %s", err, out)
+					}
+					localRepo, err := git.NewManagerWithBackend(localDir, "test", "test@example.com", backend).Repo(t.Context(), "")
+					if err != nil {
+						t.Fatal(err)
+					}
+					local := newWorkspaceFileStore(localDir, localRepo, &quotas)
+					before, err := local.ReadPageSnapshot(t.Context(), node.ID, 0, 4096)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := remote.UpdatePage(t.Context(), node.ID, "After pull", "updated body", pageRevision(t, t.Context(), remote, node.ID), git.Author{}); err != nil {
+						t.Fatal(err)
+					}
+					if changed, err := localRepo.Pull(t.Context(), "origin", ""); err != nil || !changed {
+						t.Fatalf("pull: changed=%v, err=%v", changed, err)
+					}
+					after, err := local.ReadPageSnapshot(t.Context(), node.ID, 0, 4096)
+					if err != nil || after.Revision == before.Revision || after.Node.Title != "After pull" || after.Node.Content != "updated body" {
+						t.Fatalf("pulled snapshot reused previous revision: %+v, %v", after, err)
+					}
+				})
+			}
+		})
+
 		dir := t.TempDir()
 		repo, err := git.NewManagerWithBackend(dir, "test", "test@example.com", git.BackendGoGit).Repo(t.Context(), "")
 		if err != nil {

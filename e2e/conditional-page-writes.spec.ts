@@ -1,6 +1,14 @@
 // Exercises serialized editor acknowledgements, stale-write rejection, preserved drafts, and explicit conflict recovery.
 
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import {
+  test,
+  expect,
+  registerUser,
+  createClient,
+  getWorkspaceId,
+  gotoWithSession,
+  fillEditorContent,
+} from "./helpers";
 import { gate, installNativeTools, invokeNativeFocus, nativeResult, waitNativeReady } from "./gomode-fixtures";
 import type { UpdatePageRequest } from "../sdk/mddb/ts/v1/types.gen";
 
@@ -108,3 +116,180 @@ test("a conflict preserves draft and focus until explicit copy and discard recov
   await saving;
   expect((await ws.getNode(source.id)).title).toBe("Recovered edit");
 });
+
+for (const scenario of ["independent", "overlapping"] as const) {
+  test(`compares ${scenario} edits and conditionally saves a reviewed result`, async ({ page, request }, testInfo) => {
+    await page.setViewportSize(scenario === "independent" ? { width: 1280, height: 900 } : { width: 390, height: 844 });
+    const { token } = await registerUser(request, `recover-${scenario}`);
+    await gotoWithSession(page, token);
+    const wsID = await getWorkspaceId(page);
+    const ws = createClient(request, token).ws(wsID);
+    const source = await ws.createPage("0", { title: "Original title", content: "one\ntwo\nthree\n" });
+    await page.goto(`/w/@${wsID}/@${source.id}`);
+    const title = page.getByRole("textbox", { name: "Title", exact: true });
+    await expect(title).toHaveValue("Original title");
+    await page.clock.install();
+    await page.clock.pauseAt(new Date());
+    await fillEditorContent(page, scenario === "independent" ? "ONE\ntwo\nthree\n" : "one\nlocal passage\nthree\n");
+    if (scenario === "overlapping") await title.fill("Draft title");
+    const latest = await ws.updatePage(source.id, {
+      title: "Saved title",
+      content: scenario === "independent" ? "one\ntwo\nTHREE\n" : "one\nsaved passage\nthree\n",
+      expected_revision: (await ws.getNode(source.id)).revision ?? "",
+    });
+    const conflicted = page.waitForResponse(
+      (response) => response.url().endsWith(`/nodes/${source.id}/page`) && response.status() === 409,
+    );
+    await page.clock.runFor(2100);
+    await conflicted;
+    const compareButton = page.getByRole("button", { name: "Compare changes", exact: true });
+    await compareButton.click();
+    let dialog = page.getByRole("dialog", { name: "Compare changes" });
+    await expect(dialog.getByRole("heading", { name: "Your draft" })).toBeVisible();
+    const result = dialog.getByRole("group", { name: "Recovered result" });
+    if (scenario === "overlapping") {
+      await expect(dialog.getByRole("button", { name: "Save recovered page" })).toBeDisabled();
+      await dialog.getByRole("radio", { name: "Use draft" }).first().check();
+      await dialog.getByRole("radio", { name: "Use saved version" }).last().check();
+      await expect(result.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Draft title");
+      await expect(result.getByRole("textbox", { name: "Body", exact: true })).toHaveValue(
+        "one\nsaved passage\nthree\n",
+      );
+    } else {
+      await expect(dialog.getByRole("radio")).toHaveCount(0);
+      await expect(result.getByRole("textbox", { name: "Body", exact: true })).toHaveValue("ONE\ntwo\nTHREE\n");
+    }
+    // A keyboard user can cancel, return to the trigger, and reopen without losing edits.
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+    await expect(compareButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    dialog = page.getByRole("dialog", { name: "Compare changes" });
+    await expect(dialog.getByRole("heading", { name: "Your draft" })).toBeVisible();
+    if (scenario === "overlapping") {
+      await dialog.getByRole("radio", { name: "Use draft" }).first().check();
+      await dialog.getByRole("radio", { name: "Use saved version" }).last().check();
+    }
+    await expect(dialog).toHaveJSProperty("scrollWidth", await dialog.evaluate((element) => element.clientWidth));
+    await page.screenshot({
+      path: testInfo.outputPath(`recovery-${scenario}.png`),
+      fullPage: true,
+      animations: "disabled",
+    });
+    const body = dialog.getByRole("textbox", { name: "Body", exact: true });
+    await body.fill(`${await body.inputValue()}Reviewed addition\n`);
+    let expectedRevision = latest.node.revision;
+    if (scenario === "overlapping") {
+      const newer = await ws.updatePage(source.id, {
+        title: "New writer",
+        content: "Newest saved body",
+        expected_revision: latest.node.revision ?? "",
+      });
+      const again = page.waitForResponse(
+        (response) => response.url().endsWith(`/nodes/${source.id}/page`) && response.status() === 409,
+      );
+      await dialog.getByRole("button", { name: "Save recovered page" }).click();
+      await again;
+      await expect(dialog.getByRole("alert")).toContainText("recovered draft is preserved");
+      await dialog.getByRole("button", { name: "Load latest version" }).click();
+      await expect(dialog.getByRole("heading", { name: "Latest saved version" }).locator("..")).toContainText(
+        "Newest saved body",
+      );
+      await dialog.getByRole("radio", { name: "Use draft" }).first().check();
+      await dialog.getByRole("radio", { name: "Use draft" }).last().check();
+      expectedRevision = newer.node.revision;
+    }
+    const saving = page.waitForRequest(
+      (req) => req.url().endsWith(`/nodes/${source.id}/page`) && req.method() === "POST",
+    );
+    await dialog.getByRole("button", { name: "Save recovered page" }).click();
+    expect(((await saving).postDataJSON() as UpdatePageRequest).expected_revision).toBe(expectedRevision);
+    await expect(dialog).not.toBeVisible();
+    await expect(title).toBeFocused();
+    expect((await ws.getNode(source.id)).content).toContain("Reviewed addition");
+  });
+}
+
+for (const preference of ["native zoom", "default font"] as const) {
+  test(`recovery remains usable with enlarged ${preference}`, async ({ browser, request, baseURL }, testInfo) => {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const extension = testInfo.outputPath("preferences-extension");
+    await mkdir(extension, { recursive: true });
+    await writeFile(
+      path.join(extension, "manifest.json"),
+      JSON.stringify({
+        manifest_version: 3,
+        name: "Recovery accessibility preferences",
+        version: "1.0",
+        permissions: ["fontSettings"],
+        background: { service_worker: "background.js" },
+      }),
+    );
+    await writeFile(path.join(extension, "background.js"), "chrome.runtime.onInstalled.addListener(() => {});");
+    const context = await browser.browserType().launchPersistentContext(testInfo.outputPath("preferences-profile"), {
+      channel: "chromium",
+      headless: true,
+      baseURL,
+      viewport: { width: 1280, height: 1000 },
+      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
+    });
+    try {
+      const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+      const page = context.pages()[0];
+      if (!page) throw new Error("Missing recovery browser page");
+      await page.goto("/privacy");
+      if (preference === "native zoom") {
+        const initialDPR = await page.evaluate(() => devicePixelRatio);
+        for (const zoom of [1.25, 1.5, 2]) {
+          await worker.evaluate(`chrome.tabs.setZoom(${zoom})`);
+          await expect.poll(() => page.evaluate(() => innerWidth)).toBe(Math.round(1280 / zoom));
+          await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBeCloseTo(initialDPR * zoom);
+        }
+      } else {
+        await worker.evaluate("chrome.fontSettings.setDefaultFontSize({ pixelSize: 24 })");
+        await page.reload();
+        await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe("24px");
+        expect(await page.evaluate(() => innerWidth)).toBe(1280);
+      }
+      const { token } = await registerUser(request, `recovery-${preference.replaceAll(" ", "-")}`);
+      await gotoWithSession(page, token);
+      const wsID = await getWorkspaceId(page);
+      const ws = createClient(request, token).ws(wsID);
+      const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
+      await page.goto(`/w/@${wsID}/@${source.id}`);
+      const title = page.getByRole("textbox", { name: "Title", exact: true });
+      await expect(title).toHaveValue("Original title");
+      await page.clock.install();
+      await page.clock.pauseAt(new Date());
+      await title.fill("Draft title");
+      await ws.updatePage(source.id, {
+        title: "Saved title",
+        content: "Saved body",
+        expected_revision: (await ws.getNode(source.id)).revision ?? "",
+      });
+      const conflict = page.waitForResponse(
+        (response) => response.url().endsWith(`/nodes/${source.id}/page`) && response.status() === 409,
+      );
+      await page.clock.runFor(2100);
+      await conflict;
+      await page.getByRole("button", { name: "Compare changes", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Compare changes" });
+      await dialog.getByRole("radio", { name: "Use draft" }).check();
+      await expect(dialog).toHaveJSProperty("scrollWidth", await dialog.evaluate((el) => el.clientWidth));
+      await dialog.getByRole("heading", { name: "Compare changes" }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath("recovery-preferences-top.png"), animations: "disabled" });
+      const body = dialog.getByRole("textbox", { name: "Body", exact: true });
+      await body.fill("Reviewed body");
+      const save = dialog.getByRole("button", { name: "Save recovered page" });
+      await save.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath("recovery-preferences-result.png"), animations: "disabled" });
+      await save.click();
+      await expect(dialog).not.toBeVisible();
+      await expect(title).toBeFocused();
+      expect((await ws.getNode(source.id)).content).toBe("Reviewed body");
+    } finally {
+      await context.close();
+    }
+  });
+}

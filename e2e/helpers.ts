@@ -28,6 +28,7 @@ export interface AuthBridgeOptions {
   eventsKey?: string;
   recordFunction?: string;
   voiceConnected?: boolean;
+  voiceSessionVersion?: number;
 }
 
 export async function installAuthBridge(target: Page | BrowserContext, options: AuthBridgeOptions) {
@@ -52,7 +53,14 @@ export async function installAuthBridge(target: Page | BrowserContext, options: 
         }
         if (auth.authChanged === true && auth.nativeAccess === true) {
           const frontendToken = config.appendRequest === true ? `${config.token}${frontendRequest}` : config.token;
-          bridge.onmessage?.({ data: JSON.stringify({ frontendDocument, frontendRequest, frontendToken }) });
+          bridge.onmessage?.({
+            data: JSON.stringify({
+              frontendDocument,
+              frontendRequest,
+              frontendToken,
+              voiceSessionVersion: config.voiceSessionVersion,
+            }),
+          });
         }
       },
     };

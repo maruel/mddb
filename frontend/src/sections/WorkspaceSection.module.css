@@ -86,6 +86,7 @@
 
 .conflictBanner {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
   align-items: center;
   padding: var(--s-1) var(--s-2);

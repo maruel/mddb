@@ -73,7 +73,7 @@ func TestSnapshotRevisionFreshness(t *testing.T) {
 			if replaced.Node.Content != "replaced body" || replaced.Revision == old.Revision {
 				t.Fatal("partial save retained stale revision")
 			}
-			// Imports use atomic replacement outside normal content transactions.
+			// An external writer atomically replaces a file without a storage transaction.
 			importData := bytes.Replace(original, []byte("original body"), []byte("imported body"), 1)
 			importData = bytes.Replace(importData, []byte("title: Title"), []byte("title: Other"), 1)
 			if err := storage.WriteFile(path, importData); err != nil {

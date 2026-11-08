@@ -40,6 +40,34 @@ func TestRepo(t *testing.T) {
 
 func testRepoAll(t *testing.T, backend Backend) {
 	t.Helper()
+	t.Run("WriteTx/FileVersions", func(t *testing.T) {
+		dir := t.TempDir()
+		manager := NewManagerWithBackend(dir, "test", "test@example.com", backend)
+		repo, err := manager.Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		read := func() *FileVersion {
+			var version *FileVersion
+			if err := repo.ReadTx(t.Context(), func(saved *SavedFiles) error { version = saved.Version("saved"); return nil }); err != nil {
+				t.Fatal(err)
+			}
+			return version
+		}
+		before := read()
+		partial := errors.New("partial import")
+		if err := repo.WriteTx(t.Context(), func() error {
+			if err := os.WriteFile(filepath.Join(dir, "saved"), []byte("imported"), 0o600); err != nil {
+				return err
+			}
+			return partial
+		}); !errors.Is(err, partial) {
+			t.Fatalf("import error = %v", err)
+		}
+		if read() == before {
+			t.Fatal("partial failed import did not invalidate readers")
+		}
+	})
 
 	t.Run("SavedFileVersions", func(t *testing.T) {
 		dir := t.TempDir()

@@ -1,4 +1,4 @@
-// Owns serialized revision-conditional saves, preserved conflict drafts, and awaited editor departure.
+// Owns serialized conditional saves, acknowledged merge bases, conflict recovery, and awaited editor departure.
 
 import {
   createContext,
@@ -20,6 +20,7 @@ import { useI18n } from "../i18n";
 import { debounce } from "../utils/debounce";
 import { nodeUrl, parseNodeUrl } from "../utils/urls";
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from "../utils/markdown-utils";
+import { mergeText, type TextMerge } from "./editorMerge";
 import { classifyExternalUpdate } from "./editorSync";
 import { EventNodeUpdated, type Commit } from "@sdk/types.gen";
 import { useUndo } from "../hooks/useUndo";
@@ -29,6 +30,15 @@ export type AssetUrlMap = Record<string, string>;
 
 /** Map of node ID to title for resolving internal page links */
 export type NodeTitleMap = Record<string, string>;
+
+export interface RecoverySession {
+  previousResult?: { title: string; content: string };
+  base: { title: string; content: string };
+  local: { title: string; content: string };
+  saved: { title: string; content: string; revision: string };
+  titleMerge: TextMerge;
+  contentMerge: TextMerge;
+}
 
 interface EditorContextValue {
   // Editor state
@@ -68,6 +78,12 @@ interface EditorContextValue {
   flushAutoSave: () => Promise<boolean>;
   saveConflict: Accessor<boolean>;
   copyDraft: () => Promise<void>;
+  recovery: Accessor<RecoverySession | null>;
+  recoveryLoading: Accessor<boolean>;
+  recoveryError: Accessor<string | null>;
+  compareChanges: () => Promise<void>;
+  closeRecovery: () => void;
+  saveRecovery: (session: RecoverySession, result: { title: string; content: string }) => Promise<boolean>;
   resetEditor: () => void;
   handleTitleChange: (newTitle: string) => void;
   handleContentChange: (newContent: string) => void;
@@ -124,6 +140,11 @@ export const EditorProvider: ParentComponent = (props) => {
   const [externalChange, setExternalChange] = createSignal(false);
   const [saveConflict, setSaveConflict] = createSignal(false);
   let revision = "";
+  let acknowledged = { title: "", content: "" };
+  let recoveryRequest = 0;
+  const [recovery, setRecovery] = createSignal<RecoverySession | null>(null);
+  const [recoveryLoading, setRecoveryLoading] = createSignal(false);
+  const [recoveryError, setRecoveryError] = createSignal<string | null>(null);
   let saveQueue: Promise<boolean> = Promise.resolve(true);
   let pendingSaves = 0;
   // Metadata-only events use the acknowledged timestamp; content events use
@@ -186,6 +207,7 @@ export const EditorProvider: ParentComponent = (props) => {
     nodeId: selectedNodeId(),
     title: title(),
     content: content(),
+    expectedRevision: undefined as string | undefined,
   });
   const saveCurrent = (scope: ReturnType<typeof captureSave>) =>
     !disposed &&
@@ -210,11 +232,16 @@ export const EditorProvider: ParentComponent = (props) => {
       const saved = await ws.updatePage(nodeId, {
         title: scope.title,
         content: diskContent,
-        expected_revision: revision,
+        expected_revision: scope.expectedRevision ?? revision,
       });
       if (!saveCurrent(scope)) return false;
       revision = saved.node.revision ?? "";
+      acknowledged = {
+        title: saved.node.title,
+        content: relativeLinksToSpaUrls(saved.node.content ?? "", wsId),
+      };
       setSyncedModified(saved.node.modified);
+      setSaveError(null);
       if (title() !== scope.title || content() !== scope.content) return true;
       batch(() => {
         setTitle(saved.node.title);
@@ -289,6 +316,85 @@ export const EditorProvider: ParentComponent = (props) => {
       if (saveCurrent(scope)) setSaveError(`${t("editor.copyFailed")}: ${err}`);
     }
   };
+  const closeRecovery = () => {
+    recoveryRequest++;
+    setRecovery(null);
+    setRecoveryLoading(false);
+    setRecoveryError(null);
+  };
+  const buildRecovery = (saved: RecoverySession["saved"]): RecoverySession => {
+    const local = { title: title(), content: content() };
+    return {
+      base: { ...acknowledged },
+      local,
+      saved,
+      titleMerge: mergeText(acknowledged.title, local.title, saved.title),
+      contentMerge: mergeText(acknowledged.content, local.content, saved.content),
+    };
+  };
+  const compareChanges = async () => {
+    const scope = captureSave();
+    if (!saveCurrent(scope) || !scope.ws || !scope.nodeId) return;
+    const request = ++recoveryRequest;
+    debouncedAutoSave.cancel();
+    // Stop queued autosaves while a comparison is open, including SSE-only conflicts.
+    setSaveConflict(true);
+    setRecovery(null);
+    setRecoveryLoading(true);
+    setRecoveryError(null);
+    try {
+      await saveQueue;
+      if (!saveCurrent(scope) || request !== recoveryRequest) return;
+      const latest = await scope.ws.getNode(scope.nodeId);
+      if (!saveCurrent(scope) || request !== recoveryRequest) return;
+      setRecovery(
+        buildRecovery({
+          title: latest.title,
+          content: relativeLinksToSpaUrls(latest.content ?? "", scope.wsId),
+          revision: latest.revision ?? "",
+        }),
+      );
+    } catch {
+      if (saveCurrent(scope) && request === recoveryRequest) setRecoveryError(t("editor.compareFailed"));
+    } finally {
+      if (saveCurrent(scope) && request === recoveryRequest) setRecoveryLoading(false);
+    }
+  };
+  const saveRecovery = async (session: RecoverySession, result: { title: string; content: string }) => {
+    const scope = captureSave();
+    if (!saveCurrent(scope) || recovery() !== session || recoveryLoading()) return false;
+    if (title() !== session.local.title || content() !== session.local.content) {
+      // Keep every new keystroke and ask for a fresh explicit review.
+      setRecovery({ ...buildRecovery(session.saved), previousResult: result });
+      setRecoveryError(t("editor.draftChanged"));
+      return false;
+    }
+    debouncedAutoSave.cancel();
+    batch(() => {
+      setTitle(result.title);
+      setContent(result.content);
+      if (scope.nodeId) updateNodeTitle(scope.nodeId, result.title);
+      setHasUnsavedChanges(true);
+      setSaveConflict(false);
+      setRecoveryLoading(true);
+      setRecoveryError(null);
+    });
+    const savingScope = { ...captureSave(), expectedRevision: session.saved.revision };
+    const saved = await enqueueSave(savingScope);
+    if (!saveCurrent(scope)) return false;
+    setRecoveryLoading(false);
+    if (saved) {
+      closeRecovery();
+      setExternalChange(false);
+      // persist preserves any edits made while the recovery save was pending.
+      if (hasUnsavedChanges()) scheduleAutoSave();
+    } else {
+      setSaveConflict(true);
+      setRecovery(null);
+      setRecoveryError(t("editor.recoveryRetry"));
+    }
+    return saved;
+  };
   // Ordinary departures are gated before disposal; identity retirement never saves private drafts.
   onCleanup(() => {
     disposed = true;
@@ -340,6 +446,8 @@ export const EditorProvider: ParentComponent = (props) => {
       const wsId = user()?.workspace_id || "";
       const spaContent = relativeLinksToSpaUrls(node.content || "", wsId);
       setContent(spaContent);
+      acknowledged = { title: node.title, content: spaContent };
+      closeRecovery();
       setIcon(node.icon || "");
       setCover(node.cover || "");
       setSyncedModified(node.modified ?? null);
@@ -356,6 +464,8 @@ export const EditorProvider: ParentComponent = (props) => {
 
   function resetEditor() {
     revision = "";
+    acknowledged = { title: "", content: "" };
+    closeRecovery();
     setSaveConflict(false);
     debouncedAutoSave.cancel();
     setTitle("");
@@ -491,6 +601,12 @@ export const EditorProvider: ParentComponent = (props) => {
     flushAutoSave,
     saveConflict,
     copyDraft,
+    recovery,
+    recoveryLoading,
+    recoveryError,
+    compareChanges,
+    closeRecovery,
+    saveRecovery,
     resetEditor,
     handleTitleChange,
     handleContentChange,

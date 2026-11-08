@@ -1,4 +1,4 @@
-// Owns authenticated workspace preparation, validated conversation focus, and browser voice across route layouts.
+// Owns authenticated workspace preparation and browser/native conversation focus across route layouts.
 
 import {
   createContext,
@@ -16,7 +16,7 @@ import {
 import type { FrontendPreparationScope } from "@maruel/gomode/web/FrontendVoiceTools";
 import BrowserVoiceShell from "@maruel/gomode/web/BrowserVoiceShell";
 import { useHostMode } from "@maruel/gomode/web/HostMode";
-import type { VoiceOverlayMessages } from "@maruel/gomode/web/VoiceOverlay";
+import { defaultVoiceMessages, type VoiceMessages } from "@maruel/gomode/web/VoiceMessages";
 import { useWorkspaceData } from "../contexts/WorkspaceDataContext";
 import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -67,9 +67,8 @@ export const GoModeProvider: ParentComponent = (props) => {
     on([frontendIdentity, owner], ([lease]) => {
       setPreparation(null);
       if (lease === null) return;
-      const scope = lease.createScope();
       const workspaceId = user()?.workspace_id;
-      const captured = owner();
+      const initialOwner = owner();
       const authFetch = createAuthFetch(undefined, user()?.session_id);
       // Each publication captures its cancellation at the generated client's
       // fetch boundary without changing unrelated workspace requests.
@@ -81,9 +80,69 @@ export const GoModeProvider: ParentComponent = (props) => {
               .ws(workspaceId)
               .updateVoiceFocus(request)
         : null;
+      const selectedNodeID = createMemo(() => navigation.selectedNode()?.id ?? null);
+      let nativeFocus: {
+        sessionID: string;
+        publisher: VoiceFocusPublisher;
+        nodeID: string | null;
+        publication: Promise<void> | null;
+      } | null = null;
+      const prepareNativeFocus = async (sessionID: string, nodeID: string | null, signal?: AbortSignal) => {
+        if (!updateFocus || untrack(owner) !== initialOwner || untrack(scope.nativeVoiceSessionID) !== sessionID)
+          return;
+        if (nativeFocus?.sessionID !== sessionID) {
+          nativeFocus?.publisher.dispose();
+          nativeFocus = {
+            sessionID,
+            publisher: createVoiceFocusPublisher(updateFocus, true),
+            nodeID: null,
+            publication: null,
+          };
+        }
+        const current = nativeFocus;
+        if (current.publication === null || current.nodeID !== nodeID) {
+          current.nodeID = nodeID;
+          const publication = current.publisher.publish(
+            sessionID,
+            nodeID,
+            () =>
+              untrack(owner) === initialOwner && untrack(scope.nativeVoiceSessionID) === sessionID && !signal?.aborted,
+            signal,
+          );
+          current.publication = publication;
+          const retire = () => {
+            if (current.publication === publication) current.publication = null;
+          };
+          void publication.then(retire, retire);
+        }
+        // Scope preparation and the selection watcher share the same publication.
+        // If selection supersedes it, readiness waits for the latest publication.
+        while (current.publication !== null) {
+          const publication: Promise<void> = current.publication;
+          await publication;
+          if (nativeFocus !== current || signal?.aborted || current.publication === publication) return;
+        }
+      };
+      const scope = lease.createScope((sessionID, signal) => prepareNativeFocus(sessionID, selectedNodeID(), signal));
       const focus = updateFocus ? createVoiceFocusPublisher(updateFocus, false) : null;
       const browserFocus = updateFocus ? createVoiceFocusPublisher(updateFocus, true) : null;
       setPublisher(browserFocus);
+      createEffect(() => {
+        const sessionID = scope.nativeVoiceSessionID();
+        const selected = selectedNodeID();
+        const ready = data.ready();
+        if (nativeFocus !== null && nativeFocus.sessionID !== sessionID) {
+          nativeFocus.publisher.dispose();
+          nativeFocus = null;
+        }
+        if (!sessionID || !ready) return;
+        // Read selection reactively; publication captures the current route and
+        // the authenticated native lifetime, never a preceding tool invocation.
+        void prepareNativeFocus(sessionID, selected).catch((error: unknown) => {
+          if (untrack(scope.nativeVoiceSessionID) === sessionID)
+            console.warn("Could not publish native selected node", error);
+        });
+      });
       scope.setTools(
         workspaceId
           ? [
@@ -104,17 +163,19 @@ export const GoModeProvider: ParentComponent = (props) => {
                   if (typeof id !== "string" || id.length === 0 || id.trim() !== id)
                     throw new Error("Invalid node ID.");
                   await navigation.focusNode(id, invocation);
-                  // Native focus belongs to this invocation's conversation.
-                  // Manual native selection needs a shell conversation-lifetime
-                  // signal; retaining the last invocation ID would leak focus
-                  // into a retired conversation. Legacy bridge3 has no ID.
                   if (invocation.sessionID !== null && invocation.isCurrent()) {
                     try {
+                      if (untrack(scope.nativeVoiceSessionID) === invocation.sessionID) {
+                        await prepareNativeFocus(invocation.sessionID, id, invocation.signal);
+                        return { nodeId: id, status: "focused" };
+                      }
+                      // Older shells can dispatch conversation-bound tools
+                      // without publishing a manual-selection lifetime.
                       const invocationFocus = untrack(host.browserVoiceEnabled) ? browserFocus : focus;
                       await invocationFocus?.publish(
                         invocation.sessionID,
                         id,
-                        () => untrack(owner) === captured && invocation.isCurrent(),
+                        () => untrack(owner) === initialOwner && invocation.isCurrent(),
                         invocation.signal,
                       );
                     } catch (error) {
@@ -131,6 +192,7 @@ export const GoModeProvider: ParentComponent = (props) => {
       setPreparation(scope);
       onCleanup(() => {
         focus?.dispose();
+        nativeFocus?.publisher.dispose();
         browserFocus?.dispose();
         setPublisher(null);
         scope.dispose();
@@ -148,9 +210,9 @@ export const GoModeProvider: ParentComponent = (props) => {
       });
     },
   };
-  const messages = (defaults: Readonly<VoiceOverlayMessages>): VoiceOverlayMessages => {
-    const translated = { ...defaults };
-    for (const key of Object.keys(translated) as (keyof VoiceOverlayMessages)[]) {
+  const messages = (): VoiceMessages => {
+    const translated = { ...defaultVoiceMessages };
+    for (const key of Object.keys(translated) as (keyof VoiceMessages)[]) {
       translated[key] = t(`voice.${key}`) || translated[key];
     }
     return translated;

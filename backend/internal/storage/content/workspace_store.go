@@ -1,4 +1,4 @@
-// Owns atomic conditional page mutations, indexed node discovery, and canonical document snapshots.
+// Owns atomic conditional page mutations, serialized imports, indexed discovery, and canonical snapshots.
 
 // Package content provides versioned file storage for the mddb system.
 package content
@@ -67,6 +67,15 @@ func newWorkspaceFileStore(wsDir string, repo git.Repository, quotas *storage.Re
 		pathChildren: make(map[ksid.ID][]ksid.ID),
 		discoverable: make(map[ksid.ID]struct{}),
 	}
+}
+
+// ImportTx excludes readers while a background import replaces saved node files.
+// Ordinary document edits must use revision-conditional UpdatePage or AppendPage.
+// Existing-page snapshots refresh immediately; new-node discovery is published
+// when the importer retires workspace indexes after completion or failure.
+// The repository's recovery worker records imported changes in history later.
+func (ws *WorkspaceFileStore) ImportTx(ctx context.Context, fn func() error) error {
+	return ws.repo.WriteTx(ctx, fn)
 }
 
 // EffectiveQuotas returns the effective resource quotas for this workspace.

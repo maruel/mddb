@@ -22,6 +22,33 @@ import (
 )
 
 func TestWorkspaceRepo(t *testing.T) {
+	t.Run("WriteTx", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			repo, err := NewManagerWithBackend(t.TempDir(), "test", "test@example.com", BackendGoGit).WorkspaceRepo(t.Context(), "ws", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entered, release := make(chan struct{}), make(chan struct{})
+			readDone := make(chan error, 1)
+			go func() {
+				readDone <- repo.ReadTx(t.Context(), func(*SavedFiles) error { close(entered); <-release; return nil })
+			}()
+			<-entered
+			ctx, cancel := context.WithCancel(t.Context())
+			writeDone := make(chan error, 1)
+			called := false
+			go func() { writeDone <- repo.WriteTx(ctx, func() error { called = true; return nil }) }()
+			synctest.Wait()
+			cancel()
+			if err := <-writeDone; !errors.Is(err, context.Canceled) || called {
+				t.Fatalf("canceled waiting import ran=%v, err=%v", called, err)
+			}
+			close(release)
+			if err := <-readDone; err != nil {
+				t.Fatal(err)
+			}
+		})
+	})
 	t.Run("ReadTx", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			dir := t.TempDir()

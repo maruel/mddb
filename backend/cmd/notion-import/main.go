@@ -81,7 +81,7 @@ func run() error {
 
 	// Create client and extractor
 	client := notion.NewClient(*token)
-	writer := notion.NewWriter(*outputDir, *workspaceID)
+	writer := notion.NewWriter(*outputDir, *workspaceID, nil)
 	progress := &notion.CLIProgress{
 		Out: os.Stdout,
 		Err: os.Stderr,

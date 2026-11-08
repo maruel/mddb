@@ -220,7 +220,13 @@ func (h *NotionImportHandler) runImport(ctx context.Context, wsID ksid.ID, notio
 
 	// Create writer for workspace
 	rootDir := h.Svc.FileStore.RootDir()
-	writer := notion.NewWriter(rootDir, wsID.String())
+	writer := notion.NewWriter(rootDir, wsID.String(), func(ctx context.Context, fn func() error) error {
+		store, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			return err
+		}
+		return store.ImportTx(ctx, fn)
+	})
 
 	// Create progress reporter that updates state
 	progress := &stateProgressReporter{state: state}

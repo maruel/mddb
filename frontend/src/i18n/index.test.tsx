@@ -12,6 +12,9 @@ function TestConsumer(props: { onReady?: (ctx: ReturnType<typeof useI18n>) => vo
   return (
     <div>
       <span data-testid="locale">{ctx.locale()}</span>
+      <span data-testid="voice-placeholder">{ctx.t("voice.transcriptPlaceholder")}</span>
+      <span data-testid="voice">{ctx.t("voice.enableMicrophone")}</span>
+      <span data-testid="voice-setup-error">{ctx.t("voice.setupFailed")}</span>
       <span data-testid="translated">{ctx.t("common.loading")}</span>
       <button data-testid="change-locale" onClick={() => ctx.setLocale("fr")}>
         Change to FR
@@ -94,6 +97,9 @@ describe("I18nProvider", () => {
     // Wait for initial English dictionary to load
     await waitFor(() => {
       expect(screen.getByTestId("translated").textContent).toBe("Loading...");
+      expect(screen.getByTestId("voice").textContent).toBe("Enable microphone");
+      expect(screen.getByTestId("voice-placeholder").textContent).toBe("Conversation will appear here");
+      expect(screen.getByTestId("voice-setup-error").textContent).toBe("Voice assistant unavailable. Reload to retry.");
     });
 
     // Click button to change to French
@@ -104,6 +110,11 @@ describe("I18nProvider", () => {
     await waitFor(() => {
       // French translation for 'common.loading' is 'Chargement...'
       expect(screen.getByTestId("translated").textContent).toBe("Chargement...");
+      expect(screen.getByTestId("voice").textContent).toBe("Activer le microphone");
+      expect(screen.getByTestId("voice-placeholder").textContent).toBe("La conversation apparaîtra ici");
+      expect(screen.getByTestId("voice-setup-error").textContent).toBe(
+        "Assistant vocal indisponible. Rechargez la page pour réessayer.",
+      );
     });
     unmount();
   });
