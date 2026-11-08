@@ -598,9 +598,12 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 		return nil, mcp.ErrInvalidParams("too many resource subscriptions")
 	}
 	base := m
-	bound, e := base.bindWorkspace(ctx)
-	if e == nil {
-		m = bound
+	// A scoped request retains its admission role so setup cannot absorb a
+	// concurrent role change before the stream's authorization checks start.
+	if base.wsID == 0 {
+		if bound, e := base.bindWorkspace(ctx); e == nil {
+			m = bound
+		}
 	}
 	subscribed := make(map[string]struct{}, len(filter.ResourceSubscriptions))
 	for _, uri := range filter.ResourceSubscriptions {
@@ -646,6 +649,11 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 	}
 	return func(yield func(mcp.ResourceUpdate, error) bool) {
 		defer func() { stop(); cleanup() }()
+		// A membership event may have been published before registration.
+		if !m.streamAuthorized() {
+			yield(withdraw(), nil)
+			return
+		}
 		ticker := time.NewTicker(subscriptionKeepAlive)
 		defer ticker.Stop()
 		for {

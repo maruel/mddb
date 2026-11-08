@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/synctest"
 
@@ -399,6 +400,75 @@ func TestWorkspaceRegistry(t *testing.T) {
 			t.Fatal("withdrawn workspace retained subscriptions")
 		}
 	})
+}
+
+func TestGoModeSubscriptionSetupRoleChange(t *testing.T) {
+	for _, beforeSubscribe := range []bool{true, false} {
+		t.Run(fmt.Sprintf("beforeSubscribe=%t", beforeSubscribe), func(t *testing.T) {
+			t.Parallel()
+			env := setupTestEnv(t)
+			env.services.Broker = sse.NewBroker()
+			_, wsID := setupGoModeWorkspace(t, env, "setup-role@example.com")
+			u, err := env.userService.GetByEmail("setup-role@example.com")
+			if err != nil {
+				t.Fatal(err)
+			}
+			reg := &workspaceRegistry{svc: env.services, user: u, wsID: wsID, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+			ws, err := env.wsService.Get(wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			membership, err := env.orgMemService.Get(u.ID, ws.OrganizationID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			changeRole := func() {
+				if _, err := env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); err != nil {
+					t.Fatal(err)
+				}
+				wm, err := env.wsMemService.Get(u.ID, wsID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if beforeSubscribe {
+				changeRole()
+			}
+			// No broker event: the change may precede event registration.
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				seq, err := reg.SubscribeResourceUpdates(ctx, &mcp.SubscriptionsListenParams{})
+				if err != nil {
+					cancel()
+					t.Fatal(err)
+				}
+				if !beforeSubscribe {
+					changeRole()
+				}
+				var wg sync.WaitGroup
+				done := make(chan struct{})
+				wg.Go(func() {
+					defer close(done)
+					for _, err := range seq {
+						if err != nil {
+							t.Error(err)
+						}
+					}
+				})
+				synctest.Wait()
+				select {
+				case <-done:
+				default:
+					t.Error("role change during setup did not stop stream")
+				}
+				cancel()
+				wg.Wait()
+			})
+		})
+	}
 }
 
 func pageRevision(t *testing.T, ctx context.Context, ws *content.WorkspaceFileStore, id ksid.ID) string {
