@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,6 +40,84 @@ func TestRepo(t *testing.T) {
 
 func testRepoAll(t *testing.T, backend Backend) {
 	t.Helper()
+
+	t.Run("SavedFileVersions", func(t *testing.T) {
+		dir := t.TempDir()
+		repo, err := NewManagerWithBackend(dir, "Test", "test@example.com", backend).Repo(t.Context(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		readVersion := func(path string) *FileVersion {
+			var v *FileVersion
+			if err := repo.ReadTx(t.Context(), func(s *SavedFiles) error { v = s.Version(path); return nil }); err != nil {
+				t.Fatal(err)
+			}
+			return v
+		}
+		first := readVersion("page/index.md")
+		if again := readVersion("page/index.md"); again != first {
+			t.Fatal("unchanged file lost its generation")
+		}
+		if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			return "unrelated", []string{"other"}, os.WriteFile(filepath.Join(dir, "other"), []byte("other"), 0o600)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if readVersion("page/index.md") != first {
+			t.Fatal("unrelated write invalidated page")
+		}
+		if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			if err := os.MkdirAll(filepath.Join(dir, "page"), 0o700); err != nil {
+				return "", nil, err
+			}
+			return "page", []string{"page"}, os.WriteFile(filepath.Join(dir, "page", "index.md"), []byte("saved"), 0o600)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		second := readVersion("page/index.md")
+		if second == first {
+			t.Fatal("directory mutation retained child generation")
+		}
+		failed := errors.New("failed after saving")
+		if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			if err := os.WriteFile(filepath.Join(dir, "page", "index.md"), []byte("partial"), 0o600); err != nil {
+				return "", nil, err
+			}
+			return "", nil, failed
+		}); !errors.Is(err, failed) {
+			t.Fatal(err)
+		}
+		third := readVersion("page/index.md")
+		if third == second {
+			t.Fatal("failed callback retained potentially changed generation")
+		}
+		if _, err := repo.Pull(t.Context(), "missing", "main"); err == nil {
+			t.Fatal("pull unexpectedly succeeded")
+		}
+		if readVersion("page/index.md") == third {
+			t.Fatal("pull retained potentially changed generation")
+		}
+		beforeFailedCommit := readVersion("page/index.md")
+		if err := repo.CommitTx(t.Context(), Author{}, func() (string, []string, error) {
+			if err := os.WriteFile(filepath.Join(dir, "page", "index.md"), []byte("saved without history"), 0o600); err != nil {
+				return "", nil, err
+			}
+			return "cannot stage missing path", []string{"page/index.md", "missing/path"}, nil
+		}); err == nil {
+			t.Fatal("commit unexpectedly succeeded")
+		}
+		if readVersion("page/index.md") == beforeFailedCommit {
+			t.Fatal("failed history recording retained saved file generation")
+		}
+
+		beforeEviction := readVersion("page/index.md")
+		for i := range 256 {
+			readVersion(fmt.Sprintf("eviction-%d", i))
+		}
+		if readVersion("page/index.md") == beforeEviction {
+			t.Fatal("evicted generation reused")
+		}
+	})
 
 	t.Run("UnbornHistory", func(t *testing.T) {
 		repo, err := NewManagerWithBackend(t.TempDir(), "Test", "test@example.com", backend).Repo(t.Context(), "")

@@ -52,6 +52,8 @@ type WorkspaceFileStore struct {
 	nodeIDs      []ksid.ID
 	childIDs     map[ksid.ID][]ksid.ID
 	links        linkCache // In-memory backlink index
+	// snapshotRevisions is bounded and protected by the repository mutation gate.
+	snapshotRevisions map[ksid.ID]snapshotRevision
 }
 
 // newWorkspaceFileStore creates a new workspace store.
@@ -1733,13 +1735,15 @@ func (ws *WorkspaceFileStore) GetNodeTitles(ctx context.Context, ids []ksid.ID) 
 }
 
 // ReadPageSnapshot returns a complete schema and at most limit UTF-8 body bytes.
-// Each request streams the whole body to verify its revision. App-owned Git
-// mutations are excluded; arbitrary external in-place file writers are not.
+// A bounded digest cache reuses verified revisions across windows. Repository
+// transactions invalidate changed files; atomic import replacement is detected
+// through opened-file identity. Arbitrary external in-place writers are outside
+// the saved-file snapshot contract. Metadata is read fresh on every request.
 func (ws *WorkspaceFileStore) ReadPageSnapshot(ctx context.Context, id ksid.ID, offset int64, limit int) (out PageSnapshot, err error) {
 	if err := validateContentWindow(offset, limit); err != nil {
 		return out, err
 	}
-	err = ws.repo.ReadTx(ctx, func() (snapshotErr error) {
+	err = ws.repo.ReadTx(ctx, func(saved *git.SavedFiles) (snapshotErr error) {
 		parent, dir, e := ws.indexedNodePath(ctx, id)
 		if e != nil {
 			return e
@@ -1766,13 +1770,36 @@ func (ws *WorkspaceFileStore) ReadPageSnapshot(ctx context.Context, id ksid.ID, 
 			return e
 		}
 		out.Node.Content = ""
+		st, e := f.Stat()
+		if e != nil {
+			return e
+		}
+		version := saved.Version(filepath.ToSlash(ws.gitPath(parent, id, "index.md")))
+		cached, ok := ws.snapshotRevisions[id]
+		if ok && cached.version == version && os.SameFile(cached.info, st) &&
+			cached.info.Size() == st.Size() && cached.info.ModTime().Equal(st.ModTime()) {
+			out.Revision = cached.revision
+			start = cached.bodyStart
+		} else {
+			start, e = canonicalBodyStart(ctx, f, start, size)
+			if e != nil {
+				return e
+			}
+			out.Revision, e = Revision(ctx, p.title, io.NewSectionReader(f, start, size-start), size-start)
+			if e != nil {
+				return e
+			}
+			if len(ws.snapshotRevisions) >= 128 {
+				clear(ws.snapshotRevisions)
+			}
+			if ws.snapshotRevisions == nil {
+				ws.snapshotRevisions = make(map[ksid.ID]snapshotRevision)
+			}
+			ws.snapshotRevisions[id] = snapshotRevision{version: version, info: st, revision: out.Revision, bodyStart: start}
+		}
 		out.ContentBytes = size - start
 		if offset > out.ContentBytes {
 			return errors.New("content offset is outside document")
-		}
-		out.Revision, e = Revision(ctx, p.title, io.NewSectionReader(f, start, out.ContentBytes), out.ContentBytes)
-		if e != nil {
-			return e
 		}
 		chunk := make([]byte, min(int64(limit+utf8.UTFMax), out.ContentBytes-offset))
 		_, e = f.ReadAt(chunk, start+offset)
@@ -1798,7 +1825,11 @@ func (ws *WorkspaceFileStore) ReadPageSnapshot(ctx context.Context, id ksid.ID, 
 // ListNodeSummaries pages all nodes when parent is nil, otherwise direct children.
 // Ordering is stable ascending node ID. Only the selected headers are opened.
 func (ws *WorkspaceFileStore) ListNodeSummaries(ctx context.Context, parent *ksid.ID, after ksid.ID, limit int) (out NodeSummaryPage, err error) {
-	err = ws.repo.ReadTx(ctx, func() error { var e error; out, e = ws.listNodeSummaries(ctx, parent, after, limit); return e })
+	err = ws.repo.ReadTx(ctx, func(*git.SavedFiles) error {
+		var e error
+		out, e = ws.listNodeSummaries(ctx, parent, after, limit)
+		return e
+	})
 	return out, err
 }
 
@@ -1849,7 +1880,7 @@ func (ws *WorkspaceFileStore) listNodeSummaries(ctx context.Context, parent *ksi
 
 // ReadNodeSummary reads bounded metadata without loading or hashing the body.
 func (ws *WorkspaceFileStore) ReadNodeSummary(ctx context.Context, id ksid.ID) (out *Node, err error) {
-	err = ws.repo.ReadTx(ctx, func() error { out, err = ws.readNodeSummary(ctx, id); return err })
+	err = ws.repo.ReadTx(ctx, func(*git.SavedFiles) error { out, err = ws.readNodeSummary(ctx, id); return err })
 	return out, err
 }
 

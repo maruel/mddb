@@ -23,6 +23,7 @@ type ExecRepo struct {
 	defaultName  string
 	defaultEmail string
 	mu           sync.Mutex
+	saved        SavedFiles
 }
 
 func newExecRepo(ctx context.Context, dir, defaultName, defaultEmail string) (*ExecRepo, error) {
@@ -72,13 +73,13 @@ func (r *ExecRepo) FSAtCommit(ctx context.Context, hash string) fs.FS {
 }
 
 // ReadTx reads saved files while excluding repository-owned mutations, independently of Git metadata.
-func (r *ExecRepo) ReadTx(ctx context.Context, fn func() error) error {
+func (r *ExecRepo) ReadTx(ctx context.Context, fn func(*SavedFiles) error) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return fn()
+	return fn(&r.saved)
 }
 
 // CommitTx executes a serialized mutation and records its changed files.
@@ -91,6 +92,7 @@ func (r *ExecRepo) CommitTx(ctx context.Context, author Author, fn func() (msg s
 	}
 
 	msg, files, err := fn()
+	r.saved.invalidate(files, err != nil)
 	if err != nil {
 		return err
 	}
@@ -300,6 +302,7 @@ func (r *ExecRepo) Fetch(ctx context.Context, remoteName, branch string) error {
 func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	defer r.saved.invalidate(nil, true)
 	if branch == "" {
 		out, err := r.gitCombinedOutput(ctx, "rev-parse", "--abbrev-ref", "HEAD")
 		if err != nil {
@@ -360,6 +363,7 @@ func (r *ExecRepo) AbortMerge(ctx context.Context) error {
 }
 
 func (r *ExecRepo) abortMergeLocked(ctx context.Context) error {
+	defer r.saved.invalidate(nil, true)
 	return r.gitRun(ctx, "merge", "--abort")
 }
 

@@ -33,6 +33,7 @@ type GoGitRepo struct {
 	defaultEmail string
 	repo         *gogit.Repository
 	mu           sync.Mutex
+	saved        SavedFiles
 }
 
 func newGoGitRepo(ctx context.Context, dir, defaultName, defaultEmail string) (*GoGitRepo, error) {
@@ -86,13 +87,13 @@ func (r *GoGitRepo) FSAtCommit(ctx context.Context, hash string) fs.FS {
 }
 
 // ReadTx reads saved files while excluding repository-owned mutations, independently of Git metadata.
-func (r *GoGitRepo) ReadTx(ctx context.Context, fn func() error) error {
+func (r *GoGitRepo) ReadTx(ctx context.Context, fn func(*SavedFiles) error) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return fn()
+	return fn(&r.saved)
 }
 
 // CommitTx executes a serialized mutation and records its changed files.
@@ -111,6 +112,7 @@ func (r *GoGitRepo) CommitTx(ctx context.Context, author Author, fn func() (msg 
 	}
 
 	msg, files, err := fn()
+	r.saved.invalidate(files, err != nil)
 	if err != nil {
 		return err
 	}
@@ -607,6 +609,7 @@ func (r *GoGitRepo) Fetch(ctx context.Context, remoteName, branch string) error 
 func (r *GoGitRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	defer r.saved.invalidate(nil, true)
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}

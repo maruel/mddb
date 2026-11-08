@@ -1,4 +1,4 @@
-// Defines the Repository interface, Manager, and shared types for git operations.
+// Defines git repositories, their manager, and bounded saved-file version identities.
 
 package git
 
@@ -38,7 +38,8 @@ type Repository interface {
 	FSAtCommit(ctx context.Context, hash string) fs.FS
 	// ReadTx executes a saved-file snapshot read under the mutation gate.
 	// It does not refresh or require Git metadata. The callback must not call repository methods.
-	ReadTx(ctx context.Context, fn func() error) error
+	// SavedFiles is valid only during the callback and tracks repository-owned saved-file mutations.
+	ReadTx(ctx context.Context, fn func(*SavedFiles) error) error
 	// CommitTx executes fn while holding a lock and commits the returned files atomically.
 	// If fn returns an error or no files, no commit is made.
 	CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error
@@ -63,6 +64,51 @@ type Repository interface {
 	HasUnmergedFiles(ctx context.Context) (bool, error)
 	// AbortMerge aborts an in-progress merge.
 	AbortMerge(ctx context.Context) error
+}
+
+// FileVersion identifies one saved-file generation. Immutable.
+// Tokens remain distinct across eviction and repository reopenings.
+type FileVersion byte
+
+// SavedFiles tracks bounded file generations under the repository mutation gate.
+// Arbitrary external in-place writers are outside the saved-file transaction contract.
+// A version may be discarded at any time; equality proves freshness, inequality
+// requires re-reading. No file content or serialized cache is retained here.
+type SavedFiles struct {
+	versions map[string]*FileVersion
+}
+
+// Version returns a token for a repository-relative file during ReadTx.
+func (s *SavedFiles) Version(path string) *FileVersion {
+	path = filepath.ToSlash(filepath.Clean(path))
+	if v := s.versions[path]; v != nil {
+		return v
+	}
+	if len(s.versions) >= 128 {
+		clear(s.versions)
+	}
+	if s.versions == nil {
+		s.versions = make(map[string]*FileVersion)
+	}
+	v := new(FileVersion)
+	s.versions[path] = v
+	return v
+}
+
+func (s *SavedFiles) invalidate(paths []string, all bool) {
+	if all {
+		clear(s.versions)
+		return
+	}
+	for file := range s.versions {
+		for _, path := range paths {
+			path = filepath.ToSlash(filepath.Clean(path))
+			if file == path || strings.HasPrefix(file, path+"/") || strings.HasPrefix(path, file+"/") {
+				delete(s.versions, file)
+				break
+			}
+		}
+	}
 }
 
 // Backend selects which git implementation to use.

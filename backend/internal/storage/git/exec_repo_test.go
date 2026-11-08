@@ -49,7 +49,7 @@ func TestExecRepo(t *testing.T) {
 				if _, err := local.Pull(ctx, "origin", ""); err == nil {
 					t.Fatal("conflicting pull succeeded")
 				}
-				if err := local.ReadTx(ctx, func() error {
+				if err := local.ReadTx(ctx, func(*SavedFiles) error {
 					body, err := os.ReadFile(filepath.Join(localDir, "row")) //nolint:gosec // Test-owned temporary workspace path.
 					if err != nil {
 						return err

@@ -1,4 +1,4 @@
-// Builds bounded discovery indexes and defines streaming content revisions and page-header parsing.
+// Builds bounded discovery indexes, streaming revisions, and verified canonical document layouts.
 
 package content
 
@@ -19,7 +19,18 @@ import (
 	"unicode/utf8"
 
 	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
+
+// snapshotRevision retains a digest, canonical body offset, and bounded file/version identity, never
+// body bytes or open descriptors. File identity also detects atomic imports that
+// bypass repository transactions before retiring the workspace store.
+type snapshotRevision struct {
+	version   *git.FileVersion
+	info      os.FileInfo
+	revision  string
+	bodyStart int64
+}
 
 // MaxSnapshotMetadataBytes bounds front matter and table metadata before decoding.
 const MaxSnapshotMetadataBytes = 64 << 10
@@ -115,6 +126,8 @@ type NodeSummaryPage struct {
 	Next  ksid.ID
 }
 
+// pageHeader reads bounded front matter and returns the unnormalized body offset.
+// Summary readers do not need the potentially unbounded canonical blank-prefix scan.
 func pageHeader(ctx context.Context, f *os.File) (parsed *page, bodyStart, fileSize int64, resultErr error) {
 	st, err := f.Stat()
 	if err != nil {
@@ -142,33 +155,9 @@ func pageHeader(ctx context.Context, f *os.File) (parsed *page, bodyStart, fileS
 		if pos > 0 && lineStart && bytes.HasPrefix(line, []byte("---")) {
 			header = append(header, []byte("---")...)
 			pos += 3
-			// Bytes following the closing delimiter are body data, matching ParseMarkdown.
-			tail := line[3:]
-			for len(tail) > 0 && tail[0] == '\n' {
-				tail = tail[1:]
-				pos++
-			}
-			if len(tail) > 0 {
-				return ParseMarkdown(header), pos, st.Size(), nil
-			}
-			for {
-				b, x := r.ReadByte()
-				if x == io.EOF {
-					return ParseMarkdown(header), pos, st.Size(), nil
-				}
-				if x != nil {
-					return nil, 0, 0, x
-				}
-				if b != '\n' {
-					return ParseMarkdown(header), pos, st.Size(), nil
-				}
-				pos++
-				if pos%4096 == 0 {
-					if x := ctx.Err(); x != nil {
-						return nil, 0, 0, x
-					}
-				}
-			}
+			// Leave body normalization to cold content reads. Summary reads need
+			// only front matter and must never scan an unbounded blank prefix.
+			return ParseMarkdown(header), pos, st.Size(), nil
 		}
 		lineStart = len(line) > 0 && line[len(line)-1] == '\n'
 		header = append(header, line...)
@@ -180,6 +169,32 @@ func pageHeader(ctx context.Context, f *os.File) (parsed *page, bodyStart, fileS
 			return nil, 0, 0, e
 		}
 	}
+}
+
+// canonicalBodyStart skips the body-leading newlines ParseMarkdown normalizes
+// after a recognized closing delimiter. Call only when verifying a new file
+// generation; continuation windows reuse the verified offset.
+func canonicalBodyStart(ctx context.Context, f *os.File, start, size int64) (int64, error) {
+	if start == 0 {
+		return 0, nil
+	} // A file without front matter keeps leading newlines.
+	buf := make([]byte, min(int64(32<<10), size-start))
+	for start < size {
+		if err := ctx.Err(); err != nil {
+			return 0, err
+		}
+		n, err := f.ReadAt(buf[:min(int64(len(buf)), size-start)], start)
+		if err != nil {
+			return 0, err
+		}
+		for i, b := range buf[:n] {
+			if b != '\n' {
+				return start + int64(i), nil
+			}
+		}
+		start += int64(n)
+	}
+	return start, nil
 }
 
 func insertID(ids []ksid.ID, id ksid.ID) []ksid.ID {

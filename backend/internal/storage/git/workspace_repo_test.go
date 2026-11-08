@@ -32,7 +32,9 @@ func TestWorkspaceRepo(t *testing.T) {
 			entered := make(chan struct{})
 			release := make(chan struct{})
 			done := make(chan error, 1)
-			go func() { done <- repo.ReadTx(t.Context(), func() error { close(entered); <-release; return nil }) }()
+			go func() {
+				done <- repo.ReadTx(t.Context(), func(*SavedFiles) error { close(entered); <-release; return nil })
+			}()
 			<-entered
 			wrote := make(chan error, 1)
 			go func() {
