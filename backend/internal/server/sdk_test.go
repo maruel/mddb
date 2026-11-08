@@ -55,7 +55,7 @@ func TestSDKRoutesMatchRouter(t *testing.T) {
 	})
 
 	specified := make(map[string]bool)
-	for _, route := range dto.SDKAPI().Routes {
+	for _, route := range dto.SDKAPI.Routes {
 		pattern := route.Method + " " + route.Path
 		if specified[pattern] {
 			t.Errorf("duplicate SDK endpoint %s", pattern)

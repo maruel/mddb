@@ -21,7 +21,7 @@ func generate() error {
 	check := flag.Bool("check", false, "verify generated SDKs without writing them")
 	flag.Parse()
 	api := apisdkgen.NewAPI("../../../sdk/mddb", "MDDBSDK",
-		apisdkgen.NewVersion("v1", "dto", dto.SDKAPI()))
+		apisdkgen.NewVersion("v1", "dto", dto.SDKAPI))
 	api.Languages = []apisdkgen.Language{apisdkgen.TypeScript}
 	if *check {
 		return api.Verify()
