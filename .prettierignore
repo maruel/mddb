@@ -8,7 +8,7 @@ playwright-report
 data
 data-e2e
 *.gen.ts
-sdk/API.md
+sdk/mddb/
 **/testdata/**
 # AGENTS.md indexes are written by scripts/update_agents_file_index.py.
 AGENTS.md

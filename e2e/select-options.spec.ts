@@ -2,7 +2,7 @@
 
 import type { Page, APIRequestContext } from "@playwright/test";
 import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
-import type { Property } from "../sdk/types.gen";
+import type { Property } from "../sdk/mddb/ts/v1/types.gen";
 
 // Helper: create a table with a select column and navigate to it.
 async function setupSelectTable(page: Page, request: APIRequestContext, prefix: string) {

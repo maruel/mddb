@@ -1,7 +1,7 @@
 // E2E tests for table views API: filters, sorts, and view CRUD.
 
 import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
-import type { DataRecordResponse } from "../sdk/types.gen";
+import type { DataRecordResponse } from "../sdk/mddb/ts/v1/types.gen";
 
 test.describe("Table Views API", () => {
   test("create view and list records with filter", async ({ page, request }) => {

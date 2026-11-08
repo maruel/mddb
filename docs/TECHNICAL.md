@@ -54,7 +54,7 @@ To maintain type safety between the Go backend and SolidJS frontend, mddb uses *
 
 1. **Source**: Go API structs in `backend/internal/server/dto/`.
 2. **Process**: `apisdkgen` follows the route specification and generates TypeScript interfaces and client methods.
-3. **Artifact**: A unified `sdk/types.gen.ts` file used by the frontend.
+3. **Artifact**: The versioned TypeScript SDK in `sdk/mddb/ts/v1/` and API reference in `sdk/mddb/API.v1.md`.
 4. **Execution**: Triggered via `make types` or automatically during `make build`.
 
 ### Reproducibility

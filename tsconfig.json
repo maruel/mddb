@@ -28,7 +28,7 @@
 
     /* Paths */
     "paths": {
-      "@sdk/*": ["./sdk/*"],
+      "@sdk/*": ["./sdk/mddb/ts/v1/*"],
       "@tests/*": ["./frontend/tests/*"]
     }
   },

@@ -47,16 +47,15 @@ $(FRONTEND_STAMP): pnpm-lock.yaml
 	@pnpm install --frozen-lockfile --silent
 	@touch $@
 
-types: $(FRONTEND_STAMP)
+types:
 	@go generate ./backend/internal/server
-	@pnpm --silent exec prettier --log-level silent --write sdk/types.gen.ts
 
 # Rebuild backend/frontend/dist so a server compiled afterwards embeds the
 # current frontend sources instead of the committed dist snapshot.
-frontend-build: types
+frontend-build: $(FRONTEND_STAMP) types
 	@go generate ./backend/frontend
 
-build: types
+build: $(FRONTEND_STAMP) types
 	@go generate ./...
 	@go install -trimpath -ldflags="-s -w -buildid=" ./backend/cmd/...
 
@@ -112,7 +111,7 @@ verify: custom-gcl $(FRONTEND_STAMP)
 		'./custom-gcl run --show-stats=false ./... && go mod tidy -diff' \
 		'pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && pnpm exec node scripts/lint_frontend_styles.mjs' \
 		'pnpm exec node scripts/css_module_types.mjs --source-path frontend/src && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json' \
-		'pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs' \
+		'pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs' \
 		'uv run --locked ruff format --check --quiet . && uv run --locked ruff check --quiet .' \
 		'files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -d $$files' \
 		'uv run --locked python scripts/lint_binaries.py && uv run --locked python scripts/update_agents_file_index.py --check'
@@ -124,7 +123,7 @@ verify: custom-gcl $(FRONTEND_STAMP)
 fix: custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
-	@pnpm exec eslint frontend/src sdk e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs --fix
+	@pnpm exec eslint frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs --fix
 	@pnpm exec prettier --write --log-level warn .
 	@uv run --locked ruff check --quiet --fix .
 	@uv run --locked ruff format . >/dev/null

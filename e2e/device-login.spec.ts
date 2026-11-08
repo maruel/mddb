@@ -10,7 +10,7 @@ import {
   readDeviceLoginCode,
   readDeviceLoginProof,
 } from "./helpers";
-import type { UserResponse } from "../sdk/types.gen";
+import type { UserResponse } from "../sdk/mddb/ts/v1/types.gen";
 
 test("another-device login preserves user permissions and supports individual revocation", async ({
   browser,

@@ -1,7 +1,7 @@
 // End-to-end coverage for responsive workspace and settings sidebar behavior.
 
 import { createClient, expect, registerUser, test, gotoWithSession } from "./helpers";
-import { OrgRoleMember } from "../sdk/types.gen";
+import { OrgRoleMember } from "../sdk/mddb/ts/v1/types.gen";
 
 test.describe("Responsive shell", () => {
   test("keeps desktop collapse separate from mobile overlay dismissal across resizes", async ({ page, request }) => {

@@ -39,7 +39,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   // Frontend (SolidJS) files
   {
-    files: ["frontend/**/*.{ts,tsx}", "sdk/**/*.ts"],
+    files: ["frontend/**/*.{ts,tsx}"],
     ...solid,
     languageOptions: {
       globals: {
@@ -114,7 +114,7 @@ export default tseslint.config(
       "frontend/src/*.gen.ts",
       "frontend/src/sw.ts", // Built separately by VitePWA injectManifest
       "frontend/dist/**",
-      "sdk/types.gen.ts", // Generated file
+      "sdk/mddb/**", // Generated package
       "e2e/*.cjs", // CommonJS scripts
     ],
   },

@@ -2,7 +2,7 @@
 
 import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
 import { gate, installNativeTools, invokeNativeFocus, nativeResult, waitNativeReady } from "./gomode-fixtures";
-import type { UpdatePageRequest } from "../sdk/types.gen";
+import type { UpdatePageRequest } from "../sdk/mddb/ts/v1/types.gen";
 
 test("navigation waits for both serialized saves and uses the acknowledged revision", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-queue");

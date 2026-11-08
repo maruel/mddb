@@ -13,7 +13,7 @@ export default defineConfig({
     // A duplicated solid-js copy breaks reactivity signal identity at runtime.
     dedupe: ["solid-js"],
     alias: {
-      "@sdk": resolve(import.meta.dirname, "sdk"),
+      "@sdk": resolve(import.meta.dirname, "sdk/mddb/ts/v1"),
     },
   },
   plugins: [

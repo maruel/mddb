@@ -65,7 +65,7 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/users/role` |  | `UpdateWSMemberRoleRequest` | `UserResponse` |
 | GET | `/api/v1/workspaces/{wsID}/invitations` |  |  | `ListWSInvitationsResponse` |
 | POST | `/api/v1/workspaces/{wsID}/invitations` |  | `CreateWSInvitationRequest` | `WSInvitationResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/titles` |  | `GetNodeTitlesRequest` | `GetNodeTitlesResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/titles` |  | Query: `GetNodeTitlesRequest` | `GetNodeTitlesResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}` |  |  | `NodeResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/children` |  |  | `ListNodeChildrenResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/move` |  | `MoveNodeRequest` | `OkResponse` |
@@ -84,17 +84,17 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/create` |  | `CreateViewRequest` | `CreateViewResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}` |  | `UpdateViewRequest` | `UpdateViewResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` |  |  | `OkResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` |  | `ListRecordsRequest` | `ListRecordsResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` |  | Query: `ListRecordsRequest` | `ListRecordsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  |  | `GetRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/create` |  | `CreateRecordRequest` | `CreateRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  | `UpdateRecordRequest` | `UpdateRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` |  |  | `OkResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` |  | `ListNodeVersionsRequest` | `ListNodeVersionsResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` |  | Query: `ListNodeVersionsRequest` | `ListNodeVersionsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}` |  |  | `GetNodeVersionResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/assets` |  |  | `ListNodeAssetsResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/search` |  | `SearchRequest` | `SearchResponse` |
-| GET | `/api/v1/notifications` |  | `ListNotificationsRequest` | `ListNotificationsResponse` |
+| GET | `/api/v1/notifications` |  | Query: `ListNotificationsRequest` | `ListNotificationsResponse` |
 | GET | `/api/v1/notifications/unread-count` |  |  | `UnreadCountResponse` |
 | POST | `/api/v1/notifications/{id}/read` |  |  | `OkResponse` |
 | POST | `/api/v1/notifications/read-all` |  |  | `OkResponse` |
@@ -329,21 +329,6 @@ SMTPConfigResponse contains SMTP configuration for the response (password masked
 | `port` | `int32` |  | yes |
 | `username` | `string` |  | yes |
 | `from` | `string` |  | yes |
-
-### ResourceQuotas
-
-ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.
-At org and workspace layers: -1 means "inherit from parent", 0 means "disabled", positive means a limit.
-At server layer all fields must be strictly positive.
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `max_pages` | `int` |  | yes |
-| `max_storage_bytes` | `int64` |  | yes |
-| `max_records_per_table` | `int` |  | yes |
-| `max_asset_size_bytes` | `int64` |  | yes |
-| `max_tables_per_workspace` | `int` |  | yes |
-| `max_columns_per_table` | `int` |  | yes |
 
 ### QuotasConfigResponse
 
@@ -725,6 +710,21 @@ OrganizationQuotas defines limits for an organization.
 | `max_members_per_org` | `int` |  | yes |
 | `max_members_per_workspace` | `int` |  | yes |
 | `max_total_storage_bytes` | `int64` |  | yes |
+
+### ResourceQuotas
+
+ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.
+At org and workspace layers: -1 means "inherit from parent", 0 means "disabled", positive means a limit.
+At server layer all fields must be strictly positive.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `max_pages` | `int` |  | yes |
+| `max_storage_bytes` | `int64` |  | yes |
+| `max_records_per_table` | `int` |  | yes |
+| `max_asset_size_bytes` | `int64` |  | yes |
+| `max_tables_per_workspace` | `int` |  | yes |
+| `max_columns_per_table` | `int` |  | yes |
 
 ### OrganizationSettings
 
@@ -1115,7 +1115,7 @@ GetNodeTitlesRequest is a request to get titles for multiple nodes.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `IDs` | `string` | Comma-separated node IDs | yes |
+| `IDs` | `string` | Comma-separated node IDs<br>Query parameter: `ids`. | yes |
 
 ### GetNodeTitlesResponse
 
@@ -1446,11 +1446,11 @@ Now used for /nodes/{id}/table/records endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ViewID` | `string` | Optional: apply saved view configuration | yes |
-| `Filters` | `string` | Optional: JSON-encoded ad-hoc filters | yes |
-| `Sorts` | `string` | Optional: JSON-encoded ad-hoc sorts | yes |
-| `Offset` | `int` |  | yes |
-| `Limit` | `int` |  | yes |
+| `ViewID` | `string` | Optional: apply saved view configuration<br>Query parameter: `view_id`. | yes |
+| `Filters` | `string` | Optional: JSON-encoded ad-hoc filters<br>Query parameter: `filters`. | yes |
+| `Sorts` | `string` | Optional: JSON-encoded ad-hoc sorts<br>Query parameter: `sorts`. | yes |
+| `Offset` | `int` | Query parameter: `offset`. | yes |
+| `Limit` | `int` | Query parameter: `limit`. | yes |
 
 ### DataRecordResponse
 
@@ -1522,7 +1522,7 @@ ListNodeVersionsRequest is a request to list node version history.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `Limit` | `int` | Max commits to return (1-1000, default 1000). | yes |
+| `Limit` | `int` | Max commits to return (1-1000, default 1000).<br>Query parameter: `limit`. | yes |
 
 ### Commit
 
@@ -1614,9 +1614,9 @@ ListNotificationsRequest is a request to list notifications for the authenticate
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `Limit` | `int` |  | yes |
-| `Offset` | `int` |  | yes |
-| `UnreadOnly` | `boolean` |  | yes |
+| `Limit` | `int` | Query parameter: `limit`. | yes |
+| `Offset` | `int` | Query parameter: `offset`. | yes |
+| `UnreadOnly` | `boolean` | Query parameter: `unread_only`. | yes |
 
 ### NotificationDTO
 
