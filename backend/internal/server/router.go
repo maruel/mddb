@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/maruel/gomode"
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/githubapp"
@@ -371,7 +372,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	inner = http.NewCrossOriginProtection().Handler(inner)
 
 	f := func(w http.ResponseWriter, r *http.Request) {
-		clientIP := reqctx.ResolveClientIP(r, cfg.TrustedProxies)
+		clientIP := httpserver.ResolveClientIP(r, cfg.TrustedProxies)
 		ctx := reqctx.WithClientIP(r.Context(), clientIP)
 		var cc string
 		if cfg.IPGeo != nil {

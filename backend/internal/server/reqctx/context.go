@@ -5,80 +5,10 @@ package reqctx
 
 import (
 	"context"
-	"net/http"
-	"net/netip"
-	"slices"
-	"strings"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
-
-// ResolveClientIP returns the client address for r. It accepts forwarding
-// headers only when r's direct peer is in trustedProxies. For an
-// X-Forwarded-For chain, it returns the rightmost address outside
-// trustedProxies. A malformed header or an all-trusted chain yields the direct
-// peer.
-func ResolveClientIP(r *http.Request, trustedProxies []netip.Prefix) string {
-	direct := directClientIP(r.RemoteAddr)
-	peer, err := netip.ParseAddrPort(r.RemoteAddr)
-	if err != nil || !trusts(peer.Addr(), trustedProxies) {
-		return direct
-	}
-	if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
-		return clientIPFromXForwardedFor(xff, trustedProxies, direct)
-	}
-	if xri := r.Header.Values("X-Real-IP"); len(xri) > 0 {
-		return clientIPFromRealIP(xri, direct)
-	}
-	return direct
-}
-
-func clientIPFromXForwardedFor(values []string, trustedProxies []netip.Prefix, direct string) string {
-	var chain []netip.Addr
-	for _, value := range values {
-		for part := range strings.SplitSeq(value, ",") {
-			addr, err := netip.ParseAddr(strings.TrimSpace(part))
-			if err != nil {
-				return direct
-			}
-			chain = append(chain, addr)
-		}
-	}
-	for _, addr := range slices.Backward(chain) {
-		if !trusts(addr, trustedProxies) {
-			return addr.String()
-		}
-	}
-	return direct
-}
-
-func clientIPFromRealIP(values []string, direct string) string {
-	if len(values) != 1 {
-		return direct
-	}
-	addr, err := netip.ParseAddr(strings.TrimSpace(values[0]))
-	if err != nil {
-		return direct
-	}
-	return addr.String()
-}
-
-func directClientIP(remoteAddr string) string {
-	if addr, err := netip.ParseAddrPort(remoteAddr); err == nil {
-		return addr.Addr().String()
-	}
-	if addr, err := netip.ParseAddr(remoteAddr); err == nil {
-		return addr.String()
-	}
-	return ""
-}
-
-// trusts reports whether addr belongs to one of trustedProxies.
-func trusts(addr netip.Addr, trustedProxies []netip.Prefix) bool {
-	addr = addr.Unmap()
-	return slices.ContainsFunc(trustedProxies, func(p netip.Prefix) bool { return p.Contains(addr) })
-}
 
 // Context keys for request metadata.
 type contextKey string

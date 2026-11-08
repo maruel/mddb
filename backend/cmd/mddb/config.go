@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
@@ -255,7 +256,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 			return nil, fmt.Errorf("server.geo_db: %w", err)
 		}
 	}
-	trustedProxies, err := parseTrustedProxies(tc.Server.TrustedProxies)
+	trustedProxies, err := httpserver.ParseTrustedProxies(tc.Server.TrustedProxies)
 	if err != nil {
 		return nil, fmt.Errorf("server.trusted_proxies: %w", err)
 	}
@@ -374,19 +375,6 @@ func resolveConfigPath(path, cfgDir string) (string, error) {
 		return expanded, nil
 	}
 	return filepath.Join(cfgDir, expanded), nil
-}
-
-// parseTrustedProxies parses CIDR prefixes such as "127.0.0.1/32".
-func parseTrustedProxies(raw []string) ([]netip.Prefix, error) {
-	prefixes := make([]netip.Prefix, 0, len(raw))
-	for _, r := range raw {
-		p, err := netip.ParsePrefix(r)
-		if err != nil {
-			return nil, fmt.Errorf("invalid prefix %q: %w", r, err)
-		}
-		prefixes = append(prefixes, p.Masked())
-	}
-	return prefixes, nil
 }
 
 // parseLogLevel maps a configured log level to a slog level.
