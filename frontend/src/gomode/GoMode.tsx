@@ -26,6 +26,9 @@ import VoiceResourceUpdates from "./VoiceResourceUpdates";
 import { createVoiceFocusPublisher, type VoiceFocusPublisher } from "./voiceFocus";
 import styles from "./GoMode.module.css";
 import type { WorkspaceEvent } from "@sdk/types.gen";
+import type { UpdateVoiceFocusRequest } from "@sdk/types.gen";
+import { createApiClient } from "@sdk/api.gen";
+import { createAuthFetch } from "../useApi";
 
 interface GoModeContextValue {
   preparation: Accessor<FrontendPreparationScope | null>;
@@ -35,7 +38,7 @@ const GoModeContext = createContext<GoModeContextValue>();
 
 export const GoModeProvider: ParentComponent = (props) => {
   const host = useHostMode();
-  const { frontendIdentity, identity, user, wsApi } = useAuth();
+  const { frontendIdentity, identity, user } = useAuth();
   const { t } = useI18n();
   const data = useWorkspaceData();
   const navigation = useWorkspaceNavigation();
@@ -66,12 +69,20 @@ export const GoModeProvider: ParentComponent = (props) => {
       if (lease === null) return;
       const scope = lease.createScope();
       const workspaceId = user()?.workspace_id;
-      const client = wsApi();
       const captured = owner();
-      const focus = client ? createVoiceFocusPublisher((request) => client.updateVoiceFocus(request), false) : null;
-      const browserFocus = client
-        ? createVoiceFocusPublisher((request) => client.updateVoiceFocus(request), true)
+      const authFetch = createAuthFetch(undefined, user()?.session_id);
+      // Each publication captures its cancellation at the generated client's
+      // fetch boundary without changing unrelated workspace requests.
+      const updateFocus = workspaceId
+        ? (request: UpdateVoiceFocusRequest, signal: AbortSignal) =>
+            createApiClient((url, init) =>
+              authFetch(url, { ...init, signal: AbortSignal.any([signal, ...(init?.signal ? [init.signal] : [])]) }),
+            )
+              .ws(workspaceId)
+              .updateVoiceFocus(request)
         : null;
+      const focus = updateFocus ? createVoiceFocusPublisher(updateFocus, false) : null;
+      const browserFocus = updateFocus ? createVoiceFocusPublisher(updateFocus, true) : null;
       setPublisher(browserFocus);
       scope.setTools(
         workspaceId
@@ -104,6 +115,7 @@ export const GoModeProvider: ParentComponent = (props) => {
                         invocation.sessionID,
                         id,
                         () => untrack(owner) === captured && invocation.isCurrent(),
+                        invocation.signal,
                       );
                     } catch (error) {
                       console.warn("Could not publish native voice focus", error);
@@ -155,7 +167,7 @@ export const GoModeProvider: ParentComponent = (props) => {
             const staticFocus = publisher();
             const staticOwner = owner();
             const publishFocus = async (sessionID: string, nodeID: string | null, signal?: AbortSignal) => {
-              await staticFocus?.publish(sessionID, nodeID, () => staticOwner === untrack(owner) && !signal?.aborted);
+              await staticFocus?.publish(sessionID, nodeID, () => staticOwner === untrack(owner), signal);
             };
             return (
               <div class={styles.shell}>

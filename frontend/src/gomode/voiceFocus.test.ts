@@ -1,9 +1,76 @@
-// Tests focus lease conflicts, rapid selection changes, and retired publisher clearing.
+// Tests focus cancellation, advisory deadlines, supersession, and version-bound retired lease clearing.
 
-import { it } from "node:test";
-import { expect } from "@tests/expect";
+import { afterEach, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import type { UpdateVoiceFocusRequest, UpdateVoiceFocusResponse } from "@sdk/types.gen";
 import { createVoiceFocusPublisher } from "./voiceFocus";
+
+afterEach(() => vi.useRealTimers());
+
+it("cancels a stalled publication and allows a new conversation before the old response arrives", async () => {
+  const requests: UpdateVoiceFocusRequest[] = [];
+  const signals: AbortSignal[] = [];
+  let release!: (response: UpdateVoiceFocusResponse) => void;
+  const publisher = createVoiceFocusPublisher(async (request, signal) => {
+    requests.push(request);
+    signals.push(signal);
+    if (requests.length === 1)
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    return { version: 8, applied: true };
+  }, true);
+  const controller = new AbortController();
+  const first = publisher.publish("old-conversation", "old", () => true, controller.signal);
+  await Promise.resolve();
+  controller.abort();
+  const next = publisher.publish("new-conversation", "new", () => true);
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  expect(requests.map((request) => request.nodeId)).toEqual(["old", "new"]);
+  expect(signals[0]!.aborted).toBe(true);
+  await Promise.all([first, next]);
+  release({ version: 7, applied: true });
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  expect(requests.at(-1)).toEqual({ "openai/session": "old-conversation", nodeId: "0", version: 7, release: true });
+  publisher.dispose();
+});
+
+it("bounds advisory publication even when transport never settles", async () => {
+  vi.useFakeTimers();
+  const publisher = createVoiceFocusPublisher(() => new Promise(() => {}), true);
+  let settled = false;
+  void publisher
+    .publish("conversation", "node", () => true)
+    .catch(() => {
+      settled = true;
+    });
+  await Promise.resolve();
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(settled).toBe(true);
+  publisher.dispose();
+});
+
+it("releases only the retired lease when an applied reply arrives after a newer selection", async () => {
+  const requests: UpdateVoiceFocusRequest[] = [];
+  let release!: (response: UpdateVoiceFocusResponse) => void;
+  const publisher = createVoiceFocusPublisher(async (request) => {
+    requests.push(request);
+    if (requests.length === 1)
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    return { version: 12, applied: true };
+  }, true);
+  const old = publisher.publish("conversation", "old", () => true);
+  await publisher.publish("conversation", "new", () => true);
+  await old;
+  release({ version: 11, applied: true });
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  expect(requests.at(-1)).toEqual({ "openai/session": "conversation", nodeId: "0", version: 11, release: true });
+  await publisher.publish("conversation", "newer", () => true);
+  expect(requests.at(-1)?.version).toBe(12);
+  publisher.dispose();
+});
 
 it("claims a server lease before publishing a selection", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
@@ -25,7 +92,7 @@ it("claims a server lease before publishing a selection", async () => {
   });
 });
 
-it("serializes rapid selections and does not retry the retired selection", async () => {
+it("supersedes rapid selections without adopting the retired response version", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
   let release!: (response: UpdateVoiceFocusResponse) => void;
   const publisher = createVoiceFocusPublisher(async (request) => {
@@ -42,7 +109,7 @@ it("serializes rapid selections and does not retry the retired selection", async
   release({ version: 8, applied: false });
   await Promise.all([first, second]);
   expect(requests.map((request) => request.nodeId)).toEqual(["old", "new"]);
-  expect(requests[1]!.version).toBe(8);
+  expect(requests[1]!.version).toBe(0);
 });
 
 it("clears a retired owner with its last lease without retrying conflicts", async () => {

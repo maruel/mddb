@@ -1,4 +1,4 @@
-// Verifies authoritative initial/live browser focus and workspace isolation across real voice runtimes.
+// Verifies cancellable browser focus preparation, live selection, and workspace isolation across real voice runtimes.
 
 import { test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 import { gate, installBrowserTools } from "./gomode-fixtures";
@@ -7,6 +7,48 @@ import type { Page, Request } from "@playwright/test";
 test.use({ launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] } });
 
 const frames = (page: Page) => page.evaluate(() => window.browserToolFixture.sent);
+
+test("canceling a stalled focus publication lets the next connection prepare before its response", async ({
+  page,
+  context,
+  request,
+}) => {
+  await context.grantPermissions(["microphone"]);
+  const { token } = await registerUser(request, "voice-focus-reconnect");
+  await installBrowserTools(page);
+  await gotoWithSession(page, token);
+  const requested = gate();
+  const release = gate();
+  let held = false;
+  let heldRequest: Request | undefined;
+  await page.route("**/gomode/focus", async (route) => {
+    if (held) {
+      await route.continue();
+      return;
+    }
+    held = true;
+    heldRequest = route.request();
+    const response = await route.fetch();
+    requested.resolve();
+    await release.promise;
+    await route.fulfill({ response }).catch((error: unknown) => {
+      expect(route.request().failure(), String(error)).not.toBeNull();
+    });
+  });
+  try {
+    await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
+    await requested.promise;
+    await page.getByRole("button", { name: "Cancel connection", exact: true }).click();
+    // The held response remains unavailable: promise settlement and reconnect
+    // alone cannot prove cancellation reached the browser's HTTP transport.
+    await expect.poll(() => heldRequest?.failure()?.errorText).toBe("net::ERR_ABORTED");
+    await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.browserToolFixture.peerCount)).toBe(1);
+    await expect.poll(() => frames(page)).toContainEqual(expect.objectContaining({ kind: "session.setup" }));
+  } finally {
+    release.resolve();
+  }
+});
 
 test("retiring a host while initial focus is pending cancels setup and never retries its lease", async ({
   page,
