@@ -1,4 +1,4 @@
-// Go Mode discovery, conversation workspace/node focus, and authenticated MCP read and write access.
+// Go Mode conversation focus and workspace-authorized MCP access with session-owned streams.
 
 package server
 
@@ -52,6 +52,7 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 }
 
 func goModeMCP(svc *handlers.Services, version string, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
+	sessions := mcp.NewSessionStore(goModeSessionOwner)
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := reqctx.User(r.Context())
 		if u == nil {
@@ -75,10 +76,23 @@ func goModeMCP(svc *handlers.Services, version string, nodeH *handlers.NodeHandl
 				return
 			}
 		}
+		ctx := context.WithValue(r.Context(), goModeWorkspaceKey{}, wsID)
 		registry := &workspaceRegistry{svc: svc, nodeH: nodeH, user: u, wsID: wsID, role: role, focus: focus}
-		h := &mcp.Handler{Registry: registry, ServerInfo: mcp.Implementation{Name: "mddb", Version: version}}
-		h.HandleMCP(w, r)
+		h := &mcp.Handler{Registry: registry, Sessions: sessions, ServerInfo: mcp.Implementation{Name: "mddb", Version: version}}
+		h.HandleMCP(w, r.WithContext(ctx))
 	}
+}
+
+type goModeWorkspaceKey struct{}
+
+func goModeSessionOwner(ctx context.Context) (string, error) {
+	u := reqctx.User(ctx)
+	id := reqctx.SessionID(ctx)
+	if u == nil || id.IsZero() {
+		return "", errors.New("authenticated MCP session is missing its owner")
+	}
+	ws := ctx.Value(goModeWorkspaceKey{}).(ksid.ID)
+	return fmt.Sprintf("user:%s/session:%s/workspace:%s", u.ID, id, ws), nil
 }
 
 // writeMCPError answers an MCP request that failed before dispatch with a
