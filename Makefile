@@ -5,7 +5,7 @@
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
-FRONTEND_TEST = pnpm exec node --test scripts/css_module_types.test.mjs && NODE_OPTIONS=--no-experimental-webstorage pnpm exec tsx --test --conditions=browser --test-force-exit --test-reporter=./scripts/quiet-test-reporter.mjs --import ./frontend/tests/setup-dom.ts
+FRONTEND_TEST = pnpm exec node --test scripts/css_module_types.test.mjs scripts/vite_proxy.test.mjs && NODE_OPTIONS=--no-experimental-webstorage pnpm exec tsx --test --conditions=browser --test-force-exit --test-reporter=./scripts/quiet-test-reporter.mjs --import ./frontend/tests/setup-dom.ts
 FRONTEND_TEST_FILES = "frontend/src/**/*.test.ts" "frontend/src/**/*.test.tsx"
 
 # The custom-gcl binary is not byte-reproducible (golangci-lint custom builds
@@ -111,7 +111,7 @@ verify: custom-gcl $(FRONTEND_STAMP)
 		'./custom-gcl run --show-stats=false ./... && go mod tidy -diff' \
 		'pnpm exec prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content . && pnpm exec stylelint "frontend/src/**/*.css" && pnpm exec node scripts/lint_frontend_styles.mjs' \
 		'pnpm exec node scripts/css_module_types.mjs --source-path frontend/src && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && pnpm exec tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json' \
-		'pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs' \
+		'pnpm --silent exec eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs scripts/vite_proxy.test.mjs' \
 		'uv run --locked ruff format --check --quiet . && uv run --locked ruff check --quiet .' \
 		'files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -d $$files' \
 		'uv run --locked python scripts/lint_binaries.py && uv run --locked python scripts/update_agents_file_index.py --check'
@@ -123,7 +123,7 @@ verify: custom-gcl $(FRONTEND_STAMP)
 fix: custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
-	@pnpm exec eslint frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs --fix
+	@pnpm exec eslint frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs scripts/vite_proxy.test.mjs --fix
 	@pnpm exec prettier --write --log-level warn .
 	@uv run --locked ruff check --quiet --fix .
 	@uv run --locked ruff format . >/dev/null

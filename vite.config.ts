@@ -1,4 +1,4 @@
-// Vite build configuration for the SolidJS frontend.
+// Vite builds the SolidJS frontend and proxies same-origin development API requests.
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import solidSVG from "vite-solid-svg";
@@ -130,6 +130,15 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        configure(proxy, options) {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            // Normalize only the dev server's own origin after Host rewriting.
+            // Foreign and malformed origins must reach backend validation intact.
+            if (req.headers.origin === `http://${req.headers.host}`) {
+              proxyReq.setHeader("Origin", new URL(String(options.target)).origin);
+            }
+          });
+        },
       },
       "/assets": {
         target: "http://localhost:8080",

@@ -1,8 +1,9 @@
-// Persists active host sessions, expiry, and credential revocation.
+// Persists host sessions and cancels bound request lifetimes on expiry or revocation.
 
 package identity
 
 import (
+	"context"
 	"errors"
 	"iter"
 	"sync"
@@ -57,8 +58,9 @@ type SessionService struct {
 	// creationMu serializes quota checking and insertion for concurrent logins.
 	creationMu sync.Mutex
 
-	table    *jsonldb.Table[*Session]
-	byUserID *jsonldb.Index[ksid.ID, *Session]
+	table     *jsonldb.Table[*Session]
+	byUserID  *jsonldb.Index[ksid.ID, *Session]
+	lifetimes *sessionLifetimes
 }
 
 // NewSessionService creates a new session service.
@@ -68,7 +70,45 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 		return nil, err
 	}
 	byUserID := jsonldb.NewIndex(table, func(s *Session) ksid.ID { return s.UserID })
-	return &SessionService{table: table, byUserID: byUserID}, nil
+	lifetimes := &sessionLifetimes{bindings: make(map[ksid.ID]map[*sessionBinding]struct{})}
+	table.AddObserver(lifetimes)
+	return &SessionService{table: table, byUserID: byUserID, lifetimes: lifetimes}, nil
+}
+
+// Context binds a long-lived authenticated request to its validated session.
+// The returned cancel function releases the binding. Expiry, revocation, row
+// removal, or credential replacement cancels every bound request, including
+// when persistence reports failure after installing the changed row.
+func (s *SessionService) Context(ctx context.Context, session *Session) (context.Context, context.CancelFunc, error) {
+	ctx, cancel := context.WithDeadline(ctx, session.ExpiresAt.AsTime())
+	b := &sessionBinding{cancel: cancel}
+	s.lifetimes.mu.Lock()
+	bindings := s.lifetimes.bindings[session.ID]
+	if bindings == nil {
+		bindings = make(map[*sessionBinding]struct{})
+		s.lifetimes.bindings[session.ID] = bindings
+	}
+	bindings[b] = struct{}{}
+	s.lifetimes.mu.Unlock()
+	release := func() {
+		s.lifetimes.mu.Lock()
+		defer s.lifetimes.mu.Unlock()
+		delete(s.lifetimes.bindings[session.ID], b)
+		if len(s.lifetimes.bindings[session.ID]) == 0 {
+			delete(s.lifetimes.bindings, session.ID)
+		}
+	}
+	stop := context.AfterFunc(ctx, release)
+	cleanup := func() { stop(); cancel(); release() }
+	// Register before reading: a mutation either cancels the registered request
+	// or is visible in this read. Never acquire a table lock while holding mu.
+	current, err := s.Get(session.ID)
+	if err != nil || !current.RevokedAt.IsZero() || current.UserID != session.UserID ||
+		current.TokenHash != session.TokenHash || current.ExpiresAt != session.ExpiresAt || ctx.Err() != nil {
+		cleanup()
+		return nil, nil, errSessionInactive
+	}
+	return ctx, cleanup, nil
 }
 
 // Create creates a new session with an auto-generated ID.
@@ -236,11 +276,41 @@ func (s *SessionService) CleanupExpired(olderThan time.Duration) (int, error) {
 	return count, nil
 }
 
+type sessionBinding struct {
+	cancel context.CancelFunc
+}
+
+type sessionLifetimes struct {
+	mu       sync.Mutex
+	bindings map[ksid.ID]map[*sessionBinding]struct{}
+}
+
+func (s *sessionLifetimes) OnAppend(*Session) {}
+
+func (s *sessionLifetimes) OnUpdate(prev, next *Session) {
+	if !next.RevokedAt.IsZero() || prev.UserID != next.UserID || prev.TokenHash != next.TokenHash || prev.ExpiresAt != next.ExpiresAt {
+		s.cancel(next.ID)
+	}
+}
+
+func (s *sessionLifetimes) OnDelete(session *Session) {
+	s.cancel(session.ID)
+}
+
+func (s *sessionLifetimes) cancel(id ksid.ID) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for b := range s.bindings[id] {
+		b.cancel()
+	}
+}
+
 var (
 	errSessionIDRequired        = errors.New("session id is required")
 	errSessionUserIDRequired    = errors.New("session user_id is required")
 	errSessionTokenHashRequired = errors.New("session token_hash is required")
 	errSessionNotFound          = errors.New("session not found")
+	errSessionInactive          = errors.New("session is no longer active")
 	// ErrSessionQuotaExceeded is returned when a user has too many active sessions.
 	ErrSessionQuotaExceeded = errors.New("maximum number of active sessions exceeded")
 )

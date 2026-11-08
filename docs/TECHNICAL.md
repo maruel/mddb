@@ -333,3 +333,15 @@ an address verified through email or a provider. A provider login cannot merge
 into an unverified password account: verify the existing account's email first,
 or move its claimed address and retry provider sign-in. This avoids sharing
 content, passwords, and active sessions with an unproven registrant.
+
+## MCP notification scope
+
+Native subscriptions keep their request's conversation-selected workspace. Released
+Streamable HTTP clients carry conversation metadata independently on each POST;
+their GET notification stream has no conversation metadata. Use the same explicit
+`/api/v1/gomode/mcp?workspaceId=<workspace ID>` endpoint for released initialize,
+subscribe, GET, and DELETE when subscribing to documents or conversation context.
+The transport session is bound to that workspace and persisted login session.
+Changing the account's active workspace does not retarget it. Unscoped GET remains
+generic and sessionless; unscoped conversation/document subscription requests fail
+with scope guidance instead of silently selecting an account-global workspace.

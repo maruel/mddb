@@ -51,9 +51,13 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 	}
 }
 
-func goModeMCP(svc *handlers.Services, version string, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
+func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
 	sessions := mcp.NewSessionStore(goModeSessionOwner)
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !validGoModeOrigin(r, cfg.BaseURL) {
+			writeMCPError(w, http.StatusForbidden, "Invalid MCP origin")
+			return
+		}
 		u := reqctx.User(r.Context())
 		if u == nil {
 			writeMCPError(w, http.StatusUnauthorized, "Authentication required")
@@ -77,10 +81,42 @@ func goModeMCP(svc *handlers.Services, version string, nodeH *handlers.NodeHandl
 			}
 		}
 		ctx := context.WithValue(r.Context(), goModeWorkspaceKey{}, wsID)
-		registry := &workspaceRegistry{svc: svc, nodeH: nodeH, user: u, wsID: wsID, role: role, focus: focus}
-		h := &mcp.Handler{Registry: registry, Sessions: sessions, ServerInfo: mcp.Implementation{Name: "mddb", Version: version}}
+		// Native dispatch rejects missing or mismatched Mcp-Method headers before
+		// opening a subscription. Ordinary POST calls need no lifetime binding.
+		if r.Method == http.MethodGet || r.Header.Get("Mcp-Method") == string(mcp.MethodSubscriptionsListen) {
+			session := reqctx.Session(ctx)
+			if session == nil {
+				writeMCPError(w, http.StatusUnauthorized, "Authentication required")
+				return
+			}
+			bound, cancel, err := svc.Session.Context(ctx, session)
+			if err != nil {
+				writeMCPError(w, http.StatusUnauthorized, "Session is no longer active")
+				return
+			}
+			defer cancel()
+			ctx = bound
+		}
+		registry := &workspaceRegistry{svc: svc, nodeH: nodeH, user: u, wsID: wsID, role: role, focus: focus, released: r.Method != http.MethodPost || r.Header.Get("Mcp-Method") == ""}
+		h := &mcp.Handler{Registry: registry, Sessions: sessions, ServerInfo: mcp.Implementation{Name: "mddb", Version: cfg.Version}}
 		h.HandleMCP(w, r.WithContext(ctx))
 	}
+}
+
+func validGoModeOrigin(r *http.Request, baseURL string) bool {
+	values := r.Header.Values("Origin")
+	if len(values) == 0 {
+		return true
+	}
+	if len(values) != 1 {
+		return false
+	}
+	origin, err := url.Parse(values[0])
+	if err != nil || origin.User != nil || origin.Host == "" || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" {
+		return false
+	}
+	base, err := url.Parse(baseURL)
+	return err == nil && (origin.Scheme == "http" || origin.Scheme == "https") && origin.Scheme == base.Scheme && strings.EqualFold(origin.Host, base.Host)
 }
 
 type goModeWorkspaceKey struct{}
@@ -112,6 +148,8 @@ type workspaceRegistry struct {
 	wsID  ksid.ID
 	role  identity.WorkspaceRole
 	focus *voiceFocusState
+	// Released GET carries no per-POST conversation metadata.
+	released bool
 }
 
 func (m *workspaceRegistry) Instructions(ctx context.Context, meta *mcp.RequestMeta) (string, error) {
@@ -536,6 +574,15 @@ func (m *workspaceRegistry) nodeURI(id ksid.ID) string {
 // of polling or overwriting a concurrent edit. The handler dedups notifications
 // by resource content, so this may report any event that can touch a node.
 func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params *mcp.SubscriptionsListenParams) (iter.Seq2[mcp.ResourceUpdate, error], error) {
+	if m.released && m.wsID == 0 {
+		needsWorkspace := params.Meta.Session != ""
+		for _, uri := range params.Notifications.ResourceSubscriptions {
+			needsWorkspace = needsWorkspace || uri != voiceItemsURI
+		}
+		if needsWorkspace {
+			return nil, mcp.ErrInvalidParams("Released document subscriptions require an explicit ?workspaceId=<workspace ID> MCP endpoint; GET does not inherit POST conversation metadata")
+		}
+	}
 	ctx, err := withVoiceSession(ctx, &params.Meta)
 	if err != nil {
 		return nil, err
@@ -617,6 +664,10 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 				if e != nil {
 					bound = base
 				}
+				if bound.wsID == m.wsID && bound.role != m.role {
+					yield(withdraw(), nil)
+					return
+				}
 				update := mcp.ResourceUpdate{}
 				if bound.wsID != m.wsID {
 					mu.Lock()
@@ -647,11 +698,9 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 				if !ok {
 					return
 				}
-				if m.wsID != 0 {
-					if _, msg, _ := m.svc.EffectiveWorkspaceRole(m.user, m.wsID); msg != "" {
-						yield(withdraw(), nil)
-						return
-					}
+				if !m.streamAuthorized() {
+					yield(withdraw(), nil)
+					return
 				}
 				update := mcp.ResourceUpdate{ResourcesListChanged: filter.ResourcesListChanged && nodeEventChangesTree(evt.Type)}
 				if _, want := subscribed[voiceItemsURI]; want {
@@ -686,11 +735,9 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 					return
 				}
 			case <-ticker.C:
-				if m.wsID != 0 {
-					if _, msg, _ := m.svc.EffectiveWorkspaceRole(m.user, m.wsID); msg != "" {
-						yield(withdraw(), nil)
-						return
-					}
+				if !m.streamAuthorized() {
+					yield(withdraw(), nil)
+					return
 				}
 				if !yield(mcp.ResourceUpdate{KeepAlive: true}, nil) {
 					return
@@ -698,6 +745,17 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 			}
 		}
 	}, nil
+}
+
+// streamAuthorized rechecks current workspace memberships and role before every
+// workspace event and heartbeat, including otherwise idle streams.
+// Login revocation and expiry cancel the owning request independently.
+func (m *workspaceRegistry) streamAuthorized() bool {
+	if m.wsID == 0 {
+		return true
+	}
+	role, message, _ := m.svc.EffectiveWorkspaceRole(m.user, m.wsID)
+	return message == "" && role == m.role
 }
 
 // nodeEventChangesTree reports whether an event can change the workspace's

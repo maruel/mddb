@@ -152,7 +152,10 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
 		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
 	} else {
-		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version, nh, focus), svc, hcfg, identity.WSRoleViewer, limiters))
+		mcpHandler := WrapAuthReadRaw(goModeMCP(svc, hcfg, nh, focus), svc, hcfg, identity.WSRoleViewer, limiters)
+		mux.Handle("POST "+goModeMCPEndpoint, mcpHandler)
+		mux.Handle("GET "+goModeMCPEndpoint, mcpHandler)
+		mux.Handle("DELETE "+goModeMCPEndpoint, mcpHandler)
 	}
 
 	// Other handlers
