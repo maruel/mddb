@@ -210,6 +210,141 @@ for (const scenario of ["independent", "overlapping"] as const) {
   });
 }
 
+for (const locale of ["en", "de"] as const) {
+  test(`changed regions and keyboard overlap navigation preserve a long ${locale} recovery`, async ({
+    page,
+    request,
+  }, testInfo) => {
+    await page.setViewportSize(locale === "en" ? { width: 1280, height: 900 } : { width: 390, height: 844 });
+    const labels =
+      locale === "en"
+        ? {
+            compare: "Compare changes",
+            draft: "Your draft",
+            saved: "Latest saved version",
+            base: "Last acknowledged version",
+            previous: "Previous unresolved overlap",
+            next: "Next unresolved overlap",
+            count: "unresolved overlaps",
+            useDraft: "Use draft",
+            useSaved: "Use saved version",
+            body: "Body",
+            save: "Save recovered page",
+            previousResult: "Previous recovery result — select and copy any edits you want to keep",
+          }
+        : {
+            compare: "Änderungen vergleichen",
+            draft: "Ihr Entwurf",
+            saved: "Zuletzt gespeicherte Version",
+            base: "Zuletzt bestätigte Version",
+            previous: "Vorherige ungelöste Überschneidung",
+            next: "Nächste ungelöste Überschneidung",
+            count: "ungelöste Überschneidungen",
+            useDraft: "Entwurf verwenden",
+            useSaved: "Gespeicherte Version verwenden",
+            body: "Inhalt",
+            save: "Wiederhergestellte Seite speichern",
+            previousResult: "Vorheriges Wiederherstellungsergebnis — gewünschte Änderungen auswählen und kopieren",
+          };
+    const { token } = await registerUser(request, `recovery-regions-${locale}`);
+    const client = createClient(request, token);
+    if (locale === "de") await client.updateUserSettings({ settings: { theme: "system", language: locale } });
+    await gotoWithSession(page, token);
+    const wsID = await getWorkspaceId(page);
+    const ws = client.ws(wsID);
+    const original = Array.from({ length: 180 }, (_, i) => `Unchanged section ${i} 🌳\n`);
+    const ours = [...original],
+      theirs = [...original];
+    ours[10] = "Draft first passage\n";
+    theirs[10] = "Saved first passage\n";
+    ours[120] = "Draft last passage\n";
+    theirs[120] = "Saved last passage\n";
+    ours[150] = "";
+    theirs[160] = `Saved independent ${"long ".repeat(80)}\n`;
+    const source = await ws.createPage("0", { title: "Region review", content: original.join("") });
+    await page.goto(`/w/@${wsID}/@${source.id}`);
+    await expect(page.getByTestId("wysiwyg-editor")).toContainText("Unchanged section 0");
+    await page.clock.install();
+    await page.clock.pauseAt(new Date());
+    await fillEditorContent(page, ours.join(""));
+    await ws.updatePage(source.id, {
+      title: "Region review",
+      content: theirs.join(""),
+      expected_revision: (await ws.getNode(source.id)).revision ?? "",
+    });
+    const conflict = page.waitForResponse(
+      (response) => response.url().endsWith(`/nodes/${source.id}/page`) && response.status() === 409,
+    );
+    await page.clock.runFor(2100);
+    await conflict;
+    await page.getByRole("button", { name: labels.compare, exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: labels.compare });
+    const local = dialog.getByTestId("recovery-local-source"),
+      saved = dialog.getByTestId("recovery-saved-source");
+    await expect.poll(() => local.textContent()).toBe(ours.join(""));
+    await expect.poll(() => saved.textContent()).toBe(theirs.join(""));
+    await expect(local.locator("mark")).toHaveText(["Draft first passage\n", "Draft last passage\n"]);
+    await expect(saved.locator("mark")).toHaveText(["Saved first passage\n", "Saved last passage\n", theirs[160]!]);
+    await expect(dialog.getByRole("status")).toContainText(`2 ${labels.count}`);
+    await page.screenshot({
+      path: testInfo.outputPath(`recovery-regions-${locale}-navigation.png`),
+      animations: "disabled",
+    });
+    const next = dialog.getByRole("button", { name: labels.next, exact: true });
+    const previous = dialog.getByRole("button", { name: labels.previous, exact: true });
+    // Reach the native navigation buttons through the dialog's ordinary Tab order.
+    for (let i = 0; i < 6 && !(await next.evaluate((el) => el === document.activeElement)); i++)
+      await page.keyboard.press("Tab");
+    await expect(next).toBeFocused();
+    await next.press("Enter");
+    const firstDraft = dialog.getByRole("radio", { name: labels.useDraft }).first();
+    const lastDraft = dialog.getByRole("radio", { name: labels.useDraft }).last();
+    await expect(firstDraft).toBeFocused();
+    await next.press("Enter");
+    await expect(lastDraft).toBeFocused();
+    await previous.press("Enter");
+    await expect(firstDraft).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(dialog.getByRole("status")).toContainText(`1 ${labels.count}`);
+    await previous.press("Enter");
+    await expect(lastDraft).toBeFocused();
+    await next.press("Enter");
+    await expect(lastDraft).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`recovery-regions-${locale}-overlap.png`),
+      animations: "disabled",
+    });
+    await page.keyboard.press("ArrowRight");
+    await expect(dialog.getByRole("radio", { name: labels.useSaved }).last()).toBeChecked();
+    await expect(dialog.getByRole("status")).toContainText(`0 ${labels.count}`);
+    await expect(next).toBeDisabled();
+    const body = dialog.getByRole("textbox", { name: labels.body, exact: true });
+    const reviewed = `${await body.inputValue()}Reviewed retained addition\n`;
+    await body.fill(reviewed);
+    await dialog.getByText(labels.base, { exact: true }).click();
+    await expect.poll(() => dialog.getByTestId("recovery-base-source").textContent()).toBe(original.join(""));
+    await expect(dialog.getByTestId("recovery-base-source").locator("mark")).toContainText([original[150]!]);
+    await expect(body).toHaveValue(reviewed);
+    await firstDraft.check();
+    await expect(body).toHaveValue(reviewed);
+    await dialog.getByRole("radio", { name: labels.useSaved }).first().check();
+    await expect(dialog.getByRole("textbox", { name: labels.previousResult, exact: true })).toHaveValue(
+      `# Region review\n\n${reviewed}`,
+    );
+    await body.fill(`${await body.inputValue()}Reviewed retained addition\n`);
+    await dialog.getByRole("heading", { name: labels.compare }).scrollIntoViewIfNeeded();
+    await expect(dialog).toHaveJSProperty("scrollWidth", await dialog.evaluate((el) => el.clientWidth));
+    await page.screenshot({
+      path: testInfo.outputPath(`recovery-regions-${locale}-sources.png`),
+      animations: "disabled",
+    });
+    await dialog.getByRole("button", { name: labels.save, exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    expect((await ws.getNode(source.id)).content).toContain("Reviewed retained addition");
+    expect((await ws.getNode(source.id)).content).not.toContain("Unchanged section 150");
+  });
+}
+
 for (const preference of ["native zoom", "default font"] as const) {
   test(`recovery remains usable with enlarged ${preference}`, async ({ browser, request, baseURL }, testInfo) => {
     const { mkdir, writeFile } = await import("node:fs/promises");
@@ -275,7 +410,12 @@ for (const preference of ["native zoom", "default font"] as const) {
       await conflict;
       await page.getByRole("button", { name: "Compare changes", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Compare changes" });
-      await dialog.getByRole("radio", { name: "Use draft" }).check();
+      await expect(dialog.getByTestId("recovery-local-source").locator("mark")).toHaveCount(0);
+      await expect(dialog.getByTestId("recovery-saved-source").locator("mark")).toHaveText(["Saved body"]);
+      await dialog.getByRole("button", { name: "Next unresolved overlap", exact: true }).click();
+      await expect(dialog.getByRole("radio", { name: "Use draft" })).toBeFocused();
+      await page.keyboard.press("Space");
+      await expect(dialog.getByRole("status")).toHaveText("0 unresolved overlaps");
       await expect(dialog).toHaveJSProperty("scrollWidth", await dialog.evaluate((el) => el.clientWidth));
       await dialog.getByRole("heading", { name: "Compare changes" }).scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath("recovery-preferences-top.png"), animations: "disabled" });

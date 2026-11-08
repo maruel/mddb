@@ -136,6 +136,13 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    overlapNavigation: "Überschneidungen prüfen",
+    unresolvedOverlaps: "{{count}} ungelöste Überschneidungen",
+    previousOverlap: "Vorherige ungelöste Überschneidung",
+    nextOverlap: "Nächste ungelöste Überschneidung",
+    changedPassages:
+      "Markierte Passagen unterscheiden sich von der bestätigten Version. Unterstrichene Passagen überschneiden sich. Entfernte Texte bleiben in der bestätigten Version markiert.",
+
     previousRecovery: "Vorheriges Wiederherstellungsergebnis — gewünschte Änderungen auswählen und kopieren",
     compareChanges: "Änderungen vergleichen",
     compareHelp:

@@ -40,6 +40,13 @@ export interface RecoverySession {
   contentMerge: TextMerge;
 }
 
+type RecoveryState =
+  | { kind: "closed" }
+  | { kind: "comparing" }
+  | { kind: "reviewing"; session: RecoverySession; error: string | null }
+  | { kind: "saving"; session: RecoverySession }
+  | { kind: "failed"; error: string };
+
 interface EditorContextValue {
   // Editor state
   title: Accessor<string>;
@@ -141,10 +148,16 @@ export const EditorProvider: ParentComponent = (props) => {
   const [saveConflict, setSaveConflict] = createSignal(false);
   let revision = "";
   let acknowledged = { title: "", content: "" };
-  let recoveryRequest = 0;
-  const [recovery, setRecovery] = createSignal<RecoverySession | null>(null);
-  const [recoveryLoading, setRecoveryLoading] = createSignal(false);
-  const [recoveryError, setRecoveryError] = createSignal<string | null>(null);
+  const [recoveryState, setRecoveryState] = createSignal<RecoveryState>({ kind: "closed" });
+  const recovery = () => {
+    const state = recoveryState();
+    return state.kind === "reviewing" || state.kind === "saving" ? state.session : null;
+  };
+  const recoveryLoading = () => recoveryState().kind === "comparing" || recoveryState().kind === "saving";
+  const recoveryError = () => {
+    const state = recoveryState();
+    return state.kind === "reviewing" || state.kind === "failed" ? state.error : null;
+  };
   let saveQueue: Promise<boolean> = Promise.resolve(true);
   let pendingSaves = 0;
   // Metadata-only events use the acknowledged timestamp; content events use
@@ -317,10 +330,7 @@ export const EditorProvider: ParentComponent = (props) => {
     }
   };
   const closeRecovery = () => {
-    recoveryRequest++;
-    setRecovery(null);
-    setRecoveryLoading(false);
-    setRecoveryError(null);
+    setRecoveryState({ kind: "closed" });
   };
   const buildRecovery = (saved: RecoverySession["saved"]): RecoverySession => {
     const local = { title: title(), content: content() };
@@ -335,54 +345,57 @@ export const EditorProvider: ParentComponent = (props) => {
   const compareChanges = async () => {
     const scope = captureSave();
     if (!saveCurrent(scope) || !scope.ws || !scope.nodeId) return;
-    const request = ++recoveryRequest;
+    const request: RecoveryState = { kind: "comparing" };
     debouncedAutoSave.cancel();
     // Stop queued autosaves while a comparison is open, including SSE-only conflicts.
     setSaveConflict(true);
-    setRecovery(null);
-    setRecoveryLoading(true);
-    setRecoveryError(null);
+    setRecoveryState(request);
     try {
       await saveQueue;
-      if (!saveCurrent(scope) || request !== recoveryRequest) return;
+      if (!saveCurrent(scope) || recoveryState() !== request) return;
       const latest = await scope.ws.getNode(scope.nodeId);
-      if (!saveCurrent(scope) || request !== recoveryRequest) return;
-      setRecovery(
-        buildRecovery({
+      if (!saveCurrent(scope) || recoveryState() !== request) return;
+      setRecoveryState({
+        kind: "reviewing",
+        session: buildRecovery({
           title: latest.title,
           content: relativeLinksToSpaUrls(latest.content ?? "", scope.wsId),
           revision: latest.revision ?? "",
         }),
-      );
+        error: null,
+      });
     } catch {
-      if (saveCurrent(scope) && request === recoveryRequest) setRecoveryError(t("editor.compareFailed"));
-    } finally {
-      if (saveCurrent(scope) && request === recoveryRequest) setRecoveryLoading(false);
+      if (saveCurrent(scope) && recoveryState() === request)
+        setRecoveryState({ kind: "failed", error: t("editor.compareFailed") });
     }
   };
   const saveRecovery = async (session: RecoverySession, result: { title: string; content: string }) => {
     const scope = captureSave();
-    if (!saveCurrent(scope) || recovery() !== session || recoveryLoading()) return false;
+    const state = recoveryState();
+    if (!saveCurrent(scope) || state.kind !== "reviewing" || state.session !== session) return false;
     if (title() !== session.local.title || content() !== session.local.content) {
       // Keep every new keystroke and ask for a fresh explicit review.
-      setRecovery({ ...buildRecovery(session.saved), previousResult: result });
-      setRecoveryError(t("editor.draftChanged"));
+      setRecoveryState({
+        kind: "reviewing",
+        session: { ...buildRecovery(session.saved), previousResult: result },
+        error: t("editor.draftChanged"),
+      });
       return false;
     }
     debouncedAutoSave.cancel();
+    const saving: RecoveryState = { kind: "saving", session };
     batch(() => {
       setTitle(result.title);
       setContent(result.content);
       if (scope.nodeId) updateNodeTitle(scope.nodeId, result.title);
       setHasUnsavedChanges(true);
       setSaveConflict(false);
-      setRecoveryLoading(true);
-      setRecoveryError(null);
+      setRecoveryState(saving);
     });
     const savingScope = { ...captureSave(), expectedRevision: session.saved.revision };
     const saved = await enqueueSave(savingScope);
     if (!saveCurrent(scope)) return false;
-    setRecoveryLoading(false);
+    if (recoveryState() !== saving) return saved;
     if (saved) {
       closeRecovery();
       setExternalChange(false);
@@ -390,8 +403,7 @@ export const EditorProvider: ParentComponent = (props) => {
       if (hasUnsavedChanges()) scheduleAutoSave();
     } else {
       setSaveConflict(true);
-      setRecovery(null);
-      setRecoveryError(t("editor.recoveryRetry"));
+      setRecoveryState({ kind: "failed", error: t("editor.recoveryRetry") });
     }
     return saved;
   };

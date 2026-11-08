@@ -135,6 +135,13 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    overlapNavigation: "Review overlaps",
+    unresolvedOverlaps: "{{count}} unresolved overlaps",
+    previousOverlap: "Previous unresolved overlap",
+    nextOverlap: "Next unresolved overlap",
+    changedPassages:
+      "Highlighted passages differ from the acknowledged version. Underlined passages overlap. Removed text remains highlighted in the acknowledged version.",
+
     previousRecovery: "Previous recovery result — select and copy any edits you want to keep",
     compareChanges: "Compare changes",
     compareHelp:

@@ -1,4 +1,4 @@
-/* Responsive draft comparison, explicit overlap choices, and editable recovery results. */
+/* Responsive changed-region highlights, overlap navigation, and editable recovery comparisons. */
 .dialog {
   max-width: 64rem;
 }
@@ -68,6 +68,35 @@
   margin-top: var(--s-3);
 }
 
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+  margin-block: var(--s-3);
+}
+
+.navigation p {
+  flex-basis: 100%;
+}
+
+.legend {
+  color: var(--c-text-muted);
+}
+
+.changed,
+.overlap {
+  color: inherit;
+  background: var(--c-surface-warning-strong);
+}
+
+.overlap {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--c-text-warning);
+  text-underline-offset: 0.15em;
+}
+
 @media (width <= 600px) {
   .comparison {
     grid-template-columns: minmax(0, 1fr);
@@ -93,7 +122,8 @@
   margin-block: var(--s-3);
 }
 
-.actions button {
+.actions button,
+.navigation button {
   padding: var(--s-2) var(--s-3);
   color: var(--c-text);
   cursor: pointer;
@@ -108,7 +138,8 @@
   border-color: var(--c-action-primary);
 }
 
-.actions button:disabled {
+.actions button:disabled,
+.navigation button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }

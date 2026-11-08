@@ -1,4 +1,4 @@
-// Publishes validated browser selections and subscribes the voice runtime to document changes.
+// Subscribes the prepared voice conversation to host document changes.
 
 import { createEffect, on, onCleanup, type Accessor } from "solid-js";
 import type { WorkspaceEvent } from "@sdk/types.gen";
@@ -11,20 +11,7 @@ export default function VoiceResourceUpdates(props: {
   runtime: BrowserVoiceRuntime;
   resources: Accessor<string[]>;
   events?: Accessor<Accessor<WorkspaceEvent | null> | null>;
-  selection?: Accessor<string | null>;
-  publishFocus?: (sessionID: string, nodeID: string | null, signal?: AbortSignal) => Promise<void>;
 }) {
-  createEffect(() => {
-    const sessionID = props.runtime.session.conversationID;
-    const nodeID = props.selection?.() ?? null;
-    const publish = props.publishFocus;
-    if (!publish || !props.runtime.session.state.connected) return;
-    const controller = new AbortController();
-    void publish(sessionID, nodeID, controller.signal).catch((error: unknown) => {
-      if (!controller.signal.aborted) console.warn("Could not publish selected voice node", error);
-    });
-    onCleanup(() => controller.abort());
-  });
   createEffect(() => {
     const uris = props.resources();
     const runtime = props.runtime;

@@ -1,89 +1,31 @@
-// Tests focus cancellation, advisory deadlines, supersession, and version-bound retired lease clearing.
+// Tests host focus CAS claims and version-bound lease cleanup after shared-owner cancellation.
 
-import { afterEach, it } from "node:test";
-import { expect, vi } from "@tests/expect";
+import { it } from "node:test";
+import { expect } from "@tests/expect";
 import type { UpdateVoiceFocusRequest, UpdateVoiceFocusResponse } from "@sdk/types.gen";
 import { createVoiceFocusPublisher } from "./voiceFocus";
 
-afterEach(() => vi.useRealTimers());
+const runRelease = (request: (signal: AbortSignal) => Promise<unknown>) => {
+  void request(new AbortController().signal);
+};
 
-it("cancels a stalled publication and allows a new conversation before the old response arrives", async () => {
+it("claims a server lease before publishing a selection and preserves null selection semantics", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
-  const signals: AbortSignal[] = [];
-  let release!: (response: UpdateVoiceFocusResponse) => void;
-  const publisher = createVoiceFocusPublisher(async (request, signal) => {
-    requests.push(request);
-    signals.push(signal);
-    if (requests.length === 1)
-      return new Promise((resolve) => {
-        release = resolve;
-      });
-    return { version: 8, applied: true };
-  }, true);
-  const controller = new AbortController();
-  const first = publisher.publish("old-conversation", "old", () => true, controller.signal);
-  await Promise.resolve();
-  controller.abort();
-  const next = publisher.publish("new-conversation", "new", () => true);
-  for (let i = 0; i < 8; i++) await Promise.resolve();
-  expect(requests.map((request) => request.nodeId)).toEqual(["old", "new"]);
-  expect(signals[0]!.aborted).toBe(true);
-  await Promise.all([first, next]);
-  release({ version: 7, applied: true });
-  for (let i = 0; i < 8; i++) await Promise.resolve();
-  expect(requests.at(-1)).toEqual({ "openai/session": "old-conversation", nodeId: "0", version: 7, release: true });
-  publisher.dispose();
-});
-
-it("bounds advisory publication even when transport never settles", async () => {
-  vi.useFakeTimers();
-  const publisher = createVoiceFocusPublisher(() => new Promise(() => {}), true);
-  let settled = false;
-  void publisher
-    .publish("conversation", "node", () => true)
-    .catch(() => {
-      settled = true;
-    });
-  await Promise.resolve();
-  await vi.advanceTimersByTimeAsync(5000);
-  expect(settled).toBe(true);
-  publisher.dispose();
-});
-
-it("releases only the retired lease when an applied reply arrives after a newer selection", async () => {
-  const requests: UpdateVoiceFocusRequest[] = [];
-  let release!: (response: UpdateVoiceFocusResponse) => void;
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    if (requests.length === 1)
-      return new Promise((resolve) => {
-        release = resolve;
-      });
-    return { version: 12, applied: true };
-  }, true);
-  const old = publisher.publish("conversation", "old", () => true);
-  await publisher.publish("conversation", "new", () => true);
-  await old;
-  release({ version: 11, applied: true });
-  for (let i = 0; i < 8; i++) await Promise.resolve();
-  expect(requests.at(-1)).toEqual({ "openai/session": "conversation", nodeId: "0", version: 11, release: true });
-  await publisher.publish("conversation", "newer", () => true);
-  expect(requests.at(-1)?.version).toBe(12);
-  publisher.dispose();
-});
-
-it("claims a server lease before publishing a selection", async () => {
-  const requests: UpdateVoiceFocusRequest[] = [];
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    return { version: 7, applied: request.version === 7 };
-  }, true);
-  await publisher.publish("conversation", "node", () => true);
+  const publisher = createVoiceFocusPublisher(
+    async (request) => {
+      requests.push(request);
+      return { version: 7, applied: request.version === 7 };
+    },
+    "conversation",
+    true,
+    runRelease,
+  );
+  await publisher.publish("node", () => true, new AbortController().signal);
   expect(requests).toEqual([
     { "openai/session": "conversation", nodeId: "node", version: 0, browserSelection: true },
     { "openai/session": "conversation", nodeId: "node", version: 7, browserSelection: true },
   ]);
-  await publisher.publish("conversation", null, () => true);
+  await publisher.publish(null, () => true, new AbortController().signal);
   expect(requests.at(-1)).toEqual({
     "openai/session": "conversation",
     nodeId: "0",
@@ -92,85 +34,118 @@ it("claims a server lease before publishing a selection", async () => {
   });
 });
 
-it("supersedes rapid selections without adopting the retired response version", async () => {
+it("releases only a canceled response's committed version without replacing a newer CAS version", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
   let release!: (response: UpdateVoiceFocusResponse) => void;
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    if (requests.length === 1)
-      return new Promise((resolve) => {
-        release = resolve;
-      });
-    return { version: 9, applied: true };
-  }, true);
-  const first = publisher.publish("conversation", "old", () => true);
-  await Promise.resolve();
-  const second = publisher.publish("conversation", "new", () => true);
-  release({ version: 8, applied: false });
-  await Promise.all([first, second]);
-  expect(requests.map((request) => request.nodeId)).toEqual(["old", "new"]);
-  expect(requests[1]!.version).toBe(0);
+  const publisher = createVoiceFocusPublisher(
+    async (request) => {
+      requests.push(request);
+      if (requests.length === 1)
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      return { version: 12, applied: true };
+    },
+    "conversation",
+    true,
+    runRelease,
+  );
+  const old = new AbortController();
+  const pending = publisher.publish("old", () => true, old.signal);
+  old.abort();
+  await publisher.publish("new", () => true, new AbortController().signal);
+  release({ version: 11, applied: true });
+  await pending;
+  expect(requests.at(-1)).toEqual({ "openai/session": "conversation", nodeId: "0", version: 11, release: true });
+  await publisher.publish("newer", () => true, new AbortController().signal);
+  expect(requests.at(-1)?.version).toBe(12);
+  publisher.dispose();
 });
 
-it("clears a retired owner with its last lease without retrying conflicts", async () => {
+it("clears the last committed lease once without retrying another owner's conflict", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    return { version: 12, applied: true };
-  }, true);
-  await publisher.publish("conversation", "old", () => true);
+  const publisher = createVoiceFocusPublisher(
+    async (request) => {
+      requests.push(request);
+      return request.release ? { version: 99, applied: false } : { version: 12, applied: true };
+    },
+    "conversation",
+    true,
+    runRelease,
+  );
+  await publisher.publish("old", () => true, new AbortController().signal);
   publisher.dispose();
   await Promise.resolve();
-  await Promise.resolve();
-  expect(requests.at(-1)).toEqual({ "openai/session": "conversation", nodeId: "0", version: 12, release: true });
-  await publisher.publish("conversation", "retired", () => true);
-  expect(requests).toHaveLength(2);
+  expect(requests).toEqual([
+    { "openai/session": "conversation", nodeId: "old", version: 0, browserSelection: true },
+    { "openai/session": "conversation", nodeId: "0", version: 12, release: true },
+  ]);
 });
 
-it("bounds conflicts and suppresses canceled publications", async () => {
+it("bounds CAS conflicts and never sends an already canceled publication", async () => {
   let count = 0;
-  const publisher = createVoiceFocusPublisher(async () => ({ version: ++count, applied: false }), true);
-  await expect(publisher.publish("conversation", "node", () => true)).rejects.toThrow("changed concurrently");
+  const publisher = createVoiceFocusPublisher(
+    async () => ({ version: ++count, applied: false }),
+    "conversation",
+    true,
+    runRelease,
+  );
+  await expect(publisher.publish("node", () => true, new AbortController().signal)).rejects.toThrow(
+    "changed concurrently",
+  );
   expect(count).toBe(4);
-  await publisher.publish("conversation", "canceled", () => false);
+  const canceled = new AbortController();
+  canceled.abort();
+  await publisher.publish("canceled", () => true, canceled.signal);
+  await publisher.publish("retired", () => false, new AbortController().signal);
   expect(count).toBe(4);
 });
 
-it("never adopts another owner's conflict version for its retired clear", async () => {
+it("never adopts another owner's conflict version when its publication retires", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
-  let release!: (value: UpdateVoiceFocusResponse) => void;
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    if (requests.length === 2)
-      return new Promise((resolve) => {
-        release = resolve;
-      });
-    return { version: 1, applied: true };
-  }, true);
-  await publisher.publish("conversation", "first", () => true);
-  const pending = publisher.publish("conversation", "pending", () => true);
-  await Promise.resolve();
+  let release!: (response: UpdateVoiceFocusResponse) => void;
+  const publisher = createVoiceFocusPublisher(
+    async (request) => {
+      requests.push(request);
+      if (requests.length === 2)
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      return { version: 1, applied: true };
+    },
+    "conversation",
+    true,
+    runRelease,
+  );
+  await publisher.publish("first", () => true, new AbortController().signal);
+  let current = true;
+  const pending = publisher.publish("pending", () => current, new AbortController().signal);
+  current = false;
   publisher.dispose();
   release({ version: 99, applied: false });
   await pending;
-  await Promise.resolve();
   expect(requests.at(-1)).toEqual({ "openai/session": "conversation", nodeId: "0", version: 1, release: true });
 });
 
-it("does not publish a retired clear for an initial claim that never selected a node", async () => {
+it("does not release an initial CAS claim that never committed a selection", async () => {
   const requests: UpdateVoiceFocusRequest[] = [];
-  let release!: (value: UpdateVoiceFocusResponse) => void;
-  const publisher = createVoiceFocusPublisher(async (request) => {
-    requests.push(request);
-    return new Promise((resolve) => {
-      release = resolve;
-    });
-  }, true);
-  const pending = publisher.publish("conversation", "pending", () => true);
-  await Promise.resolve();
+  let release!: (response: UpdateVoiceFocusResponse) => void;
+  const publisher = createVoiceFocusPublisher(
+    async (request) => {
+      requests.push(request);
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    },
+    "conversation",
+    true,
+    runRelease,
+  );
+  const canceled = new AbortController();
+  const pending = publisher.publish("pending", () => true, canceled.signal);
+  canceled.abort();
   publisher.dispose();
   release({ version: 1, applied: false });
   await pending;
-  await Promise.resolve();
   expect(requests).toHaveLength(1);
 });

@@ -2,9 +2,13 @@
 declare const classes: {
   readonly "actions": string;
   readonly "base": string;
+  readonly "changed": string;
   readonly "comparison": string;
   readonly "conflict": string;
   readonly "dialog": string;
+  readonly "legend": string;
+  readonly "navigation": string;
+  readonly "overlap": string;
   readonly "previous": string;
   readonly "result": string;
 };

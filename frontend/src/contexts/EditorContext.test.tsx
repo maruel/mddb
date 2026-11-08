@@ -282,8 +282,8 @@ it("combines an independent saved body with a draft title and saves against the 
   await editor.compareChanges();
   const session = editor.recovery()!;
   expect(session.base).toEqual({ title: "Original", content: "body" });
-  expect(session.titleMerge.parts).toEqual([{ text: "Draft" }]);
-  expect(session.contentMerge.parts).toEqual([{ text: "saved body" }]);
+  expect(session.titleMerge.parts.map((part) => ("text" in part ? part.text : "CONFLICT"))).toEqual(["Draft"]);
+  expect(session.contentMerge.parts.map((part) => ("text" in part ? part.text : "CONFLICT"))).toEqual(["saved body"]);
   expect(editor.content()).toBe("body");
   const saving = editor.saveRecovery(session, { title: "Draft", content: "saved body" });
   await waitFor(() => expect(calls).toHaveLength(2));

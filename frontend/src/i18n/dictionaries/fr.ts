@@ -136,6 +136,13 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    overlapNavigation: "Examiner les chevauchements",
+    unresolvedOverlaps: "{{count}} chevauchements non résolus",
+    previousOverlap: "Chevauchement non résolu précédent",
+    nextOverlap: "Chevauchement non résolu suivant",
+    changedPassages:
+      "Les passages surlignés diffèrent de la version confirmée. Les passages soulignés se chevauchent. Le texte supprimé reste surligné dans la version confirmée.",
+
     previousRecovery: "Résultat de récupération précédent — sélectionnez et copiez les modifications à conserver",
     compareChanges: "Comparer les modifications",
     compareHelp:

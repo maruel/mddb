@@ -1,4 +1,4 @@
-// Presents draft/saved comparisons, explicit overlap choices, and editable conditional-save recovery.
+// Highlights authoritative merge regions, navigates unresolved overlaps, and preserves editable recovery results.
 
 import { createEffect, createMemo, createSignal, For, Show, untrack } from "solid-js";
 import { useEditor, type RecoverySession } from "../../contexts/EditorContext";
@@ -58,7 +58,25 @@ function Comparison(props: { session: RecoverySession; onSaved: () => void }) {
     ...props.session.contentMerge.parts.map((part, i) => ({ part, id: `content-${i}`, title: false })),
   ];
   const conflicts = createMemo(() => parts().filter((entry) => !("text" in entry.part)));
-  const resolved = () => conflicts().every((entry) => choices()[entry.id] !== undefined);
+  const unresolved = createMemo(() => conflicts().filter((entry) => choices()[entry.id] === undefined));
+  const resolved = () => unresolved().length === 0;
+  const radios = new Map<string, HTMLInputElement>();
+  let lastConflictID: string | null = null;
+  const navigate = (direction: "previous" | "next") => {
+    const current = conflicts().findIndex((entry) => entry.id === lastConflictID);
+    const remaining = unresolved();
+    const currentChoices = choices();
+    const target =
+      direction === "next"
+        ? (conflicts().find((entry, index) => index > current && currentChoices[entry.id] === undefined) ??
+          remaining[0])
+        : (conflicts().findLast(
+            (entry, index) => (current < 0 || index < current) && currentChoices[entry.id] === undefined,
+          ) ?? remaining.at(-1));
+    const radio = target ? radios.get(target.id) : undefined;
+    radio?.focus();
+    radio?.scrollIntoView({ block: "nearest" });
+  };
   function renderPart(part: MergePart, id: string): string {
     if ("text" in part) return part.text;
     return choices()[id] === "saved" ? part.saved : part.local;
@@ -72,6 +90,17 @@ function Comparison(props: { session: RecoverySession; onSaved: () => void }) {
   return (
     <>
       <p>{t("editor.compareHelp")}</p>
+      <Show when={conflicts().length > 0}>
+        <div class={styles.navigation} role="group" aria-label={t("editor.overlapNavigation")}>
+          <p role="status">{t("editor.unresolvedOverlaps", { count: unresolved().length })}</p>
+          <button disabled={resolved() || editor.recoveryLoading()} onClick={() => navigate("previous")}>
+            {t("editor.previousOverlap")}
+          </button>
+          <button disabled={resolved() || editor.recoveryLoading()} onClick={() => navigate("next")}>
+            {t("editor.nextOverlap")}
+          </button>
+        </div>
+      </Show>
       <Show when={previousResult()}>
         {(previous) => (
           <label class={styles.previous}>
@@ -83,19 +112,32 @@ function Comparison(props: { session: RecoverySession; onSaved: () => void }) {
       <div class={styles.comparison}>
         <section>
           <h3>{t("editor.yourDraft")}</h3>
-          <strong>{props.session.local.title}</strong>
-          <pre>{props.session.local.content}</pre>
+          <strong>
+            <SourceText parts={props.session.titleMerge.parts} side="local" />
+          </strong>
+          <pre data-testid="recovery-local-source">
+            <SourceText parts={props.session.contentMerge.parts} side="local" />
+          </pre>
         </section>
         <section>
           <h3>{t("editor.latestSaved")}</h3>
-          <strong>{props.session.saved.title}</strong>
-          <pre>{props.session.saved.content}</pre>
+          <strong>
+            <SourceText parts={props.session.titleMerge.parts} side="saved" />
+          </strong>
+          <pre data-testid="recovery-saved-source">
+            <SourceText parts={props.session.contentMerge.parts} side="saved" />
+          </pre>
         </section>
       </div>
+      <p class={styles.legend}>{t("editor.changedPassages")}</p>
       <details>
         <summary>{t("editor.acknowledgedBase")}</summary>
-        <strong>{props.session.base.title}</strong>
-        <pre class={styles.base}>{props.session.base.content}</pre>
+        <strong>
+          <SourceText parts={props.session.titleMerge.parts} side="base" />
+        </strong>
+        <pre class={styles.base} data-testid="recovery-base-source">
+          <SourceText parts={props.session.contentMerge.parts} side="base" />
+        </pre>
       </details>
       <Show when={props.session.contentMerge.manual || props.session.titleMerge.manual}>
         <p role="status">{t("editor.manualRecovery")}</p>
@@ -104,13 +146,20 @@ function Comparison(props: { session: RecoverySession; onSaved: () => void }) {
         <p>{t("editor.overlapHelp")}</p>
         <For each={conflicts()}>
           {(entry, index) => (
-            <fieldset class={styles.conflict} disabled={editor.recoveryLoading()}>
+            <fieldset
+              class={styles.conflict}
+              disabled={editor.recoveryLoading()}
+              onFocusIn={() => {
+                lastConflictID = entry.id;
+              }}
+            >
               <legend>
                 {entry.title ? t("editor.titlePlaceholder") : t("editor.overlap")} {index() + 1}
               </legend>
               <div class={styles.comparison}>
                 <label>
                   <input
+                    ref={(el) => radios.set(entry.id, el)}
                     type="radio"
                     name={entry.id}
                     checked={choices()[entry.id] === "local"}
@@ -173,5 +222,23 @@ function Comparison(props: { session: RecoverySession; onSaved: () => void }) {
         </button>
       </div>
     </>
+  );
+}
+
+function SourceText(props: { parts: MergePart[]; side: "base" | "local" | "saved" }) {
+  return (
+    <For each={props.parts}>
+      {(part) => (
+        <Show
+          when={
+            part[props.side] !== "" &&
+            (props.side === "base" ? part.kind !== "unchanged" : part[props.side] !== part.base)
+          }
+          fallback={part[props.side]}
+        >
+          <mark class={part.kind === "conflict" ? styles.overlap : styles.changed}>{part[props.side]}</mark>
+        </Show>
+      )}
+    </For>
   );
 }

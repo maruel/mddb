@@ -136,6 +136,13 @@ export const dict: Dictionary = {
   },
 
   editor: {
+    overlapNavigation: "Revisar coincidencias",
+    unresolvedOverlaps: "{{count}} coincidencias sin resolver",
+    previousOverlap: "Coincidencia sin resolver anterior",
+    nextOverlap: "Coincidencia sin resolver siguiente",
+    changedPassages:
+      "Los pasajes resaltados difieren de la versión confirmada. Los pasajes subrayados coinciden. El texto eliminado permanece resaltado en la versión confirmada.",
+
     previousRecovery: "Resultado de recuperación anterior: selecciona y copia los cambios que quieras conservar",
     compareChanges: "Comparar cambios",
     compareHelp:

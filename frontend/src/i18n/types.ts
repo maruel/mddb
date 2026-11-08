@@ -137,6 +137,12 @@ export interface Dictionary {
   };
 
   editor: {
+    overlapNavigation: string;
+    unresolvedOverlaps: string;
+    previousOverlap: string;
+    nextOverlap: string;
+    changedPassages: string;
+
     previousRecovery: string;
     compareChanges: string;
     compareHelp: string;

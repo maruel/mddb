@@ -180,6 +180,7 @@ for (const boundary of ["retirement", "logout"] as const) {
     }
     release.resolve();
     await expect.poll(() => held - fulfilled).toBe(0);
+    await expect(page.getByRole("status").filter({ hasText: "Voice context could not update" })).toHaveCount(0);
     if (boundary === "retirement")
       await expect.poll(() => activeNodes(request, token, workspace.id, "pending-native")).toEqual([]);
     expect(
