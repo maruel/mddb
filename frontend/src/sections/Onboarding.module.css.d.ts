@@ -2,6 +2,7 @@
 declare const classes: {
   readonly "container": string;
   readonly "error": string;
+  readonly "retry": string;
   readonly "spin": string;
   readonly "spinner": string;
   readonly "status": string;

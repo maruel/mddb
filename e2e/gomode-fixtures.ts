@@ -78,8 +78,9 @@ export async function changeNativeVoiceSession(page: Page, sessionID: string | n
 }
 
 export async function waitNativeReady(page: Page) {
+  // Initial preparation includes first-workspace provisioning and canonical roots.
   await expect
-    .poll(() => page.evaluate(() => window.nativeToolFixture.readiness.slice(-1)[0]))
+    .poll(() => page.evaluate(() => window.nativeToolFixture.readiness.slice(-1)[0]), { timeout: 15000 })
     .toMatchObject({ ready: true, tools: [{ name: "focus_node" }] });
 }
 

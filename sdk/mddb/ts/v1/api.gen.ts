@@ -14,8 +14,11 @@ export class APIError extends Error {
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 function makeRequester(fetchFn: FetchFn) {
-  return async function request<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
-    const init: RequestInit = { method, headers: { "Content-Type": "application/json", ...headers }, signal: AbortSignal.timeout(60_000) };
+  return async function request<T>(method: string, path: string, body: unknown, headers: Record<string, string> | undefined, callerSignal?: AbortSignal): Promise<T> {
+    const deadline = AbortSignal.timeout(60_000);
+    const signal = callerSignal ? AbortSignal.any([callerSignal, deadline]) : deadline;
+    signal.throwIfAborted();
+    const init: RequestInit = { method, headers: { "Content-Type": "application/json", ...headers }, signal };
     if (body !== undefined) init.body = JSON.stringify(body);
     const res = await fetchFn(path, init);
     if (!res.ok) {
@@ -34,125 +37,125 @@ function makeRequester(fetchFn: FetchFn) {
 export function createApiClient(fetchFn: FetchFn = (globalThis as any).fetch.bind(globalThis)) {
   const request = makeRequester(fetchFn);
   return {
-    getHealth: (): Promise<HealthResponse> => request<HealthResponse>("GET", "/api/v1/health"),
-    getServerDetail: (): Promise<AdminServerDetail> => request<AdminServerDetail>("GET", "/api/v1/admin/server"),
-    getConfig: (): Promise<ServerConfigResponse> => request<ServerConfigResponse>("GET", "/api/v1/server/config"),
-    updateConfig: (req: UpdateServerConfigRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/server/config", req),
-    browserLogin: (req: LoginRequest): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/browser/login", req),
-    browserRegister: (req: RegisterRequest): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/browser/register", req),
-    browserLogout: (): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/browser/logout"),
-    login: (req: LoginRequest): Promise<AuthResponse> => request<AuthResponse>("POST", "/api/v1/auth/login", req),
-    register: (req: RegisterRequest): Promise<AuthResponse> => request<AuthResponse>("POST", "/api/v1/auth/register", req),
-    acceptOrgInvitation: (req: AcceptInvitationRequest): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/invitations/org/accept", req),
-    acceptWSInvitation: (req: AcceptInvitationRequest): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/invitations/ws/accept", req),
-    listProviders: (): Promise<ProvidersResponse> => request<ProvidersResponse>("GET", "/api/v1/auth/providers"),
-    getMe: (): Promise<UserResponse> => request<UserResponse>("GET", "/api/v1/auth/me"),
-    logout: (): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/logout"),
-    listSessions: (): Promise<ListSessionsResponse> => request<ListSessionsResponse>("GET", "/api/v1/auth/sessions"),
-    revokeSession: (req: RevokeSessionRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/sessions/revoke", req),
-    revokeAllSessions: (): Promise<RevokeAllSessionsResponse> => request<RevokeAllSessionsResponse>("POST", "/api/v1/auth/sessions/revoke-all"),
-    changeEmail: (req: ChangeEmailRequest): Promise<ChangeEmailResponse> => request<ChangeEmailResponse>("POST", "/api/v1/auth/email", req),
-    sendVerificationEmail: (): Promise<SendVerificationEmailResponse> => request<SendVerificationEmailResponse>("POST", "/api/v1/auth/email/send-verification"),
-    switchWorkspace: (req: SwitchWorkspaceRequest): Promise<SwitchWorkspaceResponse> => request<SwitchWorkspaceResponse>("POST", "/api/v1/auth/switch-workspace", req),
-    updateUserSettings: (req: UpdateUserSettingsRequest): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/settings", req),
-    setPassword: (req: SetPasswordRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/password", req),
-    linkOAuth: (req: LinkOAuthAccountRequest): Promise<LinkOAuthAccountResponse> => request<LinkOAuthAccountResponse>("POST", "/api/v1/auth/oauth/link", req),
-    unlinkOAuth: (req: UnlinkOAuthAccountRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/oauth/unlink", req),
-    createOrganization: (req: CreateOrganizationRequest): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", "/api/v1/organizations", req),
-    listGitHubAppRepos: (req: ListGitHubAppReposRequest): Promise<ListGitHubAppReposResponse> => request<ListGitHubAppReposResponse>("POST", "/api/v1/github-app/repos", req),
-    listGitHubAppInstallations: (): Promise<ListGitHubAppInstallationsResponse> => request<ListGitHubAppInstallationsResponse>("GET", "/api/v1/github-app/installations"),
-    isGitHubAppAvailable: (): Promise<GitHubAppAvailableResponse> => request<GitHubAppAvailableResponse>("GET", "/api/v1/github-app/available"),
-    listNotifications: (query: ListNotificationsRequest): Promise<ListNotificationsResponse> => {
+    getHealth: (signal?: AbortSignal): Promise<HealthResponse> => request<HealthResponse>("GET", "/api/v1/health", undefined, undefined, signal),
+    getServerDetail: (signal?: AbortSignal): Promise<AdminServerDetail> => request<AdminServerDetail>("GET", "/api/v1/admin/server", undefined, undefined, signal),
+    getConfig: (signal?: AbortSignal): Promise<ServerConfigResponse> => request<ServerConfigResponse>("GET", "/api/v1/server/config", undefined, undefined, signal),
+    updateConfig: (req: UpdateServerConfigRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/server/config", req, undefined, signal),
+    browserLogin: (req: LoginRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/browser/login", req, undefined, signal),
+    browserRegister: (req: RegisterRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/browser/register", req, undefined, signal),
+    browserLogout: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/browser/logout", undefined, undefined, signal),
+    login: (req: LoginRequest, signal?: AbortSignal): Promise<AuthResponse> => request<AuthResponse>("POST", "/api/v1/auth/login", req, undefined, signal),
+    register: (req: RegisterRequest, signal?: AbortSignal): Promise<AuthResponse> => request<AuthResponse>("POST", "/api/v1/auth/register", req, undefined, signal),
+    acceptOrgInvitation: (req: AcceptInvitationRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/invitations/org/accept", req, undefined, signal),
+    acceptWSInvitation: (req: AcceptInvitationRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/invitations/ws/accept", req, undefined, signal),
+    listProviders: (signal?: AbortSignal): Promise<ProvidersResponse> => request<ProvidersResponse>("GET", "/api/v1/auth/providers", undefined, undefined, signal),
+    getMe: (signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("GET", "/api/v1/auth/me", undefined, undefined, signal),
+    logout: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/logout", undefined, undefined, signal),
+    listSessions: (signal?: AbortSignal): Promise<ListSessionsResponse> => request<ListSessionsResponse>("GET", "/api/v1/auth/sessions", undefined, undefined, signal),
+    revokeSession: (req: RevokeSessionRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/sessions/revoke", req, undefined, signal),
+    revokeAllSessions: (signal?: AbortSignal): Promise<RevokeAllSessionsResponse> => request<RevokeAllSessionsResponse>("POST", "/api/v1/auth/sessions/revoke-all", undefined, undefined, signal),
+    changeEmail: (req: ChangeEmailRequest, signal?: AbortSignal): Promise<ChangeEmailResponse> => request<ChangeEmailResponse>("POST", "/api/v1/auth/email", req, undefined, signal),
+    sendVerificationEmail: (signal?: AbortSignal): Promise<SendVerificationEmailResponse> => request<SendVerificationEmailResponse>("POST", "/api/v1/auth/email/send-verification", undefined, undefined, signal),
+    switchWorkspace: (req: SwitchWorkspaceRequest, signal?: AbortSignal): Promise<SwitchWorkspaceResponse> => request<SwitchWorkspaceResponse>("POST", "/api/v1/auth/switch-workspace", req, undefined, signal),
+    updateUserSettings: (req: UpdateUserSettingsRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", "/api/v1/auth/settings", req, undefined, signal),
+    setPassword: (req: SetPasswordRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/password", req, undefined, signal),
+    linkOAuth: (req: LinkOAuthAccountRequest, signal?: AbortSignal): Promise<LinkOAuthAccountResponse> => request<LinkOAuthAccountResponse>("POST", "/api/v1/auth/oauth/link", req, undefined, signal),
+    unlinkOAuth: (req: UnlinkOAuthAccountRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/auth/oauth/unlink", req, undefined, signal),
+    createOrganization: (req: CreateOrganizationRequest, signal?: AbortSignal): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", "/api/v1/organizations", req, undefined, signal),
+    listGitHubAppRepos: (req: ListGitHubAppReposRequest, signal?: AbortSignal): Promise<ListGitHubAppReposResponse> => request<ListGitHubAppReposResponse>("POST", "/api/v1/github-app/repos", req, undefined, signal),
+    listGitHubAppInstallations: (signal?: AbortSignal): Promise<ListGitHubAppInstallationsResponse> => request<ListGitHubAppInstallationsResponse>("GET", "/api/v1/github-app/installations", undefined, undefined, signal),
+    isGitHubAppAvailable: (signal?: AbortSignal): Promise<GitHubAppAvailableResponse> => request<GitHubAppAvailableResponse>("GET", "/api/v1/github-app/available", undefined, undefined, signal),
+    listNotifications: (query: ListNotificationsRequest, signal?: AbortSignal): Promise<ListNotificationsResponse> => {
       const search = new URLSearchParams();
       if (query["Limit"] !== undefined && query["Limit"] !== null) search.set("limit", String(query["Limit"]));
       if (query["Offset"] !== undefined && query["Offset"] !== null) search.set("offset", String(query["Offset"]));
       if (query["UnreadOnly"] !== undefined && query["UnreadOnly"] !== null) search.set("unread_only", String(query["UnreadOnly"]));
-      return request<ListNotificationsResponse>("GET", "/api/v1/notifications" + (search.size ? `?${search}` : ""));
+      return request<ListNotificationsResponse>("GET", "/api/v1/notifications" + (search.size ? `?${search}` : ""), undefined, undefined, signal);
     },
-    getUnreadCount: (): Promise<UnreadCountResponse> => request<UnreadCountResponse>("GET", "/api/v1/notifications/unread-count"),
-    markNotificationRead: (id: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/notifications/${encodeURIComponent(id)}/read`),
-    markAllNotificationsRead: (): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/read-all"),
-    deleteNotification: (id: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/notifications/${encodeURIComponent(id)}/delete`),
-    getNotificationPrefs: (): Promise<NotificationPrefsDTO> => request<NotificationPrefsDTO>("GET", "/api/v1/notifications/preferences"),
-    updateNotificationPrefs: (req: UpdateNotificationPrefsRequest): Promise<NotificationPrefsDTO> => request<NotificationPrefsDTO>("POST", "/api/v1/notifications/preferences", req),
-    getVAPIDPublicKey: (): Promise<VAPIDKeyResponse> => request<VAPIDKeyResponse>("GET", "/api/v1/notifications/vapid-key"),
-    subscribePush: (req: PushSubscribeRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/subscribe", req),
-    unsubscribePush: (req: PushUnsubscribeRequest): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/unsubscribe", req),
+    getUnreadCount: (signal?: AbortSignal): Promise<UnreadCountResponse> => request<UnreadCountResponse>("GET", "/api/v1/notifications/unread-count", undefined, undefined, signal),
+    markNotificationRead: (id: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/notifications/${encodeURIComponent(id)}/read`, undefined, undefined, signal),
+    markAllNotificationsRead: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/read-all", undefined, undefined, signal),
+    deleteNotification: (id: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/notifications/${encodeURIComponent(id)}/delete`, undefined, undefined, signal),
+    getNotificationPrefs: (signal?: AbortSignal): Promise<NotificationPrefsDTO> => request<NotificationPrefsDTO>("GET", "/api/v1/notifications/preferences", undefined, undefined, signal),
+    updateNotificationPrefs: (req: UpdateNotificationPrefsRequest, signal?: AbortSignal): Promise<NotificationPrefsDTO> => request<NotificationPrefsDTO>("POST", "/api/v1/notifications/preferences", req, undefined, signal),
+    getVAPIDPublicKey: (signal?: AbortSignal): Promise<VAPIDKeyResponse> => request<VAPIDKeyResponse>("GET", "/api/v1/notifications/vapid-key", undefined, undefined, signal),
+    subscribePush: (req: PushSubscribeRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/subscribe", req, undefined, signal),
+    unsubscribePush: (req: PushUnsubscribeRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", "/api/v1/notifications/unsubscribe", req, undefined, signal),
     org: (orgID: string) => ({
-    getOrganization: (): Promise<OrganizationResponse> => request<OrganizationResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}`),
-    updateOrganization: (req: UpdateOrganizationRequest): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}`, req),
-    updateOrgPreferences: (req: UpdateOrgPreferencesRequest): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/settings`, req),
-    listUsers: (): Promise<ListUsersResponse> => request<ListUsersResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/users`),
-    updateOrgMemberRole: (req: UpdateOrgMemberRoleRequest): Promise<UserResponse> => request<UserResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/users/role`, req),
-    removeOrgMember: (req: RemoveOrgMemberRequest): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/users/remove`, req),
-    listOrgInvitations: (): Promise<ListOrgInvitationsResponse> => request<ListOrgInvitationsResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/invitations`),
-    createOrgInvitation: (req: CreateOrgInvitationRequest): Promise<OrgInvitationResponse> => request<OrgInvitationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/invitations`, req),
-    createWorkspace: (req: CreateWorkspaceRequest): Promise<WorkspaceResponse> => request<WorkspaceResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/workspaces`, req),
-    startImport: (req: NotionImportRequest): Promise<NotionImportResponse> => request<NotionImportResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/notion/import`, req),
-    getStatus: (importWsID: string): Promise<NotionImportStatusResponse> => request<NotionImportStatusResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/notion/import/${encodeURIComponent(importWsID)}/status`),
+    getOrganization: (signal?: AbortSignal): Promise<OrganizationResponse> => request<OrganizationResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}`, undefined, undefined, signal),
+    updateOrganization: (req: UpdateOrganizationRequest, signal?: AbortSignal): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}`, req, undefined, signal),
+    updateOrgPreferences: (req: UpdateOrgPreferencesRequest, signal?: AbortSignal): Promise<OrganizationResponse> => request<OrganizationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/settings`, req, undefined, signal),
+    listUsers: (signal?: AbortSignal): Promise<ListUsersResponse> => request<ListUsersResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/users`, undefined, undefined, signal),
+    updateOrgMemberRole: (req: UpdateOrgMemberRoleRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/users/role`, req, undefined, signal),
+    removeOrgMember: (req: RemoveOrgMemberRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/users/remove`, req, undefined, signal),
+    listOrgInvitations: (signal?: AbortSignal): Promise<ListOrgInvitationsResponse> => request<ListOrgInvitationsResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/invitations`, undefined, undefined, signal),
+    createOrgInvitation: (req: CreateOrgInvitationRequest, signal?: AbortSignal): Promise<OrgInvitationResponse> => request<OrgInvitationResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/invitations`, req, undefined, signal),
+    createWorkspace: (req: CreateWorkspaceRequest, signal?: AbortSignal): Promise<WorkspaceResponse> => request<WorkspaceResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/workspaces`, req, undefined, signal),
+    startImport: (req: NotionImportRequest, signal?: AbortSignal): Promise<NotionImportResponse> => request<NotionImportResponse>("POST", `/api/v1/organizations/${encodeURIComponent(orgID)}/notion/import`, req, undefined, signal),
+    getStatus: (importWsID: string, signal?: AbortSignal): Promise<NotionImportStatusResponse> => request<NotionImportStatusResponse>("GET", `/api/v1/organizations/${encodeURIComponent(orgID)}/notion/import/${encodeURIComponent(importWsID)}/status`, undefined, undefined, signal),
     }),
     ws: (wsID: string) => ({
-    getWorkspace: (): Promise<WorkspaceResponse> => request<WorkspaceResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}`),
-    updateWorkspace: (req: UpdateWorkspaceRequest): Promise<WorkspaceResponse> => request<WorkspaceResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}`, req),
-    updateWSMembershipSettings: (req: UpdateWSMembershipSettingsRequest): Promise<WSMembershipResponse> => request<WSMembershipResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/membership`, req),
-    getGitRemote: (): Promise<GitRemoteResponse> => request<GitRemoteResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git`),
-    updateGitRemote: (req: UpdateGitRemoteRequest): Promise<GitRemoteResponse> => request<GitRemoteResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git`, req),
-    pushGit: (): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/push`),
-    pullGit: (): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/pull`),
-    getSyncStatus: (): Promise<GitSyncStatusResponse> => request<GitSyncStatusResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/status`),
-    setupGitHubAppRemote: (req: SetupGitHubAppRemoteRequest): Promise<GitRemoteResponse> => request<GitRemoteResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/github-app`, req),
-    deleteGitRemote: (): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/delete`),
-    cancelImport: (): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/notion/import/cancel`),
-    listWorkspaceMembers: (): Promise<ListWorkspaceMembersResponse> => request<ListWorkspaceMembersResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/members`),
-    resolveUsers: (req: ResolveUsersRequest): Promise<ResolveUsersResponse> => request<ResolveUsersResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/users/resolve`, req),
-    updateWSMemberRole: (req: UpdateWSMemberRoleRequest): Promise<UserResponse> => request<UserResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/users/role`, req),
-    listWSInvitations: (): Promise<ListWSInvitationsResponse> => request<ListWSInvitationsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/invitations`),
-    createWSInvitation: (req: CreateWSInvitationRequest): Promise<WSInvitationResponse> => request<WSInvitationResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/invitations`, req),
-    getNodeTitles: (query: GetNodeTitlesRequest): Promise<GetNodeTitlesResponse> => {
+    getWorkspace: (signal?: AbortSignal): Promise<WorkspaceResponse> => request<WorkspaceResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}`, undefined, undefined, signal),
+    updateWorkspace: (req: UpdateWorkspaceRequest, signal?: AbortSignal): Promise<WorkspaceResponse> => request<WorkspaceResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}`, req, undefined, signal),
+    updateWSMembershipSettings: (req: UpdateWSMembershipSettingsRequest, signal?: AbortSignal): Promise<WSMembershipResponse> => request<WSMembershipResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/membership`, req, undefined, signal),
+    getGitRemote: (signal?: AbortSignal): Promise<GitRemoteResponse> => request<GitRemoteResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git`, undefined, undefined, signal),
+    updateGitRemote: (req: UpdateGitRemoteRequest, signal?: AbortSignal): Promise<GitRemoteResponse> => request<GitRemoteResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git`, req, undefined, signal),
+    pushGit: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/push`, undefined, undefined, signal),
+    pullGit: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/pull`, undefined, undefined, signal),
+    getSyncStatus: (signal?: AbortSignal): Promise<GitSyncStatusResponse> => request<GitSyncStatusResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/status`, undefined, undefined, signal),
+    setupGitHubAppRemote: (req: SetupGitHubAppRemoteRequest, signal?: AbortSignal): Promise<GitRemoteResponse> => request<GitRemoteResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/github-app`, req, undefined, signal),
+    deleteGitRemote: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/settings/git/delete`, undefined, undefined, signal),
+    cancelImport: (signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/notion/import/cancel`, undefined, undefined, signal),
+    listWorkspaceMembers: (signal?: AbortSignal): Promise<ListWorkspaceMembersResponse> => request<ListWorkspaceMembersResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/members`, undefined, undefined, signal),
+    resolveUsers: (req: ResolveUsersRequest, signal?: AbortSignal): Promise<ResolveUsersResponse> => request<ResolveUsersResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/users/resolve`, req, undefined, signal),
+    updateWSMemberRole: (req: UpdateWSMemberRoleRequest, signal?: AbortSignal): Promise<UserResponse> => request<UserResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/users/role`, req, undefined, signal),
+    listWSInvitations: (signal?: AbortSignal): Promise<ListWSInvitationsResponse> => request<ListWSInvitationsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/invitations`, undefined, undefined, signal),
+    createWSInvitation: (req: CreateWSInvitationRequest, signal?: AbortSignal): Promise<WSInvitationResponse> => request<WSInvitationResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/invitations`, req, undefined, signal),
+    getNodeTitles: (query: GetNodeTitlesRequest, signal?: AbortSignal): Promise<GetNodeTitlesResponse> => {
       const search = new URLSearchParams();
       if (query["IDs"] !== undefined && query["IDs"] !== null) search.set("ids", String(query["IDs"]));
-      return request<GetNodeTitlesResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/titles` + (search.size ? `?${search}` : ""));
+      return request<GetNodeTitlesResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/titles` + (search.size ? `?${search}` : ""), undefined, undefined, signal);
     },
-    getNode: (id: string): Promise<NodeResponse> => request<NodeResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}`),
-    listNodeChildren: (id: string): Promise<ListNodeChildrenResponse> => request<ListNodeChildrenResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/children`),
-    moveNode: (id: string, req: MoveNodeRequest): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/move`, req),
-    deleteNode: (id: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/delete`),
-    createPage: (id: string, req: CreatePageRequest): Promise<CreatePageResponse> => request<CreatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/create`, req),
-    getPage: (id: string): Promise<GetPageResponse> => request<GetPageResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page`),
-    updateVoiceFocus: (req: UpdateVoiceFocusRequest): Promise<UpdateVoiceFocusResponse> => request<UpdateVoiceFocusResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/gomode/focus`, req),
-    updatePage: (id: string, req: UpdatePageRequest): Promise<UpdatePageResponse> => request<UpdatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page`, req),
-    appendPage: (id: string, req: AppendPageRequest): Promise<UpdatePageResponse> => request<UpdatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/append`, req),
-    deletePage: (id: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/delete`),
-    updatePageFrontmatter: (id: string, req: UpdatePageFrontmatterRequest): Promise<UpdatePageFrontmatterResponse> => request<UpdatePageFrontmatterResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/frontmatter`, req),
-    createTable: (id: string, req: CreateTableRequest): Promise<CreateTableUnderParentResponse> => request<CreateTableUnderParentResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/create`, req),
-    getTable: (id: string): Promise<GetTableSchemaResponse> => request<GetTableSchemaResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table`),
-    updateTable: (id: string, req: UpdateTableRequest): Promise<UpdateTableResponse> => request<UpdateTableResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table`, req),
-    deleteTable: (id: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/delete`),
-    createView: (id: string, req: CreateViewRequest): Promise<CreateViewResponse> => request<CreateViewResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/create`, req),
-    updateView: (id: string, viewID: string, req: UpdateViewRequest): Promise<UpdateViewResponse> => request<UpdateViewResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/${encodeURIComponent(viewID)}`, req),
-    deleteView: (id: string, viewID: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/${encodeURIComponent(viewID)}/delete`),
-    listRecords: (id: string, query: ListRecordsRequest): Promise<ListRecordsResponse> => {
+    getNode: (id: string, signal?: AbortSignal): Promise<NodeResponse> => request<NodeResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}`, undefined, undefined, signal),
+    listNodeChildren: (id: string, signal?: AbortSignal): Promise<ListNodeChildrenResponse> => request<ListNodeChildrenResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/children`, undefined, undefined, signal),
+    moveNode: (id: string, req: MoveNodeRequest, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/move`, req, undefined, signal),
+    deleteNode: (id: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/delete`, undefined, undefined, signal),
+    createPage: (id: string, req: CreatePageRequest, signal?: AbortSignal): Promise<CreatePageResponse> => request<CreatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/create`, req, undefined, signal),
+    getPage: (id: string, signal?: AbortSignal): Promise<GetPageResponse> => request<GetPageResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page`, undefined, undefined, signal),
+    updateVoiceFocus: (req: UpdateVoiceFocusRequest, signal?: AbortSignal): Promise<UpdateVoiceFocusResponse> => request<UpdateVoiceFocusResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/gomode/focus`, req, undefined, signal),
+    updatePage: (id: string, req: UpdatePageRequest, signal?: AbortSignal): Promise<UpdatePageResponse> => request<UpdatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page`, req, undefined, signal),
+    appendPage: (id: string, req: AppendPageRequest, signal?: AbortSignal): Promise<UpdatePageResponse> => request<UpdatePageResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/append`, req, undefined, signal),
+    deletePage: (id: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/delete`, undefined, undefined, signal),
+    updatePageFrontmatter: (id: string, req: UpdatePageFrontmatterRequest, signal?: AbortSignal): Promise<UpdatePageFrontmatterResponse> => request<UpdatePageFrontmatterResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/page/frontmatter`, req, undefined, signal),
+    createTable: (id: string, req: CreateTableRequest, signal?: AbortSignal): Promise<CreateTableUnderParentResponse> => request<CreateTableUnderParentResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/create`, req, undefined, signal),
+    getTable: (id: string, signal?: AbortSignal): Promise<GetTableSchemaResponse> => request<GetTableSchemaResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table`, undefined, undefined, signal),
+    updateTable: (id: string, req: UpdateTableRequest, signal?: AbortSignal): Promise<UpdateTableResponse> => request<UpdateTableResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table`, req, undefined, signal),
+    deleteTable: (id: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/delete`, undefined, undefined, signal),
+    createView: (id: string, req: CreateViewRequest, signal?: AbortSignal): Promise<CreateViewResponse> => request<CreateViewResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/create`, req, undefined, signal),
+    updateView: (id: string, viewID: string, req: UpdateViewRequest, signal?: AbortSignal): Promise<UpdateViewResponse> => request<UpdateViewResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/${encodeURIComponent(viewID)}`, req, undefined, signal),
+    deleteView: (id: string, viewID: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/views/${encodeURIComponent(viewID)}/delete`, undefined, undefined, signal),
+    listRecords: (id: string, query: ListRecordsRequest, signal?: AbortSignal): Promise<ListRecordsResponse> => {
       const search = new URLSearchParams();
       if (query["ViewID"] !== undefined && query["ViewID"] !== null) search.set("view_id", String(query["ViewID"]));
       if (query["Filters"] !== undefined && query["Filters"] !== null) search.set("filters", String(query["Filters"]));
       if (query["Sorts"] !== undefined && query["Sorts"] !== null) search.set("sorts", String(query["Sorts"]));
       if (query["Offset"] !== undefined && query["Offset"] !== null) search.set("offset", String(query["Offset"]));
       if (query["Limit"] !== undefined && query["Limit"] !== null) search.set("limit", String(query["Limit"]));
-      return request<ListRecordsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records` + (search.size ? `?${search}` : ""));
+      return request<ListRecordsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records` + (search.size ? `?${search}` : ""), undefined, undefined, signal);
     },
-    getRecord: (id: string, rid: string): Promise<GetRecordResponse> => request<GetRecordResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}`),
-    createRecord: (id: string, req: CreateRecordRequest): Promise<CreateRecordResponse> => request<CreateRecordResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/create`, req),
-    updateRecord: (id: string, rid: string, req: UpdateRecordRequest): Promise<UpdateRecordResponse> => request<UpdateRecordResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}`, req),
-    deleteRecord: (id: string, rid: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}/delete`),
-    listNodeVersions: (id: string, query: ListNodeVersionsRequest): Promise<ListNodeVersionsResponse> => {
+    getRecord: (id: string, rid: string, signal?: AbortSignal): Promise<GetRecordResponse> => request<GetRecordResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}`, undefined, undefined, signal),
+    createRecord: (id: string, req: CreateRecordRequest, signal?: AbortSignal): Promise<CreateRecordResponse> => request<CreateRecordResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/create`, req, undefined, signal),
+    updateRecord: (id: string, rid: string, req: UpdateRecordRequest, signal?: AbortSignal): Promise<UpdateRecordResponse> => request<UpdateRecordResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}`, req, undefined, signal),
+    deleteRecord: (id: string, rid: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/table/records/${encodeURIComponent(rid)}/delete`, undefined, undefined, signal),
+    listNodeVersions: (id: string, query: ListNodeVersionsRequest, signal?: AbortSignal): Promise<ListNodeVersionsResponse> => {
       const search = new URLSearchParams();
       if (query["Limit"] !== undefined && query["Limit"] !== null) search.set("limit", String(query["Limit"]));
-      return request<ListNodeVersionsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/history` + (search.size ? `?${search}` : ""));
+      return request<ListNodeVersionsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/history` + (search.size ? `?${search}` : ""), undefined, undefined, signal);
     },
-    getNodeVersion: (id: string, hash: string): Promise<GetNodeVersionResponse> => request<GetNodeVersionResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/history/${encodeURIComponent(hash)}`),
-    listNodeAssets: (id: string): Promise<ListNodeAssetsResponse> => request<ListNodeAssetsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/assets`),
-    deleteNodeAsset: (id: string, name: string): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/assets/${encodeURIComponent(name)}/delete`),
-    search: (req: SearchRequest): Promise<SearchResponse> => request<SearchResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/search`, req),
+    getNodeVersion: (id: string, hash: string, signal?: AbortSignal): Promise<GetNodeVersionResponse> => request<GetNodeVersionResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/history/${encodeURIComponent(hash)}`, undefined, undefined, signal),
+    listNodeAssets: (id: string, signal?: AbortSignal): Promise<ListNodeAssetsResponse> => request<ListNodeAssetsResponse>("GET", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/assets`, undefined, undefined, signal),
+    deleteNodeAsset: (id: string, name: string, signal?: AbortSignal): Promise<OkResponse> => request<OkResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/nodes/${encodeURIComponent(id)}/assets/${encodeURIComponent(name)}/delete`, undefined, undefined, signal),
+    search: (req: SearchRequest, signal?: AbortSignal): Promise<SearchResponse> => request<SearchResponse>("POST", `/api/v1/workspaces/${encodeURIComponent(wsID)}/search`, req, undefined, signal),
     }),
   };
 }

@@ -66,15 +66,10 @@ export const GoModeProvider: ParentComponent = (props) => {
       if (lease === null) return;
       const workspaceId = user()?.workspace_id;
       const authFetch = createAuthFetch(undefined, user()?.session_id);
-      // Each publication captures its cancellation at the generated client's
-      // fetch boundary without changing unrelated workspace requests.
-      const updateFocus = workspaceId
-        ? (request: UpdateVoiceFocusRequest, signal: AbortSignal) =>
-            createApiClient((url, init) =>
-              authFetch(url, { ...init, signal: AbortSignal.any([signal, ...(init?.signal ? [init.signal] : [])]) }),
-            )
-              .ws(workspaceId)
-              .updateVoiceFocus(request)
+      // Keep the client bound to this lease's workspace and cookie session.
+      const workspace = workspaceId ? createApiClient(authFetch).ws(workspaceId) : null;
+      const updateFocus = workspace
+        ? (request: UpdateVoiceFocusRequest, signal: AbortSignal) => workspace.updateVoiceFocus(request, signal)
         : null;
       const scope = lease.createScope(
         updateFocus

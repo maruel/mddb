@@ -146,6 +146,7 @@ export const dict: Dictionary = {
     compareChanges: "Compare changes",
     compareHelp:
       "Independent changes are combined below. Resolve every overlap, then review and edit the result before saving.",
+    reviewRequired: "Review changes or reload the latest page to continue.",
     yourDraft: "Your draft",
     latestSaved: "Latest saved version",
     acknowledgedBase: "Last acknowledged version",
@@ -237,6 +238,7 @@ export const dict: Dictionary = {
   },
 
   onboarding: {
+    noWorkspace: "No workspace is available. Ask an organization administrator for access.",
     welcome: "Welcome to mddb!",
     letsGetStarted: "Let's get your workspace ready.",
     confirmWorkspaceName: "Confirm Workspace Name",

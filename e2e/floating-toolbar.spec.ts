@@ -74,6 +74,7 @@ test.describe("Floating Toolbar Visibility", () => {
         const { token } = await registerUser(request, "toolbar-late-titles");
         const client = createClient(request, token);
         await gotoWithSession(page, token);
+        await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
         const wsID = await getWorkspaceId(page);
         const target = await client.ws(wsID).createPage("0", { title: "Linked target", content: "Target content" });
         const node = await client.ws(wsID).createPage("0", {

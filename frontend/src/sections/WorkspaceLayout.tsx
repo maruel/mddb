@@ -1,4 +1,5 @@
-// Workspace layout with draft-gated navigation and route-owned sidebar History.
+// Workspace layout with persistent preparation recovery, draft-gated navigation, and route-owned sidebar History.
+
 import {
   createEffect,
   createMemo,
@@ -20,6 +21,8 @@ import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
 import NotionImportModal, { type NotionImportData } from "../components/NotionImportModal";
 import KeyboardShortcutsDialog from "../components/KeyboardShortcutsDialog";
 import { TransientFeedback } from "../components/TransientFeedback";
+import { Button } from "../components/shared";
+import { useWorkspaceData } from "../contexts/WorkspaceDataContext";
 import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
 import { useGoMode } from "../gomode/GoMode";
 import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from "../contexts";
@@ -32,6 +35,7 @@ import MenuIcon from "@material-symbols/svg-400/outlined/menu.svg?solid";
 
 const WorkspaceLayout: ParentComponent = (props) => {
   const { t } = useI18n();
+  const workspaceData = useWorkspaceData();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, wsApi, orgApi, identity: authIdentity } = useAuth();
@@ -640,14 +644,36 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
         <main class={styles.main}>
           <Show
-            when={loadError()}
+            when={workspaceData.preparationError()}
             fallback={
-              <Show when={saveError()}>
-                {(error) => <TransientFeedback message={error()} onDismiss={() => setSaveError(null)} />}
+              <Show
+                when={loadError()}
+                fallback={
+                  <Show when={saveError()}>
+                    {(error) => <TransientFeedback message={error()} onDismiss={() => setSaveError(null)} />}
+                  </Show>
+                }
+              >
+                {(error) => <TransientFeedback message={error()} onDismiss={() => setLoadError(null)} />}
               </Show>
             }
           >
-            {(error) => <TransientFeedback message={error()} onDismiss={() => setLoadError(null)} />}
+            {(error) => (
+              <div class={styles.preparationError} role="alert">
+                <span class={styles.preparationMessage}>{error()}</span>
+                <Button
+                  variant="primary"
+                  class={styles.preparationRetry}
+                  onClick={() =>
+                    void workspaceData
+                      .loadNodes(true)
+                      .catch((failure: unknown) => console.warn("Workspace preparation retry failed", failure))
+                  }
+                >
+                  {t("recovery.retry")}
+                </Button>
+              </div>
+            )}
           </Show>
           {props.children}
         </main>

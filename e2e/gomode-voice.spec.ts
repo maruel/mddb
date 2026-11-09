@@ -236,6 +236,8 @@ test.describe("localized microphone permissions", () => {
         await route.abort();
       });
       await gotoWithSession(page, token);
+      // First-login provisioning and its canonical roots precede voice controls.
+      await expect(page.getByTestId("wysiwyg-editor")).toBeVisible({ timeout: 15000 });
       if (capability === "denied") {
         expect(
           await page.evaluate(

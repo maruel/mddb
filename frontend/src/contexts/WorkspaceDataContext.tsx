@@ -1,4 +1,4 @@
-// Owns canonical root-node snapshots and initial preparation across authenticated routes.
+// Owns workspace preparation, resumable startup requests, and canonical root snapshots across routes.
 
 import {
   batch,
@@ -14,149 +14,250 @@ import {
 } from "solid-js";
 import { createStore, reconcile, type SetStoreFunction } from "solid-js/store";
 import { useLocation } from "@solidjs/router";
-import type { NodeResponse } from "@sdk/types.gen";
+import { WSRoleAdmin, WSRoleEditor, type NodeResponse, type UserResponse } from "@sdk/types.gen";
 import { useAuth } from "./AuthContext";
 import { useI18n } from "../i18n";
+import type { Api } from "../useApi";
+import { provisionFirstWorkspace } from "./firstLogin";
+
+type PreparationMode = "read-only" | "workspace" | "refresh";
+type PreparationStage = "roots" | "welcome" | "final-read";
+interface OperationOwner {
+  scope: string;
+  controller: AbortController;
+  completion: ReturnType<typeof Promise.withResolvers<NodeResponse[]>>;
+}
+interface WorkspacePreparation extends OperationOwner {
+  kind: "workspace";
+  user: UserResponse;
+  client: ReturnType<Api["ws"]>;
+  mode: PreparationMode;
+  stage: PreparationStage;
+}
+type PreparationOperation =
+  WorkspacePreparation | (OperationOwner & { kind: "provision"; user: UserResponse; api: Api });
+type PreparationState =
+  | { kind: "idle" | "needs-workspace" }
+  | { kind: "running"; operation: PreparationOperation }
+  | { kind: "failed"; operation: PreparationOperation; error: string };
 
 interface WorkspaceDataContextValue {
   owner: Accessor<string | null>;
   nodes: NodeResponse[];
   setNodesStore: SetStoreFunction<NodeResponse[]>;
   loadingNodes: Accessor<boolean>;
-  snapshotReady: Accessor<boolean>;
   ready: Accessor<boolean>;
-  loadError: Accessor<string | null>;
-  setLoadError: (error: string | null) => void;
+  needsWorkspace: Accessor<boolean>;
+  preparationError: Accessor<string | null>;
   loadNodes: (force: boolean) => Promise<NodeResponse[]>;
-  completeInitialization: (owner: string, refresh: boolean) => Promise<void>;
 }
 const WorkspaceDataContext = createContext<WorkspaceDataContextValue>();
 
 export const WorkspaceDataProvider: ParentComponent = (props) => {
   const auth = useAuth();
   const location = useLocation();
-  const { t } = useI18n();
-  const owner = createMemo(() => {
+  const { t, ready: i18nReady } = useI18n();
+  const scope = createMemo(() => {
     const user = auth.user();
-    return user?.workspace_id ? `${auth.identity()}:${user.id}:${user.session_id ?? ""}:${user.workspace_id}` : null;
+    return user ? `${auth.identity()}:${user.id}:${user.session_id ?? ""}:${user.workspace_id ?? ""}` : null;
+  });
+  const owner = () => (auth.user()?.workspace_id ? scope() : null);
+  const workspaceEntry = createMemo(() => {
+    const path = location.pathname;
+    return path === "/" || path === "/login" || path === "/onboarding" || path.startsWith("/w/");
   });
   const [nodes, setNodesStore] = createStore<NodeResponse[]>([]);
-  const [loadedOwner, setLoadedOwner] = createSignal<string | null>(null);
-  const [initializationPending, setInitializationPending] = createSignal(false);
-  const [loadingNodes, setLoadingNodes] = createSignal(false);
-  const [loadError, setLoadError] = createSignal<string | null>(null);
-  const snapshotReady = () => owner() !== null && loadedOwner() === owner();
-  const ready = () => snapshotReady() && !initializationPending();
-  let pending: Promise<NodeResponse[]> | null = null;
-  let initializationReadOwner: string | null = null;
-  let generation = 0;
+  const [snapshot, setSnapshot] = createSignal<{ owner: string; policy: "read-only" | "workspace" } | null>(null);
+  const [state, setState] = createSignal<PreparationState>({ kind: "idle" });
+  const ready = createMemo(() => owner() !== null && snapshot()?.owner === owner());
   let disposed = false;
-  const workspaceEntry = (path: string) =>
-    path === "/" || path === "/login" || path === "/onboarding" || path.startsWith("/w/");
 
-  function loadNodes(force: boolean): Promise<NodeResponse[]> {
-    const captured = owner();
-    const client = auth.wsApi();
-    if (captured === null || client === null || disposed) return Promise.resolve([]);
-    if (pending !== null) return pending;
-    if (!force && loadedOwner() === captured) return Promise.resolve([...nodes]);
-    const request = generation;
-    setLoadingNodes(true);
-    const task = (async () => {
+  const current = (operation: PreparationOperation) => {
+    const active = state();
+    return (
+      !disposed &&
+      !operation.controller.signal.aborted &&
+      scope() === operation.scope &&
+      active.kind === "running" &&
+      active.operation === operation
+    );
+  };
+  const retire = () => {
+    const active = state();
+    if (active.kind === "running" || active.kind === "failed") active.operation.controller.abort();
+    setState({ kind: "idle" });
+  };
+  const publish = (operation: WorkspacePreparation, roots: NodeResponse[]) => {
+    if (!current(operation)) return [];
+    const policy = operation.mode === "refresh" ? (snapshot()?.policy ?? "read-only") : operation.mode;
+    batch(() => {
+      setNodesStore(reconcile(roots));
+      setSnapshot({ owner: operation.scope, policy });
+      setState({ kind: "idle" });
+    });
+    return roots;
+  };
+  const run = async (operation: PreparationOperation): Promise<NodeResponse[]> => {
+    const { user, controller } = operation;
+    const signal = controller.signal;
+    if (operation.kind === "provision") {
+      const firstName = user.name.split(" ")[0] || user.name;
+      const result = await provisionFirstWorkspace(
+        user,
+        operation.api,
+        {
+          organization: t(firstName ? "onboarding.defaultOrgName" : "onboarding.defaultOrgNameFallback", {
+            name: firstName,
+          }),
+          workspace: t(firstName ? "onboarding.defaultWorkspaceName" : "onboarding.defaultWorkspaceNameFallback", {
+            name: firstName,
+          }),
+        },
+        signal,
+      );
+      if (!current(operation)) return [];
+      if (result.workspace_id) {
+        // The new workspace starts its own preparation. This operation must not
+        // publish a result or clear its successor after changing the auth scope.
+        auth.setUser(result);
+      } else {
+        setState({ kind: "needs-workspace" });
+      }
+      return [];
+    }
+    const client = operation.client;
+    if (operation.stage === "roots") {
+      const response = await client.listNodeChildren("0", signal);
+      if (!current(operation)) return [];
+      const roots = response.nodes ?? [];
+      if (
+        operation.mode !== "workspace" ||
+        roots.length > 0 ||
+        (user.workspace_role !== WSRoleAdmin && user.workspace_role !== WSRoleEditor)
+      ) {
+        return publish(operation, roots);
+      }
+      operation.stage = "welcome";
+    }
+    if (operation.stage === "welcome") {
+      // Permission can change without replacing the session or workspace owner.
+      const role = auth.user()?.workspace_role;
+      if (workspaceEntry() && (role === WSRoleAdmin || role === WSRoleEditor)) {
+        await client.createPage(
+          "0",
+          {
+            title: t("welcome.welcomePageTitle"),
+            content: t("welcome.welcomePageContent"),
+            ensure_root_if_empty: true,
+          },
+          signal,
+        );
+        if (!current(operation)) return [];
+      }
+      operation.stage = "final-read";
+    }
+    const canonical = await client.listNodeChildren("0", signal);
+    return publish(operation, canonical.nodes ?? []);
+  };
+  const start = (mode: PreparationMode, stage: PreparationStage): Promise<NodeResponse[]> => {
+    const user = auth.user();
+    const captured = scope();
+    if (!user || captured === null || disposed) return Promise.resolve([]);
+    const lifetime: OperationOwner = {
+      scope: captured,
+      controller: new AbortController(),
+      completion: Promise.withResolvers<NodeResponse[]>(),
+    };
+    const operation: PreparationOperation = user.workspace_id
+      ? { ...lifetime, kind: "workspace", user, client: auth.api().ws(user.workspace_id), mode, stage }
+      : { ...lifetime, kind: "provision", user, api: auth.api() };
+    setState({ kind: "running", operation });
+    void (async () => {
       try {
-        const response = await client.listNodeChildren("0");
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
-        if (disposed || generation !== request || owner() !== captured) return [];
-        batch(() => {
-          setNodesStore(reconcile(response.nodes ?? []));
-          setLoadedOwner(captured);
-          setLoadError(null);
-          if (initializationReadOwner === captured) {
-            initializationReadOwner = null;
-            setInitializationPending(false);
-          }
-        });
-        return response.nodes ?? [];
+        operation.completion.resolve(await run(operation));
       } catch (error) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
-        if (!disposed && generation === request && owner() === captured)
-          setLoadError(`${t("errors.failedToLoad")}: ${String(error)}`);
-        throw error;
-      } finally {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
-        if (!disposed && generation === request && owner() === captured) {
-          pending = null;
-          setLoadingNodes(false);
+        if (current(operation)) {
+          setState({ kind: "failed", operation, error: `${t("errors.failedToLoad")}: ${String(error)}` });
         }
+        operation.completion.reject(error);
       }
     })();
-    pending = task;
-    return task;
-  }
-  const readInitial = () => {
-    void loadNodes(false).catch((error: unknown) => console.warn("Initial workspace read failed", error));
+    return operation.completion.promise;
+  };
+  const begin = (force: boolean): Promise<NodeResponse[]> => {
+    const active = state();
+    if (active.kind === "running") return active.operation.completion.promise;
+    if (!i18nReady() && !ready()) return Promise.resolve([]);
+    if (!force && ready()) return Promise.resolve([...nodes]);
+    if (active.kind === "failed") {
+      const operation = active.operation;
+      retire();
+      return operation.kind === "provision" ? start("workspace", "roots") : start(operation.mode, operation.stage);
+    }
+    if (!auth.user()?.workspace_id && !workspaceEntry()) return Promise.resolve([]);
+    return start(ready() ? "refresh" : workspaceEntry() ? "workspace" : "read-only", "roots");
+  };
+  const observe = (preparation: Promise<NodeResponse[]>) => {
+    void preparation.catch((error: unknown) => {
+      // Retiring an owner deliberately aborts its pending request.
+      if (error instanceof Error && error.name === "AbortError") return;
+      console.warn("Workspace preparation failed", error);
+    });
+  };
+  const prepare = () => {
+    const user = auth.user();
+    const captured = scope();
+    if (captured === null || !user || !i18nReady()) return;
+    if (!user.workspace_id && !workspaceEntry()) {
+      setState({ kind: "needs-workspace" });
+      return;
+    }
+    if (ready()) {
+      if (!workspaceEntry() || snapshot()?.policy === "workspace") {
+        return;
+      }
+      if (nodes.length > 0 || (user.workspace_role !== WSRoleAdmin && user.workspace_role !== WSRoleEditor)) {
+        setSnapshot({ owner: captured, policy: "workspace" });
+        return;
+      }
+      observe(start("workspace", "welcome"));
+      return;
+    }
+    observe(begin(false));
   };
   createEffect(
-    on(owner, (current) => {
-      generation++;
-      pending = null;
-      initializationReadOwner = null;
-      batch(() => {
-        setNodesStore(reconcile([]));
-        setLoadedOwner(null);
-        setLoadError(null);
-        setLoadingNodes(false);
-        setInitializationPending(current !== null && workspaceEntry(location.pathname));
-      });
-      if (current !== null && !initializationPending()) readInitial();
+    on([scope, workspaceEntry, i18nReady], ([captured, entry], previous) => {
+      const replaced = !previous || previous[0] !== captured;
+      const changedPolicy = previous && previous[1] !== entry;
+      if (replaced || changedPolicy) retire();
+      if (replaced) {
+        batch(() => {
+          setNodesStore(reconcile([]));
+          setSnapshot(null);
+        });
+      }
+      // Translation readiness can start idle work, but cannot restart a failed
+      // stage or replace a request that already owns valid translated input.
+      if (state().kind === "running" || state().kind === "failed") return;
+      prepare();
     }),
-  );
-  createEffect(
-    on(
-      () => location.pathname,
-      (path) => {
-        if (initializationPending() && !workspaceEntry(path)) {
-          setInitializationPending(false);
-          readInitial();
-        }
-      },
-    ),
   );
   onCleanup(() => {
     disposed = true;
-    generation++;
+    retire();
   });
   const value: WorkspaceDataContextValue = {
     owner,
     nodes,
     setNodesStore,
-    loadingNodes,
-    snapshotReady,
+    loadingNodes: () => state().kind === "running",
     ready,
-    loadError,
-    setLoadError,
-    loadNodes,
-    async completeInitialization(captured, refresh) {
-      if (disposed || captured !== owner()) return;
-      const request = generation;
-      if (!refresh) {
-        if (snapshotReady()) setInitializationPending(false);
-        return;
-      }
-      // Reads already underway may predate the route's initialization writes.
-      // Only the following fresh read, or its successful retry, can settle them.
-      if (pending !== null) {
-        try {
-          await pending;
-        } catch (error) {
-          console.warn("Prior workspace read failed", error);
-        }
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
-      if (disposed || generation !== request || captured !== owner()) return;
-      initializationReadOwner = captured;
-      await loadNodes(true);
+    needsWorkspace: () => state().kind === "needs-workspace",
+    preparationError: () => {
+      const active = state();
+      return active.kind === "failed" ? active.error : null;
     },
+    loadNodes: begin,
   };
   return <WorkspaceDataContext.Provider value={value}>{props.children}</WorkspaceDataContext.Provider>;
 };

@@ -220,6 +220,168 @@ beforeEach(() => {
   });
 });
 
+for (const field of ["title", "content"] as const) {
+  it(`becomes clean when ${field} returns to its acknowledged value`, async () => {
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    if (field === "title") {
+      editor.handleTitleChange("Edited");
+      editor.handleTitleChange("Original");
+    } else {
+      editor.handleContentChange("Edited body");
+      editor.handleContentChange("body");
+    }
+    expect(editor.hasUnsavedChanges()).toBe(false);
+    expect(await editor.beginIntent().drain()).toBe(true);
+    expect(calls).toHaveLength(0);
+    navigate("/settings");
+    await waitFor(() => expect(currentPath).toBe("/settings"));
+  });
+}
+
+it("title undo becomes clean and redo restores the dirty draft", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Edited");
+  await editor.undo();
+  expect(editor.title()).toBe("Original");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  await editor.redo();
+  expect(editor.title()).toBe("Edited");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+});
+
+it("saves a reverted clean draft after the pending different write is acknowledged", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Pending B");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  editor.handleTitleChange("Original");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  firstTitle = "Unacknowledged remote title";
+  FakeEventSource.current.resync();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(editor.title()).toBe("Original");
+  expect(editor.externalChange()).toBe(true);
+  navigate("/settings");
+  expect(currentPath).toBe("/w/workspace/one");
+  calls[0]!.resolve(saved("Pending B", "b".repeat(64)));
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body).toEqual({ title: "Original", content: "body", expected_revision: "b".repeat(64) });
+  expect(currentPath).toBe("/w/workspace/one");
+  calls[1]!.resolve(saved("Original", "c".repeat(64)));
+  await saving;
+  await waitFor(() => expect(currentPath).toBe("/settings"));
+});
+
+for (const outcome of ["conflict", "unknown"] as const) {
+  it(`retains ${outcome} protection after reverting to acknowledged text`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    editor.handleTitleChange("Pending B");
+    const saving = editor.beginIntent().drain();
+    await waitFor(() => expect(calls).toHaveLength(1));
+    editor.handleTitleChange("Original");
+    if (outcome === "unknown") calls[0]!.reject(new TypeError("Response lost after commit"));
+    else calls[0]!.resolve(Response.json({ error: { code: "CONFLICT", message: "Changed" } }, { status: 409 }));
+    expect(await saving).toBe(false);
+    expect(editor.hasUnsavedChanges()).toBe(false);
+    expect(editor.saveIssue()).toBe(outcome);
+    editor.handleTitleChange("Changed again");
+    editor.handleTitleChange("Original");
+    expect(await editor.beginIntent().drain()).toBe(false);
+    firstTitle = "Remote C";
+    FakeEventSource.current.resync();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(editor.title()).toBe("Original");
+    expect(editor.saveIssue()).toBe(outcome);
+    navigate("/settings");
+    expect(currentPath).toBe("/w/workspace/one");
+    expect(calls).toHaveLength(1);
+  });
+}
+
+it("keeps unchanged uploads admitted until their application settles", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  let finish!: (value: boolean) => void;
+  const upload = editor.runAsyncEdit(
+    () =>
+      new Promise<boolean>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(editor.asyncEditPending()).toBe(true);
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  navigate("/settings");
+  expect(currentPath).toBe("/w/workspace/one");
+  expect(calls).toHaveLength(0);
+  finish(true);
+  await upload;
+  await waitFor(() => expect(currentPath).toBe("/settings"));
+  expect(calls).toHaveLength(0);
+});
+
+it("writes an explicitly recovered old baseline against the latest remote revision", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = { ...node("one", "Remote C", "c".repeat(64)), content: "Remote body" };
+  await editor.compareChanges();
+  const saving = editor.saveRecovery(editor.recovery()!, { title: "Original", content: "body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(calls[1]!.body).toEqual({ title: "Original", content: "body", expected_revision: latest.revision });
+  calls[1]!.resolve(saved("Original", "d".repeat(64)));
+  expect(await saving).toBe(true);
+  expect(editor.saveIssue()).toBe(null);
+});
+
+it("keeps manual comparison admission visible and blocked after a clean revert", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Review draft");
+  await editor.compareChanges();
+  editor.closeRecovery();
+  editor.handleTitleChange("Original");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.saveIssue()).toBe(null);
+  expect(editor.comparisonBlocked()).toBe(true);
+  expect(editor.autoSaveStatus()).toBe("idle");
+  expect(workspace.saveError()).toBe(null);
+  navigate("/settings");
+  expect(await editor.beginIntent().drain()).toBe(false);
+  expect(currentPath).toBe("/w/workspace/one");
+  expect(calls).toHaveLength(0);
+  await editor.compareChanges();
+  expect(editor.recovery()?.local).toEqual({ title: "Original", content: "body" });
+});
+
+it("retains comparison admission after an older write succeeds and becomes clean", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Pending draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  const comparing = editor.compareChanges();
+  calls[0]!.resolve(saved("Pending draft", "b".repeat(64)));
+  await saving;
+  await comparing;
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.saveIssue()).toBe(null);
+  expect(editor.comparisonBlocked()).toBe(true);
+  expect(editor.autoSaveStatus()).toBe("idle");
+  editor.closeRecovery();
+  navigate("/settings");
+  expect(await editor.beginIntent().drain()).toBe(false);
+  expect(calls).toHaveLength(1);
+  expect(currentPath).toBe("/w/workspace/one");
+});
+
 it("keeps an uncertain save outcome for explicit recovery rather than repeating it", async () => {
   mount();
   await waitFor(() => expect(editor.title()).toBe("Original"));
@@ -395,6 +557,24 @@ it("applies the canonical acknowledged title to the editor and sidebar together"
   expect(await saving).toBe(true);
   expect(editor.title()).toBe("Canonical");
   expect(workspace.nodes.find((n) => n.id === "one")?.title).toBe("Canonical");
+});
+
+it("derives cleanliness from a canonical acknowledgement matching newer local edits", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("  Canonical  ");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  editor.handleTitleChange("Canonical");
+  editor.handleContentChange("Canonical body");
+  calls[0]!.resolve(
+    Response.json({ node: { ...node("one", "Canonical", "b".repeat(64)), content: "Canonical body" } }),
+  );
+  expect(await saving).toBe(true);
+  expect(editor.title()).toBe("Canonical");
+  expect(editor.content()).toBe("Canonical body");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(calls).toHaveLength(1);
 });
 
 it("serializes saves and chooses each revision only after the preceding acknowledgement", async () => {
@@ -591,10 +771,12 @@ it("keeps comparison admission blocked when an older save fails ordinarily", asy
   editor.handleTitleChange("Newer queued draft");
   const queued = intent.drain();
   const comparing = editor.compareChanges();
-  expect(editor.saveIssue()).toBe("conflict");
+  expect(editor.saveIssue()).toBe(null);
+  expect(editor.comparisonBlocked()).toBe(true);
   calls[0]!.resolve(Response.json({ error: "invalid draft" }, { status: 422 }));
   expect(await first).toBe(false);
-  expect(editor.saveIssue()).toBe("conflict");
+  expect(editor.saveIssue()).toBe(null);
+  expect(editor.comparisonBlocked()).toBe(true);
   expect(await queued).toBe(false);
   await comparing;
   expect(editor.recovery()?.local.title).toBe("Newer queued draft");

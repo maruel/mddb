@@ -64,6 +64,7 @@ test("browser hang-up cancels a pending lookup and releases the transport and mi
   await installBrowserTools(page);
   const { token } = await registerUser(request, "browser-focus-cancel");
   await gotoWithSession(page, token);
+  await expect(page.getByTestId("wysiwyg-editor")).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("user-menu-button")).toBeVisible();
   const workspaceId = await getWorkspaceId(page);
   const target = await createClient(request, token)
@@ -84,6 +85,7 @@ test("browser hang-up cancels a pending lookup and releases the transport and mi
   const original = page.url();
   await browserFocus(page, target.id, "hang-up");
   await requested.promise;
+  const aborted = page.waitForEvent("requestfailed", (req) => req.url().endsWith(`/nodes/${target.id}`));
   await page.getByRole("button", { name: "End voice session", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.browserToolFixture.closed)).toBe(true);
   await expect
@@ -95,6 +97,7 @@ test("browser hang-up cancels a pending lookup and releases the transport and mi
       ),
     )
     .toBe(true);
+  expect((await aborted).failure()?.errorText).toBe("net::ERR_ABORTED");
   release.resolve();
   await completed.promise;
   await expect(page).toHaveURL(original);

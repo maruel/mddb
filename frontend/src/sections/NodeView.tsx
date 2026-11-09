@@ -55,6 +55,7 @@ export default function NodeView() {
     linkedNodeTitles,
     externalChange,
     saveIssue,
+    comparisonBlocked,
     editingLocked,
     copyDraft,
     compareChanges,
@@ -321,19 +322,26 @@ export default function NodeView() {
       <ConflictRecovery onSaved={() => titleInput?.focus()} />
       <Show when={selectedNodeId()}>
         <div class={styles.editor} inert={editingLocked()} aria-busy={editingLocked()}>
-          <Show when={externalChange() || saveIssue() !== null}>
+          <Show when={externalChange() || saveIssue() !== null || comparisonBlocked()}>
             <div class={styles.conflictBanner}>
               <span>
                 {saveIssue() === "unknown"
                   ? t("editor.saveUnknown")
                   : saveIssue() === "conflict"
                     ? t("editor.saveConflict")
-                    : t("sse.externalChange")}
+                    : comparisonBlocked()
+                      ? t("editor.reviewRequired")
+                      : t("sse.externalChange")}
               </span>
-              <Show when={hasUnsavedChanges() && saveIssue() !== "unknown"}>
+              <Show
+                when={
+                  (hasUnsavedChanges() || saveIssue() === "conflict" || comparisonBlocked()) &&
+                  saveIssue() !== "unknown"
+                }
+              >
                 <button onClick={compareChanges}>{t("editor.compareChanges")}</button>
               </Show>
-              <Show when={saveIssue() !== null}>
+              <Show when={saveIssue() !== null || comparisonBlocked()}>
                 <button onClick={copyDraft}>{t("editor.copyDraft")}</button>
               </Show>
               <button
@@ -343,9 +351,9 @@ export default function NodeView() {
                 }}
                 disabled={asyncEditPending()}
               >
-                {saveIssue() !== null ? t("editor.reloadLatest") : t("sse.refreshContent")}
+                {saveIssue() !== null || comparisonBlocked() ? t("editor.reloadLatest") : t("sse.refreshContent")}
               </button>
-              <Show when={saveIssue() === null}>
+              <Show when={saveIssue() === null && !comparisonBlocked()}>
                 <button onClick={dismissExternalChange}>{t("sse.dismissNotice")}</button>
               </Show>
             </div>

@@ -1,6 +1,8 @@
-// Workspace context providing node tree, navigation, and workspace switching.
+// Owns current per-node metadata requests, route-local operations, transient errors, and workspace switching.
+
 import {
   createContext,
+  createComputed,
   useContext,
   createSignal,
   createEffect,
@@ -25,16 +27,11 @@ import {
   EventNodeMoved,
   EventNodeUpdated,
   EventResync,
-  OrgRoleAdmin,
-  OrgRoleOwner,
-  WSRoleAdmin,
-  WSRoleEditor,
   type NodeResponse,
 } from "@sdk/types.gen";
 import { workspaceUrl } from "../utils/urls";
-import { APIError, createApi } from "../useApi";
+import { APIError } from "../useApi";
 import { findNodePath, reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
-import { provisionFirstWorkspace } from "./firstLogin";
 
 interface NodeLoadOptions {
   refresh: boolean;
@@ -44,7 +41,6 @@ interface NodeLoadOptions {
 interface WorkspaceContextValue {
   // Node tree
   nodes: NodeResponse[];
-  setNodes: (fn: (nodes: NodeResponse[]) => void) => void;
 
   // Selected node
   selectedNodeId: Accessor<string | null>;
@@ -77,10 +73,6 @@ interface WorkspaceContextValue {
   // Combined loading (any operation in progress) - for backward compatibility
   loading: Accessor<boolean>;
 
-  // First login state
-  firstLoginCheckDone: Accessor<boolean>;
-  setFirstLoginCheckDone: (done: boolean) => void;
-
   // Operations
   switchWorkspace: (wsId: string) => Promise<void>;
   createOrganization: (data: { name: string }) => Promise<void>;
@@ -100,16 +92,37 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue>();
 
 export const WorkspaceProvider: ParentComponent = (props) => {
-  const { t, ready: i18nReady } = useI18n();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const navigation = useWorkspaceNavigation();
   const { user, identity: authIdentity, setUser, api, wsApi } = useAuth();
 
   const rootData = useWorkspaceData();
-  const { nodes, setNodesStore, loadingNodes, loadError, setLoadError } = rootData;
+  const { nodes, setNodesStore, loadingNodes } = rootData;
+  const metadataRequests = new Map<string, AbortController>();
+  const retireMetadata = (id: string) => {
+    metadataRequests.get(id)?.abort();
+    metadataRequests.delete(id);
+  };
+  const retireAllMetadata = () => {
+    for (const id of metadataRequests.keys()) retireMetadata(id);
+  };
+  const retireSubtreeMetadata = (nodeId: string) => {
+    for (const id of metadataRequests.keys()) {
+      if (findNodePath(nodes, id)?.some((node) => node.id === nodeId)) retireMetadata(id);
+    }
+  };
+  // Retire synchronously when canonical work starts, before a later metadata
+  // event can join the root read and own its subsequent detail request.
+  createComputed(
+    on([rootData.owner, loadingNodes], ([owner, readingRoots], previous) => {
+      if (readingRoots || (previous && owner !== previous[0])) retireAllMetadata();
+    }),
+  );
   let disposed = false;
   onCleanup(() => {
     disposed = true;
+    retireAllMetadata();
     nodeRequest++;
   });
 
@@ -126,6 +139,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   const [creatingNode, setCreatingNode] = createSignal(false);
 
   // Operation-specific error states
+  const [loadError, setLoadError] = createSignal<string | null>(null);
   const [saveError, setSaveError] = createSignal<string | null>(null);
 
   // Combined loading (any operation in progress) - derived for backward compatibility
@@ -138,10 +152,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       deletingNodeId() !== null ||
       creatingNode(),
   );
-
-  // First login state
-  const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
-  const [firstLoginInProgress, setFirstLoginInProgress] = createSignal(false);
 
   // Track loaded state to prevent duplicate calls
   const [failedNodeId, setFailedNodeId] = createSignal<string | null>(null);
@@ -163,22 +173,19 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadingNodeId(null);
       setSwitchingWorkspace(false);
       setCreatingNode(false);
+      setLoadError(null);
     });
   });
 
-  // Clear all errors
+  // Clear route operation errors
   const clearErrors = () => {
     setLoadError(null);
     setSaveError(null);
   };
 
-  // Wrapper for setNodes using produce
-  const setNodes = (fn: (nodes: NodeResponse[]) => void) => {
-    setNodesStore(produce(fn));
-  };
-
   // Helper to update node title in local state (sidebar and breadcrumbs)
   const updateNodeTitle = (nodeId: string, newTitle: string) => {
+    retireMetadata(nodeId);
     setNodesStore(
       produce((list) => {
         const update = (nodeList: NodeResponse[]): boolean => {
@@ -200,6 +207,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   };
 
   const updateNodeIcon = (nodeId: string, newIcon: string) => {
+    retireMetadata(nodeId);
     setNodesStore(
       produce((list) => {
         const update = (nodeList: NodeResponse[]): boolean => {
@@ -221,6 +229,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
   // Remove a node from the store (used after deletion)
   const removeNode = (nodeId: string) => {
+    const parent = findNodePath(nodes, nodeId)?.at(-2);
+    if (parent?.children?.length === 1) retireMetadata(parent.id);
+    retireSubtreeMetadata(nodeId);
     setNodesStore(
       produce((list) => {
         const removeFromList = (nodeList: NodeResponse[]): boolean => {
@@ -268,54 +279,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (authIdentity() !== initialIdentity) return;
     setUser(updatedUser);
     await switchWorkspace(ws.id);
-  }
-
-  // Provision the first organization and workspace with server-side idempotency.
-  async function autoProvisionFirstLogin() {
-    const initialUser = user();
-    const initialIdentity = authIdentity();
-    if (!initialUser) return;
-    try {
-      setCreatingNode(true);
-      const firstName = initialUser.name.split(" ")[0] || initialUser.name;
-      const result = await provisionFirstWorkspace(initialUser.id, createApi(undefined, initialUser.session_id), {
-        organization: firstName
-          ? t("onboarding.defaultOrgName", { name: firstName })
-          : t("onboarding.defaultOrgNameFallback"),
-        workspace: firstName
-          ? t("onboarding.defaultWorkspaceName", { name: firstName })
-          : t("onboarding.defaultWorkspaceNameFallback"),
-      });
-      if (authIdentity() !== initialIdentity) return;
-      setUser(result.user);
-      if (result.user.workspace_id) navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name));
-    } catch (err) {
-      if (authIdentity() === initialIdentity) {
-        setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
-        setFirstLoginCheckDone(true);
-      }
-    } finally {
-      if (authIdentity() === initialIdentity) setCreatingNode(false);
-    }
-  }
-
-  // Auto-create welcome page if no root page exists
-  async function createWelcomePageIfNeeded(): Promise<void> {
-    const ws = wsApi();
-    const u = user();
-    if (!ws || !u?.workspace_id) return;
-    if (u.workspace_role !== WSRoleAdmin && u.workspace_role !== WSRoleEditor) {
-      return;
-    }
-    try {
-      await ws.createPage("0", {
-        title: t("welcome.welcomePageTitle"),
-        content: t("welcome.welcomePageContent"),
-        ensure_root_if_empty: true,
-      });
-    } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
-    }
   }
 
   async function switchWorkspace(wsId: string) {
@@ -417,6 +380,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
       const children = data.nodes?.filter((node): node is NodeResponse => Boolean(node)) || [];
 
+      // This snapshot replaces descendant metadata as well as the parent's
+      // child-presence flag. Older detail reads no longer own either write.
+      retireSubtreeMetadata(nodeId);
       setNodesStore(
         produce((list) => {
           const updateChildren = (nodeList: NodeResponse[]): boolean => {
@@ -440,66 +406,34 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  // First-time login check (wait for translations to be ready)
-  // Navigation to workspace is handled by App.tsx RootRedirect component
-  createEffect(() => {
-    const u = user();
-    if (!u || !i18nReady() || firstLoginCheckDone() || firstLoginInProgress()) return;
-
-    const firstOrg = u.organizations?.[0];
-    const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg?.organization_id) ?? [];
-    if (
-      !firstOrg ||
-      (!u.workspace_id && !!u.workspaces?.length) ||
-      (orgWorkspaces.length === 0 && (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner))
-    ) {
-      setFirstLoginInProgress(true);
-      void autoProvisionFirstLogin().finally(() => setFirstLoginInProgress(false));
-      return;
-    }
-
-    const wsId = u.workspace_id;
-    if (!wsId) return;
-
-    setFirstLoginCheckDone(true);
-  });
-
-  // The route owns welcome initialization; the root owns each canonical read.
-  let initializationOwner: string | null = null;
-  const initialize = () => {
-    const captured = rootData.owner();
-    if (!firstLoginCheckDone() || captured === null) return;
-    if (initializationOwner === captured) return;
-    initializationOwner = captured;
-    const current = () => !disposed && rootData.owner() === captured;
-    void (async () => {
-      const snapshot = await rootData.loadNodes(false);
-      if (!current()) return;
-      const role = user()?.workspace_role;
-      const refresh = snapshot.length === 0 && (role === WSRoleAdmin || role === WSRoleEditor);
-      if (refresh) {
-        await createWelcomePageIfNeeded();
-        if (!current()) return;
-      }
-      if (current()) await rootData.completeInitialization(captured, refresh);
-    })()
-      .catch((error: unknown) => console.warn("Workspace initialization failed", error))
-      .finally(() => {
-        if (initializationOwner === captured) initializationOwner = null;
-      });
-  };
-  createEffect(on([rootData.owner, firstLoginCheckDone, rootData.snapshotReady], initialize));
-
   // Update metadata in place so page edits retain loaded descendants and focus.
-  // TODO(2026-11-08): incremental-clients: sequence per-node refreshes and discard
-  // responses superseded by a newer refresh request.
   async function refreshNodeMetadata(id: string, authoritative: boolean) {
     const ws = wsApi();
     if (!ws || !findNodePath(nodes, id)) return;
-    const identity = workspaceIdentity();
+    retireMetadata(id);
+    const controller = new AbortController();
+    metadataRequests.set(id, controller);
+    const owner = rootData.owner();
+    const current = () =>
+      !disposed &&
+      !controller.signal.aborted &&
+      metadataRequests.get(id) === controller &&
+      rootData.owner() === owner &&
+      findNodePath(nodes, id) !== null;
     try {
-      const data = await ws.getNode(id);
-      if (identity !== workspaceIdentity()) return;
+      // A root snapshot that began earlier must publish before this detail read.
+      if (loadingNodes()) {
+        try {
+          await rootData.loadNodes(false);
+        } catch {
+          // The canonical owner publishes preparation failure and owns retry.
+          // No detail request started, so there is no route error to publish.
+          return;
+        }
+      }
+      if (!current()) return;
+      const data = await ws.getNode(id, controller.signal);
+      if (!current()) return;
       setNodesStore(
         produce((list) => {
           const path = findNodePath(list, id);
@@ -520,7 +454,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     } catch (err) {
       // A subsequent deletion event owns removal of a concurrently deleted node.
       if (err instanceof APIError && err.status === 404) return;
-      if (identity === workspaceIdentity()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
+      if (current()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
+    } finally {
+      if (metadataRequests.get(id) === controller) metadataRequests.delete(id);
     }
   }
 
@@ -550,6 +486,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     try {
       await ws.moveNode(nodeId, { new_parent_id: newParentId });
 
+      retireSubtreeMetadata(nodeId);
+      const sourcePath = findNodePath(nodes, nodeId);
+      if (sourcePath) {
+        const sourceParent = sourcePath.at(-2);
+        if (sourceParent?.children?.length === 1) retireMetadata(sourceParent.id);
+        retireMetadata(newParentId);
+      }
       let moveResult: ReturnType<typeof reconcileMovedNode>;
       batch(() => {
         setNodesStore(
@@ -580,7 +523,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
   const value: WorkspaceContextValue = {
     nodes,
-    setNodes,
     selectedNodeId,
     setSelectedNodeId,
     selectedNodeData,
@@ -602,8 +544,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     saveError,
     setSaveError,
     loading,
-    firstLoginCheckDone,
-    setFirstLoginCheckDone,
     switchWorkspace,
     createOrganization,
     createWorkspace,

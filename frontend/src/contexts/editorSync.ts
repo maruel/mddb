@@ -7,14 +7,14 @@ export type ExternalUpdateDecision = "ignore" | "reload" | "conflict";
 export function classifyExternalUpdate(
   eventModified: number,
   syncedModified: number | null,
-  hasUnsavedChanges: boolean,
+  localWorkPending: boolean,
   eventRevision: string | null,
   syncedRevision: string | null,
 ): ExternalUpdateDecision {
   if (eventRevision !== null && syncedRevision !== null) {
     if (eventRevision === syncedRevision) return "ignore";
-    return hasUnsavedChanges ? "conflict" : "reload";
+    return localWorkPending ? "conflict" : "reload";
   }
   if (syncedModified !== null && eventModified <= syncedModified) return "ignore";
-  return hasUnsavedChanges ? "conflict" : "reload";
+  return localWorkPending ? "conflict" : "reload";
 }

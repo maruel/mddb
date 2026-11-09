@@ -1,78 +1,52 @@
-// Onboarding screen for first-time users, using the shared first-workspace provisioner.
+// Presents shared workspace preparation, retry, access requirements, and the resulting workspace redirect.
 
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { useAuth } from "../contexts";
-import { provisionFirstWorkspace } from "../contexts/firstLogin";
+import { useWorkspaceData } from "../contexts/WorkspaceDataContext";
 import { useI18n } from "../i18n";
-import { createApi } from "../useApi";
 import { workspaceUrl } from "../utils/urls";
 import styles from "./Onboarding.module.css";
 
-/**
- * Onboarding handles the first-login flow for users who have authenticated
- * but don't yet have an organization or workspace.
- *
- * Creates or picks the first workspace and redirects to it.
- */
 export default function Onboarding() {
-  const { t, ready: i18nReady } = useI18n();
-  const { user, identity, setUser } = useAuth();
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const data = useWorkspaceData();
   const navigate = useNavigate();
-
-  const [done, setDone] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
-
-  // Track whether we're already running to prevent duplicate executions
-  const [running, setRunning] = createSignal(false);
-
-  // Run first-login flow
   createEffect(() => {
-    const u = user();
-    const initialIdentity = identity();
-    if (!u || !i18nReady() || running() || done() || error()) return;
-
-    // If user already has a workspace, redirect
-    if (u.workspace_id) {
-      navigate(workspaceUrl(u.workspace_id, u.workspace_name), { replace: true });
-      return;
-    }
-
-    // Run async flow
-    setRunning(true);
-    void (async () => {
-      try {
-        const firstName = u.name.split(" ")[0] || u.name;
-        const result = await provisionFirstWorkspace(u.id, createApi(undefined, u.session_id), {
-          organization: firstName
-            ? t("onboarding.defaultOrgName", { name: firstName })
-            : t("onboarding.defaultOrgNameFallback"),
-          workspace: firstName
-            ? t("onboarding.defaultWorkspaceName", { name: firstName })
-            : t("onboarding.defaultWorkspaceNameFallback"),
-        });
-        if (identity() !== initialIdentity) return;
-        setUser(result.user);
-        if (result.user.workspace_id)
-          navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name), { replace: true });
-        setDone(true);
-      } catch (err) {
-        console.error("Onboarding error:", err);
-        setError(String(err));
-      } finally {
-        setRunning(false);
-      }
-    })();
+    const current = user();
+    if (current?.workspace_id) navigate(workspaceUrl(current.workspace_id, current.workspace_name), { replace: true });
   });
-
   return (
     <div class={styles.container}>
-      <Show when={error()}>
-        <div class={styles.error}>{error()}</div>
+      <Show when={data.preparationError()}>
+        <div class={styles.error} role="alert">
+          {data.preparationError()}
+        </div>
+        <button
+          class={styles.retry}
+          type="button"
+          onClick={() =>
+            void data.loadNodes(true).catch((error: unknown) => console.warn("Workspace retry failed", error))
+          }
+        >
+          {t("recovery.retry")}
+        </button>
       </Show>
-      <Show when={!error()}>
-        <div class={styles.status}>{t("common.loading") || "Loading..."}</div>
-        <div class={styles.spinner} />
+      <Show when={!data.preparationError()}>
+        <Show
+          when={data.needsWorkspace()}
+          fallback={
+            <>
+              <div class={styles.status} role="status">
+                {t("common.loading")}
+              </div>
+              <div class={styles.spinner} />
+            </>
+          }
+        >
+          <p role="status">{t("onboarding.noWorkspace")}</p>
+        </Show>
       </Show>
     </div>
   );

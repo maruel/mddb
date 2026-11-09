@@ -146,6 +146,7 @@ export interface Dictionary {
     previousRecovery: string;
     compareChanges: string;
     compareHelp: string;
+    reviewRequired: string;
     yourDraft: string;
     latestSaved: string;
     acknowledgedBase: string;
@@ -228,6 +229,7 @@ export interface Dictionary {
   };
 
   onboarding: {
+    noWorkspace: string;
     welcome: string;
     letsGetStarted: string;
     confirmWorkspaceName: string;

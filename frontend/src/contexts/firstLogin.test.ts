@@ -101,14 +101,14 @@ function setupApi(initial: { organization: boolean; workspace: boolean; member: 
     } else throw new Error(`Unexpected request: ${method} ${url}`);
     return { ok: true, json: async () => body } as Response;
   };
-  return { api: createApiClient(fetchFn), requests };
+  return { api: createApiClient(fetchFn), requests, user: currentUser() };
 }
 
 describe("provisionFirstWorkspace", () => {
   it("creates one organization and workspace for a new account", async () => {
-    const { api, requests } = setupApi({ organization: false, workspace: false, member: false });
-    const result = await provisionFirstWorkspace("user-1", api, names);
-    expect(result.user.workspace_id).toBe("ws-1");
+    const { api, requests, user } = setupApi({ organization: false, workspace: false, member: false });
+    const result = await provisionFirstWorkspace(user, api, names, new AbortController().signal);
+    expect(result.workspace_id).toBe("ws-1");
     expect(requests.filter((request) => request.startsWith("POST"))).toEqual([
       "POST /api/v1/organizations",
       "POST /api/v1/organizations/org-1/workspaces",
@@ -117,23 +117,28 @@ describe("provisionFirstWorkspace", () => {
   });
 
   it("reuses the existing workspace without creating resources", async () => {
-    const { api, requests } = setupApi({ organization: true, workspace: true, member: false });
-    const result = await provisionFirstWorkspace("user-1", api, names);
-    expect(result.user.workspace_id).toBe("ws-1");
-    expect(requests).toEqual(["GET /api/v1/auth/me"]);
+    const { api, requests, user } = setupApi({ organization: true, workspace: true, member: false });
+    const result = await provisionFirstWorkspace(user, api, names, new AbortController().signal);
+    expect(result.workspace_id).toBe("ws-1");
+    expect(requests).toEqual([]);
   });
 
   it("leaves a member without a workspace for the manual first-workspace flow", async () => {
-    const { api, requests } = setupApi({ organization: true, workspace: false, member: true });
-    const result = await provisionFirstWorkspace("user-1", api, names);
-    expect(result.user.workspace_id).toBeUndefined();
-    expect(requests).toEqual(["GET /api/v1/auth/me"]);
+    const { api, requests, user } = setupApi({ organization: true, workspace: false, member: true });
+    const result = await provisionFirstWorkspace(user, api, names, new AbortController().signal);
+    expect(result.workspace_id).toBeUndefined();
+    expect(requests).toEqual([]);
   });
 
   it("uses an accessible workspace in another organization when the first has none", async () => {
-    const { api, requests } = setupApi({ organization: true, workspace: false, member: true, otherWorkspace: true });
-    const result = await provisionFirstWorkspace("user-1", api, names);
-    expect(result.user.workspace_id).toBe("ws-2");
-    expect(requests).toEqual(["GET /api/v1/auth/me", "POST /api/v1/auth/switch-workspace"]);
+    const { api, requests, user } = setupApi({
+      organization: true,
+      workspace: false,
+      member: true,
+      otherWorkspace: true,
+    });
+    const result = await provisionFirstWorkspace(user, api, names, new AbortController().signal);
+    expect(result.workspace_id).toBe("ws-2");
+    expect(requests).toEqual(["POST /api/v1/auth/switch-workspace"]);
   });
 });

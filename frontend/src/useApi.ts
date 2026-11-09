@@ -1,4 +1,4 @@
-// Utilities for creating authenticated and retry-enabled API clients.
+// Creates authenticated API clients with cancellable transport retries and UI write correlation.
 
 import { createApiClient, APIError, type FetchFn } from "@sdk/api.gen";
 
@@ -73,18 +73,38 @@ function getRetryDelay(attempt: number, retryAfterMs: number | null): number {
 /** Wraps a fetch function with retry logic for 429 and 5xx errors */
 function withRetry(fetchFn: FetchFn): FetchFn {
   return async (url: string, init?: RequestInit): Promise<Response> => {
+    const signal = init?.signal;
     let attempt = 0;
     for (;;) {
+      signal?.throwIfAborted();
       const response = await fetchFn(url, init);
+      signal?.throwIfAborted();
       if (!isRetryableStatus(response.status) || attempt >= RETRY_CONFIG.maxRetries) {
         return response;
       }
       const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
       const delay = getRetryDelay(attempt, retryAfterMs);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await response.body?.cancel();
+      await waitForRetry(delay, signal);
       attempt++;
     }
   };
+}
+
+function waitForRetry(delay: number, signal: AbortSignal | null | undefined): Promise<void> {
+  signal?.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const cancel = () => {
+      clearTimeout(timer);
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- AbortSignal and throwIfAborted preserve the caller's rejection reason.
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", cancel);
+      resolve();
+    }, delay);
+    signal?.addEventListener("abort", cancel, { once: true });
+  });
 }
 
 /**

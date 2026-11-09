@@ -1,4 +1,4 @@
-/* Styles for WorkspaceSection layout and components. */
+/* Styles for the workspace layout, preparation recovery, and document components. */
 
 .app {
   display: flex;
@@ -74,6 +74,33 @@
   min-height: 0;
   overflow: hidden;
   background: var(--c-surface);
+}
+
+.preparationError {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3);
+  margin: var(--s-3);
+  color: var(--c-text);
+  background: var(--c-surface-danger-subtle);
+  border: 1px solid var(--c-border-danger-strong);
+  border-radius: var(--radius-md);
+}
+
+.preparationMessage {
+  flex: 1 1 16rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.preparationRetry {
+  flex: none;
+  min-height: 2.75rem;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--radius-md);
 }
 
 .editor {

@@ -1,4 +1,5 @@
-// Binds saves and asynchronous edits to loaded documents while preserving user-action authority through recovery and departure.
+// Owns document drafts, derived dirtiness, save admission, and asynchronous edits through recovery and departure.
+
 import {
   createContext,
   batch,
@@ -30,6 +31,11 @@ export type AssetUrlMap = Record<string, string>;
 
 /** Map of node ID to title for resolving internal page links */
 export type NodeTitleMap = Record<string, string>;
+
+interface Draft {
+  title: string;
+  content: string;
+}
 
 export interface RecoverySession {
   previousResult?: { title: string; content: string };
@@ -67,11 +73,8 @@ type SaveOutcome = "blocked" | "conflict" | "error" | "idle" | "saved" | "unknow
 interface EditorContextValue {
   // Editor state
   title: Accessor<string>;
-  setTitle: (title: string) => void;
   content: Accessor<string>;
-  setContent: (content: string) => void;
   hasUnsavedChanges: Accessor<boolean>;
-  setHasUnsavedChanges: (has: boolean) => void;
   autoSaveStatus: Accessor<"idle" | "saving" | "saved" | "error">;
 
   // Asset URLs (filename -> signed URL)
@@ -103,6 +106,7 @@ interface EditorContextValue {
   prepareDeparture: () => Promise<EditorIntent | null>;
   asyncEditPending: Accessor<boolean>;
   saveIssue: Accessor<"conflict" | "unknown" | null>;
+  comparisonBlocked: Accessor<boolean>;
   editingLocked: Accessor<boolean>;
   copyDraft: () => Promise<void>;
   recovery: Accessor<RecoverySession | null>;
@@ -111,7 +115,6 @@ interface EditorContextValue {
   compareChanges: () => Promise<void>;
   closeRecovery: () => void;
   saveRecovery: (session: RecoverySession, result: { title: string; content: string }) => Promise<boolean>;
-  resetEditor: () => void;
   handleTitleChange: (newTitle: string) => void;
   handleContentChange: (newContent: string) => void;
 
@@ -153,10 +156,11 @@ export const EditorProvider: ParentComponent = (props) => {
   // Prevents re-entering undo tracking when undo itself calls handleTitleChange.
   let applyingTitleUndo = false;
 
-  // Editor state
-  const [title, setTitle] = createSignal("");
-  const [content, setContent] = createSignal("");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
+  // Only this provider replaces the draft. Public edits pass through admission,
+  // undo tracking, sidebar updates, and autosave scheduling below.
+  const [draft, replaceDraft] = createSignal<Draft>({ title: "", content: "" });
+  const title = () => draft().title;
+  const content = () => draft().content;
 
   // Frontmatter state
   const [icon, setIcon] = createSignal("");
@@ -206,7 +210,16 @@ export const EditorProvider: ParentComponent = (props) => {
   const saveIssue = (): "conflict" | "unknown" | null => {
     const outcome = saveSession()?.outcome();
     if (outcome === "unknown") return "unknown";
-    return outcome === "blocked" || outcome === "conflict" ? "conflict" : null;
+    return outcome === "conflict" ? "conflict" : null;
+  };
+  const comparisonBlocked = () => saveSession()?.outcome() === "blocked";
+  const writesBlocked = () => comparisonBlocked() || saveIssue() !== null;
+  const savePending = () => Boolean(saveSession()?.pending());
+  const hasUnsavedChanges = () => {
+    const acknowledged = saveSession()?.acknowledged();
+    return (
+      acknowledged !== undefined && (draft().title !== acknowledged.title || draft().content !== acknowledged.content)
+    );
   };
   const recoveryMessage = () => t(saveIssue() === "unknown" ? "editor.saveUnknown" : "editor.saveConflict");
   const editingLocked = () => {
@@ -221,7 +234,7 @@ export const EditorProvider: ParentComponent = (props) => {
     if (session === null) return "idle";
     if (session.pending() !== null) return "saving";
     const outcome = session.outcome();
-    if (outcome === "error" || outcome === "conflict" || outcome === "unknown") return "error";
+    if (saveIssue() !== null || (outcome === "error" && hasUnsavedChanges())) return "error";
     return outcome === "saved" && !hasUnsavedChanges() ? "saved" : "idle";
   };
   const retireSaveSession = () => {
@@ -272,19 +285,34 @@ export const EditorProvider: ParentComponent = (props) => {
     }
   };
   const dismissExternalChange = () => setExternalChange(false);
-  const refreshFromServer = () => {
+  const localWorkPending = () => hasUnsavedChanges() || savePending() || asyncEditPending() || writesBlocked();
+  const reloadFromServer = (automatic: boolean) => {
     if (asyncEditPending()) return;
     const nodeId = selectedNodeId();
     if (nodeId) {
       const node = selectedNodeData();
-      const draft = [title(), content(), icon(), cover(), hasUnsavedChanges()];
+      const captured = {
+        draft: draft(),
+        icon: icon(),
+        cover: cover(),
+        acknowledged: saveSession()?.acknowledged(),
+        outcome: saveSession()?.outcome(),
+      };
       debouncedAutoSave.cancel();
       void loadNode(nodeId, {
         refresh: true,
         canApply: () => {
           if (selectedNodeData() !== node) return false;
-          const current = [title(), content(), icon(), cover(), hasUnsavedChanges()];
-          if (asyncEditPending() || current.some((entry, index) => entry !== draft[index])) {
+          if (
+            asyncEditPending() ||
+            savePending() ||
+            (automatic && writesBlocked()) ||
+            draft() !== captured.draft ||
+            icon() !== captured.icon ||
+            cover() !== captured.cover ||
+            saveSession()?.acknowledged() !== captured.acknowledged ||
+            saveSession()?.outcome() !== captured.outcome
+          ) {
             setExternalChange(true);
             return false;
           }
@@ -294,6 +322,8 @@ export const EditorProvider: ParentComponent = (props) => {
       }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
+
+  const refreshFromServer = () => reloadFromServer(false);
 
   // Apply another writer's edit live when the editor is clean, and fall back to
   // the conflict banner when reloading would discard unsaved local work.
@@ -305,14 +335,14 @@ export const EditorProvider: ParentComponent = (props) => {
       const nodeId = selectedNodeId();
       if (!nodeId) return;
       if (evt.type === EventResync || evt.aspects?.includes(EventAspectMetadata)) {
-        if (hasUnsavedChanges() || asyncEditPending()) setExternalChange(true);
-        else refreshFromServer();
+        if (localWorkPending()) setExternalChange(true);
+        else reloadFromServer(true);
         return;
       }
       const decision = classifyExternalUpdate(
         evt.modified,
         saveSession()?.acknowledged().modified ?? null,
-        hasUnsavedChanges() || asyncEditPending(),
+        localWorkPending(),
         evt.revision ?? null,
         saveSession()?.acknowledged().revision || null,
       );
@@ -321,7 +351,7 @@ export const EditorProvider: ParentComponent = (props) => {
         setExternalChange(true);
         return;
       }
-      refreshFromServer();
+      reloadFromServer(true);
     });
   });
 
@@ -345,15 +375,15 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!saveCurrent(scope)) return false;
     const session = scope.session;
     const { nodeId, ws, wsId } = session;
-    if (!hasUnsavedChanges()) return true;
-    if (!ws) return false;
-    if (saveIssue() !== null) {
-      const error = recoveryMessage();
-      if (session.outcome() === "blocked") session.setOutcome("conflict");
-      setExternalChange(true);
-      setSaveError(error);
+    if (writesBlocked()) {
+      if (saveIssue() !== null) {
+        setExternalChange(true);
+        setSaveError(recoveryMessage());
+      }
       return false;
     }
+    if (scope.expectedRevision === null && !hasUnsavedChanges()) return true;
+    if (!ws) return false;
     session.setOutcome("idle");
     try {
       const diskContent = spaUrlsToRelativeLinks(scope.content, wsId);
@@ -373,11 +403,10 @@ export const EditorProvider: ParentComponent = (props) => {
       setSaveError(null);
       if (title() !== scope.title || content() !== scope.content) return true;
       batch(() => {
-        setTitle(saved.node.title);
-        setContent(session.acknowledged().content);
+        replaceDraft({ title: saved.node.title, content: session.acknowledged().content });
         updateNodeTitle(nodeId, saved.node.title);
-        setHasUnsavedChanges(false);
-        if (saveIssue() === null) session.setOutcome("saved");
+
+        if (!writesBlocked()) session.setOutcome("saved");
       });
       if (!saveCurrent(scope)) return false;
       if (wsId) {
@@ -398,8 +427,16 @@ export const EditorProvider: ParentComponent = (props) => {
       const conflict = err instanceof APIError && err.status === 409;
       const uncertain = !(err instanceof APIError) || err.status >= 500;
       // Settlement cannot reopen admission installed by an explicit comparison.
-      const issue = uncertain ? "unknown" : saveIssue();
-      session.setOutcome(issue === "unknown" ? "unknown" : conflict || issue !== null ? "conflict" : "error");
+      const previous = session.outcome();
+      session.setOutcome(
+        uncertain
+          ? "unknown"
+          : conflict
+            ? "conflict"
+            : previous === "blocked" || previous === "unknown" || previous === "conflict"
+              ? previous
+              : "error",
+      );
       if (saveIssue() !== null) setExternalChange(true);
       setSaveError(saveIssue() !== null ? recoveryMessage() : `${t("errors.autoSaveFailed")}: ${String(err)}`);
       return false;
@@ -418,7 +455,13 @@ export const EditorProvider: ParentComponent = (props) => {
   const debouncedAutoSave = debounce((scope: SaveSnapshot) => {
     void enqueueSave(scope);
   }, 2000);
-  const scheduleAutoSave = () => debouncedAutoSave(captureSave());
+  const scheduleAutoSave = () => {
+    if (writesBlocked() || (!hasUnsavedChanges() && !savePending())) {
+      debouncedAutoSave.cancel();
+      return;
+    }
+    debouncedAutoSave(captureSave());
+  };
   const settleEdits = async (scope: SaveSnapshot): Promise<boolean> => {
     if (!saveCurrent(scope)) return false;
     while (scope.session.edits().length > 0) {
@@ -479,8 +522,7 @@ export const EditorProvider: ParentComponent = (props) => {
     const intent = continuingIntent ?? beginIntent();
     const scope = captureSave();
     if (!saveCurrent(scope)) return;
-    const session = scope.session;
-    if (!hasUnsavedChanges() && session.pending() === null && !asyncEditPending()) return;
+    if (!localWorkPending()) return;
     event.preventDefault();
     void drainAndSave().then((saved) => {
       if (saved && intent.current() && saveCurrent(scope)) event.retry(true);
@@ -519,7 +561,7 @@ export const EditorProvider: ParentComponent = (props) => {
     debouncedAutoSave.cancel();
     // Block autosaves without relabeling an uncertain write before a current,
     // authorized, versioned snapshot supplies its reconciliation baseline.
-    if (saveIssue() === null) scope.session.setOutcome("blocked");
+    if (!writesBlocked()) scope.session.setOutcome("blocked");
     setRecoveryState(request);
     try {
       if (!(await settleEdits(scope))) return;
@@ -568,10 +610,9 @@ export const EditorProvider: ParentComponent = (props) => {
     debouncedAutoSave.cancel();
     const saving: RecoveryState = { kind: "saving", session };
     batch(() => {
-      setTitle(result.title);
-      setContent(result.content);
+      replaceDraft({ title: result.title, content: result.content });
       updateNodeTitle(scope.session.nodeId, result.title);
-      setHasUnsavedChanges(true);
+
       scope.session.setOutcome("idle");
       setRecoveryState(saving);
     });
@@ -634,16 +675,15 @@ export const EditorProvider: ParentComponent = (props) => {
         retireSaveSession();
         debouncedAutoSave.cancel();
         setSaveError(null);
-        setTitle(node.title);
         // Convert relative file path links from API to SPA URLs for the editor.
         const wsId = user()?.workspace_id || "";
         const spaContent = relativeLinksToSpaUrls(node.content || "", wsId);
-        setContent(spaContent);
+        replaceDraft({ title: node.title, content: spaContent });
         setSaveSession(createSaveSession(node, spaContent));
         closeRecovery();
         setIcon(node.icon || "");
         setCover(node.cover || "");
-        setHasUnsavedChanges(false);
+
         setShowHistory(false);
         setExternalChange(false);
         // Fetch linked node titles in the background
@@ -660,11 +700,10 @@ export const EditorProvider: ParentComponent = (props) => {
     retireSaveSession();
     closeRecovery();
     debouncedAutoSave.cancel();
-    setTitle("");
-    setContent("");
+    replaceDraft({ title: "", content: "" });
     setIcon("");
     setCover("");
-    setHasUnsavedChanges(false);
+
     setShowHistory(false);
     setHistory(null);
     setLinkedNodeTitles({});
@@ -707,7 +746,7 @@ export const EditorProvider: ParentComponent = (props) => {
   }
 
   function handleTitleChange(newTitle: string) {
-    if (editingLocked()) return;
+    if (editingLocked() || !saveCurrent(captureSave()) || newTitle === title()) return;
     // On first edit in this session, capture the pre-edit title for undo.
     if (!applyingTitleUndo && titleBeforeEdit === null) {
       const oldTitle = title();
@@ -730,19 +769,19 @@ export const EditorProvider: ParentComponent = (props) => {
         },
       });
     }
-    setTitle(newTitle);
+    replaceDraft((current) => ({ ...current, title: newTitle }));
     const id = selectedNodeId();
     if (id) {
       updateNodeTitle(id, newTitle);
     }
-    setHasUnsavedChanges(true);
+
     scheduleAutoSave();
   }
 
   function handleContentChange(newContent: string) {
-    if (editingLocked()) return;
-    setContent(newContent);
-    setHasUnsavedChanges(true);
+    if (editingLocked() || !saveCurrent(captureSave()) || newContent === content()) return;
+    replaceDraft((current) => ({ ...current, content: newContent }));
+
     scheduleAutoSave();
   }
 
@@ -772,11 +811,8 @@ export const EditorProvider: ParentComponent = (props) => {
 
   const value: EditorContextValue = {
     title,
-    setTitle,
     content,
-    setContent,
     hasUnsavedChanges,
-    setHasUnsavedChanges,
     autoSaveStatus,
     assetUrls,
     linkedNodeTitles,
@@ -796,6 +832,7 @@ export const EditorProvider: ParentComponent = (props) => {
     prepareDeparture,
     asyncEditPending,
     saveIssue,
+    comparisonBlocked,
     editingLocked,
     copyDraft,
     recovery,
@@ -804,7 +841,6 @@ export const EditorProvider: ParentComponent = (props) => {
     compareChanges,
     closeRecovery,
     saveRecovery,
-    resetEditor,
     handleTitleChange,
     handleContentChange,
     async undo() {

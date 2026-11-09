@@ -1,4 +1,4 @@
-// Tests UI write correlation across concurrent requests, retries, and independent MCP calls.
+// Tests transport cancellation and UI write correlation across retries and independent MCP calls.
 
 import { afterEach, describe, it } from "node:test";
 import { expect, vi } from "@tests/expect";
@@ -7,6 +7,37 @@ import { createApi, createAuthFetch, isLocalWriteRequest, localWriteHeaders } fr
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+describe("request cancellation", () => {
+  it("cancels retry backoff before another transport attempt", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetch);
+    let settled = false;
+    const pending = createAuthFetch()("/retry", { signal: controller.signal }).catch((error: unknown) => {
+      settled = true;
+      return error;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(true);
+    expect(await pending).toBe(controller.signal.reason);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not admit a transport request after cancellation", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetch);
+    await expect(createAuthFetch()("/canceled", { signal: controller.signal })).rejects.toBe(controller.signal.reason);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("UI write request IDs", () => {

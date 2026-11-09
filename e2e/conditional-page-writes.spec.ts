@@ -1,4 +1,4 @@
-// Exercises serialized editor acknowledgements, stale-write rejection, preserved drafts, and explicit conflict recovery.
+// Exercises derived draft dirtiness, serialized acknowledgements, protected departure, and explicit conflict recovery.
 
 import {
   test,
@@ -11,6 +11,103 @@ import {
 } from "./helpers";
 import { gate, installNativeTools, invokeNativeFocus, nativeResult, waitNativeReady } from "./gomode-fixtures";
 import type { UpdatePageRequest } from "../sdk/mddb/ts/v1/types.gen";
+
+test("returning title and native body undo to acknowledged text avoids a draft write", async ({ page, request }) => {
+  const { token } = await registerUser(request, "draft-undo-clean");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
+  const target = await ws.createPage("0", { title: "Other page", content: "Other body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  const paragraph = page.getByTestId("wysiwyg-editor").locator(".ProseMirror p").first();
+  await expect(title).toHaveValue("Original title");
+  await expect(paragraph).toHaveText("Original body");
+  let writes = 0;
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().endsWith(`/nodes/${source.id}/page`)) writes++;
+  });
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await title.fill("Edited title");
+  await title.fill("Original title");
+  await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+  await paragraph.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(" added text");
+  await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+  await page.keyboard.press("Control+z");
+  await expect(paragraph).toHaveText("Original body");
+  await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+  await page.clock.runFor(2100);
+  expect(writes).toBe(0);
+  await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+  await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
+  expect(writes).toBe(0);
+  await page.clock.resume();
+});
+
+test("a closed comparison keeps review available for a clean draft and writes an explicit old baseline", async ({
+  page,
+  request,
+}) => {
+  const { token } = await registerUser(request, "draft-review-clean");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
+  const target = await ws.createPage("0", { title: "Other page", content: "Other body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toHaveValue("Original title");
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  let writes = 0;
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().endsWith(`/nodes/${source.id}/page`)) writes++;
+  });
+  await title.fill("Review draft");
+  const latest = await ws.updatePage(source.id, {
+    title: "Remote title",
+    content: "Remote body",
+    expected_revision: (await ws.getNode(source.id)).revision ?? "",
+  });
+  const compare = page.getByRole("button", { name: "Compare changes", exact: true });
+  await compare.click();
+  const dialog = page.getByRole("dialog", { name: "Compare changes", exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await title.fill("Original title");
+  await expect(page.getByText("Unsaved", { exact: true })).not.toBeVisible();
+  await expect(page.getByText("Review changes or reload the latest page to continue.", { exact: true })).toBeVisible();
+  await expect(compare).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dismiss", exact: true })).not.toBeVisible();
+  await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+  await expect(page).toHaveURL(new RegExp(`/@${source.id}(?:\\+|$)`));
+  expect(writes).toBe(0);
+  await compare.click();
+  const result = dialog.getByRole("group", { name: "Recovered result" });
+  await expect(result.getByRole("textbox", { name: "Title", exact: true })).toHaveValue("Remote title");
+  await result.getByRole("textbox", { name: "Title", exact: true }).fill("Original title");
+  await result.getByRole("textbox", { name: "Body", exact: true }).fill("Original body");
+  const recovering = page.waitForRequest(
+    (req) => req.method() === "POST" && req.url().endsWith(`/nodes/${source.id}/page`),
+  );
+  await dialog.getByRole("button", { name: "Save recovered page", exact: true }).click();
+  expect((await recovering).postDataJSON()).toEqual({
+    title: "Original title",
+    content: "Original body",
+    expected_revision: latest.node.revision,
+  });
+  await expect(dialog).not.toBeVisible();
+  await expect(title).toHaveValue("Original title");
+  expect(writes).toBe(1);
+  expect((await ws.getNode(source.id)).title).toBe("Original title");
+  await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+  await expect(page).toHaveURL(new RegExp(`/@${target.id}(?:\\+|$)`));
+  await page.clock.resume();
+});
 
 test("a lost save response keeps the draft for inspection without resubmitting", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-lost-response");

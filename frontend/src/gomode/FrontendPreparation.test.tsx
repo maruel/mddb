@@ -4,6 +4,7 @@ import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { expect, vi } from "@tests/expect";
 import type { UserResponse } from "@sdk/types.gen";
+import { WSRoleViewer } from "@sdk/types.gen";
 import { WorkspaceDataProvider } from "../contexts/WorkspaceDataContext";
 import { WorkspaceNavigationProvider } from "../contexts/WorkspaceNavigationContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
@@ -108,6 +109,18 @@ it("waits for settled cookie identity, explicitly prepares zero tools, and revok
   await currentAuth().logout();
   expect(readiness.at(-1)).toEqual(expect.objectContaining({ ready: false, tools: [] }));
   expect(messages.at(-1)).toEqual(expect.objectContaining({ authChanged: true, nativeAccess: false }));
+});
+
+it("keeps native preparation unchanged when empty settings data becomes workspace data", async () => {
+  window.history.replaceState(null, "", "/settings/user");
+  responses.push(Promise.resolve({ ...account, workspace_id: "workspace", workspace_role: WSRoleViewer }));
+  mount();
+  await waitFor(() => expect(readiness.at(-1)?.ready).toBe(true));
+  const prepared = [...readiness];
+  if (!navigate) throw new Error("Navigation provider did not mount");
+  navigate("/w/@workspace");
+  await waitFor(() => expect(window.location.pathname).toBe("/w/@workspace"));
+  expect(readiness).toEqual(prepared);
 });
 
 it("keeps metadata refresh ready but replaces the lease for a new authoritative session", async () => {

@@ -1,4 +1,4 @@
-// Gates workspace and voice navigation on saved drafts while retaining admitted intent through focus lookup.
+// Gates navigation on saved drafts and cancels retired voice lookups at their HTTP transport.
 
 import {
   createContext,
@@ -114,7 +114,7 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
       try {
         let node: NodeResponse;
         try {
-          node = await abortable(client.getNode(id), signal);
+          node = await client.getNode(id, signal);
         } catch (error) {
           if (!current()) throw new Error("Focus canceled.", { cause: error });
           console.warn("Voice node lookup failed", error);
@@ -161,18 +161,6 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
   };
   return <WorkspaceNavigationContext.Provider value={value}>{props.children}</WorkspaceNavigationContext.Provider>;
 };
-
-function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const cancel = () => reject(new Error("Focus canceled."));
-    if (signal.aborted) {
-      cancel();
-      return;
-    }
-    signal.addEventListener("abort", cancel, { once: true });
-    void promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", cancel));
-  });
-}
 
 export function useWorkspaceNavigation(): WorkspaceNavigationContextValue {
   const context = useContext(WorkspaceNavigationContext);

@@ -175,7 +175,11 @@ for (const boundary of ["retirement", "logout"] as const) {
     if (boundary === "retirement") await changeNativeVoiceSession(page, null);
     else {
       await page.getByTestId("user-menu-button").click();
+      const loggedOut = page.waitForResponse(
+        (response) => response.url().endsWith("/auth/browser/logout") && response.request().method() === "POST",
+      );
       await page.getByRole("menuitem", { name: "Logout", exact: true }).click();
+      expect((await loggedOut).ok()).toBe(true);
       await expect(page.getByRole("heading", { name: "Login to mddb", exact: true })).toBeVisible();
     }
     release.resolve();

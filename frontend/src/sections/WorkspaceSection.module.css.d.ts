@@ -35,6 +35,9 @@ declare const classes: {
   readonly "mobileBackdropVisible": string;
   readonly "noHistory": string;
   readonly "nodeContent": string;
+  readonly "preparationError": string;
+  readonly "preparationMessage": string;
+  readonly "preparationRetry": string;
   readonly "previewContent": string;
   readonly "previewHeader": string;
   readonly "previewInfo": string;

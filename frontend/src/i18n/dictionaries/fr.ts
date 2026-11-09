@@ -147,6 +147,7 @@ export const dict: Dictionary = {
     compareChanges: "Comparer les modifications",
     compareHelp:
       "Les modifications indépendantes sont combinées ci-dessous. Résolvez chaque conflit, puis vérifiez et modifiez le résultat avant de l’enregistrer.",
+    reviewRequired: "Vérifiez les modifications ou rechargez la dernière version pour continuer.",
     yourDraft: "Votre brouillon",
     latestSaved: "Dernière version enregistrée",
     acknowledgedBase: "Dernière version confirmée",
@@ -238,6 +239,7 @@ export const dict: Dictionary = {
   },
 
   onboarding: {
+    noWorkspace: "Aucun espace de travail n’est disponible. Demandez l’accès à un administrateur de l’organisation.",
     welcome: "Bienvenue sur mddb !",
     letsGetStarted: "Préparons votre espace de travail.",
     confirmWorkspaceName: "Confirmer le nom de l'espace",

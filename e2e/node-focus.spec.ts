@@ -123,6 +123,7 @@ test("canceling or choosing another route during validation prevents a late focu
     const original = page.url();
     const envelope = await invokeNativeFocus(page, target.id, cancellation, "native-focus-conversation");
     await requested.promise;
+    const aborted = page.waitForEvent("requestfailed", (req) => req.url().endsWith(`/nodes/${target.id}`));
     if (cancellation === "native") await cancelNativeFocus(page, envelope);
     else {
       await page.getByTestId("user-menu-button").click();
@@ -130,6 +131,7 @@ test("canceling or choosing another route during validation prevents a late focu
       await expect(page).toHaveURL(/\/settings\/user$/);
     }
     const chosen = page.url();
+    expect((await aborted).failure()?.errorText).toBe("net::ERR_ABORTED");
     release.resolve();
     await completed.promise;
     await expect(page).toHaveURL(chosen);
