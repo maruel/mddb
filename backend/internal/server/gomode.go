@@ -370,7 +370,7 @@ func (m *workspaceRegistry) updateNode(ctx context.Context, req *mcp.ToolRequest
 	}
 	node, err := m.nodeH.ReplacePage(ctx, m.wsID, m.user, request)
 	if err != nil {
-		return mcp.ToolError[mcpschema.WriteNodeOutput](err.Error())
+		return pageToolError(err)
 	}
 	return m.writtenResult(ctx, node)
 }
@@ -434,9 +434,22 @@ func (m *workspaceRegistry) appendNode(ctx context.Context, req *mcp.ToolRequest
 	}
 	node, err := m.nodeH.AppendToPage(ctx, m.wsID, m.user, request)
 	if err != nil {
-		return mcp.ToolError[mcpschema.WriteNodeOutput](err.Error())
+		return pageToolError(err)
 	}
 	return m.writtenResult(ctx, node)
+}
+
+func pageToolError(err error) mcp.ToolResult[mcpschema.WriteNodeOutput] {
+	out := mcpschema.MutationError{Error: err.Error(), Code: dto.ErrorCodeInternal}
+	if api, ok := errors.AsType[*dto.APIError](err); ok {
+		out.Code = api.Code()
+		details := api.Details()
+		out.CurrentRevision, _ = details["current_revision"].(string)
+		out.Recovery, _ = details["recovery"].(string)
+	}
+	return mcp.ToolErrorWithMeta[mcpschema.WriteNodeOutput](err.Error(), mcp.MetaObject{
+		"com.fghbuild.mddb/mutationError": out,
+	})
 }
 
 func (m *workspaceRegistry) ListResources(ctx context.Context, raw string) (mcp.ResourcesListResult, error) {

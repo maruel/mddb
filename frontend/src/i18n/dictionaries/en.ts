@@ -169,6 +169,9 @@ export const dict: Dictionary = {
       "The page could not be saved. Your recovered draft is preserved. Load the latest version to compare again.",
     saveConflict:
       "This page changed elsewhere. Your draft is kept. Compare changes to recover your edits, copy the draft, or discard it and reload.",
+    asyncEditFailed: "The edit could not be inserted. Stay on this page and try again.",
+    saveUnknown:
+      "The save could not be confirmed. Your draft is kept. Copy it, then reload and inspect the current page before editing again.",
     copyDraft: "Copy draft",
     reloadLatest: "Discard edits and reload",
     copyFailed: "Could not copy the draft",

@@ -1,8 +1,20 @@
-// Defines sentinel errors for content operations.
+// Defines content errors and the verified revision available after a rejected mutation.
 
 package content
 
 import "errors"
+
+// RevisionConflictError reports the revision observed while rejecting a stale mutation.
+// A conflict does not distinguish a lost successful response from another writer.
+type RevisionConflictError struct {
+	CurrentRevision string
+}
+
+// Error describes the rejected mutation without claiming which writer changed it.
+func (e *RevisionConflictError) Error() string { return ErrRevisionConflict.Error() }
+
+// Unwrap preserves sentinel matching for revision conflicts.
+func (e *RevisionConflictError) Unwrap() error { return ErrRevisionConflict }
 
 var (
 	// ErrRevisionConflict means the page changed since the supplied revision.

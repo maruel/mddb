@@ -331,7 +331,7 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 			return "", nil, err
 		}
 		if expectedRevision == "" || revision != expectedRevision {
-			return "", nil, ErrRevisionConflict
+			return "", nil, &RevisionConflictError{CurrentRevision: revision}
 		}
 		mutate(p)
 		p.modified = storage.Now()

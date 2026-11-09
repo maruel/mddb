@@ -12,6 +12,121 @@ import {
 import { gate, installNativeTools, invokeNativeFocus, nativeResult, waitNativeReady } from "./gomode-fixtures";
 import type { UpdatePageRequest } from "../sdk/mddb/ts/v1/types.gen";
 
+test("a lost save response keeps the draft for inspection without resubmitting", async ({ page, request }) => {
+  const { token } = await registerUser(request, "conditional-lost-response");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Uncertain source", content: "Original body" });
+  const target = await ws.createPage("0", { title: "Uncertain target", content: "Other body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toHaveValue("Uncertain source");
+  let writes = 0;
+  await page.route(`**/nodes/${source.id}/page`, async (route) => {
+    writes++;
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await title.fill("Uncertain draft");
+  await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+  await expect(page.getByText("The save could not be confirmed.", { exact: false }).first()).toBeVisible();
+  await expect(title).toHaveValue("Uncertain draft");
+  expect((await ws.getNode(source.id)).title).toBe("Uncertain draft");
+  await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+  await expect(page).toHaveURL(new RegExp(`/@${source.id}(?:\\+|$)`));
+  expect(writes).toBe(1);
+  await page.getByRole("button", { name: "Discard edits and reload", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Copy draft", exact: true })).not.toBeVisible();
+});
+
+test("a failed latest read after an uncertain recovery save keeps unknown-outcome protection", async ({
+  page,
+  request,
+}) => {
+  const { token } = await registerUser(request, "recovery-unknown-read");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Original", content: "Original body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toHaveValue("Original");
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await title.fill("Private recovery draft");
+  await ws.updatePage(source.id, {
+    title: "Remote title",
+    content: "Original body",
+    expected_revision: (await ws.getNode(source.id)).revision ?? "",
+  });
+  const conflict = page.waitForResponse(
+    (response) => response.url().endsWith(`/nodes/${source.id}/page`) && response.status() === 409,
+  );
+  await page.clock.runFor(2100);
+  await conflict;
+  await page.getByRole("button", { name: "Compare changes", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Compare changes" });
+  await dialog.getByRole("radio", { name: "Use draft" }).check();
+  let recoveryWrites = 0;
+  await page.route(`**/nodes/${source.id}/page`, async (route) => {
+    recoveryWrites++;
+    await route.fetch();
+    await route.abort("failed");
+  });
+  await dialog.getByRole("button", { name: "Save recovered page", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("recovered draft is preserved");
+  await page.route(`**/nodes/${source.id}`, (route) =>
+    route.fulfill({ status: 403, json: { error: { code: "FORBIDDEN", message: "Read forbidden" } } }),
+  );
+  await dialog.getByRole("button", { name: "Load latest version", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Could not load the latest version");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByText("The save could not be confirmed.", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Compare changes", exact: true })).not.toBeVisible();
+  await expect(title).toHaveValue("Private recovery draft");
+  await title.fill("Still private after failed inspection");
+  await page.clock.runFor(2100);
+  expect(recoveryWrites).toBe(1);
+  await expect(title).toHaveValue("Still private after failed inspection");
+});
+
+test("the old editor cannot accept edits while the destination load is pending", async ({ page, request }) => {
+  const { token } = await registerUser(request, "conditional-departure-load");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Departure source", content: "Original body" });
+  const target = await ws.createPage("0", { title: "Departure target", content: "Other body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toHaveValue("Departure source");
+  const loaded = gate(),
+    reply = gate();
+  await page.route(`**/nodes/${target.id}`, async (route) => {
+    const response = await route.fetch();
+    loaded.resolve();
+    await reply.promise;
+    await route.fulfill({ response });
+  });
+  try {
+    await title.fill("Saved before departure");
+    await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+    await loaded.promise;
+    await expect(title).toBeDisabled();
+    await expect(page.locator("[inert][aria-busy=true]")).toBeVisible();
+    await expect(page.locator(".ProseMirror")).toHaveAttribute("contenteditable", "false");
+    expect((await ws.getNode(source.id)).title).toBe("Saved before departure");
+    reply.resolve();
+    await expect(title).toHaveValue("Departure target");
+    await expect(title).toBeEnabled();
+    await expect(page.locator(".ProseMirror")).toHaveAttribute("contenteditable", "true");
+  } finally {
+    reply.resolve();
+  }
+});
+
 test("navigation waits for both serialized saves and uses the acknowledged revision", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-queue");
   await gotoWithSession(page, token);
@@ -433,3 +548,127 @@ for (const preference of ["native zoom", "default font"] as const) {
     }
   });
 }
+for (const asset of ["body", "cover"] as const) {
+  for (const departure of ["node", "failed deletion"] as const) {
+    test(`${asset} upload is applied before ${departure}`, async ({ page, request }) => {
+      const { token } = await registerUser(request, `upload-${asset}-${departure === "node" ? "node" : "delete"}`);
+      await gotoWithSession(page, token);
+      const wsID = await getWorkspaceId(page);
+      const ws = createClient(request, token).ws(wsID);
+      const source = await ws.createPage("0", { title: "Uploading source", content: "Original body" });
+      const target = await ws.createPage("0", { title: "Upload destination", content: "Other body" });
+      await page.goto(`/w/@${wsID}/@${source.id}`);
+      const title = page.getByRole("textbox", { name: "Title", exact: true });
+      await expect(title).toHaveValue("Uploading source");
+      let pageWrites = 0;
+      page.on("request", (call) => {
+        if (call.method() === "POST" && call.url().endsWith(`/nodes/${source.id}/page`)) pageWrites++;
+      });
+      const uploaded = gate(),
+        uploadReply = gate(),
+        departureStarted = gate(),
+        departureReply = gate();
+      await page.route(`**/nodes/${source.id}/assets`, async (route) => {
+        const response = await route.fetch();
+        uploaded.resolve();
+        await uploadReply.promise;
+        await route.fulfill({ response });
+      });
+      await page.route(
+        departure === "node" ? `**/nodes/${target.id}` : `**/nodes/${source.id}/delete`,
+        async (route) => {
+          departureStarted.resolve();
+          await departureReply.promise;
+          if (departure === "node") await route.continue();
+          else
+            await route.fulfill({
+              status: 400,
+              json: { error: { code: "VALIDATION_FAILED", message: "Deletion rejected" } },
+            });
+        },
+      );
+      try {
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1"/></svg>';
+        if (asset === "cover") {
+          await page
+            .locator('input[type="file"][accept="image/*"]')
+            .setInputFiles({ name: "pending.svg", mimeType: "image/svg+xml", buffer: Buffer.from(svg) });
+        } else {
+          const transfer = await page.evaluateHandle((data) => {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(new File([data], "pending.svg", { type: "image/svg+xml" }));
+            return dataTransfer;
+          }, svg);
+          await page.locator(".ProseMirror").dispatchEvent("drop", { dataTransfer: transfer });
+          await transfer.dispose();
+        }
+        await uploaded.promise;
+        if (departure === "node") {
+          await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+        } else {
+          page.once("dialog", (dialog) => dialog.accept());
+          const sourceRow = page.getByTestId(`sidebar-node-${source.id}`);
+          await sourceRow.hover();
+          await sourceRow.getByTestId("delete-node-button").click();
+        }
+        // Departure must wait for the insertion, leaving its originating editor writable.
+        await expect(title).toBeEnabled();
+        uploadReply.resolve();
+        await departureStarted.promise;
+        const saved = await ws.getNode(source.id);
+        if (asset === "body") expect(saved.content).toContain("pending.svg");
+        else {
+          expect(saved.cover).toBe("pending.svg");
+          expect(pageWrites).toBe(0);
+        }
+        departureReply.resolve();
+        await expect(title).toHaveValue(departure === "node" ? "Upload destination" : "Uploading source");
+        if (departure === "failed deletion") {
+          await expect(title).toBeEnabled();
+          if (asset === "body") await expect(page.locator('.ProseMirror img[alt="pending.svg"]')).toBeVisible();
+        }
+      } finally {
+        uploadReply.resolve();
+        departureReply.resolve();
+      }
+    });
+  }
+}
+
+test("an upload failure keeps the source draft and blocks its waiting departure", async ({ page, request }) => {
+  const { token } = await registerUser(request, "upload-departure-failure");
+  await gotoWithSession(page, token);
+  const wsID = await getWorkspaceId(page);
+  const ws = createClient(request, token).ws(wsID);
+  const source = await ws.createPage("0", { title: "Upload failure source", content: "Original body" });
+  const target = await ws.createPage("0", { title: "Upload failure target", content: "Other body" });
+  await page.goto(`/w/@${wsID}/@${source.id}`);
+  const title = page.getByRole("textbox", { name: "Title", exact: true });
+  await expect(title).toHaveValue("Upload failure source");
+  const started = gate(),
+    reply = gate();
+  await page.route(`**/nodes/${source.id}/assets`, async (route) => {
+    started.resolve();
+    await reply.promise;
+    await route.fulfill({
+      status: 400,
+      json: { error: { code: "VALIDATION_FAILED", message: "Choose a smaller image and upload again" } },
+    });
+  });
+  try {
+    await title.fill("Draft kept after failed upload");
+    await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
+      name: "failed.svg",
+      mimeType: "image/svg+xml",
+      buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+    });
+    await started.promise;
+    await page.getByTestId(`sidebar-node-${target.id}`).locator("> div").first().click();
+    reply.resolve();
+    await expect(page.getByText("Choose a smaller image and upload again", { exact: false })).toBeVisible();
+    await expect(title).toHaveValue("Draft kept after failed upload");
+    await expect(page).toHaveURL(new RegExp(`/@${source.id}(?:\\+|$)`));
+  } finally {
+    reply.resolve();
+  }
+});

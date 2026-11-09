@@ -1,4 +1,4 @@
-// Owns serialized conditional saves, acknowledged merge bases, conflict recovery, and awaited editor departure.
+// Owns asynchronous conditional saves, acknowledged merge bases, conflict recovery, and editor departure authority.
 
 import {
   createContext,
@@ -11,7 +11,7 @@ import {
   type ParentComponent,
   type Accessor,
 } from "solid-js";
-import { useBeforeLeave, useLocation } from "@solidjs/router";
+import { useBeforeLeave, useLocation, useNavigate } from "@solidjs/router";
 import { APIError } from "../useApi";
 import { useAuth } from "./AuthContext";
 import { useEventSource } from "./EventSourceContext";
@@ -39,6 +39,20 @@ export interface RecoverySession {
   titleMerge: TextMerge;
   contentMerge: TextMerge;
 }
+// Only a user action begins authority. Its asynchronous children inherit it:
+// draining or continuing navigation must never supersede a newer user action.
+export interface EditorIntent {
+  current: () => boolean;
+  drain: () => Promise<boolean>;
+  navigate: (path: string) => void;
+}
+interface HistorySnapshot {
+  commits: Commit[];
+  intent: EditorIntent;
+}
+// Follow-ups run only after their edit is removed from pending work and saved.
+export type SavedEditContinuation = (intent: EditorIntent) => Promise<void>;
+export type RunAsyncEdit = (edit: () => Promise<boolean>, afterSave?: SavedEditContinuation) => Promise<void>;
 
 type RecoveryState =
   | { kind: "closed" }
@@ -65,9 +79,8 @@ interface EditorContextValue {
 
   // History
   showHistory: Accessor<boolean>;
-  setShowHistory: (show: boolean) => void;
-  history: Accessor<Commit[]>;
-  loadHistory: (nodeId: string) => Promise<void>;
+  history: Accessor<HistorySnapshot | null>;
+  loadHistory: (nodeId: string, intent: EditorIntent) => Promise<void>;
 
   // External change detection (SSE)
   externalChange: Accessor<boolean>;
@@ -78,12 +91,16 @@ interface EditorContextValue {
   icon: Accessor<string>;
   cover: Accessor<string>;
   handleIconChange: (newIcon: string) => Promise<void>;
-  handleCoverChange: (newCover: string) => Promise<void>;
+  handleCoverChange: (newCover: string) => Promise<boolean>;
 
   // Actions
   triggerAutoSave: () => void;
-  flushAutoSave: () => Promise<boolean>;
-  saveConflict: Accessor<boolean>;
+  beginIntent: () => EditorIntent;
+  runAsyncEdit: RunAsyncEdit;
+  prepareDeparture: () => Promise<EditorIntent | null>;
+  asyncEditPending: Accessor<boolean>;
+  saveIssue: Accessor<"conflict" | "unknown" | null>;
+  editingLocked: Accessor<boolean>;
   copyDraft: () => Promise<void>;
   recovery: Accessor<RecoverySession | null>;
   recoveryLoading: Accessor<boolean>;
@@ -110,8 +127,20 @@ export const EditorProvider: ParentComponent = (props) => {
   let disposed = false;
   const location = useLocation();
   let departure = 0;
-  const { selectedNodeId, selectedNodeData, updateNodeTitle, updateNodeIcon, loadNode, setLoadError, setSaveError } =
-    useWorkspace();
+  const navigate = useNavigate();
+  let continuingIntent: EditorIntent | null = null;
+  const {
+    selectedNodeId,
+    selectedNodeData,
+    loadingNodeId,
+    switchingWorkspace,
+    deletingNodeId,
+    updateNodeTitle,
+    updateNodeIcon,
+    loadNode,
+    setLoadError,
+    setSaveError,
+  } = useWorkspace();
   const { lastEvent } = useEventSource();
 
   // Application-level undo stack (title changes; editor content undo is handled by ProseMirror)
@@ -141,11 +170,20 @@ export const EditorProvider: ParentComponent = (props) => {
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
-  const [history, setHistory] = createSignal<Commit[]>([]);
+  const [history, setHistory] = createSignal<HistorySnapshot | null>(null);
 
   // External change detection (SSE)
   const [externalChange, setExternalChange] = createSignal(false);
-  const [saveConflict, setSaveConflict] = createSignal(false);
+  const [saveIssue, setSaveIssue] = createSignal<"conflict" | "unknown" | null>(null);
+  const recoveryMessage = () => t(saveIssue() === "unknown" ? "editor.saveUnknown" : "editor.saveConflict");
+  const editingLocked = () => {
+    if (switchingWorkspace() || (selectedNodeId() !== null && deletingNodeId() === selectedNodeId())) return true;
+    // Returning to the current route cancels departure even if the obsolete
+    // destination request has not settled yet.
+    const routed = parseNodeUrl(location.pathname);
+    if (routed?.nodeId === selectedNodeId()) return false;
+    return loadingNodeId() !== null && loadingNodeId() !== selectedNodeId();
+  };
   let revision = "";
   let acknowledged = { title: "", content: "" };
   const [recoveryState, setRecoveryState] = createSignal<RecoveryState>({ kind: "closed" });
@@ -160,11 +198,43 @@ export const EditorProvider: ParentComponent = (props) => {
   };
   let saveQueue: Promise<boolean> = Promise.resolve(true);
   let pendingSaves = 0;
+  // Covers upload AND reference application, not just the network transfer.
+  // Departure keeps the originating editor admitted until this work settles.
+  const [pendingEdits, setPendingEdits] = createSignal<readonly Promise<boolean>[]>([]);
+  const asyncEditPending = () => pendingEdits().length > 0;
+  const runAsyncEdit: RunAsyncEdit = async (edit, afterSave) => {
+    if (editingLocked()) return;
+    const scope = captureSave();
+    const intent = captureIntent();
+    const pending = Promise.resolve()
+      .then(() => (saveCurrent(scope) ? edit() : false))
+      .catch((err: unknown) => {
+        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+        return false;
+      });
+    setPendingEdits((current) => [...current, pending]);
+    let applied: boolean;
+    try {
+      applied = await pending;
+    } finally {
+      setPendingEdits((current) => current.filter((entry) => entry !== pending));
+    }
+    const mayContinue = () => saveCurrent(scope) && intent.current() && !editingLocked();
+    // Never await a flush while this operation itself is still pending.
+    if (applied && afterSave && mayContinue()) {
+      try {
+        if ((await intent.drain()) && mayContinue()) await afterSave(intent);
+      } catch (err) {
+        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      }
+    }
+  };
   // Metadata-only events use the acknowledged timestamp; content events use
   // the canonical revision so edits within one persisted second stay visible.
   const [syncedModified, setSyncedModified] = createSignal<number | null>(null);
   const dismissExternalChange = () => setExternalChange(false);
   const refreshFromServer = () => {
+    if (asyncEditPending()) return;
     const nodeId = selectedNodeId();
     if (nodeId) {
       const node = selectedNodeData();
@@ -175,7 +245,7 @@ export const EditorProvider: ParentComponent = (props) => {
         canApply: () => {
           if (selectedNodeData() !== node) return false;
           const current = [title(), content(), icon(), cover(), hasUnsavedChanges()];
-          if (current.some((entry, index) => entry !== draft[index])) {
+          if (asyncEditPending() || current.some((entry, index) => entry !== draft[index])) {
             setExternalChange(true);
             return false;
           }
@@ -198,7 +268,7 @@ export const EditorProvider: ParentComponent = (props) => {
       const decision = classifyExternalUpdate(
         evt.modified,
         syncedModified(),
-        hasUnsavedChanges(),
+        hasUnsavedChanges() || asyncEditPending(),
         evt.revision ?? null,
         revision || null,
       );
@@ -232,9 +302,9 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!saveCurrent(scope)) return false;
     if (!nodeId || !hasUnsavedChanges()) return true;
     if (!ws) return false;
-    if (saveConflict()) {
+    if (saveIssue() !== null) {
       setExternalChange(true);
-      setSaveError(t("editor.saveConflict"));
+      setSaveError(recoveryMessage());
       setAutoSaveStatus("error");
       return false;
     }
@@ -281,9 +351,13 @@ export const EditorProvider: ParentComponent = (props) => {
     } catch (err) {
       if (!saveCurrent(scope)) return false;
       if (err instanceof APIError && err.status === 409) {
-        setSaveConflict(true);
+        setSaveIssue("conflict");
         setExternalChange(true);
-        setSaveError(t("editor.saveConflict"));
+        setSaveError(recoveryMessage());
+      } else if (!(err instanceof APIError) || err.status >= 500) {
+        setSaveIssue("unknown");
+        setExternalChange(true);
+        setSaveError(recoveryMessage());
       } else setSaveError(`${t("errors.autoSaveFailed")}: ${err}`);
       setAutoSaveStatus("error");
       return false;
@@ -302,23 +376,69 @@ export const EditorProvider: ParentComponent = (props) => {
     void enqueueSave(scope);
   }, 2000);
   const scheduleAutoSave = () => debouncedAutoSave(captureSave());
-  const flushAutoSave = async (): Promise<boolean> => {
+  const settleEdits = async (scope: ReturnType<typeof captureSave>): Promise<boolean> => {
+    while (asyncEditPending()) {
+      if ((await Promise.all(pendingEdits())).some((saved) => !saved)) return false;
+      if (!saveCurrent(scope)) return false;
+    }
+    return saveCurrent(scope);
+  };
+  const drainAndSave = async (): Promise<boolean> => {
     debouncedAutoSave.cancel();
     const scope = captureSave();
-    if (!(await enqueueSave(scope))) return false;
+    if (!(await settleEdits(scope))) return false;
+    // Capture after insertion: an upload may have changed the draft while awaited.
+    if (!(await enqueueSave(captureSave()))) return false;
     // Edits made while the first request was in flight also have to be saved.
     if (!saveCurrent(scope)) return false;
-    if (hasUnsavedChanges()) return flushAutoSave();
+    if (hasUnsavedChanges() || asyncEditPending()) return drainAndSave();
     return true;
   };
+  // Capture authority without renewing it; async edit admission uses this path.
+  const captureIntent = (): EditorIntent => {
+    const version = departure;
+    const identity = authIdentity();
+    const wsId = user()?.workspace_id;
+    const current = () =>
+      !disposed && version === departure && identity === authIdentity() && wsId === user()?.workspace_id;
+    const intent: EditorIntent = {
+      current,
+      async drain() {
+        return current() && (await drainAndSave()) && current();
+      },
+      navigate(path) {
+        if (!current()) return;
+        // Router admission is synchronous. Carry this same authority through
+        // its guard rather than treating a continuation as a new user action.
+        continuingIntent = intent;
+        try {
+          navigate(path);
+        } finally {
+          continuingIntent = null;
+        }
+      },
+    };
+    return intent;
+  };
+  const beginIntent = () => {
+    departure++;
+    return captureIntent();
+  };
+  const prepareDeparture = async () => {
+    if (editingLocked()) return null;
+    const intent = beginIntent();
+    return (await intent.drain()) && !editingLocked() ? intent : null;
+  };
   useBeforeLeave((event) => {
-    if (event.defaultPrevented || (!hasUnsavedChanges() && pendingSaves === 0)) return;
+    if (event.defaultPrevented) return;
+    // Clean route changes also supersede an asynchronous command's follow-up.
+    const intent = continuingIntent ?? beginIntent();
+    if (!hasUnsavedChanges() && pendingSaves === 0 && !asyncEditPending()) return;
     const scope = captureSave();
     if (!scope.nodeId || !scope.wsId) return;
     event.preventDefault();
-    const request = ++departure;
-    void flushAutoSave().then((saved) => {
-      if (saved && request === departure && saveCurrent(scope)) event.retry(true);
+    void drainAndSave().then((saved) => {
+      if (saved && intent.current() && saveCurrent(scope)) event.retry(true);
     });
   });
   const copyDraft = async () => {
@@ -345,34 +465,46 @@ export const EditorProvider: ParentComponent = (props) => {
   const compareChanges = async () => {
     const scope = captureSave();
     if (!saveCurrent(scope) || !scope.ws || !scope.nodeId) return;
+    const intent = beginIntent();
     const request: RecoveryState = { kind: "comparing" };
     debouncedAutoSave.cancel();
-    // Stop queued autosaves while a comparison is open, including SSE-only conflicts.
-    setSaveConflict(true);
+    // Block autosaves without relabeling an uncertain write before a current,
+    // authorized, versioned snapshot supplies its reconciliation baseline.
+    setSaveIssue((issue) => issue ?? "conflict");
     setRecoveryState(request);
     try {
+      if (!(await settleEdits(scope))) return;
       await saveQueue;
-      if (!saveCurrent(scope) || recoveryState() !== request) return;
+      if (!saveCurrent(scope) || !intent.current() || recoveryState() !== request) return;
       const latest = await scope.ws.getNode(scope.nodeId);
-      if (!saveCurrent(scope) || recoveryState() !== request) return;
-      setRecoveryState({
-        kind: "reviewing",
-        session: buildRecovery({
-          title: latest.title,
-          content: relativeLinksToSpaUrls(latest.content ?? "", scope.wsId),
-          revision: latest.revision ?? "",
-        }),
-        error: null,
+      if (!(await settleEdits(scope))) return;
+      if (!saveCurrent(scope) || !intent.current() || recoveryState() !== request) return;
+      if (!latest.revision) {
+        setRecoveryState({ kind: "failed", error: t("editor.compareFailed") });
+        return;
+      }
+      const session = buildRecovery({
+        title: latest.title,
+        content: relativeLinksToSpaUrls(latest.content ?? "", scope.wsId),
+        revision: latest.revision,
+      });
+      batch(() => {
+        setSaveIssue("conflict");
+        setRecoveryState({ kind: "reviewing", session, error: null });
       });
     } catch {
-      if (saveCurrent(scope) && recoveryState() === request)
+      if (saveCurrent(scope) && intent.current() && recoveryState() === request)
         setRecoveryState({ kind: "failed", error: t("editor.compareFailed") });
+    } finally {
+      if (recoveryState() === request) setRecoveryState({ kind: "closed" });
     }
   };
   const saveRecovery = async (session: RecoverySession, result: { title: string; content: string }) => {
     const scope = captureSave();
     const state = recoveryState();
     if (!saveCurrent(scope) || state.kind !== "reviewing" || state.session !== session) return false;
+    const intent = beginIntent();
+    if (!(await settleEdits(scope)) || !intent.current() || recoveryState() !== state) return false;
     if (title() !== session.local.title || content() !== session.local.content) {
       // Keep every new keystroke and ask for a fresh explicit review.
       setRecoveryState({
@@ -389,7 +521,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setContent(result.content);
       if (scope.nodeId) updateNodeTitle(scope.nodeId, result.title);
       setHasUnsavedChanges(true);
-      setSaveConflict(false);
+      setSaveIssue(null);
       setRecoveryState(saving);
     });
     const savingScope = { ...captureSave(), expectedRevision: session.saved.revision };
@@ -402,7 +534,7 @@ export const EditorProvider: ParentComponent = (props) => {
       // persist preserves any edits made while the recovery save was pending.
       if (hasUnsavedChanges()) scheduleAutoSave();
     } else {
-      setSaveConflict(true);
+      setSaveIssue((issue) => issue ?? "conflict");
       setRecoveryState({ kind: "failed", error: t("editor.recoveryRetry") });
     }
     return saved;
@@ -451,7 +583,7 @@ export const EditorProvider: ParentComponent = (props) => {
     titleBeforeEdit = null;
     if (node) {
       revision = node.revision ?? "";
-      setSaveConflict(false);
+      setSaveIssue(null);
       setSaveError(null);
       setTitle(node.title);
       // Convert relative file path links from API to SPA URLs for the editor.
@@ -478,7 +610,7 @@ export const EditorProvider: ParentComponent = (props) => {
     revision = "";
     acknowledged = { title: "", content: "" };
     closeRecovery();
-    setSaveConflict(false);
+    setSaveIssue(null);
     debouncedAutoSave.cancel();
     setTitle("");
     setContent("");
@@ -487,13 +619,14 @@ export const EditorProvider: ParentComponent = (props) => {
     setHasUnsavedChanges(false);
     setAutoSaveStatus("idle");
     setShowHistory(false);
-    setHistory([]);
+    setHistory(null);
     setLinkedNodeTitles({});
     setExternalChange(false);
     setSyncedModified(null);
   }
 
   async function handleIconChange(newIcon: string) {
+    if (editingLocked()) return;
     const nodeId = selectedNodeId();
     const scope = captureSave();
     const ws = scope.ws;
@@ -511,22 +644,26 @@ export const EditorProvider: ParentComponent = (props) => {
   }
 
   async function handleCoverChange(newCover: string) {
+    if (editingLocked()) return false;
     const nodeId = selectedNodeId();
     const scope = captureSave();
     const ws = scope.ws;
-    if (!saveCurrent(scope)) return;
-    if (!nodeId || !ws) return;
+    if (!saveCurrent(scope)) return false;
+    if (!nodeId || !ws) return false;
     setCover(newCover);
     try {
       const saved = await ws.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
-      if (!saveCurrent(scope)) return;
+      if (!saveCurrent(scope)) return false;
       setSyncedModified(saved.modified);
+      return true;
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      return false;
     }
   }
 
   function handleTitleChange(newTitle: string) {
+    if (editingLocked()) return;
     // On first edit in this session, capture the pre-edit title for undo.
     if (!applyingTitleUndo && titleBeforeEdit === null) {
       const oldTitle = title();
@@ -557,34 +694,30 @@ export const EditorProvider: ParentComponent = (props) => {
   }
 
   function handleContentChange(newContent: string) {
+    if (editingLocked()) return;
     setContent(newContent);
     setHasUnsavedChanges(true);
     scheduleAutoSave();
   }
 
-  // Local loading state for history - can be exposed later for UI feedback
-  const [_loadingHistory, setLoadingHistory] = createSignal(false);
-
-  async function loadHistory(nodeId: string) {
+  async function loadHistory(nodeId: string, intent: EditorIntent) {
+    if (!intent.current()) return;
     if (showHistory()) {
       setShowHistory(false);
       return;
     }
     const scope = captureSave();
     const ws = scope.ws;
-    if (!saveCurrent(scope)) return;
+    if (!saveCurrent(scope) || scope.nodeId !== nodeId) return;
     if (!ws) return;
 
     try {
-      setLoadingHistory(true);
       const data = await ws.listNodeVersions(nodeId, { Limit: 100 });
-      if (!saveCurrent(scope)) return;
-      setHistory((data.history?.filter(Boolean) as Commit[]) || []);
+      if (!saveCurrent(scope) || !intent.current()) return;
+      setHistory({ commits: (data.history?.filter(Boolean) as Commit[]) || [], intent });
       setShowHistory(true);
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
-    } finally {
-      setLoadingHistory(false);
+      if (saveCurrent(scope) && intent.current()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     }
   }
 
@@ -599,7 +732,6 @@ export const EditorProvider: ParentComponent = (props) => {
     assetUrls,
     linkedNodeTitles,
     showHistory,
-    setShowHistory,
     history,
     loadHistory,
     externalChange,
@@ -610,8 +742,12 @@ export const EditorProvider: ParentComponent = (props) => {
     handleIconChange,
     handleCoverChange,
     triggerAutoSave: scheduleAutoSave,
-    flushAutoSave,
-    saveConflict,
+    beginIntent,
+    runAsyncEdit,
+    prepareDeparture,
+    asyncEditPending,
+    saveIssue,
+    editingLocked,
     copyDraft,
     recovery,
     recoveryLoading,
@@ -622,8 +758,12 @@ export const EditorProvider: ParentComponent = (props) => {
     resetEditor,
     handleTitleChange,
     handleContentChange,
-    undo: undoActions.undo,
-    redo: undoActions.redo,
+    async undo() {
+      if (!editingLocked()) await undoActions.undo();
+    },
+    async redo() {
+      if (!editingLocked()) await undoActions.redo();
+    },
     canUndo: undoActions.canUndo,
     canRedo: undoActions.canRedo,
   };

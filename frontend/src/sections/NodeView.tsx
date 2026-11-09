@@ -1,4 +1,4 @@
-// Displays page/table editing with preserved-draft conflict comparison and recovery.
+// Owns live editing, conflict recovery, and historical previews under their departure intent.
 
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from "solid-js";
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
@@ -17,6 +17,7 @@ import { useAuthScope, useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIE
 import { useI18n } from "../i18n";
 import { nodeUrl, stripSlug } from "../utils/urls";
 import { relativeLinksToSpaUrls } from "../utils/markdown-utils";
+import type { EditorIntent } from "../contexts/EditorContext";
 import type { Property, Commit } from "@sdk/types.gen";
 import styles from "./WorkspaceSection.module.css";
 import EditIcon from "@material-symbols/svg-400/outlined/edit.svg?solid";
@@ -54,7 +55,8 @@ export default function NodeView() {
     handleContentChange,
     linkedNodeTitles,
     externalChange,
-    saveConflict,
+    saveIssue,
+    editingLocked,
     copyDraft,
     compareChanges,
     dismissExternalChange,
@@ -63,6 +65,9 @@ export default function NodeView() {
     cover,
     handleIconChange,
     handleCoverChange,
+    beginIntent,
+    runAsyncEdit,
+    asyncEditPending,
   } = useEditor();
 
   const coverSession = user()?.session_id;
@@ -92,11 +97,7 @@ export default function NodeView() {
 
   const [previewContent, setPreviewContent] = createSignal<string | null>(null);
   const [previewCommit, setPreviewCommit] = createSignal<Commit | null>(null);
-  const [_loadingPreview, setLoadingPreview] = createSignal(false);
-  let previewRequest = 0;
   const clearPreview = () => {
-    previewRequest++;
-    setLoadingPreview(false);
     setPreviewContent(null);
     setPreviewCommit(null);
   };
@@ -176,11 +177,11 @@ export default function NodeView() {
 
   // Opening history loads its first version; dismissing a preview must not reopen it.
   createEffect(
-    on([showHistory, history], ([visible, commits]) => {
+    on([showHistory, history], ([visible, snapshot]) => {
       clearPreview();
       const id = selectedNodeId();
-      const first = commits[0];
-      if (visible && id && first) void loadPreview(id, first);
+      const first = snapshot?.commits[0];
+      if (visible && id && first && snapshot) void loadPreview(id, first, snapshot.intent);
     }),
   );
 
@@ -255,44 +256,53 @@ export default function NodeView() {
     await updateTableProperties(nodeId, currentProperties);
   }
 
-  async function handleUploadCover(file: File): Promise<void> {
-    const isCurrent = captureScope();
-    const nodeId = selectedNodeId();
-    const result = await coverUpload.uploadFile(file);
-    if (!isCurrent() || selectedNodeId() !== nodeId) return;
-    if (!result) {
-      const err = coverUpload.error();
-      if (err) setSaveError(err);
-      return;
-    }
-    await handleCoverChange(result.name);
-    if (!isCurrent() || selectedNodeId() !== nodeId) return;
-    // Reload the originating node to get updated asset URLs
-    if (nodeId) loadNode(nodeId, { refresh: false });
-  }
+  const handleUploadCover = (file: File): Promise<void> =>
+    runAsyncEdit(async () => {
+      const isCurrent = captureScope();
+      const nodeId = selectedNodeId();
+      const result = await coverUpload.uploadFile(file);
+      if (!isCurrent() || selectedNodeId() !== nodeId) return false;
+      if (!result) {
+        const err = coverUpload.error();
+        throw new Error(err ?? t("errors.failedToSave"));
+      }
+      if (!(await handleCoverChange(result.name))) return false;
+      if (!isCurrent() || selectedNodeId() !== nodeId) return false;
+      // Reload the originating node to get updated asset URLs
+      if (nodeId) loadNode(nodeId, { refresh: false });
+      return true;
+    });
 
-  async function loadPreview(nodeId: string, commit: Commit) {
+  async function loadPreview(nodeId: string, commit: Commit, intent: EditorIntent) {
     const isCurrent = captureScope();
     const ws = wsApi();
     const wsId = user()?.workspace_id;
-    if (!ws || !wsId || !showHistory() || selectedNodeId() !== nodeId || stripSlug(params.nodeId) !== nodeId) return;
-    const request = ++previewRequest;
+    if (
+      !ws ||
+      !wsId ||
+      !showHistory() ||
+      editingLocked() ||
+      selectedNodeId() !== nodeId ||
+      stripSlug(params.nodeId) !== nodeId
+    )
+      return;
     const ownsPreview = () =>
       isCurrent() &&
-      request === previewRequest &&
+      intent.current() &&
       showHistory() &&
+      !editingLocked() &&
       selectedNodeId() === nodeId &&
       stripSlug(params.nodeId) === nodeId;
     try {
-      setLoadingPreview(true);
+      // Preview retires the live editor. Drain admitted work both before fetching
+      // and before applying: uploads and newer drafts may arrive during the read.
+      if (!(await intent.drain()) || !ownsPreview()) return;
       const data = await ws.getNodeVersion(nodeId, commit.hash);
-      if (!ownsPreview()) return;
+      if (!ownsPreview() || !(await intent.drain()) || !ownsPreview()) return;
       setPreviewContent(relativeLinksToSpaUrls(data.content || "", wsId));
       setPreviewCommit(commit);
     } catch (err) {
       if (ownsPreview()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
-    } finally {
-      if (ownsPreview()) setLoadingPreview(false);
     }
   }
 
@@ -310,20 +320,32 @@ export default function NodeView() {
     <>
       <ConflictRecovery onSaved={() => titleInput?.focus()} />
       <Show when={selectedNodeId()}>
-        <div class={styles.editor}>
-          <Show when={externalChange() || saveConflict()}>
+        <div class={styles.editor} inert={editingLocked()} aria-busy={editingLocked()}>
+          <Show when={externalChange() || saveIssue() !== null}>
             <div class={styles.conflictBanner}>
-              <span>{saveConflict() ? t("editor.saveConflict") : t("sse.externalChange")}</span>
-              <Show when={hasUnsavedChanges()}>
+              <span>
+                {saveIssue() === "unknown"
+                  ? t("editor.saveUnknown")
+                  : saveIssue() === "conflict"
+                    ? t("editor.saveConflict")
+                    : t("sse.externalChange")}
+              </span>
+              <Show when={hasUnsavedChanges() && saveIssue() !== "unknown"}>
                 <button onClick={compareChanges}>{t("editor.compareChanges")}</button>
               </Show>
-              <Show when={saveConflict()}>
+              <Show when={saveIssue() !== null}>
                 <button onClick={copyDraft}>{t("editor.copyDraft")}</button>
               </Show>
-              <button onClick={refreshFromServer}>
-                {saveConflict() ? t("editor.reloadLatest") : t("sse.refreshContent")}
+              <button
+                onClick={() => {
+                  beginIntent();
+                  refreshFromServer();
+                }}
+                disabled={asyncEditPending()}
+              >
+                {saveIssue() !== null ? t("editor.reloadLatest") : t("sse.refreshContent")}
               </button>
-              <Show when={!saveConflict()}>
+              <Show when={saveIssue() === null}>
                 <button onClick={dismissExternalChange}>{t("sse.dismissNotice")}</button>
               </Show>
             </div>
@@ -345,6 +367,7 @@ export default function NodeView() {
                 ref={(el) => (titleInput = el)}
                 placeholder={t("editor.titlePlaceholder") || "Title"}
                 value={title()}
+                disabled={editingLocked()}
                 onInput={(e) => handleTitleChange(e.target.value)}
                 class={styles.titleInput}
               />
@@ -381,7 +404,7 @@ export default function NodeView() {
             <div class={styles.historyPanel}>
               <h3>{t("editor.versionHistory")}</h3>
               <ul class={styles.historyList}>
-                <For each={history()}>
+                <For each={history()?.commits}>
                   {(commit) => (
                     <li
                       class={styles.historyItem}
@@ -393,7 +416,7 @@ export default function NodeView() {
                         aria-pressed={previewCommit()?.hash === commit.hash}
                         onClick={() => {
                           const id = selectedNodeId();
-                          if (id) loadPreview(id, commit);
+                          if (id && !editingLocked()) void loadPreview(id, commit, beginIntent());
                         }}
                       >
                         <div class={styles.historyMeta}>
@@ -407,7 +430,7 @@ export default function NodeView() {
                     </li>
                   )}
                 </For>
-                <Show when={history().length === 0}>
+                <Show when={history()?.commits.length === 0}>
                   <li class={styles.noHistory}>{t("editor.noHistory")}</li>
                 </Show>
               </ul>
@@ -419,6 +442,7 @@ export default function NodeView() {
               <Show when={selectedNodeData()?.has_page}>
                 <Suspense fallback={<div class={styles.editorLoading}>{t("common.loading")}</div>}>
                   <Editor
+                    readOnly={editingLocked()}
                     content={content()}
                     nodeId={selectedNodeId() ?? undefined}
                     assetUrls={assetUrls()}
@@ -430,7 +454,8 @@ export default function NodeView() {
                       const nodeId = selectedNodeId();
                       if (nodeId) loadNode(nodeId, { refresh: false });
                     }}
-                    onError={setSaveError}
+                    runAsyncEdit={runAsyncEdit}
+                    asyncEditPending={asyncEditPending()}
                     onNavigateToNode={handleNavigateToNode}
                   />
                 </Suspense>
@@ -538,7 +563,13 @@ export default function NodeView() {
                     {previewCommit()?.author_name} • {new Date(previewCommit()?.timestamp || 0).toLocaleString()}
                   </span>
                 </div>
-                <button onClick={clearPreview} class={styles.closePreviewButton}>
+                <button
+                  onClick={() => {
+                    beginIntent();
+                    clearPreview();
+                  }}
+                  class={styles.closePreviewButton}
+                >
                   {t("editor.closePreview")}
                 </button>
               </div>

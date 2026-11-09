@@ -57,11 +57,13 @@ let navigation!: ReturnType<typeof useWorkspaceNavigation>;
 let auth!: ReturnType<typeof useAuth>;
 let navigate!: ReturnType<typeof useNavigate>;
 let currentPath = "";
-let calls: Array<{ body: UpdatePageRequest; resolve: (response: Response) => void }>;
+let calls: Array<{ body: UpdatePageRequest; resolve: (response: Response) => void; reject: (error: Error) => void }>;
 let switches: number;
 let latest: NodeResponse | null;
 let latestReply: Promise<Response> | null;
 let accountLocale = "en";
+let switchResponse: Promise<Response> | null;
+let nodeResponse: Promise<Response> | null;
 
 function Probe() {
   editor = useEditor();
@@ -71,10 +73,11 @@ function Probe() {
   navigate = useNavigate();
   const location = useLocation();
   navigation.registerView({
+    beginNavigation: editor.beginIntent,
     selectedNodeId: workspace.selectedNodeId,
     selectedNodeData: workspace.selectedNodeData,
     failedNodeId: workspace.failedNodeId,
-    beforeNavigate: editor.flushAutoSave,
+    beforeNavigate: async () => (await editor.prepareDeparture()) !== null,
   });
   createEffect(() => {
     currentPath = location.pathname;
@@ -133,6 +136,8 @@ beforeEach(() => {
   switches = 0;
   latest = null;
   latestReply = null;
+  switchResponse = null;
+  nodeResponse = null;
   localStorage.clear();
   delete window.goModeHost;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -142,23 +147,97 @@ beforeEach(() => {
     if (url.endsWith("/auth/browser/logout")) return Response.json({ ok: true });
     if (url.endsWith("/switch-workspace")) {
       switches++;
-      return Response.json({ user: { ...account, workspace_id: "other" } });
+      return switchResponse ?? Response.json({ user: { ...account, workspace_id: "other" } });
     }
     if (url.endsWith("/nodes/0/children"))
       return Response.json({ nodes: [node("one", "Original", firstRevision), node("two", "Other", firstRevision)] });
     if (url.endsWith("/nodes/one/page") && init?.method === "POST")
-      return new Promise<Response>((resolve) =>
-        calls.push({ body: JSON.parse(String(init.body)) as UpdatePageRequest, resolve }),
+      return new Promise<Response>((resolve, reject) =>
+        calls.push({ body: JSON.parse(String(init.body)) as UpdatePageRequest, resolve, reject }),
       );
     if (url.endsWith("/nodes/one") && latestReply) return latestReply;
     if (url.endsWith("/nodes/one") && latest) return Response.json(latest);
     if (/\/nodes\/(one|two)$/.test(url))
-      return Response.json(
-        node(url.endsWith("one") ? "one" : "two", url.endsWith("one") ? "Original" : "Other", firstRevision),
+      return (
+        (url.endsWith("two") ? nodeResponse : null) ??
+        Response.json(
+          node(url.endsWith("one") ? "one" : "two", url.endsWith("one") ? "Original" : "Other", firstRevision),
+        )
       );
     if (url.endsWith("/notifications/unread-count")) return Response.json({ count: 0 });
     return Response.json({ titles: {}, assets: [], history: [], nodes: [] });
   });
+});
+
+it("keeps an uncertain save outcome for explicit recovery rather than repeating it", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Uncertain draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  calls[0]!.reject(new TypeError("Response lost after the server committed"));
+  expect(await saving).toBe(false);
+  expect(editor.saveIssue()).toBe("unknown");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(editor.title()).toBe("Uncertain draft");
+  expect(await editor.beginIntent().drain()).toBe(false);
+  expect(calls).toHaveLength(1);
+});
+
+for (const target of ["node", "workspace"] as const) {
+  it(`locks the old editor while a delayed ${target} replacement is pending`, async () => {
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    let release!: (response: Response) => void;
+    const delayed = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    let departing: Promise<void> | undefined;
+    if (target === "node") {
+      nodeResponse = delayed;
+      navigate("/w/workspace/two");
+      await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+    } else {
+      switchResponse = delayed;
+      departing = workspace.switchWorkspace("other");
+      await waitFor(() => expect(workspace.switchingWorkspace()).toBe(true));
+    }
+    expect(editor.editingLocked()).toBe(true);
+    editor.handleTitleChange("Too late");
+    editor.handleContentChange("Too late");
+    expect(editor.title()).toBe("Original");
+    expect(editor.content()).toBe("body");
+    expect(editor.hasUnsavedChanges()).toBe(false);
+    release(
+      target === "node"
+        ? Response.json(node("two", "Other", firstRevision))
+        : Response.json({ user: { ...account, workspace_id: "other" } }),
+    );
+    if (departing) await departing;
+    await waitFor(() => expect(editor.editingLocked()).toBe(false));
+  });
+}
+
+it("locks the selected deletion without consuming undo while its request is pending", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Before delete");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  calls[0]!.resolve(saved("Before delete", "b".repeat(64)));
+  expect(await saving).toBe(true);
+  const admitted = editor.beginIntent();
+  workspace.setDeletingNodeId("one");
+  expect(editor.editingLocked()).toBe(true);
+  expect(await editor.prepareDeparture()).toBeNull();
+  expect(admitted.current()).toBe(true);
+  editor.handleContentChange("Too late");
+  await editor.undo();
+  expect(editor.content()).toBe("body");
+  expect(editor.title()).toBe("Before delete");
+  workspace.setDeletingNodeId(null);
+  await editor.undo();
+  expect(editor.title()).toBe("Original");
 });
 afterEach(() => {
   cleanup();
@@ -170,7 +249,7 @@ it("applies the canonical acknowledged title to the editor and sidebar together"
   await waitFor(() => expect(editor.title()).toBe("Original"));
   await waitFor(() => expect(workspace.nodes.find((n) => n.id === "one")?.title).toBe("Original"));
   editor.handleTitleChange("  Canonical  ");
-  const saving = editor.flushAutoSave();
+  const saving = editor.beginIntent().drain();
   await waitFor(() => expect(calls).toHaveLength(1));
   calls[0]!.resolve(saved("Canonical", "b".repeat(64)));
   expect(await saving).toBe(true);
@@ -182,10 +261,11 @@ it("serializes saves and chooses each revision only after the preceding acknowle
   mount();
   await waitFor(() => expect(editor.title()).toBe("Original"));
   editor.handleTitleChange("First");
-  const first = editor.flushAutoSave();
+  const intent = editor.beginIntent();
+  const first = intent.drain();
   await waitFor(() => expect(calls).toHaveLength(1));
   editor.handleTitleChange("Second");
-  const second = editor.flushAutoSave();
+  const second = intent.drain();
   expect(calls).toHaveLength(1);
   expect(calls[0]?.body.expected_revision).toBe(firstRevision);
   calls[0]!.resolve(saved("First", "b".repeat(64)));
@@ -221,18 +301,18 @@ for (const target of ["node", "settings", "workspace", "voice", "back"] as const
     expect(currentPath).toBe("/w/workspace/one");
     calls[0]!.resolve(Response.json({ error: { code: "CONFLICT", message: "Changed" } }, { status: 409 }));
     if (departure) await departure;
-    await waitFor(() => expect(editor.saveConflict()).toBe(true));
+    await waitFor(() => expect(editor.saveIssue()).toBe("conflict"));
     expect(editor.title()).toBe("Private draft");
     expect(editor.hasUnsavedChanges()).toBe(true);
     expect(workspace.selectedNodeId()).toBe("one");
     expect(currentPath).toBe("/w/workspace/one");
     expect(switches).toBe(0);
     editor.dismissExternalChange();
-    expect(editor.saveConflict()).toBe(true);
+    expect(editor.saveIssue()).toBe("conflict");
     navigate("/settings");
     await waitFor(() => expect(editor.externalChange()).toBe(true));
     expect(currentPath).toBe("/w/workspace/one");
-    expect(await editor.flushAutoSave()).toBe(false);
+    expect(await editor.beginIntent().drain()).toBe(false);
     expect(calls).toHaveLength(1);
   });
 }
@@ -260,15 +340,161 @@ for (const outcome of ["success", "conflict"] as const) {
     await Promise.resolve();
     expect(retired.title()).toBe("");
     expect(editor.title()).toBe("Original");
-    expect(editor.saveConflict()).toBe(false);
+    expect(editor.saveIssue()).toBeNull();
     expect(currentPath).toBe("/w/workspace/one");
     expect(editor.hasUnsavedChanges()).toBe(false);
   });
 }
 
+it("comparison includes an admitted asynchronous insertion before capturing its draft", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  let finish!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const editing = editor.runAsyncEdit(async () => {
+    await gate;
+    editor.handleContentChange("Inserted reference");
+    return true;
+  });
+  const comparing = editor.compareChanges();
+  try {
+    // All mocked HTTP replies settle within this event-loop turn. The admitted
+    // insertion remains held until this test explicitly releases it.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(editor.recovery()).toBe(null);
+  } finally {
+    finish();
+    await editing;
+    await comparing;
+  }
+  expect(editor.recovery()?.local.content).toBe("Inserted reference");
+});
+
+it("recovery saving waits for admitted insertions and supersedes their navigation continuation", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  await editor.compareChanges();
+  const session = editor.recovery()!;
+  let finish!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const editing = editor.runAsyncEdit(
+    async () => {
+      await gate;
+      editor.handleContentChange("Inserted while reviewing");
+      return true;
+    },
+    async (intent) => {
+      intent.navigate("/settings");
+    },
+  );
+  const saving = editor.saveRecovery(session, { title: "Reviewed", content: "Reviewed body" });
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(calls).toHaveLength(1);
+  } finally {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => saved("Reviewed", "c".repeat(64)));
+    finish();
+    calls[1]?.resolve(saved("Reviewed", "c".repeat(64)));
+    await Promise.all([editing, saving]);
+  }
+  expect(await saving).toBe(false);
+  expect(editor.content()).toBe("Inserted while reviewing");
+  expect(editor.recovery()?.local.content).toBe("Inserted while reviewing");
+  expect(currentPath).toBe("/w/workspace/one");
+});
+
+it("an uncertain recovery save retains unknown-outcome protection", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  await editor.compareChanges();
+  const saving = editor.saveRecovery(editor.recovery()!, { title: "Reviewed", content: "Reviewed body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  calls[1]!.reject(new Error("reply lost"));
+  expect(await saving).toBe(false);
+  expect(editor.saveIssue()).toBe("unknown");
+  expect(await editor.beginIntent().drain()).toBe(false);
+  expect(calls).toHaveLength(2);
+});
+
+for (const failure of ["http", "network", "unversioned"] as const) {
+  it(`retains an uncertain recovery outcome through a failed ${failure} comparison retry`, async () => {
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    await conflictDraft();
+    latest = node("one", "Saved title", "b".repeat(64));
+    await editor.compareChanges();
+    const saving = editor.saveRecovery(editor.recovery()!, { title: "Reviewed", content: "Reviewed body" });
+    await waitFor(() => expect(calls).toHaveLength(2));
+    calls[1]!.reject(new Error("save reply lost"));
+    expect(await saving).toBe(false);
+    let failRead!: () => void;
+    latestReply = new Promise<Response>((resolve, reject) => {
+      failRead = () => {
+        if (failure === "http") resolve(Response.json({ error: "read forbidden" }, { status: 403 }));
+        else if (failure === "unversioned")
+          resolve(Response.json({ ...latest, has_page: false, has_table: true, revision: undefined }));
+        else reject(new Error("read reply lost"));
+      };
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Load latest version" }));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const issueWhileReading = editor.saveIssue();
+    failRead();
+    await waitFor(() => expect(editor.recoveryLoading()).toBe(false));
+    expect(issueWhileReading).toBe("unknown");
+    expect(editor.recoveryError()).toContain("Could not load the latest version");
+    expect(editor.saveIssue()).toBe("unknown");
+    expect(editor.title()).toBe("Reviewed");
+    expect(editor.content()).toBe("Reviewed body");
+    expect(await editor.beginIntent().drain()).toBe(false);
+    expect(calls).toHaveLength(2);
+    latestReply = null;
+    latest = { ...node("one", "Reviewed", "c".repeat(64)), content: "Reviewed body" };
+    fireEvent.click(screen.getByRole("button", { name: "Load latest version" }));
+    await waitFor(() => expect(editor.recovery()?.saved.revision).toBe(latest!.revision));
+    expect(editor.saveIssue()).toBe("conflict");
+    expect(calls).toHaveLength(2);
+  });
+}
+
+it("a canceled latest read cannot resolve an uncertain recovery outcome", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  await conflictDraft();
+  latest = node("one", "Saved title", "b".repeat(64));
+  await editor.compareChanges();
+  const saving = editor.saveRecovery(editor.recovery()!, { title: "Reviewed", content: "Reviewed body" });
+  await waitFor(() => expect(calls).toHaveLength(2));
+  calls[1]!.reject(new Error("save reply lost"));
+  expect(await saving).toBe(false);
+  let reply!: (response: Response) => void;
+  latestReply = new Promise<Response>((resolve) => {
+    reply = resolve;
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Load latest version" }));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  editor.closeRecovery();
+  reply(Response.json(node("one", "Saved title", "c".repeat(64))));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(editor.saveIssue()).toBe("unknown");
+  expect(editor.recovery()).toBe(null);
+  expect(editor.recoveryLoading()).toBe(false);
+  expect(calls).toHaveLength(2);
+});
+
 async function conflictDraft() {
   editor.handleTitleChange("Draft");
-  const saving = editor.flushAutoSave();
+  const saving = editor.beginIntent().drain();
   await waitFor(() => expect(calls).toHaveLength(1));
   calls[0]!.resolve(Response.json({ error: "conflict" }, { status: 409 }));
   expect(await saving).toBe(false);
@@ -351,7 +577,7 @@ it("preserves a recovered draft after another writer wins again and requires a n
   expect(await saving).toBe(false);
   expect(editor.title()).toBe("Reviewed draft");
   expect(editor.content()).toBe("reviewed body");
-  expect(editor.saveConflict()).toBe(true);
+  expect(editor.saveIssue()).toBe("conflict");
   expect(editor.recovery()).toBe(null);
   latest = { ...latest, content: "even newer", revision: "d".repeat(64) };
   await editor.compareChanges();
@@ -440,3 +666,43 @@ it("cancels pending comparisons and ignores their eventual response", async () =
   expect(editor.recoveryLoading()).toBe(false);
   expect(editor.title()).toBe("Draft");
 });
+it(
+  "does not let a late voice lookup supersede a newer departure waiting for an insertion",
+  { timeout: 7000 },
+  async () => {
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    let reply!: (response: Response) => void;
+    nodeResponse = new Promise<Response>((resolve) => {
+      reply = resolve;
+    });
+    const focus = navigation
+      .focusNode("two", {
+        sessionID: "voice",
+        signal: new AbortController().signal,
+        isCurrent: () => true,
+      })
+      .catch((error: unknown) => error);
+    let finish!: () => void;
+    const insertion = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const editing = editor.runAsyncEdit(async () => {
+      await insertion;
+      editor.handleContentChange("Inserted reference");
+      return true;
+    });
+    navigate("/settings");
+    expect(currentPath).toBe("/w/workspace/one");
+    reply(Response.json(node("two", "Other", firstRevision)));
+    // Let the real lookup and its continuation run while the insertion is held.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    finish();
+    await editing;
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body.content).toBe("Inserted reference");
+    calls[0]!.resolve(saved("Original", "b".repeat(64)));
+    await waitFor(() => expect(currentPath).toBe("/settings"));
+    await focus;
+  },
+);

@@ -170,6 +170,10 @@ export const dict: Dictionary = {
       "Die Seite konnte nicht gespeichert werden. Ihr wiederhergestellter Entwurf bleibt erhalten. Laden Sie die neueste Version für einen erneuten Vergleich.",
     saveConflict:
       "Diese Seite wurde andernorts geändert. Ihr Entwurf bleibt erhalten. Vergleichen Sie die Änderungen, kopieren Sie den Entwurf oder verwerfen Sie ihn und laden Sie neu.",
+    asyncEditFailed:
+      "Die Änderung konnte nicht eingefügt werden. Bleiben Sie auf dieser Seite und versuchen Sie es erneut.",
+    saveUnknown:
+      "Das Speichern konnte nicht bestätigt werden. Ihr Entwurf bleibt erhalten. Kopieren Sie ihn und laden und prüfen Sie die Seite vor weiteren Änderungen.",
     copyDraft: "Entwurf kopieren",
     reloadLatest: "Änderungen verwerfen und neu laden",
     copyFailed: "Entwurf konnte nicht kopiert werden",

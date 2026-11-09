@@ -89,3 +89,15 @@ type AppendNodeInput struct {
 type WriteNodeOutput struct {
 	Node NodeDetail `json:"node"`
 }
+
+// MutationError is the machine-facing com.fghbuild.mddb/mutationError entry in
+// a failed tool result's _meta. CurrentRevision was observed when the mutation
+// was rejected; recovery "read_current" requires inspecting the latest content
+// before deciding whether to write. A conflict cannot prove whether a previous
+// attempt succeeded, so clients must not automatically rebase and repeat append.
+type MutationError struct {
+	Error           string        `json:"error"`
+	Code            dto.ErrorCode `json:"code"`
+	CurrentRevision string        `json:"currentRevision,omitempty"`
+	Recovery        string        `json:"recovery,omitempty"`
+}

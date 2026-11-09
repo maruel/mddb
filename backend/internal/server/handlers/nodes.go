@@ -299,7 +299,12 @@ func (h *NodeHandler) AppendToPage(ctx context.Context, wsID ksid.ID, user *iden
 
 func pageMutationError(err error) error {
 	if errors.Is(err, content.ErrRevisionConflict) {
-		return dto.NewAPIError(409, dto.ErrorCodeConflict, "Page changed; reload before saving")
+		conflict := dto.NewAPIError(409, dto.ErrorCodeConflict, "Page changed; a previous attempt may have succeeded. Read the current page before deciding whether to write again").
+			WithDetail("recovery", "read_current")
+		if revision, ok := errors.AsType[*content.RevisionConflictError](err); ok {
+			conflict = conflict.WithDetail("current_revision", revision.CurrentRevision)
+		}
+		return conflict
 	}
 	if errors.Is(err, content.ErrNodeNotFound) {
 		return dto.NotFound("page")
@@ -393,6 +398,8 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identity.Us
 }
 
 // UpdateTable updates a table's schema.
+// TODO(2026-11-07): table-record-concurrency: add a revision precondition and
+// transactional check for schema/title replacement. Page CAS does not protect it.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -581,6 +588,8 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 }
 
 // UpdateRecord updates an existing record in a table.
+// TODO(2026-11-07): table-record-concurrency: revision-guard record replacement
+// transactionally and return canonical state/conflicts. Page CAS does not protect it.
 func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {

@@ -171,6 +171,9 @@ export const dict: Dictionary = {
       "Impossible d’enregistrer la page. Votre brouillon récupéré est conservé. Chargez la dernière version pour comparer à nouveau.",
     saveConflict:
       "Cette page a été modifiée ailleurs. Votre brouillon est conservé. Comparez les modifications pour le récupérer, copiez-le ou abandonnez-le et rechargez.",
+    asyncEditFailed: "Impossible d’insérer la modification. Restez sur cette page et réessayez.",
+    saveUnknown:
+      "Impossible de confirmer la sauvegarde. Votre brouillon est conservé. Copiez-le, puis rechargez et vérifiez la page avant de la modifier.",
     copyDraft: "Copier le brouillon",
     reloadLatest: "Abandonner et recharger",
     copyFailed: "Impossible de copier le brouillon",

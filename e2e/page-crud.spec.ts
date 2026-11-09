@@ -158,7 +158,7 @@ test.describe("Page CRUD Operations", () => {
     expect(savedData.content).toBe("Modified content");
   });
 
-  test("shows a fixed transient failure message when autosave fails", async ({ page, request }) => {
+  test("shows fixed recovery feedback when autosave cannot be confirmed", async ({ page, request }) => {
     const { token } = await registerUser(request, "autosave-feedback");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
@@ -173,20 +173,35 @@ test.describe("Page CRUD Operations", () => {
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Autosave feedback", { timeout: 5000 });
 
+    let attempts = 0;
     await page.route(`**/nodes/${pageData.id}/page`, async (route) => {
       if (route.request().method() === "POST") {
-        await route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"save failed"}' });
+        attempts++;
+        await route.fulfill({ status: 500, json: { error: { code: "INTERNAL_ERROR", message: "save failed" } } });
         return;
       }
       await route.continue();
     });
+    await page.clock.install();
+    await page.clock.pauseAt(new Date());
     await fillEditorContent(page, "Unsaved after failed autosave");
+    await page.clock.runFor(2100);
+    await expect.poll(() => attempts).toBe(1);
+    for (const [delay, expected] of [
+      [1000, 2],
+      [2000, 3],
+      [4000, 4],
+    ] as const) {
+      await page.clock.runFor(delay);
+      await expect.poll(() => attempts).toBe(expected);
+    }
 
     const feedback = page.getByTestId("workspace-feedback");
     await expect(feedback).toBeVisible({ timeout: 10000 });
-    await expect(feedback).toContainText("Auto-save failed");
+    await expect(feedback).toContainText("The save could not be confirmed.");
     await expect(feedback).toHaveCSS("position", "fixed");
     await expect(page.locator('[class*="saveErrorIndicator"]')).toContainText("Auto-save failed");
+    await expect(page.getByRole("button", { name: "Copy draft", exact: true })).toBeVisible();
   });
 });
 

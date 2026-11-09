@@ -591,7 +591,8 @@ func readSSEUntil(t *testing.T, r *bufio.Reader, substr string) string {
 
 // mcpToolOutcome is the decoded tools/call result shared by the MCP write tests.
 type mcpToolOutcome struct {
-	IsError           bool `json:"isError"`
+	Meta              map[string]json.RawMessage `json:"_meta"`
+	IsError           bool                       `json:"isError"`
 	StructuredContent struct {
 		Error string               `json:"error"`
 		Node  mcpschema.NodeDetail `json:"node"`

@@ -1,4 +1,4 @@
-// ProseMirror markdown editor preserving selection and history across metadata-only refreshes.
+// ProseMirror editor with mapped asynchronous insertions and guarded mode changes.
 
 import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from "solid-js";
 import { EditorView } from "prosemirror-view";
@@ -24,7 +24,7 @@ import { BlockContextMenu } from "./BlockContextMenu";
 import { EditorDropIndicator } from "./EditorDropIndicator";
 import SlashCommandMenu from "./SlashCommandMenu";
 import EditorToolbar, { type FormatState } from "./EditorToolbar";
-import type { AssetUrlMap } from "../../contexts/EditorContext";
+import type { AssetUrlMap, RunAsyncEdit, SavedEditContinuation } from "../../contexts/EditorContext";
 import styles from "./Editor.module.css";
 
 interface EditorProps {
@@ -38,9 +38,16 @@ interface EditorProps {
   wsId?: string;
   sessionID?: string;
   onAssetUploaded?: () => void;
-  onError?: (error: string) => void;
+  runAsyncEdit: RunAsyncEdit;
+  asyncEditPending: boolean;
   onNavigateToNode?: (nodeId: string) => void;
 }
+
+export type AsyncInsertion = (
+  pos: number,
+  edit: (insert: (node: ProseMirrorNode) => void) => Promise<void>,
+  afterSave?: SavedEditContinuation,
+) => Promise<void>;
 
 export default function Editor(props: EditorProps) {
   const { t } = useI18n();
@@ -61,82 +68,60 @@ export default function Editor(props: EditorProps) {
   // Create invalid link decoration plugin
   const invalidLinkPlugin = createInvalidLinkPlugin();
 
-  // Handle file drop uploads
-  const handleFileDrop = async (files: File[], pos: number) => {
-    const initialEditorView = view();
-    if (!initialEditorView || !props.wsId || !props.nodeId) return;
+  // Drop anchors follow ordinary edits until their asynchronous insertions commit.
+  const insertions = new Set<{ pos: number }>();
 
-    const originalSession = props.sessionID;
-    const originalNode = props.nodeId;
-    const originalWorkspace = props.wsId;
-    const isCurrent = () =>
-      !initialEditorView.isDestroyed &&
-      view() === initialEditorView &&
-      props.sessionID === originalSession &&
-      props.nodeId === originalNode &&
-      props.wsId === originalWorkspace;
-    const { uploadFile, error } = useAssetUpload({
-      wsId: props.wsId,
-      nodeId: props.nodeId,
-      sessionID: props.sessionID,
-    });
-
-    for (const file of files) {
-      if (!isCurrent()) return;
-      const result = await uploadFile(file);
-      if (!isCurrent()) return;
-      if (result) {
-        const isImage = isImageMimeType(result.mimeType);
-        let tr = initialEditorView.state.tr;
-
-        if (isImage) {
-          // Flattened block schemas handle images inside blocks or as separate blocks
-          // For now, simpler to insert as a paragraph block with an image mark or inline image?
-          // Schema does not seem to have 'image' node type in 'nodes' export from schema.ts?
-          // Let's check schema.ts... Phase 1 spec didn't mention 'image' block, only 'inline*' content.
-          // Standard ProseMirror uses inline image nodes.
-          // Wait, schema.ts removed 'image' node from baseSchema?
-          // Actually schema.ts removed bullet_list etc but added block. baseSchema has image.
-          // let's assume image node exists in baseSchema marks or nodes.
-          // schema.ts extends baseSchema.spec.nodes.remove(...).addToEnd(...)
-          // baseSchema has 'image' node.
-
-          // However, we can only insert 'block' or 'divider' at top level.
-          // To insert an image, we should insert a paragraph block containing the image node.
-
-          const imageType = schema.nodes.image;
-          // Check if image node exists in our schema
-          if (imageType) {
-            const imageNode = imageType.create({
-              src: result.url,
-              alt: result.name,
-              title: null,
+  // Every asynchronous body writer shares admission, mapped anchors, and retirement.
+  const insertAsync: AsyncInsertion = (pos, edit, afterSave) =>
+    props.runAsyncEdit(
+      () =>
+        untrack(async () => {
+          const initial = view();
+          if (!initial) return false;
+          const session = props.sessionID,
+            nodeId = props.nodeId,
+            wsId = props.wsId;
+          const current = () =>
+            !initial.isDestroyed &&
+            view() === initial &&
+            props.sessionID === session &&
+            props.nodeId === nodeId &&
+            props.wsId === wsId;
+          const insertion = { pos };
+          insertions.add(insertion);
+          try {
+            await edit((node) => {
+              if (!current() || props.readOnly) throw new Error(t("editor.asyncEditFailed"));
+              initial.dispatch(initial.state.tr.insert(insertion.pos, node));
             });
+            return current();
+          } finally {
+            insertions.delete(insertion);
+          }
+        }),
+      afterSave,
+    );
 
-            // Create a new paragraph block containing the image
-            const block = nodes.block.create({ type: "paragraph", indent: 0 }, imageNode);
-            tr = tr.insert(pos, block);
-          }
-        } else {
-          // Insert link
-          const linkType = marks.link;
-          if (linkType) {
-            const linkMark = linkType.create({ href: result.url, title: null });
-            const textNode = schema.text(result.name, [linkMark]);
-            // Create a new paragraph block containing the link
-            const block = nodes.block.create({ type: "paragraph", indent: 0 }, textNode);
-            tr = tr.insert(pos, block);
-          }
+  const handleFileDrop = (files: File[], pos: number) =>
+    insertAsync(pos, (insert) =>
+      untrack(async () => {
+        if (!props.wsId || !props.nodeId) throw new Error(t("editor.asyncEditFailed"));
+        const { uploadFile, error } = useAssetUpload({
+          wsId: props.wsId,
+          nodeId: props.nodeId,
+          sessionID: props.sessionID,
+        });
+        for (const file of files) {
+          const result = await uploadFile(file);
+          if (!result) throw new Error(error() ?? t("errors.failedToSave"));
+          const inline = isImageMimeType(result.mimeType)
+            ? schema.node("image", { src: result.url, alt: result.name, title: null })
+            : schema.text(result.name, [schema.mark("link", { href: result.url, title: null })]);
+          insert(nodes.block.create({ type: "paragraph", indent: 0 }, inline));
+          props.onAssetUploaded?.();
         }
-
-        initialEditorView.dispatch(tr);
-        props.onAssetUploaded?.();
-      } else {
-        const errMsg = error();
-        if (errMsg) props.onError?.(errMsg);
-      }
-    }
-  };
+      }),
+    );
 
   const dropPlugin = createDropUploadPlugin({ onFileDrop: handleFileDrop });
 
@@ -299,10 +284,20 @@ export default function Editor(props: EditorProps) {
         block: createBlockNodeView,
       },
       dispatchTransaction(tr) {
-        const newState = editorView.state.apply(tr);
+        if (props.readOnly && tr.docChanged) return;
+        const applied = editorView.state.applyTransaction(tr);
+        const docChanged = applied.transactions.some((transaction) => transaction.docChanged);
+        // A selection transaction can also cause an appended document change.
+        if (props.readOnly && docChanged) return;
+        for (const transaction of applied.transactions) {
+          // Association after the boundary also resolves deleted drop targets
+          // and keeps multiple inserted files in their original order.
+          for (const insertion of insertions) insertion.pos = transaction.mapping.map(insertion.pos, 1);
+        }
+        const newState = applied.state;
         editorView.updateState(newState);
 
-        if (tr.docChanged) {
+        if (docChanged) {
           const md = localSerializeMarkdown(newState.doc);
           setMarkdownContent(md);
           lastEmittedContent = md;
@@ -360,17 +355,27 @@ export default function Editor(props: EditorProps) {
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     onCleanup(() => {
+      insertions.clear();
       editorView.destroy();
       scrollContainer.removeEventListener("scroll", handleScroll);
       window.removeEventListener("scroll", handleScroll);
     });
   });
 
+  createEffect(() => {
+    const editable = !props.readOnly;
+    view()?.setProps({ editable: () => editable });
+  });
+
   createEffect(
     on(
-      () => [props.nodeId, props.content, props.linkedNodeTitles] as const,
+      () => [props.nodeId, props.content, props.linkedNodeTitles, props.asyncEditPending] as const,
       ([nodeId, content, linkedNodeTitles]) => {
         const nodeChanged = nodeId !== lastLoadedNodeId;
+        if (nodeChanged) insertions.clear();
+        // A same-node refresh must not replace the representation or bypass
+        // transaction mapping while an admitted insertion still owns it.
+        if (!nodeChanged && props.asyncEditPending) return;
         const contentChangedExternally = content !== lastEmittedContent;
         const titlesChanged = linkedNodeTitles !== lastLinkedNodeTitles;
         // Compare the same Markdown under each title map. Reparsing the live
@@ -407,44 +412,37 @@ export default function Editor(props: EditorProps) {
   );
 
   const handleMarkdownChange = (value: string) => {
+    if (props.readOnly) return;
     setMarkdownContent(value);
     lastEmittedContent = value;
     props.onChange(value);
   };
 
-  const switchToWysiwyg = () => {
+  const modeLocked = () => props.readOnly || props.asyncEditPending;
+  // All user mode changes, including document-level shortcuts, go through here.
+  // Pending insertions must keep their representation; rebuilding a locked or
+  // already-active editor would discard its undo history.
+  const switchMode = (mode: "wysiwyg" | "markdown") => {
+    if (modeLocked() || editorMode() === mode) return;
     const editorView = view();
     if (editorView) {
-      const doc = parseMarkdown(resolveMarkdown(markdownContent(), props.linkedNodeTitles));
-      const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
-      editorView.updateState(state);
-      updateActiveStates(editorView);
-      updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
+      if (mode === "wysiwyg") {
+        const doc = parseMarkdown(resolveMarkdown(markdownContent(), props.linkedNodeTitles));
+        const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
+        editorView.updateState(state);
+        updateActiveStates(editorView);
+        updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
+      } else {
+        setMarkdownContent(localSerializeMarkdown(editorView.state.doc));
+      }
     }
-    setEditorMode("wysiwyg");
-  };
-
-  const switchToMarkdown = () => {
-    const editorView = view();
-    if (editorView) {
-      const md = localSerializeMarkdown(editorView.state.doc);
-      setMarkdownContent(md);
-    }
-    setEditorMode("markdown");
-  };
-
-  const toggleMode = () => {
-    if (editorMode() === "wysiwyg") {
-      switchToMarkdown();
-    } else {
-      switchToWysiwyg();
-    }
+    setEditorMode(mode);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
       e.preventDefault();
-      toggleMode();
+      switchMode(editorMode() === "wysiwyg" ? "markdown" : "wysiwyg");
     }
   };
 
@@ -492,7 +490,8 @@ export default function Editor(props: EditorProps) {
       <div class={styles.modeIndicator}>
         <button
           class={editorMode() === "wysiwyg" ? styles.modeIndicatorActive : undefined}
-          onClick={switchToWysiwyg}
+          onClick={() => switchMode("wysiwyg")}
+          disabled={modeLocked()}
           title="Visual mode (Ctrl+Shift+M)"
           data-testid="editor-mode-visual"
         >
@@ -500,7 +499,8 @@ export default function Editor(props: EditorProps) {
         </button>
         <button
           class={editorMode() === "markdown" ? styles.modeIndicatorActive : undefined}
-          onClick={switchToMarkdown}
+          onClick={() => switchMode("markdown")}
+          disabled={modeLocked()}
           title="Markdown mode (Ctrl+Shift+M)"
           data-testid="editor-mode-markdown"
         >
@@ -508,7 +508,11 @@ export default function Editor(props: EditorProps) {
         </button>
       </div>
 
-      <Show when={view()}>{(v) => <SlashCommandMenu view={v()} state={slashMenuState()} nodeId={props.nodeId} />}</Show>
+      <Show when={view()}>
+        {(v) => (
+          <SlashCommandMenu view={v()} state={slashMenuState()} nodeId={props.nodeId} insertAsync={insertAsync} />
+        )}
+      </Show>
     </div>
   );
 }

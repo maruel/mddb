@@ -170,6 +170,9 @@ export const dict: Dictionary = {
       "No se pudo guardar la página. Tu borrador recuperado se conserva. Carga la última versión para comparar de nuevo.",
     saveConflict:
       "Esta página cambió en otro lugar. Tu borrador se conserva. Compara los cambios para recuperarlo, cópialo o descártalo y recarga.",
+    asyncEditFailed: "No se pudo insertar el cambio. Quédate en esta página e inténtalo de nuevo.",
+    saveUnknown:
+      "No se pudo confirmar el guardado. Se conserva tu borrador. Cópialo, recarga e inspecciona la página antes de editar de nuevo.",
     copyDraft: "Copiar borrador",
     reloadLatest: "Descartar cambios y recargar",
     copyFailed: "No se pudo copiar el borrador",

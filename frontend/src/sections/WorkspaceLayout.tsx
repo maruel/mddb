@@ -1,4 +1,4 @@
-// Workspace layout with header, sidebar, and content outlet.
+// Workspace layout with draft-gated navigation and route-owned sidebar History.
 
 import {
   createEffect,
@@ -11,7 +11,8 @@ import {
   onMount,
   type ParentComponent,
 } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import type { EditorIntent } from "../contexts/EditorContext";
+import { useLocation, useNavigate } from "@solidjs/router";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import NotificationBell from "../components/NotificationBell";
@@ -24,7 +25,7 @@ import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
 import { useGoMode } from "../gomode/GoMode";
 import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from "../contexts";
 import { useI18n } from "../i18n";
-import { settingsUrl, nodeUrl } from "../utils/urls";
+import { settingsUrl, nodeUrl, parseNodeUrl } from "../utils/urls";
 import type { NodeResponse, NotionImportStatusResponse } from "@sdk/types.gen";
 import styles from "./WorkspaceSection.module.css";
 
@@ -33,6 +34,7 @@ import MenuIcon from "@material-symbols/svg-400/outlined/menu.svg?solid";
 const WorkspaceLayout: ParentComponent = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, wsApi, orgApi, identity: authIdentity } = useAuth();
   let disposed = false;
   const {
@@ -56,7 +58,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     moveNode,
   } = useWorkspace();
   const { connected, lastEvent } = useEventSource();
-  const { flushAutoSave, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
+  const { beginIntent, prepareDeparture, editingLocked, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
   const { undo: recordsUndo, redo: recordsRedo } = useRecords();
 
   // The voice agent watches the open document so it can be told when the page
@@ -132,15 +134,75 @@ const WorkspaceLayout: ParentComponent = (props) => {
   };
   const navigation = useWorkspaceNavigation();
   navigation.registerView({
+    beginNavigation() {
+      const intent = beginIntent();
+      return {
+        ...intent,
+        async drain() {
+          const saved = await intent.drain();
+          if (saved && isMobileLayout()) setMobileSidebarOpen(false);
+          return saved;
+        },
+      };
+    },
     selectedNodeId,
     selectedNodeData,
     failedNodeId,
     async beforeNavigate() {
-      if (!(await flushAutoSave())) return false;
+      if (!(await prepareDeparture())) return false;
       if (isMobileLayout()) setMobileSidebarOpen(false);
       return true;
     },
   });
+
+  // Sidebar History follows the route-owned load, including a slow draft flush.
+  const [historyTarget, setHistoryTarget] = createSignal<{
+    id: string;
+    identity: number;
+    wsId: string;
+    from: string;
+    intent: EditorIntent;
+  } | null>(null);
+  createEffect(
+    on(
+      [historyTarget, selectedNodeId, failedNodeId, () => location.pathname, authIdentity, () => user()?.workspace_id],
+      () => {
+        const target = historyTarget();
+        if (!target) return;
+        const route = parseNodeUrl(location.pathname);
+        const matches = route?.wsId === target.wsId && route.nodeId === target.id;
+        if (
+          !target.intent.current() ||
+          authIdentity() !== target.identity ||
+          user()?.workspace_id !== target.wsId ||
+          (!matches && location.pathname !== target.from) ||
+          failedNodeId() === target.id
+        ) {
+          setHistoryTarget(null);
+        } else if (matches && selectedNodeId() === target.id) {
+          setHistoryTarget(null);
+          void loadHistory(target.id, target.intent);
+        }
+      },
+    ),
+  );
+
+  async function handleShowHistory(nodeId: string) {
+    if (editingLocked()) return;
+    setHistoryTarget(null);
+    const intent = beginIntent();
+    const u = user();
+    const wsId = u?.workspace_id;
+    if (nodeId !== selectedNodeId() && wsId) {
+      // Install the route-following intent only after THIS departure succeeds.
+      if (!(await intent.drain())) return;
+      setHistoryTarget({ id: nodeId, identity: authIdentity(), wsId, from: location.pathname, intent });
+      intent.navigate(nodeUrl(wsId, u?.workspace_name, nodeId));
+    } else {
+      setHistoryTarget(null);
+      void loadHistory(nodeId, intent);
+    }
+  }
 
   const isFirstWorkspace = () => {
     const currentUser = user();
@@ -328,7 +390,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
   // Create node helper
   async function createNode(type: "document" | "table" = "document", parentId?: string) {
-    if (!(await navigation.beforeNavigate())) return;
+    const intent = await prepareDeparture();
+    if (!intent) return;
     const identity = authIdentity();
     const initialWorkspace = user()?.workspace_id;
     const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;
@@ -360,8 +423,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
       const u = user();
       const wsId = u?.workspace_id;
       const wsName = u?.workspace_name;
-      if (wsId) {
-        navigate(nodeUrl(wsId, wsName, String(newNodeId), defaultTitle));
+      if (wsId && intent.current()) {
+        intent.navigate(nodeUrl(wsId, wsName, String(newNodeId), defaultTitle));
       }
       setSaveError(null);
       setNodeCreationParentId(null);
@@ -373,6 +436,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   const handleNodeClick = (node: NodeResponse) => {
+    setHistoryTarget(null);
     const u = user();
     const wsId = u?.workspace_id;
     const wsName = u?.workspace_name;
@@ -386,7 +450,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
   };
 
   async function handleDeleteNode(nodeId: string) {
-    if (nodeId === selectedNodeId() && !(await navigation.beforeNavigate())) return;
+    const selected = nodeId === selectedNodeId();
+    const intent = selected ? await prepareDeparture() : null;
+    if (selected && !intent) return;
     const identity = authIdentity();
     const initialWorkspace = user()?.workspace_id;
     const isCurrent = () => !disposed && authIdentity() === identity && user()?.workspace_id === initialWorkspace;
@@ -418,17 +484,17 @@ const WorkspaceLayout: ParentComponent = (props) => {
       if (!isCurrent()) return;
       removeNode(nodeId);
 
-      if (nodeId === selectedNodeId()) {
+      if (nodeId === selectedNodeId() && intent?.current()) {
         const u = user();
         const wsId = u?.workspace_id;
         const wsName = u?.workspace_name;
         if (nextNode && wsId) {
-          navigate(nodeUrl(wsId, wsName, nextNode.id, nextNode.title));
+          intent.navigate(nodeUrl(wsId, wsName, nextNode.id, nextNode.title));
         } else if (wsId) {
           await loadNodes(true);
           if (!isCurrent()) return;
           // Navigate to workspace root, let WorkspaceRoot handle redirect
-          navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
+          intent.navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
         }
       }
       setSaveError(null);
@@ -553,27 +619,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           onCloseMobileSidebar={closeSidebar}
           onFetchChildren={fetchNodeChildren}
           onDeleteNode={handleDeleteNode}
-          onShowHistory={(nodeId: string) => {
-            const u = user();
-            const wsId = u?.workspace_id;
-            const wsName = u?.workspace_name;
-            if (nodeId !== selectedNodeId() && wsId) {
-              navigate(nodeUrl(wsId, wsName, nodeId));
-              // Load history after navigation settles
-              const identity = authIdentity();
-              setTimeout(() => {
-                if (
-                  !disposed &&
-                  authIdentity() === identity &&
-                  user()?.workspace_id === wsId &&
-                  selectedNodeId() === nodeId
-                )
-                  void loadHistory(nodeId);
-              }, 100);
-            } else {
-              loadHistory(nodeId);
-            }
-          }}
+          onShowHistory={handleShowHistory}
           onOpenSettings={() => {
             const wsId = user()?.workspace_id;
             const wsName = user()?.workspace_name;

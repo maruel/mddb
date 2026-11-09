@@ -3,12 +3,14 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 	"unicode/utf8"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 )
 
@@ -44,8 +46,12 @@ func TestConditionalPageWrites(t *testing.T) {
 		if path == "/page" {
 			request["title"] = "Stale"
 		}
-		if status := env.doJSON(t, http.MethodPost, base+created.ID.String()+path, request, nil, token); status != http.StatusConflict {
+		var conflict dto.ErrorResponse
+		if status := env.doJSON(t, http.MethodPost, base+created.ID.String()+path, request, &conflict, token); status != http.StatusConflict {
 			t.Fatalf("stale%s status=%d", path, status)
+		}
+		if conflict.Error.Code != dto.ErrorCodeConflict || conflict.Details["current_revision"] != saved.Node.Revision || conflict.Details["recovery"] != "read_current" {
+			t.Fatalf("conflict is not recoverable: %+v", conflict)
 		}
 		if got := pageRevisionHTTP(t, env, token, wsID, created.ID); got != saved.Node.Revision {
 			t.Fatal("stale mutation changed content")
@@ -73,12 +79,57 @@ func TestConditionalPageWrites(t *testing.T) {
 		if !stale.IsError {
 			t.Fatalf("stale %s succeeded", tool)
 		}
+		var conflict mcpschema.MutationError
+		if err := json.Unmarshal(stale.Meta["com.fghbuild.mddb/mutationError"], &conflict); err != nil {
+			t.Fatalf("decode MCP recovery: %v", err)
+		}
+		if conflict.Code != dto.ErrorCodeConflict || conflict.CurrentRevision != outcome.StructuredContent.Node.Revision || conflict.Recovery != "read_current" {
+			t.Fatalf("MCP conflict is not recoverable: %+v", stale)
+		}
 	}
 	// Large mutation results use the same bounded windows and revision-bound
 	// continuation as node_read; every byte remains retrievable.
 	large := strings.Repeat("🌳 body\n", 10000)
 	expected := ""
 	currentRevision := outcome.StructuredContent.Node.Revision
+	// A client that loses an accepted append response retries the same request,
+	// then recovers by reading the page instead of rebasing the append.
+	replay := dto.AppendPageRequest{Content: "Lost response append", ExpectedRevision: currentRevision}
+	if status := env.doJSON(t, http.MethodPost, base+created.ID.String()+"/page/append", replay, nil, token); status != http.StatusOK {
+		t.Fatalf("accepted append status=%d", status)
+	}
+	var recovery dto.ErrorResponse
+	if status := env.doJSON(t, http.MethodPost, base+created.ID.String()+"/page/append", replay, &recovery, token); status != http.StatusConflict {
+		t.Fatalf("replayed append status=%d", status)
+	}
+	var recovered dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, base+created.ID.String(), nil, &recovered, token); status != http.StatusOK {
+		t.Fatalf("recovery read status=%d", status)
+	}
+	if recovered.Content != "Canonical body\n\nMCP append\n\nLost response append" || recovery.Details["current_revision"] != recovered.Revision || recovery.Details["recovery"] != "read_current" {
+		t.Fatalf("ambiguous append recovery: %+v %+v", recovery, recovered)
+	}
+	// Released MCP clients receive the same machine-facing recovery metadata,
+	// outside the success-only structuredContent schema.
+	var released struct {
+		Result mcpToolOutcome `json:"result"`
+	}
+	if status := env.doJSON(t, http.MethodPost, goModeMCPEndpoint, map[string]any{
+		"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+		"params": map[string]any{"name": "node_append", "arguments": map[string]any{
+			"nodeId": created.ID.String(), "content": replay.Content, "expectedRevision": replay.ExpectedRevision,
+		}},
+	}, &released, token); status != http.StatusOK {
+		t.Fatalf("released replay status=%d", status)
+	}
+	var releasedConflict mcpschema.MutationError
+	if err := json.Unmarshal(released.Result.Meta["com.fghbuild.mddb/mutationError"], &releasedConflict); err != nil {
+		t.Fatalf("decode released recovery: %v", err)
+	}
+	if !released.Result.IsError || releasedConflict.Code != dto.ErrorCodeConflict || releasedConflict.CurrentRevision != recovered.Revision || releasedConflict.Recovery != "read_current" {
+		t.Fatalf("released recovery=%+v", releasedConflict)
+	}
+	currentRevision = recovered.Revision
 	for _, tool := range []string{"node_update", "node_append"} {
 		args := map[string]any{"nodeId": created.ID.String(), "content": large, "expectedRevision": currentRevision}
 		if tool == "node_update" {

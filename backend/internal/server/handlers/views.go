@@ -25,6 +25,10 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
+	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
+	// a revision-guarded table transaction. Whole-table replacement after this
+	// read can revert concurrent schema/property edits; page CAS does not protect it.
+
 	node, err := ws.ReadTable(req.NodeID)
 	if err != nil {
 		return nil, dto.NotFound("table")
@@ -54,6 +58,10 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
+
+	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
+	// a revision-guarded table transaction. Whole-table replacement after this
+	// read can revert concurrent schema/property edits; page CAS does not protect it.
 
 	node, err := ws.ReadTable(req.NodeID)
 	if err != nil {
@@ -108,6 +116,10 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
+
+	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
+	// a revision-guarded table transaction. Whole-table replacement after this
+	// read can revert concurrent schema/property edits; page CAS does not protect it.
 
 	node, err := ws.ReadTable(req.NodeID)
 	if err != nil {

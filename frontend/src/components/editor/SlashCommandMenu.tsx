@@ -1,13 +1,12 @@
-// Slash command menu overlay component for selecting block types.
+// Slash commands with owned asynchronous subpage insertion and saved navigation follow-up.
 
-import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { createSignal, createEffect, For, Show, onMount, onCleanup, untrack } from "solid-js";
 import type { EditorView } from "prosemirror-view";
 import { schema, marks } from "./prosemirror-config";
 import { useI18n } from "../../i18n";
 import { useAuth, useAuthScope } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useEditor } from "../../contexts/EditorContext";
+import type { AsyncInsertion } from "./Editor";
 import { useClickOutside } from "../../composables/useClickOutside";
 import { nodeUrl } from "../../utils/urls";
 import { filterCommands, type SlashCommand } from "./slashCommands";
@@ -18,15 +17,14 @@ interface SlashCommandMenuProps {
   view: EditorView;
   state: SlashMenuState;
   nodeId?: string;
+  insertAsync: AsyncInsertion;
 }
 
 export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const { user, wsApi } = useAuth();
   const captureScope = useAuthScope();
   const { fetchNodeChildren } = useWorkspace();
-  const { flushAutoSave } = useEditor();
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [adjustedPosition, setAdjustedPosition] = createSignal<{ top: number; left: number } | null>(null);
   let menuRef: HTMLDivElement | undefined;
@@ -187,38 +185,23 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       const tr = props.view.state.tr.delete(triggerPos, cursorPos);
       props.view.dispatch(tr);
 
-      try {
-        // Create the subpage
-        const untitledTitle = t("slashMenu.untitledSubpage") || "Untitled";
-        const newPage = await ws.createPage(parentId, { title: untitledTitle });
-        if (!isCurrent() || props.nodeId !== parentId) return;
-        if (!newPage?.id) return;
-
-        // Build the URL for the new page
-        const wsId = u.workspace_id;
-        const wsName = u.workspace_name;
-        const url = nodeUrl(wsId || "", wsName, newPage.id, untitledTitle);
-
-        // Insert a proper link node with link mark (not raw markdown text)
-        const linkMark = marks.link.create({ href: url, title: null });
-        const linkNode = schema.text(untitledTitle, [linkMark]);
-        const insertTr = props.view.state.tr.insert(props.view.state.selection.from, linkNode);
-        props.view.dispatch(insertTr);
-
-        // Flush auto-save to persist the link immediately
-        if (!(await flushAutoSave())) return;
-
-        // Refresh parent's children in sidebar to show new subpage
-        // (loadNodes only refreshes root nodes, fetchNodeChildren refreshes the parent's children)
-        await fetchNodeChildren(parentId);
-        if (!isCurrent() || props.nodeId !== parentId) return;
-
-        navigate(url);
-      } catch (err) {
-        console.error("Failed to create subpage:", err);
-      }
-
-      props.view.focus();
+      let url = "";
+      await props.insertAsync(
+        triggerPos,
+        (insert) =>
+          untrack(async () => {
+            const untitledTitle = t("slashMenu.untitledSubpage") || "Untitled";
+            const newPage = await ws.createPage(parentId, { title: untitledTitle });
+            url = nodeUrl(u.workspace_id || "", u.workspace_name, newPage.id, untitledTitle);
+            insert(schema.text(untitledTitle, [marks.link.create({ href: url, title: null })]));
+          }),
+        (intent) =>
+          untrack(async () => {
+            await fetchNodeChildren(parentId);
+            if (intent.current() && isCurrent() && props.nodeId === parentId) intent.navigate(url);
+          }),
+      );
+      if (isCurrent()) props.view.focus();
       return;
     }
 

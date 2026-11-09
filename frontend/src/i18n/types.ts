@@ -164,6 +164,8 @@ export interface Dictionary {
     draftChanged: string;
     recoveryRetry: string;
     saveConflict: string;
+    asyncEditFailed: string;
+    saveUnknown: string;
     copyDraft: string;
     reloadLatest: string;
     copyFailed: string;

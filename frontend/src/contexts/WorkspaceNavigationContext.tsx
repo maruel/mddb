@@ -1,4 +1,4 @@
-// Gates workspace and voice navigation on saved drafts and observes route-owned focus completion.
+// Gates workspace and voice navigation on saved drafts while retaining admitted intent through focus lookup.
 
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
 import { useLocation, useNavigate } from "@solidjs/router";
 import type { NodeResponse } from "@sdk/types.gen";
 import type { FrontendVoiceToolContext } from "@maruel/gomode/web/FrontendVoiceTools";
+import type { EditorIntent } from "./EditorContext";
 import { useI18n } from "../i18n";
 import { useAuth } from "./AuthContext";
 import { nodeUrl, parseNodeUrl } from "../utils/urls";
@@ -25,6 +26,7 @@ export interface WorkspaceNavigationView {
   selectedNodeData: Accessor<NodeResponse | null>;
   failedNodeId: Accessor<string | null>;
   beforeNavigate(): Promise<boolean>;
+  beginNavigation(): EditorIntent;
 }
 interface WorkspaceNavigationContextValue {
   beforeNavigate(): Promise<boolean>;
@@ -98,11 +100,17 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
       if (!user?.workspace_id || !client || disposed) throw new Error("Workspace unavailable.");
       const wsId = user.workspace_id;
       const captured = owner();
+      const intent = viewOwner() === captured ? view()?.beginNavigation() : null;
       const operation = { controller: new AbortController(), target: id, wsId, navigating: false };
       pending = operation;
       const signal = AbortSignal.any([context.signal, operation.controller.signal]);
       const current = () =>
-        !disposed && !signal.aborted && context.isCurrent() && owner() === captured && pending === operation;
+        !disposed &&
+        !signal.aborted &&
+        context.isCurrent() &&
+        owner() === captured &&
+        pending === operation &&
+        (!intent || intent.current());
       try {
         let node: NodeResponse;
         try {
@@ -117,10 +125,12 @@ export const WorkspaceNavigationProvider: ParentComponent = (props) => {
         const active = view();
         if (matches(user.workspace_id, id) && active?.selectedNodeId() === id && active.selectedNodeData()?.id === id)
           return;
-        if (active && !(await active.beforeNavigate())) throw new Error(t("errors.autoSaveFailed"));
+        if (intent && !(await intent.drain())) throw new Error(t("errors.autoSaveFailed"));
         if (!current()) throw new Error("Focus canceled.");
         operation.navigating = true;
-        navigate(nodeUrl(user.workspace_id, user.workspace_name, node.id, node.title));
+        const path = nodeUrl(user.workspace_id, user.workspace_name, node.id, node.title);
+        if (intent) intent.navigate(path);
+        else navigate(path);
         await new Promise<void>((resolve, reject) => {
           createRoot((dispose) => {
             const stop = (error: Error | null) => {
