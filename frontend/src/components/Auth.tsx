@@ -31,6 +31,7 @@ const providerConfig: Record<OAuthProvider, { style: string; labelKey: string }>
 
 function getProviderConfig(provider: OAuthProvider): { style: string; label: string } {
   const config = providerConfig[provider];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
   if (config) {
     return { style: config.style, label: config.labelKey };
   }
@@ -111,6 +112,7 @@ export default function Auth(props: AuthProps) {
                     class={config.style}
                     target="_self"
                   >
+                    {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The provider icon may be absent for unknown runtime data. */}
                     {Icon && <Icon class={styles.oauthIcon} />}
                     {isKnown ? t(config.label) : config.label}
                   </a>

@@ -467,6 +467,7 @@ func (w *deviceFailedWriter) Write([]byte) (int, error) { return 0, errors.New("
 // deviceCompletionHost exercises failures around the real host's durable issuer.
 type deviceCompletionHost struct {
 	devicelogin.Host
+
 	failure string
 	cancel  context.CancelFunc
 	ip      netip.Addr

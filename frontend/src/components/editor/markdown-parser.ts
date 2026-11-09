@@ -174,13 +174,13 @@ export function parseMarkdown(markdown: string): ProseMirrorNode {
 function flattenDocument(node: ProseMirrorNode, blocks: ProseMirrorNode[], baseIndent: number): void {
   node.forEach((child) => {
     if (child.type.name === "bullet_list" || child.type.name === "ordered_list") {
-      flattenList(child, blocks, baseIndent, child.type.name as "bullet_list" | "ordered_list");
+      flattenList(child, blocks, baseIndent, child.type.name);
     } else if (child.type.name === "list_item") {
       // Should not happen at top level, but handle it
       flattenListItem(child, blocks, baseIndent, "bullet");
     } else if (child.type.name === "heading") {
       const content = convertInlineContent(child);
-      const blockNode = nodes.block.create({ type: "heading", level: child.attrs.level, indent: 0 }, content);
+      const blockNode = nodes.block.create({ type: "heading", level: child.attrs.level as number, indent: 0 }, content);
       blocks.push(blockNode);
     } else if (child.type.name === "paragraph") {
       const content = convertInlineContent(child);
@@ -211,7 +211,7 @@ function flattenDocument(node: ProseMirrorNode, blocks: ProseMirrorNode[], baseI
       }
     } else if (child.type.name === "code_block") {
       const content = child.textContent;
-      const language = child.attrs.params || "";
+      const language = (child.attrs.params as string | undefined) || "";
       const blockNode = nodes.block.create(
         { type: "code", language: language || undefined, indent: 0 },
         schema.text(content),
@@ -264,21 +264,22 @@ function flattenListItem(
   // Create block for this item
   const isTask = itemNode.attrs.checked !== null;
   const blockType = isTask ? "task" : itemType;
-  const blockAttrs: BlockAttrs = {
+  const blockAttrs: Partial<BlockAttrs> = {
     type: blockType,
     indent: baseIndent,
-    ...(isTask && { checked: itemNode.attrs.checked }),
+    ...(isTask && { checked: itemNode.attrs.checked as boolean }),
     ...(blockType === "number" && typeof number === "number" && { number }),
   };
 
-  const blockContent = itemContent ? convertInlineContent(itemContent as ProseMirrorNode) : [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The synchronous document traversal callback updates this local variable.
+  const blockContent = itemContent ? convertInlineContent(itemContent) : [];
   const blockNode = nodes.block.create(blockAttrs, blockContent);
   blocks.push(blockNode);
 
   // Flatten nested lists
   itemNode.forEach((child) => {
     if (child.type.name === "bullet_list" || child.type.name === "ordered_list") {
-      flattenList(child, blocks, baseIndent + 1, child.type.name as "bullet_list" | "ordered_list");
+      flattenList(child, blocks, baseIndent + 1, child.type.name);
     }
   });
 }

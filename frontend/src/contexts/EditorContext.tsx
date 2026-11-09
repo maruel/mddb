@@ -1,5 +1,4 @@
 // Binds saves and asynchronous edits to loaded documents while preserving user-action authority through recovery and departure.
-
 import {
   createContext,
   batch,
@@ -180,6 +179,8 @@ export const EditorProvider: ParentComponent = (props) => {
       title: node.title,
       content: spaContent,
       revision: node.revision ?? "",
+      // API responses may omit metadata despite the generated type.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       modified: node.modified ?? null,
     });
     const [outcome, setOutcome] = createSignal<SaveOutcome>("idle");
@@ -250,15 +251,15 @@ export const EditorProvider: ParentComponent = (props) => {
     const pending = Promise.resolve()
       .then(() => (saveCurrent(scope) ? edit() : false))
       .catch((err: unknown) => {
-        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
         return false;
       });
-    session.setEdits((current) => [...current, pending]);
+    void session.setEdits((current) => [...current, pending]);
     let applied: boolean;
     try {
       applied = await pending;
     } finally {
-      session.setEdits((current) => current.filter((entry) => entry !== pending));
+      void session.setEdits((current) => current.filter((entry) => entry !== pending));
     }
     const mayContinue = () => saveCurrent(scope) && intent.current() && !editingLocked();
     // Never await a flush while this operation itself is still pending.
@@ -266,7 +267,7 @@ export const EditorProvider: ParentComponent = (props) => {
       try {
         if ((await intent.drain()) && mayContinue()) await afterSave(intent);
       } catch (err) {
-        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+        if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
       }
     }
   };
@@ -278,7 +279,7 @@ export const EditorProvider: ParentComponent = (props) => {
       const node = selectedNodeData();
       const draft = [title(), content(), icon(), cover(), hasUnsavedChanges()];
       debouncedAutoSave.cancel();
-      loadNode(nodeId, {
+      void loadNode(nodeId, {
         refresh: true,
         canApply: () => {
           if (selectedNodeData() !== node) return false;
@@ -290,7 +291,7 @@ export const EditorProvider: ParentComponent = (props) => {
           setExternalChange(false);
           return true;
         },
-      });
+      }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
 
@@ -400,7 +401,7 @@ export const EditorProvider: ParentComponent = (props) => {
       const issue = uncertain ? "unknown" : saveIssue();
       session.setOutcome(issue === "unknown" ? "unknown" : conflict || issue !== null ? "conflict" : "error");
       if (saveIssue() !== null) setExternalChange(true);
-      setSaveError(saveIssue() !== null ? recoveryMessage() : `${t("errors.autoSaveFailed")}: ${err}`);
+      setSaveError(saveIssue() !== null ? recoveryMessage() : `${t("errors.autoSaveFailed")}: ${String(err)}`);
       return false;
     }
   };
@@ -408,7 +409,7 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!saveCurrent(scope)) return Promise.resolve(false);
     const session = scope.session;
     const next = (untrack(session.pending) ?? Promise.resolve(true)).then(() => untrack(() => persist(scope)));
-    session.setPending(next);
+    void session.setPending(next);
     return next.finally(() => {
       if (session.pending() === next) session.setPending(null);
     });
@@ -490,7 +491,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       await navigator.clipboard.writeText(`# ${title()}\n\n${content()}`);
     } catch (err) {
-      if (saveCurrent(scope)) setSaveError(`${t("editor.copyFailed")}: ${err}`);
+      if (saveCurrent(scope)) setSaveError(`${t("editor.copyFailed")}: ${String(err)}`);
     }
   };
   const closeRecovery = () => {
@@ -615,6 +616,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       const resp = await ws.getNodeTitles({ IDs: linkedIds.join(",") });
       if (!saveCurrent(scope)) return;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
       setLinkedNodeTitles(resp.titles || {});
     } catch {
       // Silent failure - just use stored titles in links
@@ -645,7 +647,9 @@ export const EditorProvider: ParentComponent = (props) => {
         setShowHistory(false);
         setExternalChange(false);
         // Fetch linked node titles in the background
-        untrack(() => fetchLinkedNodeTitles(spaContent));
+        void untrack(() => fetchLinkedNodeTitles(spaContent)).catch((backgroundError: unknown) =>
+          reportError(backgroundError),
+        );
       } else {
         resetEditor();
       }
@@ -680,7 +684,7 @@ export const EditorProvider: ParentComponent = (props) => {
       if (!saveCurrent(scope)) return;
       scope.session.acknowledge({ ...scope.session.acknowledged(), modified: saved.modified });
     } catch (err) {
-      if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
     }
   }
 
@@ -697,7 +701,7 @@ export const EditorProvider: ParentComponent = (props) => {
       scope.session.acknowledge({ ...scope.session.acknowledged(), modified: saved.modified });
       return true;
     } catch (err) {
-      if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      if (saveCurrent(scope)) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
       return false;
     }
   }
@@ -710,17 +714,19 @@ export const EditorProvider: ParentComponent = (props) => {
       titleBeforeEdit = oldTitle;
       undoActions.push({
         description: t("common.undo"),
-        undo: async () => {
+        undo: () => {
           applyingTitleUndo = true;
           titleBeforeEdit = null;
           handleTitleChange(oldTitle);
           applyingTitleUndo = false;
+          return Promise.resolve();
         },
-        redo: async () => {
+        redo: () => {
           applyingTitleUndo = true;
           titleBeforeEdit = null;
           handleTitleChange(newTitle);
           applyingTitleUndo = false;
+          return Promise.resolve();
         },
       });
     }
@@ -757,10 +763,10 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       const data = await ws.listNodeVersions(nodeId, { Limit: 100 });
       if (!current()) return;
-      setHistory({ commits: (data.history?.filter(Boolean) as Commit[]) || [], intent });
+      setHistory({ commits: data.history.filter((item): item is Commit => Boolean(item)), intent });
       setShowHistory(true);
     } catch (err) {
-      if (current()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (current()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
     }
   }
 

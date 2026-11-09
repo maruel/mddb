@@ -231,6 +231,7 @@ func invalidationRequest(ctx context.Context, protocol, method string, params ma
 
 type invalidationMeasuredRegistry struct {
 	*workspaceRegistry
+
 	reads   atomic.Int64
 	scanned atomic.Int64
 	catalog atomic.Int64

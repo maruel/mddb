@@ -1,5 +1,4 @@
 // Admin dashboard showing server-wide stats, org/workspace breakdown, and request metrics.
-
 import { createSignal, createEffect, For, Show } from "solid-js";
 import { useAuth } from "../../contexts";
 import { useI18n } from "../../i18n";
@@ -47,14 +46,14 @@ export default function AdminDashboard() {
       const resp = await api().getServerDetail();
       setData(resp);
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    load();
+    void load().catch((backgroundError: unknown) => reportError(backgroundError));
   });
 
   return (

@@ -52,6 +52,7 @@ export function FieldValue(props: FieldValueProps): JSXElement {
   }
 
   const rawValue = () => props.record.data[props.column.name] ?? "";
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
   const strValue = () => String(rawValue());
   const chips = () =>
     strValue()

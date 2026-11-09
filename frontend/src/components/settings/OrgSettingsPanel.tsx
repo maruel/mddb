@@ -1,5 +1,4 @@
 // Organization settings panel for managing organization members and preferences.
-
 import { createSignal, createEffect, createMemo, Show } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { useAuth } from "../../contexts";
@@ -109,7 +108,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
       if (activeTab() === "members" && isAdmin()) {
         const [membersData, invsData] = await Promise.all([org.listUsers(), org.listOrgInvitations()]);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
 
@@ -117,14 +118,14 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         await loadOrgData();
       }
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadData();
+    void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
   });
 
   createEffect(() => {
@@ -141,9 +142,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setLoading(true);
       await org.createOrgInvitation({ email, role });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
-      loadData();
+      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
-      setError(`${t("errors.failedToInvite")}: ${err}`);
+      setError(`${t("errors.failedToInvite")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -157,9 +158,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setLoading(true);
       await org.removeOrgMember({ user_id: userId });
       setSuccess(t("success.memberRemoved"));
-      loadData();
+      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
-      setError(`${t("errors.failedToRemoveMember")}: ${err}`);
+      setError(`${t("errors.failedToRemoveMember")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -172,9 +173,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setLoading(true);
       await org.updateOrgMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
-      loadData();
+      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
-      setError(`${t("errors.failedToUpdateRole")}: ${err}`);
+      setError(`${t("errors.failedToUpdateRole")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -205,7 +206,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       await org.updateOrgPreferences({ quotas: buildQuotasPayload() });
       setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -223,7 +224,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       await org.updateOrgPreferences({ quotas: buildQuotasPayload() });
       setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMoun
 import { Portal } from "solid-js/web";
 import {
   type DataRecordResponse,
+  type ResolvedUser,
   type Property,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
@@ -199,7 +200,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
               }}
             >
               <input
-                ref={(el) => setTimeout(() => el?.focus(), 0)}
+                ref={(el) => setTimeout(() => el.focus(), 0)}
                 type="text"
                 class={styles.searchInput}
                 placeholder={t("table.searchOptions")}
@@ -376,7 +377,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
               }}
             >
               <input
-                ref={(el) => setTimeout(() => el?.focus(), 0)}
+                ref={(el) => setTimeout(() => el.focus(), 0)}
                 type="text"
                 class={styles.searchInput}
                 placeholder={t("table.searchOptions")}
@@ -445,7 +446,7 @@ export function UserEditor(props: UserEditorProps) {
   }
 
   const members = () => records?.workspaceMembers() ?? [];
-  const resolvedUsers = () => records?.resolvedUsers() ?? new Map();
+  const resolvedUsers = () => records?.resolvedUsers() ?? new Map<string, ResolvedUser>();
 
   const openDropdown = () => {
     if (triggerRef) setDropPos(getDropPos(triggerRef));

@@ -1,5 +1,4 @@
 // Workspace settings panel for managing workspace members, settings, and git sync.
-
 import { createSignal, createEffect, Show, For } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
 import { useAuth } from "../../contexts";
@@ -116,7 +115,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           org.listUsers(),
           ws ? ws.listWSInvitations() : Promise.resolve({ invitations: [] }),
         ]);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
@@ -143,6 +144,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           if (availResp.available) {
             try {
               const instResp = await client.listGitHubAppInstallations();
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
               setGhInstallations(instResp.installations || []);
             } catch {
               setGhInstallations([]);
@@ -171,14 +173,14 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         }
       }
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadData();
+    void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
   });
 
   createEffect(() => {
@@ -197,9 +199,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setLoading(true);
       await ws.createWSInvitation({ email, role });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
-      loadData();
+      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
-      setError(`${t("errors.failedToInvite")}: ${err}`);
+      setError(`${t("errors.failedToInvite")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -213,9 +215,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setLoading(true);
       await ws.updateWSMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
-      loadData();
+      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
-      setError(`${t("errors.failedToUpdateRole")}: ${err}`);
+      setError(`${t("errors.failedToUpdateRole")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -238,7 +240,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
       setSuccess(t("success.workspaceSettingsSaved") || "Workspace settings saved successfully");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -257,7 +259,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       await ws.updateWorkspace({ quotas: resourceQuotas() });
       setSuccess(t("success.workspaceSettingsSaved") || "Workspace settings saved successfully");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -282,7 +284,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setNewRemoteURL("");
       setNewRemoteToken("");
     } catch (err) {
-      setError(`${t("errors.failedToAddRemote")}: ${err}`);
+      setError(`${t("errors.failedToAddRemote")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -300,7 +302,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setSuccess(t("success.pushSuccessful") || "Push successful");
       await loadData();
     } catch (err) {
-      setError(`${t("errors.pushFailed")}: ${err}`);
+      setError(`${t("errors.pushFailed")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -318,7 +320,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setSuccess(t("success.pullSuccessful") || "Pull successful");
       await loadData();
     } catch (err) {
-      setError(`${t("errors.pullFailed")}: ${err}`);
+      setError(`${t("errors.pullFailed")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -337,7 +339,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGitRemote(null);
       setSuccess(t("success.remoteRemoved") || "Remote removed");
     } catch (err) {
-      setError(`${t("errors.failedToRemoveRemote")}: ${err}`);
+      setError(`${t("errors.failedToRemoveRemote")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -354,9 +356,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGhSelectedRepo("");
       setError(null);
       const resp = await api().listGitHubAppRepos({ installation_id: instId });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
       setGhAppRepos(resp.repos || []);
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setGhLoadingRepos(false);
     }
@@ -385,7 +388,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGhSelectedInstallation("");
       setGhSelectedRepo("");
     } catch (err) {
-      setError(`${t("errors.failedToAddRemote")}: ${err}`);
+      setError(`${t("errors.failedToAddRemote")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -405,7 +408,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       });
       setGitAutoPush(newVal);
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -694,7 +697,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                       value={ghSelectedInstallation()}
                       onChange={(e) => {
                         setGhSelectedInstallation(e.target.value);
-                        if (e.target.value) handleLoadGhRepos(e.target.value);
+                        if (e.target.value)
+                          void handleLoadGhRepos(e.target.value).catch((backgroundError: unknown) =>
+                            reportError(backgroundError),
+                          );
                       }}
                       required
                     >

@@ -100,6 +100,7 @@ func admitVoiceAt(g *voiceGateway, id ksid.ID, now time.Time) bool {
 
 type testTextVoiceBridge struct {
 	testVoiceBridge
+
 	started chan ksid.ID
 }
 

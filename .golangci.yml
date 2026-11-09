@@ -4,31 +4,56 @@ run:
   tests: true
 linters:
   enable:
+    - asasalint
+    - asciicheck
+    - bidichk
     - bodyclose
     - commentcheck
     - contextcheck
     - copyloopvar
     - dupword
     - durationcheck
+    - embeddedstructfieldcheck
     - errname
     - errorlint
     - exhaustive
+    - exptostd
+    - gocheckcompilerdirectives
+    - gochecksumtype
     - gocritic
-    - gosec
     - godot
+    - gomoddirectives
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - iotamixing
+    - loggercheck
+    - makezero
     - methodfilecheck
-    - misspell
+    - mirror
+    - musttag
+    - nakedret
     - nilerr
+    - nilnesserr
     - nilnil
     - nolintlint
+    - nosprintfhostport
     - perfsprint
     - prealloc
+    - predeclared
+    - reassign
     - revive
+    - sloglint
     - sqlclosecheck
     - unconvert
     - unparam
     - unused
     - usestdlibvars
+    - wastedassign
     - whitespace
   settings:
     custom:

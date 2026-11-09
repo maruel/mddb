@@ -49,7 +49,7 @@ export default function PasswordSection(props: Props) {
       // Reload to update has_password state
       window.location.reload();
     } catch (err) {
-      props.onError(`${t("errors.failedToSave")}: ${err}`);
+      props.onError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }

@@ -97,7 +97,7 @@ export function createInvalidLinkPlugin(): Plugin<InvalidLinkPluginState> {
 
       apply(tr, pluginState, _oldState, newState) {
         // Check for meta to update linkedNodeTitles or wsId
-        const meta = tr.getMeta(invalidLinkPluginKey);
+        const meta = tr.getMeta(invalidLinkPluginKey) as { linkedNodeTitles?: NodeTitleMap; wsId?: string } | undefined;
         if (meta) {
           const newLinkedNodeTitles = meta.linkedNodeTitles ?? pluginState.linkedNodeTitles;
           const newWsId = meta.wsId ?? pluginState.wsId;

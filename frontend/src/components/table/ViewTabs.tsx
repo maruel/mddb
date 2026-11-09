@@ -1,5 +1,4 @@
 // Horizontal tabs for switching between saved table views.
-
 import { createSignal, For, Show } from "solid-js";
 import { useRecords } from "../../contexts";
 import { useClickOutside } from "../../composables/useClickOutside";
@@ -49,7 +48,7 @@ export default function ViewTabs() {
 
   const handleNewView = (type: ViewType) => {
     const name = t("table.newView") || "New View";
-    createView(name, type);
+    void createView(name, type).catch((backgroundError: unknown) => reportError(backgroundError));
     setShowNewViewMenu(false);
   };
 
@@ -85,10 +84,12 @@ export default function ViewTabs() {
         setRenamingViewId(state.view.id);
         break;
       case "duplicate":
-        createView(state.view.name + " (copy)", state.view.type);
+        void createView(state.view.name + " (copy)", state.view.type).catch((backgroundError: unknown) =>
+          reportError(backgroundError),
+        );
         break;
       case "delete":
-        deleteView(state.view.id);
+        void deleteView(state.view.id).catch((backgroundError: unknown) => reportError(backgroundError));
         break;
     }
   };
@@ -98,7 +99,7 @@ export default function ViewTabs() {
     if (!viewId) return;
     const newName = renameValue().trim();
     if (newName) {
-      updateView(viewId, { name: newName });
+      void updateView(viewId, { name: newName }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
     setRenamingViewId(null);
   };
@@ -108,6 +109,7 @@ export default function ViewTabs() {
       <div class={styles.tabs}>
         <For each={views()}>
           {(view) => {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
             const Icon = VIEW_ICONS[view.type] || TableRowsIcon;
             return (
               <div class={styles.tabWrapper}>
@@ -133,7 +135,7 @@ export default function ViewTabs() {
                         e.stopPropagation();
                       }}
                       onBlur={commitRename}
-                      ref={(el) => setTimeout(() => el?.select(), 0)}
+                      ref={(el) => setTimeout(() => el.select(), 0)}
                     />
                   </Show>
                 </button>

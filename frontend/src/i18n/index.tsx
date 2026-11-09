@@ -6,19 +6,29 @@ import type { Dictionary, Locale } from "./types";
 import type { ErrorCode } from "@sdk/types.gen";
 
 // Flatten the dictionary for dot-notation access
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FlatDict = i18n.Flatten<Dictionary & Record<string, any>>;
+type FlatDict = Record<string, string>;
 
 // Dynamic import for dictionaries
 async function fetchDictionary(locale: Locale): Promise<FlatDict> {
-  const module = await import(`./dictionaries/${locale}.ts`);
-  return i18n.flatten(module.dict) as FlatDict;
+  const loaders = {
+    en: () => import("./dictionaries/en.ts"),
+    fr: () => import("./dictionaries/fr.ts"),
+    de: () => import("./dictionaries/de.ts"),
+    es: () => import("./dictionaries/es.ts"),
+  };
+  const module = await loaders[locale]();
+  const entries = Object.entries(i18n.flatten({ ...module.dict }));
+  const flat: FlatDict = {};
+  for (const [key, value] of entries) {
+    if (typeof value === "string") flat[key] = value;
+  }
+  return flat;
 }
 
 interface I18nContextValue {
   locale: Accessor<Locale>;
   setLocale: (locale: Locale) => void;
-  t: i18n.NullableTranslator<FlatDict>;
+  t: (key: string, args?: Record<string, string | number>) => string;
   translateError: (code: ErrorCode | string) => string;
   ready: Accessor<boolean>;
 }
@@ -33,11 +43,11 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
 
   // Wrap translator to ensure dict() is accessed on each call for proper reactivity.
   // This ensures Solid tracks dependencies correctly when locale changes.
-  const t: typeof rawTranslator = (key, ...args) => {
+  const t: I18nContextValue["t"] = (key, args) => {
     // Force dict access for reactivity tracking - this makes components
     // that call t() re-render when the dictionary changes
     dict();
-    return rawTranslator(key, ...args);
+    return rawTranslator(key, args) ?? "";
   };
 
   // Expose whether translations are loaded
@@ -45,13 +55,13 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
 
   const translateError = (code: ErrorCode | string): string => {
     // Try to find error message by code
-    const key = `errors.${code}` as keyof FlatDict;
+    const key = `errors.${code}`;
     const translated = t(key);
     if (translated && translated !== key) {
-      return translated as string;
+      return translated;
     }
     // Fallback to unknown error
-    return (t("errors.unknown") as string) || "An error occurred";
+    return t("errors.unknown") || "An error occurred";
   };
 
   const value: I18nContextValue = {

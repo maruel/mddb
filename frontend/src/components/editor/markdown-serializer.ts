@@ -2,7 +2,7 @@
 // Groups consecutive list items by indent and type, emits proper list markers and indentation.
 
 import type { Node as ProseMirrorNode } from "prosemirror-model";
-import type { BlockAttrs } from "./schema";
+import { blockAttrs } from "./schema";
 
 interface ListContext {
   type: "bullet" | "number" | "task";
@@ -20,7 +20,7 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
   let prevType: string | null = null;
 
   doc.forEach((block) => {
-    const { type, indent, checked, level, language } = block.attrs as BlockAttrs;
+    const { type, indent, checked, level, language } = blockAttrs(block);
     const content = serializeInline(block);
 
     // Close list contexts that no longer apply
@@ -144,8 +144,8 @@ function serializeInline(block: ProseMirrorNode): string {
         } else if (mark.type.name === "underline") {
           text = `<u>${text}</u>`;
         } else if (mark.type.name === "link") {
-          const href = mark.attrs.href || "#";
-          const title = mark.attrs.title;
+          const href = (mark.attrs.href as string | undefined) || "#";
+          const title = mark.attrs.title as string | null;
           text = `[${text}](${href}${title ? ` "${title}"` : ""})`;
         }
       });

@@ -669,6 +669,7 @@ func (r *GoGitRepo) AbortMerge(ctx context.Context) error {
 // contextCommitIter makes cancellation visible inside a path-filtered scan.
 type contextCommitIter struct {
 	object.CommitIter
+
 	ctx context.Context
 }
 

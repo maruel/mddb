@@ -1,5 +1,4 @@
 // Table view with inline editing.
-
 import { createSignal, createEffect, onCleanup, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
@@ -195,7 +194,7 @@ export default function TableTable(props: TableTableProps) {
     const newCols = hasEntry
       ? existing.map((vc) => (vc.property === colName ? { ...vc, visible: false } : vc))
       : [...existing, { property: colName, visible: false }];
-    updateView(viewId, { columns: newCols });
+    void updateView(viewId, { columns: newCols }).catch((backgroundError: unknown) => reportError(backgroundError));
   };
 
   const showColumn = (colName: string) => {
@@ -203,7 +202,7 @@ export default function TableTable(props: TableTableProps) {
     if (!viewId || viewId === DEFAULT_VIEW_ID) return;
     const existing = views().find((v) => v.id === viewId)?.columns ?? [];
     const newCols = existing.map((vc) => (vc.property === colName ? { ...vc, visible: true } : vc));
-    updateView(viewId, { columns: newCols });
+    void updateView(viewId, { columns: newCols }).catch((backgroundError: unknown) => reportError(backgroundError));
   };
 
   const handleResizeStart = (e: MouseEvent, colName: string) => {
@@ -233,7 +232,7 @@ export default function TableTable(props: TableTableProps) {
         const newCols = hasEntry
           ? existing.map((vc) => (vc.property === s.colName ? { ...vc, width: finalWidth } : vc))
           : [...existing, { property: s.colName, width: finalWidth, visible: true }];
-        updateView(viewId, { columns: newCols });
+        void updateView(viewId, { columns: newCols }).catch((backgroundError: unknown) => reportError(backgroundError));
       }
       setResizing(null);
     };
@@ -421,7 +420,7 @@ export default function TableTable(props: TableTableProps) {
     setSorts(newSorts);
     const viewId = activeViewId();
     if (viewId && viewId !== DEFAULT_VIEW_ID) {
-      updateView(viewId, { sorts: newSorts });
+      void updateView(viewId, { sorts: newSorts }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
 
@@ -432,7 +431,7 @@ export default function TableTable(props: TableTableProps) {
     setSorts(newSorts);
     const viewId = activeViewId();
     if (viewId && viewId !== DEFAULT_VIEW_ID) {
-      updateView(viewId, { sorts: newSorts });
+      void updateView(viewId, { sorts: newSorts }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
 
@@ -445,7 +444,9 @@ export default function TableTable(props: TableTableProps) {
     setFilters(newFilters);
     const viewId = activeViewId();
     if (viewId && viewId !== DEFAULT_VIEW_ID) {
-      updateView(viewId, { filters: newFilters });
+      void updateView(viewId, { filters: newFilters }).catch((backgroundError: unknown) =>
+        reportError(backgroundError),
+      );
     }
   };
 
@@ -456,7 +457,9 @@ export default function TableTable(props: TableTableProps) {
     setFilters(newFilters);
     const viewId = activeViewId();
     if (viewId && viewId !== DEFAULT_VIEW_ID) {
-      updateView(viewId, { filters: newFilters });
+      void updateView(viewId, { filters: newFilters }).catch((backgroundError: unknown) =>
+        reportError(backgroundError),
+      );
     }
   };
 
@@ -706,7 +709,7 @@ export default function TableTable(props: TableTableProps) {
                             if (e.key === "Escape") setRenamingColumn(null);
                           }}
                           onBlur={commitRename}
-                          ref={(el) => setTimeout(() => el?.select(), 0)}
+                          ref={(el) => setTimeout(() => el.select(), 0)}
                         />
                       </Show>
                       <div

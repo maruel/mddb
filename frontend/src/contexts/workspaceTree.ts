@@ -48,6 +48,7 @@ export function reconcileMovedNode(nodes: NodeResponse[], nodeId: string, newPar
     return false;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- A synchronous traversal callback updates this local variable.
   if (!removeFromList(nodes) || !movedNode) return null;
   const moved = movedNode;
 

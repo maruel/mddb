@@ -42,8 +42,8 @@ type voiceSession struct {
 }
 
 type voiceSessionLifecycle interface {
-	SetOnSessionClosed(func(string))
-	HasSession(string) bool
+	SetOnSessionClosed(callback func(string))
+	HasSession(sessionID string) bool
 }
 
 type voicePendingSession struct {
@@ -441,6 +441,7 @@ type voiceReservationKey struct{}
 // voiceChoiceGateway preserves optional choice routing through session admission.
 type voiceChoiceGateway struct {
 	*voiceGateway
+
 	choices voicegateway.ChoiceMediaBridge
 }
 

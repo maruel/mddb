@@ -1,5 +1,4 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
-
 import { createSignal, onCleanup, createEffect, For, Show, on, untrack } from "solid-js";
 import { useI18n } from "../i18n";
 import type { NodeResponse } from "@sdk/types.gen";
@@ -30,7 +29,7 @@ interface SidebarNodeProps {
   onFetchChildren?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => void;
   onShowHistory?: (nodeId: string) => void;
-  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void> | void;
+  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void>;
   depth: number;
   isFirstTreeItem: boolean;
 }
@@ -82,7 +81,10 @@ export default function SidebarNode(props: SidebarNodeProps) {
   createEffect(() => {
     if (isExpanded() && mightHaveChildren() && !props.node.children && props.onFetchChildren) {
       setIsLoadingChildren(true);
-      props.onFetchChildren(props.node.id).finally(() => setIsLoadingChildren(false));
+      void props
+        .onFetchChildren(props.node.id)
+        .finally(() => setIsLoadingChildren(false))
+        .catch((backgroundError: unknown) => reportError(backgroundError));
     }
   });
 
@@ -142,7 +144,10 @@ export default function SidebarNode(props: SidebarNodeProps) {
         setIsExpanded(true);
         if (!props.node.children && props.onFetchChildren) {
           setIsLoadingChildren(true);
-          props.onFetchChildren(props.node.id).finally(() => setIsLoadingChildren(false));
+          void props
+            .onFetchChildren(props.node.id)
+            .finally(() => setIsLoadingChildren(false))
+            .catch((backgroundError: unknown) => reportError(backgroundError));
         }
       }, 600);
     }
@@ -211,7 +216,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
     if (target && targetId) {
       props.onFocusNode(targetId);
       queueMicrotask(() => {
-        if (target?.isConnected) target.focus();
+        if (target.isConnected) target.focus();
       });
     }
   };

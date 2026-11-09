@@ -52,7 +52,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
     };
     es.onerror = () => setConnected(false);
 
-    es.addEventListener("workspace", (e: MessageEvent) => {
+    es.addEventListener("workspace", (e: MessageEvent<string>) => {
       try {
         const evt = JSON.parse(e.data) as WorkspaceEvent;
         // Suppress only writes the UI explicitly owns, including uploads and
@@ -64,7 +64,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
       }
     });
 
-    es.addEventListener("server", (e: MessageEvent) => {
+    es.addEventListener("server", (e: MessageEvent<string>) => {
       try {
         const { revision } = JSON.parse(e.data) as { revision: string };
         if (knownRevision === null) {

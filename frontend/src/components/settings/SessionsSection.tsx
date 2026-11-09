@@ -51,7 +51,7 @@ export default function SessionsSection() {
       <Show when={sessions.loading}>
         <p role="status">{t("common.loading")}</p>
       </Show>
-      <Show when={sessions.error || error()}>
+      <Show when={Boolean(sessions.error) || error()}>
         <p role="alert">{t("deviceLogin.sessionsError")}</p>
       </Show>
       <ul>

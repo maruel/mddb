@@ -1,5 +1,4 @@
 // Sidebar navigation component containing workspace selection and page tree.
-
 import { createSignal, For, Show, createEffect, createMemo } from "solid-js";
 import SidebarNode from "./SidebarNode";
 import { useI18n } from "../i18n";
@@ -41,7 +40,7 @@ interface SidebarProps {
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
   onShowKeyboardShortcuts: () => void;
-  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void> | void;
+  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void>;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -142,7 +141,7 @@ export default function Sidebar(props: SidebarProps) {
   const handleNameKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      saveWorkspaceName();
+      void saveWorkspaceName().catch((backgroundError: unknown) => reportError(backgroundError));
     } else if (e.key === "Escape") {
       e.preventDefault();
       cancelEditingName();
@@ -186,7 +185,7 @@ export default function Sidebar(props: SidebarProps) {
 
   const handleSwitchWorkspace = (wsId: string) => {
     if (wsId !== currentWsId()) {
-      switchWorkspace(wsId);
+      void switchWorkspace(wsId).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
 
@@ -211,8 +210,8 @@ export default function Sidebar(props: SidebarProps) {
     e.preventDefault();
     setIsRootDropTarget(false);
     const nodeId = e.dataTransfer?.getData("text/plain");
-    if (nodeId) {
-      props.onMoveNode?.(nodeId, "0");
+    if (nodeId && props.onMoveNode) {
+      void props.onMoveNode(nodeId, "0").catch((backgroundError: unknown) => reportError(backgroundError));
     }
   };
 

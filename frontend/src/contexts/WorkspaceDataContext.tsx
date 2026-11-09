@@ -65,6 +65,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
     const task = (async () => {
       try {
         const response = await client.listNodeChildren("0");
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (disposed || generation !== request || owner() !== captured) return [];
         batch(() => {
           setNodesStore(reconcile(response.nodes));
@@ -77,10 +78,12 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
         });
         return response.nodes;
       } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (!disposed && generation === request && owner() === captured)
-          setLoadError(`${t("errors.failedToLoad")}: ${error}`);
+          setLoadError(`${t("errors.failedToLoad")}: ${String(error)}`);
         throw error;
       } finally {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (!disposed && generation === request && owner() === captured) {
           pending = null;
           setLoadingNodes(false);
@@ -149,6 +152,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
           console.warn("Prior workspace read failed", error);
         }
       }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
       if (disposed || generation !== request || captured !== owner()) return;
       initializationReadOwner = captured;
       await loadNodes(true);

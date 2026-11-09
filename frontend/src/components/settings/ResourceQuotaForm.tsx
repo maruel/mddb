@@ -25,9 +25,10 @@ export default function ResourceQuotaForm(props: ResourceQuotaFormProps) {
   };
 
   const toggleInherit = (key: QuotaKey) => {
-    const cur = (props.value()[key] as number) ?? 0;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+    const cur = props.value()[key] ?? 0;
     if (cur === -1) {
-      const ceil = props.ceiling?.()?.[key] as number | undefined;
+      const ceil = props.ceiling?.()?.[key];
       update(key, ceil ?? 0);
     } else {
       update(key, -1);
@@ -47,8 +48,9 @@ export default function ResourceQuotaForm(props: ResourceQuotaFormProps) {
     <div class={styles.formGrid}>
       <For each={fields}>
         {(field) => {
-          const val = () => (props.value()[field.key] as number) ?? 0;
-          const ceilVal = () => props.ceiling?.()?.[field.key] as number | undefined;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+          const val = () => props.value()[field.key] ?? 0;
+          const ceilVal = () => props.ceiling?.()?.[field.key];
           const isInherited = () => val() === -1;
           const ceilDisplay = () => {
             const v = ceilVal();

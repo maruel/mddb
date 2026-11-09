@@ -99,6 +99,7 @@ export const AuthProvider: ParentComponent = (props) => {
     nativeIdentity?.dispose();
   });
   createEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     const lang = user()?.settings?.language;
     const locale: Locale = lang === "fr" || lang === "de" || lang === "es" ? lang : "en";
     setLocale(locale);
@@ -167,6 +168,7 @@ export const AuthProvider: ParentComponent = (props) => {
     } catch (error) {
       probe = { error };
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
     if (disposed || signal?.aborted || generation !== request) return false;
     const reconciliation = reconcileIdentity(shown, probe);
     if (reconciliation.status === "unavailable") throw reconciliation.error;

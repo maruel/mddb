@@ -412,6 +412,7 @@ func TestValidGoModeOrigin(t *testing.T) {
 // firstFlushGate exposes the real released GET boundary before registry setup.
 type firstFlushGate struct {
 	http.ResponseWriter
+
 	entered chan struct{}
 	release <-chan struct{}
 	once    sync.Once

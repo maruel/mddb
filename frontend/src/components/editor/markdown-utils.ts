@@ -25,11 +25,11 @@ function isLocalFilename(src: string): boolean {
  * Uses the asset URL map from the backend which contains signed URLs.
  */
 export function rewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap): string {
-  if (!assetUrls || Object.keys(assetUrls).length === 0) return markdown;
+  if (Object.keys(assetUrls).length === 0) return markdown;
 
   // Match markdown images with local filenames (not URLs or absolute paths)
   // Matches: ![...](filename.ext) but not ![...](http...) or ![...](/...)
-  let result = markdown.replace(/!\[([^\]]*)\]\(([^/)][^)]*)\)/g, (match, alt, src) => {
+  let result = markdown.replace(/!\[([^\]]*)\]\(([^/)][^)]*)\)/g, (match: string, alt: string, src: string) => {
     if (!isLocalFilename(src)) return match;
     // Look up signed URL from asset map
     const signedUrl = assetUrls[src];
@@ -42,7 +42,7 @@ export function rewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap): stri
 
   // Match markdown links with local filenames that are in the asset map
   // This handles linked files like PDFs
-  result = result.replace(/\[([^\]]+)\]\(([^/)][^)]*)\)/g, (match, text, href) => {
+  result = result.replace(/\[([^\]]+)\]\(([^/)][^)]*)\)/g, (match: string, text: string, href: string) => {
     if (!isLocalFilename(href)) return match;
     // Only convert if this filename is in the asset map
     const signedUrl = assetUrls[href];
@@ -83,7 +83,7 @@ function extractFilenameFromAssetUrl(url: string): string | null {
 export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap): string {
   // Build reverse map: signed URL -> filename
   const reverseMap: Record<string, string> = {};
-  for (const [filename, url] of Object.entries(assetUrls || {})) {
+  for (const [filename, url] of Object.entries(assetUrls)) {
     reverseMap[url] = filename;
   }
 
@@ -98,7 +98,7 @@ export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap
   };
 
   // Match markdown images: ![alt](url)
-  let result = markdown.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+  let result = markdown.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match: string, alt: string, src: string) => {
     const filename = urlToFilename(src);
     if (filename) {
       return `![${alt}](${filename})`;
@@ -108,7 +108,7 @@ export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap
 
   // Match markdown links: [text](url)
   // Only convert links that point to signed asset URLs
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, href) => {
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match: string, text: string, href: string) => {
     // Only process asset URLs (not regular links)
     const filename = extractFilenameFromAssetUrl(href);
     if (filename) {
@@ -135,14 +135,14 @@ export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap
  * @returns Markdown with link display text updated to current titles
  */
 export function rewriteInternalLinkTitles(markdown: string, nodeTitles: NodeTitleMap, currentWsId: string): string {
-  if (!markdown || !currentWsId || !nodeTitles || Object.keys(nodeTitles).length === 0) {
+  if (!markdown || !currentWsId || Object.keys(nodeTitles).length === 0) {
     return markdown;
   }
 
   // Pattern captures: full match, text, wsId, nodeId (and anything after)
   return markdown.replace(
     /\[([^\]]*)\]\((\/w\/@([^/+]+)(?:\+[^/]*)?\/@([A-Za-z0-9]+)(?:\+[^)]*)?)\)/g,
-    (match, _text, url, wsId, nodeId) => {
+    (match: string, _text: string, url: string, wsId: string, nodeId: string) => {
       // Only rewrite links to the current workspace
       if (wsId !== currentWsId) {
         return match;

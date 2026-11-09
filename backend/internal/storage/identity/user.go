@@ -383,6 +383,7 @@ func (idx *oauthIndex) OnDelete(row *userStorage) {
 
 type userStorage struct {
 	User
+
 	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
 }
 

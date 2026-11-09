@@ -1,7 +1,7 @@
 // Flat block schema for uniform drag-drop block editor.
 // Every visible line is a top-level block node with attributes for type, indentation, and styling.
 
-import { Schema, type NodeSpec, type DOMOutputSpec } from "prosemirror-model";
+import { Schema, type Node as ProseMirrorNode, type NodeSpec, type DOMOutputSpec } from "prosemirror-model";
 import { schema as baseSchema } from "prosemirror-markdown";
 
 // Block types: correspond to different content kinds
@@ -10,11 +10,16 @@ export type BlockType = "paragraph" | "heading" | "bullet" | "number" | "task" |
 // Block attributes: describe a single block's type, nesting level, and metadata
 export interface BlockAttrs {
   type: BlockType;
-  level?: number; // heading level (1-6)
+  level: number | null; // heading level (1-6)
   indent: number; // nesting depth (0+), enables drag-and-drop without changing type
-  checked?: boolean; // task completion state (for type=task)
-  number?: number; // sequential number (for type=number)
-  language?: string; // code block language (for type=code)
+  checked: boolean | null; // task completion state (for type=task)
+  number: number | null; // sequential number (for type=number)
+  language: string | null; // code block language (for type=code)
+}
+
+/** Read attributes from a node created by the block schema. */
+export function blockAttrs(node: ProseMirrorNode): BlockAttrs {
+  return node.attrs as BlockAttrs;
 }
 
 // Block node specification: all content lines are unified under this node
@@ -149,7 +154,7 @@ const blockSpec: NodeSpec = {
     { tag: "p", attrs: { type: "paragraph" } },
   ],
   toDOM(node): DOMOutputSpec {
-    const { type, level, indent, checked, language } = node.attrs;
+    const { type, level, indent, checked, language } = blockAttrs(node);
     const baseAttrs: Record<string, string> = {
       "data-type": type,
       "data-indent": String(indent),

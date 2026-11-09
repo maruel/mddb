@@ -24,6 +24,7 @@ func WriteHeaders(w http.ResponseWriter, result Result) {
 // before any response is written.
 type rateLimitResponseWriter struct {
 	http.ResponseWriter
+
 	result      Result
 	wroteHeader bool
 }

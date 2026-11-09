@@ -112,7 +112,7 @@ export function duplicateBlocks(positions: number[]): Command {
 export function convertBlock(
   pos: number,
   toType: BlockType,
-  attrs?: { level?: number; checked?: boolean; language?: string },
+  attrs?: { level?: number | null; checked?: boolean | null; language?: string | null },
 ): Command {
   return (state, dispatch) => {
     const node = state.doc.nodeAt(pos);
@@ -148,7 +148,7 @@ export function convertBlock(
 export function convertBlocks(
   positions: number[],
   toType: BlockType,
-  attrs?: { level?: number; checked?: boolean; language?: string },
+  attrs?: { level?: number | null; checked?: boolean | null; language?: string | null },
 ): Command {
   return (state, dispatch) => {
     if (positions.length === 0) return false;

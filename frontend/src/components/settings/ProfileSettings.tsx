@@ -70,7 +70,9 @@ export default function ProfileSettings() {
 
   createEffect(() => {
     const u = user();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     setTheme(u?.settings?.theme || "light");
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     setLanguage(u?.settings?.language || "en");
   });
 
@@ -99,7 +101,7 @@ export default function ProfileSettings() {
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }

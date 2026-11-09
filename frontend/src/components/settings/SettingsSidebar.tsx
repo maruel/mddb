@@ -34,7 +34,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
   // Derive route from location if not provided via props
   const derivedRoute = (): UnifiedSettingsMatch => {
     const path = location.pathname;
-    const hash = location.hash?.slice(1) || undefined;
+    const hash = location.hash.slice(1) || undefined;
 
     if (path === "/settings/user" || path === "/settings/user/") {
       return { type: "profile" };
@@ -90,7 +90,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
           .filter((tab) => !tab.adminOnly || isAdmin)
           .map((tab) => ({
             id: `ws-${wsId}-${tab.id}`,
-            label: t(tab.labelKey as Parameters<typeof t>[0]),
+            label: t(tab.labelKey),
             url: settingsUrl("workspace", wsId, wsName) + `#${tab.id}`,
           }));
         return {
@@ -121,7 +121,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
           url: settingsUrl("org", orgId, orgName),
           children: orgTabDefs.map((tab) => ({
             id: `org-${orgId}-${tab.id}`,
-            label: t(tab.labelKey as Parameters<typeof t>[0]),
+            label: t(tab.labelKey),
             url: settingsUrl("org", orgId, orgName) + `#${tab.id}`,
           })),
         };

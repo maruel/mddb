@@ -1,5 +1,4 @@
 // Owns live editing, conflict recovery, and historical previews under their departure intent.
-
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from "solid-js";
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
 import TableTable from "../components/TableTable";
@@ -181,7 +180,7 @@ export default function NodeView() {
       clearPreview();
       const id = selectedNodeId();
       const first = snapshot?.commits[0];
-      if (visible && id && first && snapshot) void loadPreview(id, first, snapshot.intent);
+      if (visible && id && first) void loadPreview(id, first, snapshot.intent);
     }),
   );
 
@@ -203,7 +202,7 @@ export default function NodeView() {
       setSelectedNodeData({ ...nodeData, properties: updatedProperties });
       setSaveError(null);
     } catch (err) {
-      if (ownsNode()) setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      if (ownsNode()) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       if (isCurrent() && savingNodeId() === nodeId) setSavingNodeId(null);
     }
@@ -269,7 +268,8 @@ export default function NodeView() {
       if (!(await handleCoverChange(result.name))) return false;
       if (!isCurrent() || selectedNodeId() !== nodeId) return false;
       // Reload the originating node to get updated asset URLs
-      if (nodeId) loadNode(nodeId, { refresh: false });
+      if (nodeId)
+        void loadNode(nodeId, { refresh: false }).catch((backgroundError: unknown) => reportError(backgroundError));
       return true;
     });
 
@@ -302,7 +302,7 @@ export default function NodeView() {
       setPreviewContent(relativeLinksToSpaUrls(data.content || "", wsId));
       setPreviewCommit(commit);
     } catch (err) {
-      if (ownsPreview()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (ownsPreview()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
     }
   }
 
@@ -408,7 +408,7 @@ export default function NodeView() {
                   {(commit) => (
                     <li
                       class={styles.historyItem}
-                      classList={{ [styles.activeHistoryItem as string]: previewCommit()?.hash === commit.hash }}
+                      classList={{ [styles.activeHistoryItem]: previewCommit()?.hash === commit.hash }}
                     >
                       <button
                         type="button"
@@ -452,7 +452,10 @@ export default function NodeView() {
                     wsId={user()?.workspace_id}
                     onAssetUploaded={() => {
                       const nodeId = selectedNodeId();
-                      if (nodeId) loadNode(nodeId, { refresh: false });
+                      if (nodeId)
+                        void loadNode(nodeId, { refresh: false }).catch((backgroundError: unknown) =>
+                          reportError(backgroundError),
+                        );
                     }}
                     runAsyncEdit={runAsyncEdit}
                     asyncEditPending={asyncEditPending()}
@@ -532,7 +535,10 @@ export default function NodeView() {
                       groupByColumn={activeView()?.groups?.[0]?.property}
                       onGroupByChange={(columnName) => {
                         const id = activeViewId();
-                        if (id) updateView(id, { groups: [{ property: columnName }] });
+                        if (id)
+                          void updateView(id, { groups: [{ property: columnName }] }).catch(
+                            (backgroundError: unknown) => reportError(backgroundError),
+                          );
                       }}
                     />
                   </Show>

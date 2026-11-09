@@ -51,6 +51,7 @@ export default tseslint.config(
     },
     rules: {
       ...sharedRules,
+      "@typescript-eslint/no-misused-spread": "error",
       // Enforce all solid rules as errors
       "solid/components-return-once": "error",
       "solid/event-handlers": "error",
@@ -71,11 +72,52 @@ export default tseslint.config(
       "solid/style-prop": "error",
     },
   },
+  {
+    files: ["frontend/**/*.tsx"],
+    // Solid assigns ref variables during rendering.
+    rules: { "no-unassigned-vars": "off" },
+  },
+  {
+    files: ["frontend/src/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.bench.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-base-to-string": "error",
+      "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
+      "@typescript-eslint/require-await": "error",
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "@typescript-eslint/no-unnecessary-condition": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/prefer-promise-reject-errors": "error",
+      "@typescript-eslint/switch-exhaustiveness-check": ["error", { considerDefaultExhaustiveForUnions: true }],
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+      "@typescript-eslint/no-array-delete": "error",
+      "@typescript-eslint/no-deprecated": "error",
+      "@typescript-eslint/no-for-in-array": "error",
+      "@typescript-eslint/only-throw-error": "error",
+    },
+  },
   // Unit tests (allow non-null assertions like e2e tests)
   {
     files: ["frontend/**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/no-deprecated": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/only-throw-error": "error",
+      // node:test owns registration promises. Test mocks deliberately implement
+      // promise-returning interfaces without requiring artificial awaits.
+      "@typescript-eslint/no-floating-promises": [
+        "error",
+        { allowForKnownSafeCalls: [{ from: "package", name: ["test", "it", "describe"], package: "@types/node" }] },
+      ],
     },
   },
   // E2E tests (Playwright)
@@ -91,6 +133,11 @@ export default tseslint.config(
     },
     rules: {
       ...sharedRules,
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/only-throw-error": "error",
+      "@typescript-eslint/no-deprecated": "error",
       "no-console": "off", // Allow console in e2e tests
       "@typescript-eslint/no-non-null-assertion": "off", // Common in tests after expect assertions
     },

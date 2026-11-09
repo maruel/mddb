@@ -1,5 +1,6 @@
 // ProseMirror flat block views with drag handles and live Pele previews for Mermaid code.
 
+import { blockAttrs } from "./schema";
 import { isMermaidFence, insertMermaidSvg, renderMermaidDiagram } from "../../mermaid";
 import { debounce } from "../../utils/debounce";
 import { render } from "solid-js/web";
@@ -87,7 +88,7 @@ export class BlockNodeView implements NodeView {
   }
 
   private createContentElement(): { contentDOM: HTMLElement; wrapperDOM?: HTMLElement } {
-    const { type, level, checked, language } = this.node.attrs;
+    const { type, level, checked, language } = blockAttrs(this.node);
     let element: HTMLElement;
 
     switch (type) {
@@ -140,15 +141,15 @@ export class BlockNodeView implements NodeView {
   }
 
   private updateDOMAttributes(): void {
-    const { type, indent, level, checked, language } = this.node.attrs;
+    const { type, indent, level, checked, language } = blockAttrs(this.node);
 
     this.dom.dataset.type = type;
     this.dom.dataset.indent = String(indent || 0);
 
-    if (level !== null && level !== undefined) {
+    if (level !== null) {
       this.dom.dataset.level = String(level);
     }
-    if (checked !== null && checked !== undefined) {
+    if (checked !== null) {
       this.dom.dataset.checked = String(checked);
     }
     if (language) {
@@ -295,10 +296,10 @@ export class BlockNodeView implements NodeView {
   }
 
   ignoreMutation(mutation: ViewMutationRecord): boolean {
-    if (mutation.type !== "selection" && this.handleContainer.contains(mutation.target as Node)) {
+    if (mutation.type !== "selection" && this.handleContainer.contains(mutation.target)) {
       return true;
     }
-    if (this.diagram?.contains(mutation.target as Node)) return true;
+    if (this.diagram?.contains(mutation.target)) return true;
     if (mutation.type === "childList" && mutation.target === this.dom) {
       return [...mutation.addedNodes, ...mutation.removedNodes].every(
         (node) => node instanceof HTMLElement && node.classList.contains("mermaid-diagram"),
@@ -309,6 +310,7 @@ export class BlockNodeView implements NodeView {
       return true;
     }
     // Ignore data-checked attribute changes on task blocks
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Browser capabilities and DOM state can differ from their declared types.
     if (mutation.type === "attributes" && (mutation.target as HTMLElement).classList?.contains("block-task")) {
       return true;
     }

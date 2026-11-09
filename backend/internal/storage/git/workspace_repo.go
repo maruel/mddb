@@ -21,6 +21,7 @@ import (
 
 type workspaceRepo struct {
 	Repository
+
 	dir        string
 	gitPointer string
 	pending    atomic.Bool

@@ -170,7 +170,10 @@ export const slashCommands: SlashCommand[] = [
 
       if (blockNode) {
         const newPos = blockPos + blockNode.nodeSize;
-        const tr2 = state.tr.insert(newPos, nodes.block.create({ type: "paragraph", indent: blockNode.attrs.indent }));
+        const tr2 = state.tr.insert(
+          newPos,
+          nodes.block.create({ type: "paragraph", indent: blockNode.attrs.indent as number }),
+        );
         tr2.setSelection(Selection.near(tr2.doc.resolve(newPos + 1)));
         view.dispatch(tr2);
       }

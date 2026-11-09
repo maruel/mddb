@@ -3,7 +3,7 @@
 
 import { keymap } from "prosemirror-keymap";
 import { type Command, type EditorState } from "prosemirror-state";
-import { type BlockType } from "./schema";
+import { blockAttrs, type BlockType } from "./schema";
 
 /**
  * Check if a block type is list-like (supports indentation).
@@ -29,15 +29,15 @@ const indentCommand: Command = (state, dispatch) => {
   const { node, pos } = getCurrentBlock(state);
   if (!node) return false;
 
-  const { type, indent } = node.attrs;
-  if (!isListType(type as BlockType)) return false;
-  if ((indent as number) >= 8) return false;
+  const { type, indent } = blockAttrs(node);
+  if (!isListType(type)) return false;
+  if (indent >= 8) return false;
 
   if (dispatch) {
     dispatch(
       state.tr.setNodeMarkup(pos, undefined, {
         ...node.attrs,
-        indent: (indent as number) + 1,
+        indent: indent + 1,
       }),
     );
   }
@@ -51,14 +51,14 @@ const outdentCommand: Command = (state, dispatch) => {
   const { node, pos } = getCurrentBlock(state);
   if (!node) return false;
 
-  const { indent } = node.attrs;
-  if ((indent as number) <= 0) return false;
+  const { indent } = blockAttrs(node);
+  if (indent <= 0) return false;
 
   if (dispatch) {
     dispatch(
       state.tr.setNodeMarkup(pos, undefined, {
         ...node.attrs,
-        indent: (indent as number) - 1,
+        indent: indent - 1,
       }),
     );
   }
@@ -75,17 +75,17 @@ const enterCommand: Command = (state, dispatch) => {
   const { node, pos } = getCurrentBlock(state);
   if (!node) return false;
 
-  const { type, indent } = node.attrs;
+  const { type, indent } = blockAttrs(node);
 
   // Only handle list-type blocks specially
-  if (!isListType(type as BlockType)) return false;
+  if (!isListType(type)) return false;
 
   // If block is empty, convert to paragraph or decrease indent
   if (node.content.size === 0) {
     if (dispatch) {
       const newAttrs =
-        (indent as number) > 0
-          ? { type, indent: (indent as number) - 1, checked: type === "task" ? false : null }
+        indent > 0
+          ? { type, indent: indent - 1, checked: type === "task" ? false : null }
           : { type: "paragraph", indent: 0, checked: null };
       dispatch(state.tr.setNodeMarkup(pos, undefined, newAttrs));
     }
@@ -122,15 +122,15 @@ const backspaceCommand: Command = (state, dispatch) => {
   const { node, pos } = getCurrentBlock(state);
   if (!node) return false;
 
-  const { type, indent } = node.attrs;
+  const { type, indent } = blockAttrs(node);
 
   // If indented, outdent first
-  if ((indent as number) > 0) {
+  if (indent > 0) {
     if (dispatch) {
       dispatch(
         state.tr.setNodeMarkup(pos, undefined, {
           ...node.attrs,
-          indent: (indent as number) - 1,
+          indent: indent - 1,
         }),
       );
     }
@@ -138,7 +138,7 @@ const backspaceCommand: Command = (state, dispatch) => {
   }
 
   // If list/quote type, convert to paragraph
-  if (["bullet", "number", "task", "quote"].includes(type as string)) {
+  if (["bullet", "number", "task", "quote"].includes(type)) {
     if (dispatch) {
       dispatch(
         state.tr.setNodeMarkup(pos, undefined, {

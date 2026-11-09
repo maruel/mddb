@@ -40,7 +40,7 @@ export function WorkspaceSettingsRoute() {
   const { user } = useAuth();
 
   // Extract section from hash (e.g., #members, #settings, #sync)
-  const section = () => location.hash?.slice(1) || undefined;
+  const section = () => location.hash.slice(1) || undefined;
 
   // Extract wsId - handle "@id+slug" format
   const wsId = () => stripSlug(params.wsId || "");
@@ -75,7 +75,7 @@ export function OrgSettingsRoute() {
   const { user } = useAuth();
 
   // Extract section from hash
-  const section = () => location.hash?.slice(1) || undefined;
+  const section = () => location.hash.slice(1) || undefined;
 
   // Extract orgId - handle "@id+slug" format
   const orgId = () => stripSlug(params.orgId || "");

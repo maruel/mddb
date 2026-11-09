@@ -25,7 +25,7 @@ const RELATIVE_LINK_PATTERN = /\[([^\]]*)\]\(([^)]+\/index\.md)\)/g;
 export function relativeLinksToSpaUrls(content: string, wsId: string): string {
   if (!content || !wsId || !content.includes("/index.md)")) return content;
 
-  return content.replace(RELATIVE_LINK_PATTERN, (match, text, href) => {
+  return content.replace(RELATIVE_LINK_PATTERN, (match: string, text: string, href: string) => {
     // Skip absolute or external links.
     if (href.startsWith("/") || href.startsWith("http")) return match;
 
@@ -63,11 +63,14 @@ const SPA_LINK_PATTERN = /\[([^\]]*)\]\(\/w\/@([^/+]+)(?:\+[^/]*)?\/@([A-Za-z0-9
 export function spaUrlsToRelativeLinks(content: string, wsId: string): string {
   if (!content || !wsId || !content.includes("/w/@")) return content;
 
-  return content.replace(new RegExp(SPA_LINK_PATTERN.source, "g"), (match, text, linkWsId, nodeId) => {
-    // Skip cross-workspace links.
-    if (linkWsId !== wsId) return match;
-    return `[${text}](../${nodeId}/index.md)`;
-  });
+  return content.replace(
+    new RegExp(SPA_LINK_PATTERN.source, "g"),
+    (match: string, text: string, linkWsId: string, nodeId: string) => {
+      // Skip cross-workspace links.
+      if (linkWsId !== wsId) return match;
+      return `[${text}](../${nodeId}/index.md)`;
+    },
+  );
 }
 
 /**

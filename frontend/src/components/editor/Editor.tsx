@@ -123,7 +123,11 @@ export default function Editor(props: EditorProps) {
       }),
     );
 
-  const dropPlugin = createDropUploadPlugin({ onFileDrop: handleFileDrop });
+  const dropPlugin = createDropUploadPlugin({
+    onFileDrop: (file, pos) => {
+      void handleFileDrop(file, pos).catch((error: unknown) => console.error("File upload failed:", error));
+    },
+  });
 
   let lastLoadedNodeId: string | undefined = untrack(() => props.nodeId);
   let lastEmittedContent: string = untrack(() => props.content);
@@ -223,13 +227,13 @@ export default function Editor(props: EditorProps) {
 
     // If we have a single block context, use it
     if (blockNode && blockNode.type.name === "block") {
-      const type = blockNode.attrs.type;
+      const type: unknown = blockNode.attrs.type;
       if (type === "bullet") isBulletList = true;
       if (type === "number") isOrderedList = true;
       if (type === "task") isTaskList = true;
       if (type === "quote") isBlockquote = true;
       if (type === "code") isCodeBlock = true;
-      if (type === "heading") headingLevel = blockNode.attrs.level;
+      if (type === "heading") headingLevel = blockNode.attrs.level as number | null;
     }
 
     setFormatState({
@@ -311,7 +315,7 @@ export default function Editor(props: EditorProps) {
           const target = event.target as HTMLElement;
 
           // Handle checkbox toggle: clicks on the ::before pseudo-element area (left padding)
-          const taskEl = target.closest(".block-task") as HTMLElement | null;
+          const taskEl = target.closest<HTMLElement>(".block-task");
           if (taskEl && isTaskCheckboxClick(event, taskEl)) {
             event.preventDefault();
             toggleTaskBlock(taskBlockPos(editorView, taskEl))(editorView.state, editorView.dispatch);
@@ -342,7 +346,7 @@ export default function Editor(props: EditorProps) {
       },
     });
 
-    const pmEl = editorEl.querySelector(".ProseMirror") as HTMLElement & { pmView?: EditorView };
+    const pmEl = editorEl.querySelector<HTMLElement & { pmView?: EditorView }>(".ProseMirror");
     if (pmEl) pmEl.pmView = editorView;
 
     setView(editorView);

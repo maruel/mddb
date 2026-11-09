@@ -37,9 +37,7 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
 
   // Update expansion when route changes
   createEffect(() => {
-    // Access currentRoute to track changes (triggers reactivity)
-    const route = props.currentRoute;
-    if (route && shouldAutoExpand()) {
+    if (shouldAutoExpand()) {
       setIsExpanded(true);
     }
   });

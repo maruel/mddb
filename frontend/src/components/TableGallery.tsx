@@ -69,11 +69,11 @@ export default function TableGallery(props: TableGalleryProps) {
                             alt={getRecordTitle(record, props.columns) || "Record"}
                             class={styles.image}
                             onError={(e) => {
-                              e.currentTarget.classList.add(styles.imageHidden as string);
+                              e.currentTarget.classList.add(styles.imageHidden);
                               const placeholder = e.currentTarget.nextElementSibling as HTMLElement | null;
                               placeholder?.classList.replace(
-                                styles.imagePlaceholderHidden as string,
-                                styles.imagePlaceholderVisible as string,
+                                styles.imagePlaceholderHidden,
+                                styles.imagePlaceholderVisible,
                               );
                             }}
                           />

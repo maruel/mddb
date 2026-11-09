@@ -52,11 +52,13 @@ export default function UserProfile(props: UserProfileProps) {
 
   createEffect(() => {
     const u = user();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     setTheme(u?.settings?.theme || "light");
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     setLanguage(u?.settings?.language || "en");
   });
 
-  const loadData = async () => {
+  const loadData = () => {
     const u = user();
     if (!u) return;
 
@@ -67,10 +69,11 @@ export default function UserProfile(props: UserProfileProps) {
       // Load membership settings (notifications)
       const currentWsMembership = u.workspaces?.find((m) => m.workspace_id === u.workspace_id);
       if (currentWsMembership) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setNotifications(currentWsMembership.settings?.notifications ?? true);
       }
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -116,7 +119,7 @@ export default function UserProfile(props: UserProfileProps) {
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }

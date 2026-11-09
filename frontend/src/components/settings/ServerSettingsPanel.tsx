@@ -1,5 +1,4 @@
 // Server settings panel for global admins: dashboard, SMTP configuration, and quotas/rate limits.
-
 import { createSignal, createEffect, Show, lazy } from "solid-js";
 import { useAuth } from "../../contexts";
 import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
@@ -91,14 +90,14 @@ export default function ServerSettingsPanel() {
       setReadAuthRatePerMin(data.rate_limits.read_auth_rate_per_min);
       setReadUnauthRatePerMin(data.rate_limits.read_unauth_rate_per_min);
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadConfig();
+    void loadConfig().catch((backgroundError: unknown) => reportError(backgroundError));
   });
 
   const saveSMTP = async (e: Event) => {
@@ -121,7 +120,7 @@ export default function ServerSettingsPanel() {
       setSuccess(t("server.configurationSaved"));
       await loadConfig();
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -155,7 +154,7 @@ export default function ServerSettingsPanel() {
 
       setSuccess(t("server.configurationSaved"));
     } catch (err) {
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }

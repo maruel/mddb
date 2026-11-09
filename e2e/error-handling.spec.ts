@@ -9,6 +9,14 @@ import {
   gotoWithSession,
 } from "./helpers";
 
+test("reported background errors reach the browser pageerror channel", async ({ page, request }) => {
+  const { token } = await registerUser(request, "reported-error");
+  await gotoWithSession(page, token);
+  const failure = page.waitForEvent("pageerror");
+  await page.evaluate(() => reportError(new Error("reported background failure")));
+  expect((await failure).message).toContain("reported background failure");
+});
+
 test.describe("Error Handling - Invalid Routes", () => {
   test("navigating to non-existent page shows appropriate error or handles gracefully", async ({ page, request }) => {
     const { token } = await registerUser(request, "invalid-page");
@@ -91,7 +99,7 @@ test.describe("Error Handling - API Failures", () => {
 
     // Block API requests to simulate network failure
     await page.route("**/api/v1/workspaces/**/page", (route) => {
-      route.abort("failed");
+      return route.abort("failed");
     });
 
     // Edit content (switch to markdown mode for reliable interaction)

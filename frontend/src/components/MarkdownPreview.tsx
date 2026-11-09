@@ -97,6 +97,8 @@ if (!originalFenceRenderer) throw new Error("Markdown fence renderer is unavaila
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const source = originalFenceRenderer(tokens, idx, options, env, self);
   if (!isMermaidFence(tokens[idx]?.info)) return source;
+  // Markdown-it plugin metadata may contain a non-string label.
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   const label = md.utils.escapeHtml(String(env?.codeLabel || ""));
   return `<div data-mermaid-block><div data-mermaid-diagram></div><details open><summary>${label}</summary>${source}</details></div>`;
 };

@@ -32,6 +32,7 @@ export function handleEnterBlur(e: KeyboardEvent): void {
 export function getFieldValue(record: DataRecordResponse, fieldName: string | undefined): string {
   if (!fieldName) return "";
   const value = record.data[fieldName];
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
   return value !== null && value !== undefined ? String(value) : "";
 }
 

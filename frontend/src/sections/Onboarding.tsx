@@ -40,16 +40,16 @@ export default function Onboarding() {
 
     // Run async flow
     setRunning(true);
-    (async () => {
+    void (async () => {
       try {
         const firstName = u.name.split(" ")[0] || u.name;
         const result = await provisionFirstWorkspace(u.id, createApi(undefined, u.session_id), {
-          organization: (firstName
+          organization: firstName
             ? t("onboarding.defaultOrgName", { name: firstName })
-            : t("onboarding.defaultOrgNameFallback")) as string,
-          workspace: (firstName
+            : t("onboarding.defaultOrgNameFallback"),
+          workspace: firstName
             ? t("onboarding.defaultWorkspaceName", { name: firstName })
-            : t("onboarding.defaultWorkspaceNameFallback")) as string,
+            : t("onboarding.defaultWorkspaceNameFallback"),
         });
         if (identity() !== initialIdentity) return;
         setUser(result.user);

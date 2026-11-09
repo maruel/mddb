@@ -1,5 +1,4 @@
 // Workspace layout with draft-gated navigation and route-owned sidebar History.
-
 import {
   createEffect,
   createMemo,
@@ -90,15 +89,15 @@ const WorkspaceLayout: ParentComponent = (props) => {
       const isTable = selectedNodeData()?.has_table ?? false;
       if (e.shiftKey) {
         if (isTable) {
-          recordsRedo();
+          void recordsRedo().catch((backgroundError: unknown) => reportError(backgroundError));
         } else {
-          editorRedo();
+          void editorRedo().catch((backgroundError: unknown) => reportError(backgroundError));
         }
       } else {
         if (isTable) {
-          recordsUndo();
+          void recordsUndo().catch((backgroundError: unknown) => reportError(backgroundError));
         } else {
-          editorUndo();
+          void editorUndo().catch((backgroundError: unknown) => reportError(backgroundError));
         }
       }
     };
@@ -197,7 +196,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       // Install the route-following intent only after THIS departure succeeds.
       if (!(await intent.drain())) return;
       setHistoryTarget({ id: nodeId, identity: authIdentity(), wsId, from: location.pathname, intent });
-      intent.navigate(nodeUrl(wsId, u?.workspace_name, nodeId));
+      intent.navigate(nodeUrl(wsId, u.workspace_name, nodeId));
     } else {
       setHistoryTarget(null);
       void loadHistory(nodeId, intent);
@@ -300,7 +299,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
   const startNotionImportPolling = (wsId: string, org: NonNullable<ReturnType<typeof orgApi>>, identity: number) => {
     setNotionImportWsId(wsId);
-    importPollInterval = window.setInterval(async () => {
+    const pollImport = async () => {
       if (disposed || authIdentity() !== identity) {
         window.clearInterval(importPollInterval);
         importPollInterval = undefined;
@@ -308,6 +307,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       }
       try {
         const status = await org.getStatus(wsId);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (disposed || authIdentity() !== identity) return;
         setNotionImportStatus(status);
         if (["completed", "failed", "cancelled"].includes(status.status)) {
@@ -315,13 +315,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
           importPollInterval = undefined;
           // Reload nodes if import completed
           if (status.status === "completed") {
-            loadNodes(true);
+            void loadNodes(true).catch((backgroundError: unknown) => reportError(backgroundError));
           }
         }
       } catch {
         window.clearInterval(importPollInterval);
         importPollInterval = undefined;
       }
+    };
+    importPollInterval = window.setInterval(() => {
+      void pollImport().catch((error: unknown) => console.error("Import polling failed:", error));
     }, 2000);
   };
 
@@ -335,6 +338,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     if (disposed || authIdentity() !== identity) return;
     // Switch to the new workspace (switchWorkspace navigates automatically)
     await switchWorkspace(result.workspace_id);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
     if (disposed || authIdentity() !== identity) return;
     // Start polling for import status
     startNotionImportPolling(result.workspace_id, org, identity);
@@ -429,7 +433,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       setSaveError(null);
       setNodeCreationParentId(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
       setCreatingNode(false);
     }
@@ -499,7 +503,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       }
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
     } finally {
       setDeletingNodeId(null);
     }
@@ -563,7 +567,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         <div class={styles.userInfo}>
           <span
             class={styles.connectionStatus}
-            classList={{ [styles.connectionReconnecting as string]: !connected() }}
+            classList={{ [styles.connectionReconnecting]: !connected() }}
             role="status"
             aria-live="polite"
             aria-atomic="true"
@@ -597,22 +601,22 @@ const WorkspaceLayout: ParentComponent = (props) => {
           ancestorIds={breadcrumbPath().map((n) => n.id)}
           onCreatePage={() => {
             setNodeCreationParentId(null);
-            createNode("document");
+            void createNode("document").catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onCreateTable={() => {
             setNodeCreationParentId(null);
-            createNode("table");
+            void createNode("table").catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onCreateChildPage={(parentId: string) => {
             setNodeCreationParentId(parentId);
-            createNode("document", parentId);
+            void createNode("document", parentId).catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onCreateChildTable={(parentId: string) => {
             setNodeCreationParentId(parentId);
-            createNode("table", parentId);
+            void createNode("table", parentId).catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onSelectNode={handleNodeClick}

@@ -694,6 +694,7 @@ type githubEmail struct {
 // microsoftIDClaims holds the Microsoft ID token claims that mddb reads.
 type microsoftIDClaims struct {
 	jwt.RegisteredClaims
+
 	TenantID string `json:"tid"`
 	Email    string `json:"email"`
 	// EmailDomainOwnerVerified is the xms_edov optional claim. Microsoft

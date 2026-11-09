@@ -136,6 +136,7 @@ export function findDropTarget(
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The synchronous document traversal callback updates this local variable.
     if (!nearestBlock) return null;
 
     // Type assertion needed: TS doesn't track assignments inside callbacks
@@ -240,7 +241,7 @@ export const blockDragPlugin = new Plugin<DragState>({
   state: {
     init: () => initialState,
     apply(tr, state) {
-      const meta = tr.getMeta(blockDragPluginKey);
+      const meta = tr.getMeta(blockDragPluginKey) as Partial<DragState> | undefined;
       if (meta) {
         return { ...state, ...meta };
       }

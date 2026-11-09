@@ -170,10 +170,10 @@ export function ContextMenu(props: ContextMenuProps) {
 
   // Build classList object for each button (reactive in SolidJS)
   const getItemClassList = (action: ContextMenuAction, idx: () => number): Record<string, boolean | undefined> => ({
-    [styles.item as string]: true,
-    [styles.danger as string]: action.danger,
-    [styles.disabled as string]: action.disabled,
-    [styles.focused as string]: focusedIndex() === idx(),
+    [styles.item]: true,
+    [styles.danger]: action.danger,
+    [styles.disabled]: action.disabled,
+    [styles.focused]: focusedIndex() === idx(),
   });
 
   return (

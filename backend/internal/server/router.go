@@ -32,6 +32,7 @@ import (
 // Config holds configuration for the router.
 type Config struct {
 	*storage.ServerConfig
+
 	ConfigDir      string
 	BaseURL        string
 	Version        string
@@ -401,6 +402,7 @@ func (r *Router) Close() {
 // bandwidthWriter applies the host egress limit while preserving response control.
 type bandwidthWriter struct {
 	http.ResponseWriter
+
 	bandwidthLimiter *bandwidth.Limiter
 }
 

@@ -43,6 +43,7 @@ export function TableCell(props: TableCellProps) {
 
   const handleClick = () => {
     if (!props.isEditing()) {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
       setEditValue(String(getCellValue()));
       setEditCancelled(false);
       props.onStartEdit();

@@ -6,16 +6,20 @@ import { Button } from "./shared";
 import styles from "./ErrorBoundary.module.css";
 
 interface ErrorFallbackProps {
-  error: Error;
+  error: unknown;
   reset: () => void;
 }
 
 function ErrorFallback(props: ErrorFallbackProps) {
   const { t } = useI18n();
   const [copyState, setCopyState] = createSignal<"idle" | "copied" | "failed">("idle");
-  const diagnostic = () => `${props.error.name}: ${props.error.message}\n${props.error.stack ?? ""}`.trim();
+  const diagnostic = () => {
+    const error = props.error;
+    return error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ""}`.trim() : String(error);
+  };
 
   const copyDiagnostic = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Browser capabilities and DOM state can differ from their declared types.
     if (!navigator.clipboard) {
       setCopyState("failed");
       return;
@@ -62,7 +66,7 @@ function ErrorFallback(props: ErrorFallbackProps) {
 
 export const AppErrorBoundary: ParentComponent = (props) => {
   return (
-    <SolidErrorBoundary fallback={(err, reset) => <ErrorFallback error={err} reset={reset} />}>
+    <SolidErrorBoundary fallback={(err: unknown, reset) => <ErrorFallback error={err} reset={reset} />}>
       {props.children}
     </SolidErrorBoundary>
   );

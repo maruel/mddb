@@ -1,5 +1,4 @@
 // Page header component: cover image and icon display with edit UX.
-
 import { createSignal, Show } from "solid-js";
 import { useI18n } from "../../i18n";
 import { IconPicker, IconDisplay } from "./IconPicker";
@@ -31,9 +30,9 @@ export function PageHeader(props: PageHeaderProps) {
   function handleCoverDrop(e: DragEvent) {
     e.preventDefault();
     setDraggingCover(false);
-    const file = e.dataTransfer?.files?.[0];
+    const file = e.dataTransfer?.files[0];
     if (file && file.type.startsWith("image/")) {
-      handleCoverFileInput(file);
+      void handleCoverFileInput(file).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   }
 
@@ -127,7 +126,7 @@ export function PageHeader(props: PageHeaderProps) {
         class={styles.coverInput}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleCoverFileInput(file);
+          if (file) void handleCoverFileInput(file).catch((backgroundError: unknown) => reportError(backgroundError));
           e.target.value = "";
         }}
       />

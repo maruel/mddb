@@ -1,5 +1,4 @@
 // Notification preferences panel for managing per-type channel preferences and push subscription.
-
 import { createSignal, createEffect, Show, For } from "solid-js";
 import type { ChannelSetDTO, NotificationPrefsDTO } from "@sdk/types.gen";
 import { useAuth } from "../../contexts";
@@ -43,21 +42,23 @@ export default function NotificationSettings() {
       const data = await api().getNotificationPrefs();
       setPrefs(data);
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   createEffect(() => {
-    loadPrefs();
+    void loadPrefs().catch((backgroundError: unknown) => reportError(backgroundError));
   });
 
   const getChannels = (type: string): ChannelSetDTO => {
     const p = prefs();
     if (!p) return { email: false, web: false };
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     const override = p.overrides?.[type];
     if (override) return override;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     return p.defaults?.[type] ?? { email: false, web: false };
   };
 
@@ -80,7 +81,7 @@ export default function NotificationSettings() {
     } catch (err) {
       // Revert
       setPrefs(p);
-      setError(`${t("errors.failedToSave")}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setSaving(false);
     }

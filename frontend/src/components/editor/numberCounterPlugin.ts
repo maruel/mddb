@@ -19,7 +19,7 @@ export const numberCounterPlugin = new Plugin({
       // In flat architecture, blocks are always direct children of doc
       if (node.type.name !== "block") return;
 
-      const indent = node.attrs.indent || 0;
+      const indent = (node.attrs.indent as number | undefined) || 0;
 
       if (node.attrs.type === "number") {
         const currentCount = (counters.get(indent) || 0) + 1;
@@ -30,7 +30,7 @@ export const numberCounterPlugin = new Plugin({
           if (level > indent) counters.delete(level);
         }
 
-        const oldNumber = node.attrs.number;
+        const oldNumber: unknown = node.attrs.number;
         if (oldNumber !== currentCount) {
           tr.setNodeMarkup(pos, undefined, { ...node.attrs, number: currentCount });
           needsUpdate = true;
@@ -47,6 +47,7 @@ export const numberCounterPlugin = new Plugin({
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- A synchronous traversal callback updates this local variable.
     return needsUpdate ? tr : null;
   },
 });

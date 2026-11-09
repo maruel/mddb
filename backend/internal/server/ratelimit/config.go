@@ -77,6 +77,7 @@ func DefaultConfig(fastLimits bool) *Config {
 // Tier is a live rate limiter with its config.
 type Tier struct {
 	TierConfig
+
 	Limiter *Limiter
 }
 

@@ -18,13 +18,13 @@ interface EmojiGroup {
 // Lazy-load emoji groups (Unicode-classified, ~132 KB JSON) on first Emoji tab open.
 async function loadEmojiGroups(): Promise<EmojiGroup[]> {
   const mod = await import("./emoji-groups.json");
-  return mod.default as EmojiGroup[];
+  return mod.default;
 }
 
 // Lazy-load Material Symbols icon names (3,798 names, ~58 KB JSON) on first Icons tab open.
 async function loadIconNames(): Promise<string[]> {
   const mod = await import("./material-symbols-names.json");
-  return mod.default as string[];
+  return mod.default;
 }
 
 interface IconPickerProps {
@@ -40,15 +40,9 @@ export function IconPicker(props: IconPickerProps) {
   const [search, setSearch] = createSignal("");
   let containerRef: HTMLDivElement | undefined;
 
-  const [emojiGroups] = createResource(
-    () => tab() === "emoji",
-    (active) => (active ? loadEmojiGroups() : Promise.resolve([] as EmojiGroup[])),
-  );
+  const [emojiGroups] = createResource(() => tab() === "emoji", loadEmojiGroups);
 
-  const [iconNames] = createResource(
-    () => tab() === "icons",
-    (active) => (active ? loadIconNames() : Promise.resolve([] as string[])),
-  );
+  const [iconNames] = createResource(() => tab() === "icons", loadIconNames);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") props.onClose();

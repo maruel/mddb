@@ -19,6 +19,7 @@ import (
 // cancelObjectStorage observes real commit reads at the foreign storage boundary.
 type cancelObjectStorage struct {
 	*filesystem.Storage
+
 	cancel context.CancelFunc
 	reads  int
 }
@@ -36,6 +37,7 @@ func (s *cancelObjectStorage) EncodedObject(kind plumbing.ObjectType, hash plumb
 // cancelLoadedObjectStorage cancels after a real object lookup completes.
 type cancelLoadedObjectStorage struct {
 	*filesystem.Storage
+
 	cancel           context.CancelFunc
 	target           plumbing.Hash
 	readsAfterCancel int
@@ -57,6 +59,7 @@ func (s *cancelLoadedObjectStorage) EncodedObject(kind plumbing.ObjectType, hash
 // cancelReferenceFilesystem observes real loose-reference opens at the foreign boundary.
 type cancelReferenceFilesystem struct {
 	billy.Filesystem
+
 	cancel context.CancelFunc
 	target string
 }
@@ -72,6 +75,7 @@ func (f *cancelReferenceFilesystem) Open(name string) (billy.File, error) {
 // cancelReferenceStorage exposes the wrapped reference filesystem to the owner.
 type cancelReferenceStorage struct {
 	*filesystem.Storage
+
 	disk billy.Filesystem
 }
 

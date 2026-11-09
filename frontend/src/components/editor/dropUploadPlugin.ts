@@ -27,7 +27,7 @@ export function createDropUploadPlugin(options: DropUploadOptions): Plugin<DropU
         return { isDragging: false };
       },
       apply(tr, pluginState) {
-        const meta = tr.getMeta(dropUploadKey);
+        const meta = tr.getMeta(dropUploadKey) as DropUploadState | undefined;
         if (meta !== undefined) {
           return { isDragging: meta.isDragging };
         }
@@ -61,10 +61,8 @@ export function createDropUploadPlugin(options: DropUploadOptions): Plugin<DropU
             return false;
           }
           event.preventDefault();
-          // Set drop effect
-          if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = "copy";
-          }
+          // The file-type check above establishes dataTransfer is present.
+          event.dataTransfer.dropEffect = "copy";
           return false;
         },
 

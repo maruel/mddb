@@ -59,6 +59,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 // compressWriter wraps http.ResponseWriter to compress the response body.
 type compressWriter struct {
 	http.ResponseWriter
+
 	encoding     string
 	writer       io.WriteCloser
 	headerSent   bool

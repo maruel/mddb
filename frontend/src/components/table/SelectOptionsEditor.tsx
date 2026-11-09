@@ -137,6 +137,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
 
   const usageCount = (id: string): number => {
     return props.records.filter((r) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
       const v = String(r.data[props.column.name] ?? "");
       return v
         .split(",")
@@ -261,7 +262,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                   />
 
                   <Show when={count > 0}>
-                    <span class={styles.usageHint} title={t("table.optionUsedWarning")?.replace("{n}", String(count))}>
+                    <span class={styles.usageHint} title={t("table.optionUsedWarning").replace("{n}", String(count))}>
                       {count}
                     </span>
                   </Show>

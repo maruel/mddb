@@ -73,7 +73,8 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
       if (!response.ok) {
         let message = `Upload failed (${response.status})`;
         try {
-          const errJson = await response.json();
+          const errJson = (await response.json()) as { error?: { message?: string } };
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
           if (errJson?.error?.message) message = errJson.error.message;
         } catch {
           // non-JSON body: use status text
@@ -81,7 +82,7 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
         throw new Error(message);
       }
 
-      const result: UploadNodeAssetResponse = await response.json();
+      const result = (await response.json()) as UploadNodeAssetResponse;
       return {
         name: result.name,
         mimeType: result.mime_type,

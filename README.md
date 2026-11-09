@@ -131,7 +131,7 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 26 and pnpm 12.4.2.
+Development requires Node.js 26 and pnpm 12.
 
 ```bash
 git clone https://github.com/maruel/mddb.git

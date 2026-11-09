@@ -34,7 +34,7 @@ export function createSlashCommandPlugin(onStateChange: (state: SlashMenuState) 
 
       apply(tr, pluginState, _oldState, newState) {
         // Check if there's a meta flag to close the menu
-        const meta = tr.getMeta(slashMenuKey);
+        const meta = tr.getMeta(slashMenuKey) as { close?: boolean } | undefined;
         if (meta?.close) {
           if (pluginState.active) {
             const newPluginState = { ...initialState };

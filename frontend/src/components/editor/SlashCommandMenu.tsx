@@ -1,5 +1,4 @@
 // Slash commands with owned asynchronous subpage insertion and saved navigation follow-up.
-
 import { createSignal, createEffect, For, Show, onMount, onCleanup, untrack } from "solid-js";
 import type { EditorView } from "prosemirror-view";
 import { schema, marks } from "./prosemirror-config";
@@ -145,7 +144,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         case "Tab":
           e.preventDefault();
           e.stopPropagation();
-          executeCommand(commands[selectedIndex()]);
+          void executeCommand(commands[selectedIndex()]).catch((backgroundError: unknown) =>
+            reportError(backgroundError),
+          );
           break;
         case "Escape":
           e.preventDefault();
@@ -213,7 +214,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   };
 
   const handleItemClick = (command: SlashCommand) => {
-    executeCommand(command);
+    void executeCommand(command).catch((backgroundError: unknown) => reportError(backgroundError));
   };
 
   const handleItemMouseEnter = (index: number) => {

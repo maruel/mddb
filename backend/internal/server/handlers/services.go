@@ -334,6 +334,7 @@ type RateLimitsUpdater interface {
 // Config holds configuration values needed by handlers.
 type Config struct {
 	storage.ServerConfig
+
 	BaseURL   string
 	Version   string
 	GoVersion string
@@ -378,6 +379,7 @@ const tokenExpiration = 31 * 24 * time.Hour
 // SessionClaims binds a host JWT to its persisted session and account.
 type SessionClaims struct {
 	jwt.RegisteredClaims
+
 	SessionID string `json:"sid"`
 	Email     string `json:"email"`
 }

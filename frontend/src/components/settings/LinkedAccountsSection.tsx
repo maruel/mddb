@@ -52,7 +52,7 @@ export default function LinkedAccountsSection(props: Props) {
       const error = (await res.json()) as ErrorResponse;
       throw new Error(error.error.message);
     }
-    return res.json();
+    return (await res.json()) as unknown;
   };
 
   // Fetch available providers on mount
@@ -60,7 +60,7 @@ export default function LinkedAccountsSection(props: Props) {
     api()
       .listProviders()
       .then((resp) => setAvailableProviders(resp.providers))
-      .catch((err) => console.error("Failed to fetch providers:", err));
+      .catch((err: unknown) => console.error("Failed to fetch providers:", err));
   });
 
   // Check if a provider is linked
@@ -84,7 +84,7 @@ export default function LinkedAccountsSection(props: Props) {
       // Redirect to OAuth provider
       window.location.href = resp.redirect_url;
     } catch (err) {
-      props.onError(`${t("settings.linkingFailed")}: ${err}`);
+      props.onError(`${t("settings.linkingFailed")}: ${String(err)}`);
       setLoading(null);
     }
   };
@@ -105,7 +105,7 @@ export default function LinkedAccountsSection(props: Props) {
       // Refresh user data
       window.location.reload();
     } catch (err) {
-      props.onError(`${t("errors.failedToSave")}: ${err}`);
+      props.onError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setLoading(null);
     }

@@ -417,12 +417,14 @@ func workspaceSettingsToEntity(s dto.WorkspaceSettings) identity.WorkspaceSettin
 // orgMembershipWithName wraps an organization membership with the org name.
 type orgMembershipWithName struct {
 	*identity.OrganizationMembership
+
 	OrganizationName string
 }
 
 // wsMembershipWithName wraps a workspace membership with the workspace name and org ID.
 type wsMembershipWithName struct {
 	*identity.WorkspaceMembership
+
 	WorkspaceName  string
 	OrganizationID ksid.ID
 }

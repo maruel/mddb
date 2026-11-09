@@ -29,7 +29,7 @@ function createNode(partial: Partial<NodeResponse> & { id: string; title: string
 interface TreeHarnessProps {
   node: NodeResponse;
   onDeleteNode?: (nodeId: string) => void;
-  onMoveNode?: (nodeId: string, newParentId: string) => void;
+  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void>;
   onSelect?: (node: NodeResponse) => void;
 }
 
@@ -143,7 +143,7 @@ describe("SidebarNode data flow", () => {
     });
 
     it("restores focus after keyboard context-menu actions and moves to a focused target", async () => {
-      const onMoveNode = vi.fn();
+      const onMoveNode = vi.fn(() => Promise.resolve());
       render(() => <TreeHarness node={parentNode()} onMoveNode={onMoveNode} />);
       const parent = screen.getByRole("treeitem", { name: "Parent" });
       const source = screen.getByRole("treeitem", { name: "Child" });

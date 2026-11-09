@@ -15,15 +15,17 @@ const fixtureTest = test.extend<{ fixtureAPI: FixtureAPI }>({
   fixtureAPI: async ({ playwright }, use) => {
     const replies: FixtureAPI["replies"] = [];
     const calls: unknown[] = [];
-    const server = createServer(async (req, res) => {
-      let body = "";
-      for await (const chunk of req) body += String(chunk);
-      calls.push(body ? (JSON.parse(body) as unknown) : null);
-      const reply = replies.shift();
-      res.writeHead(reply?.status ?? 500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify(reply ? reply.body : { error: { code: "UNEXPECTED_REQUEST", message: "Unexpected request" } }),
-      );
+    const server = createServer((req, res) => {
+      void (async () => {
+        let body = "";
+        for await (const chunk of req) body += String(chunk);
+        calls.push(body ? (JSON.parse(body) as unknown) : null);
+        const reply = replies.shift();
+        res.writeHead(reply?.status ?? 500, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify(reply ? reply.body : { error: { code: "UNEXPECTED_REQUEST", message: "Unexpected request" } }),
+        );
+      })().catch((error: unknown) => res.destroy(error instanceof Error ? error : new Error(String(error))));
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const request = await playwright.request.newContext({

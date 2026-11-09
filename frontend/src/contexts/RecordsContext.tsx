@@ -1,5 +1,4 @@
 // Records context providing table records CRUD and pagination.
-
 import {
   createContext,
   useContext,
@@ -154,6 +153,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     setResolvedUsers(new Map());
     ws.listWorkspaceMembers()
       .then((res) => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         if (identity === workspaceIdentity()) setWorkspaceMembers(res.members ?? []);
       })
       .catch(() => {
@@ -179,6 +179,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const unknownIds = new Set<string>();
     for (const rec of loadedRecords) {
       for (const col of userCols) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         const v = rec.data?.[col];
         if (typeof v === "string" && v && !memberIds.has(v)) {
           unknownIds.add(v);
@@ -202,6 +203,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (toFetch.length > 0) {
       try {
         const res = await ws.resolveUsers({ ids: toFetch });
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         for (const u of res.users ?? []) {
           merged.set(u.id, u);
         }
@@ -226,6 +228,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     // Simple filter
     if (!filter.property) return true;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     const fieldValue = record.data?.[filter.property];
     const filterValue = filter.value;
 
@@ -287,7 +290,9 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     return [...recs].sort((a, b) => {
       for (const sort of sorts) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         const aVal = a.data?.[sort.property];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         const bVal = b.data?.[sort.property];
 
         let cmp: number;
@@ -302,6 +307,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         } else if (typeof aVal === "number" && typeof bVal === "number") {
           cmp = aVal - bVal;
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
           cmp = String(aVal).localeCompare(String(bVal));
         }
 
@@ -315,7 +321,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   // Debounced server reload function
   const debouncedServerReload = debounce((nodeId: string) => {
-    loadRecordsFromServer(nodeId);
+    void loadRecordsFromServer(nodeId).catch((backgroundError: unknown) => reportError(backgroundError));
   }, FILTER_DEBOUNCE_MS);
 
   // Cleanup debounced function on unmount
@@ -365,7 +371,7 @@ export const RecordsProvider: ParentComponent = (props) => {
           setActiveSorts([]);
         }
       });
-      loadRecords(node.id);
+      void loadRecords(node.id).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   });
 
@@ -377,7 +383,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     if (!nodeId || (evt.type !== EventResync && evt.node_id !== nodeId)) return;
     if (evt.type === EventResync || evt.type === EventRecordsChanged || evt.type === EventTableUpdated) {
-      loadRecords(nodeId);
+      void loadRecords(nodeId).catch((backgroundError: unknown) => reportError(backgroundError));
     }
   });
 
@@ -449,7 +455,8 @@ export const RecordsProvider: ParentComponent = (props) => {
       });
       if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
-      const loadedRecords = (data.records || []) as DataRecordResponse[];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+      const loadedRecords = data.records || [];
       setRecords(loadedRecords);
       const more = loadedRecords.length === PAGE_SIZE;
       setHasMore(more);
@@ -463,10 +470,10 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
       setLoadError(null);
       // Resolve any ghost user references in the loaded records.
-      resolveGhostUsers(loadedRecords);
+      void resolveGhostUsers(loadedRecords).catch((backgroundError: unknown) => reportError(backgroundError));
     } catch (err) {
       if (request === recordsRequest && identity === recordIdentity(selectedNodeId() ?? "")) {
-        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+        setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
       }
     } finally {
       if (request === recordsRequest) setLoadingRecords(false);
@@ -524,7 +531,8 @@ export const RecordsProvider: ParentComponent = (props) => {
       });
       if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
-      const newRecords = (data.records || []) as DataRecordResponse[];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+      const newRecords = data.records || [];
       const allRecs = [...records(), ...newRecords];
       setRecords(allRecs);
       const more = newRecords.length === PAGE_SIZE;
@@ -537,7 +545,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setLoadError(null);
     } catch (err) {
       if (request === recordsRequest && identity === recordIdentity(selectedNodeId() ?? "")) {
-        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+        setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
       }
     } finally {
       if (request === recordsRequest) setLoadingRecords(false);
@@ -594,7 +602,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -659,7 +667,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -726,7 +734,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
     } finally {
       setDeletingRecordId(null);
     }
@@ -746,13 +754,14 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
       await ws.createRecord(nodeId, { data: record.data || {} });
       if (!operationCurrent()) return;
       await loadRecords(nodeId);
       if (!operationCurrent()) return;
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -794,7 +803,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSaveError(null);
       // No need to reload records as filters are empty
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
       setSavingView(false);
     }
@@ -824,7 +833,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       // overwrite any user changes made while the request was in flight.
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setSavingView(false);
     }
@@ -858,7 +867,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
     } finally {
       setSavingView(false);
     }

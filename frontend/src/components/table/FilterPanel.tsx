@@ -56,9 +56,11 @@ export function FilterPanel(props: FilterPanelProps) {
   };
 
   const [operator, setOperator] = createSignal<FilterOp>(
-    untrack(() => (props.currentFilter?.operator as FilterOp | undefined) ?? defaultOperator()),
+    untrack(() => props.currentFilter?.operator ?? defaultOperator()),
   );
   const [value, setValue] = createSignal<string>(
+    // Saved filter values retain JavaScript string conversion.
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
     untrack(() => (props.currentFilter?.value !== undefined ? String(props.currentFilter.value) : "")),
   );
 

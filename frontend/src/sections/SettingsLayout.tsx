@@ -63,7 +63,7 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
   // Derive current route info from location for sidebar highlighting
   const currentRoute = () => {
     const path = location.pathname;
-    const hash = location.hash?.slice(1) || undefined;
+    const hash = location.hash.slice(1) || undefined;
 
     if (path === "/settings/user" || path === "/settings/user/") {
       return { type: "profile" as const };

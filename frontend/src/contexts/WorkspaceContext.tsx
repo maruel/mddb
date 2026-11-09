@@ -1,5 +1,4 @@
 // Workspace context providing node tree, navigation, and workspace switching.
-
 import {
   createContext,
   useContext,
@@ -280,19 +279,19 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setCreatingNode(true);
       const firstName = initialUser.name.split(" ")[0] || initialUser.name;
       const result = await provisionFirstWorkspace(initialUser.id, createApi(undefined, initialUser.session_id), {
-        organization: (firstName
+        organization: firstName
           ? t("onboarding.defaultOrgName", { name: firstName })
-          : t("onboarding.defaultOrgNameFallback")) as string,
-        workspace: (firstName
+          : t("onboarding.defaultOrgNameFallback"),
+        workspace: firstName
           ? t("onboarding.defaultWorkspaceName", { name: firstName })
-          : t("onboarding.defaultWorkspaceNameFallback")) as string,
+          : t("onboarding.defaultWorkspaceNameFallback"),
       });
       if (authIdentity() !== initialIdentity) return;
       setUser(result.user);
       if (result.user.workspace_id) navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name));
     } catch (err) {
       if (authIdentity() === initialIdentity) {
-        setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+        setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
         setFirstLoginCheckDone(true);
       }
     } finally {
@@ -315,7 +314,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         ensure_root_if_empty: true,
       });
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     }
   }
 
@@ -343,7 +342,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         navigate(workspaceUrl(u.workspace_id, u.workspace_name));
       }
     } catch (err) {
-      if (authIdentity() === initialIdentity) setLoadError(`${t("errors.failedToSwitch")}: ${err}`);
+      if (authIdentity() === initialIdentity) setLoadError(`${t("errors.failedToSwitch")}: ${String(err)}`);
     } finally {
       if (authIdentity() === initialIdentity) setSwitchingWorkspace(false);
     }
@@ -399,7 +398,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     } catch (err) {
       if (!disposed && request === nodeRequest && identity === workspaceIdentity()) {
         setFailedNodeId(id);
-        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+        setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
       }
       return undefined;
     } finally {
@@ -415,7 +414,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     try {
       const data = await ws.listNodeChildren(nodeId);
       if (identity !== workspaceIdentity()) return;
-      const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+      const children = data.nodes?.filter((node): node is NodeResponse => Boolean(node)) || [];
 
       setNodesStore(
         produce((list) => {
@@ -520,7 +520,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     } catch (err) {
       // A subsequent deletion event owns removal of a concurrently deleted node.
       if (err instanceof APIError && err.status === 404) return;
-      if (identity === workspaceIdentity()) setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (identity === workspaceIdentity()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);
     }
   }
 
@@ -537,7 +537,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         evt.type === EventNodeDeleted ||
         evt.type === EventNodeMoved
       ) {
-        loadNodes(true);
+        void loadNodes(true).catch((backgroundError: unknown) => reportError(backgroundError));
       }
     }),
   );
@@ -554,7 +554,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       batch(() => {
         setNodesStore(
           produce((list) => {
-            moveResult = reconcileMovedNode(list as NodeResponse[], nodeId, newParentId);
+            moveResult = reconcileMovedNode(list, nodeId, newParentId);
           }),
         );
 
@@ -574,7 +574,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToMove")}: ${err}`);
+      setSaveError(`${t("errors.failedToMove")}: ${String(err)}`);
     }
   }
 
