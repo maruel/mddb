@@ -15,6 +15,7 @@ import { EventSourceProvider } from "./EventSourceContext";
 import { EditorProvider, useEditor } from "./EditorContext";
 import { ConflictRecovery } from "../components/editor/ConflictRecovery";
 import { I18nProvider } from "../i18n";
+import { stripSlug } from "../utils/urls";
 
 const firstRevision = "a".repeat(64);
 const account: UserResponse = {
@@ -62,7 +63,9 @@ let calls: Array<{ body: UpdatePageRequest; resolve: (response: Response) => voi
 let switches: number;
 let latest: NodeResponse | null;
 let latestReply: Promise<Response> | null;
+let historyReply: Promise<Response> | null;
 let accountLocale = "en";
+let accountWorkspaceName: string;
 let switchResponse: Promise<Response> | null;
 let nodeResponse: Promise<Response> | null;
 let firstTitle: string;
@@ -124,7 +127,7 @@ function Probe() {
       () => location.pathname,
       (path) => {
         const id = path.split("/").at(-1);
-        if (id && path.startsWith("/w/")) void workspace.loadNode(id, { refresh: false });
+        if (id && path.startsWith("/w/")) void workspace.loadNode(stripSlug(id), { refresh: false });
       },
     ),
   );
@@ -173,8 +176,10 @@ beforeEach(() => {
   switches = 0;
   latest = null;
   latestReply = null;
+  historyReply = null;
   switchResponse = null;
   nodeResponse = null;
+  accountWorkspaceName = "Original workspace";
   firstTitle = "Original";
   firstIcon = "";
   firstHasPage = true;
@@ -184,7 +189,11 @@ beforeEach(() => {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     if (url.endsWith("/auth/me"))
-      return Response.json({ ...account, settings: { ...account.settings, language: accountLocale } });
+      return Response.json({
+        ...account,
+        workspace_name: accountWorkspaceName,
+        settings: { ...account.settings, language: accountLocale },
+      });
     if (url.endsWith("/auth/browser/logout")) return Response.json({ ok: true });
     if (url.endsWith("/switch-workspace")) {
       switches++;
@@ -197,6 +206,7 @@ beforeEach(() => {
         calls.push({ body: JSON.parse(String(init.body)) as UpdatePageRequest, resolve, reject }),
       );
     if (url.endsWith("/nodes/one") && latestReply) return latestReply;
+    if (url.includes("/nodes/one/history") && historyReply) return historyReply;
     if (url.endsWith("/nodes/one") && latest) return Response.json(latest);
     if (/\/nodes\/(one|two)$/.test(url))
       return (
@@ -408,6 +418,209 @@ it("serializes saves and chooses each revision only after the preceding acknowle
   expect(editor.hasUnsavedChanges()).toBe(false);
 });
 
+it("shows saved feedback only while the latest intended draft remains acknowledged", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Saved draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  calls[0]!.resolve(saved("Saved draft", "b".repeat(64)));
+  expect(await saving).toBe(true);
+  expect(editor.autoSaveStatus()).toBe("saved");
+  editor.handleTitleChange("New unsaved draft");
+  expect(editor.autoSaveStatus()).toBe("idle");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+});
+
+it("preserves an unsaved draft and undo across a same-session account refresh", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Private title");
+  editor.handleContentChange("Private body");
+  const loaded = workspace.selectedNodeData();
+  const identity = auth.identity();
+  await auth.refreshUser();
+  expect(auth.identity()).toBe(identity);
+  expect(workspace.selectedNodeData()).toBe(loaded);
+  expect(editor.title()).toBe("Private title");
+  expect(editor.content()).toBe("Private body");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(editor.canUndo()).toBe(true);
+  await editor.undo();
+  expect(editor.title()).toBe("Original");
+  expect(editor.content()).toBe("Private body");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+});
+
+it("preserves queued drafts and acknowledged revisions across same-session refreshes", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("First draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  editor.handleTitleChange("Second draft");
+  await auth.refreshUser();
+  expect(editor.title()).toBe("Second draft");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(editor.canUndo()).toBe(true);
+  calls[0]!.resolve(saved("First draft", "b".repeat(64)));
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body).toEqual({ title: "Second draft", content: "body", expected_revision: "b".repeat(64) });
+  calls[1]!.resolve(saved("Second draft", "c".repeat(64)));
+  expect(await saving).toBe(true);
+  await auth.refreshUser();
+  expect(editor.title()).toBe("Second draft");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.autoSaveStatus()).toBe("saved");
+  editor.handleTitleChange("Third draft");
+  const next = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(3));
+  expect(calls[2]!.body.expected_revision).toBe("c".repeat(64));
+  calls[2]!.resolve(saved("Third draft", "d".repeat(64)));
+  expect(await next).toBe(true);
+});
+
+it("uses the current workspace name when an in-flight save acknowledges after a rename", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  navigate("/w/@workspace+original-workspace/@one+original");
+  await waitFor(() => expect(currentPath).toBe("/w/@workspace+original-workspace/@one+original"));
+  editor.handleTitleChange("Saved draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  const loaded = workspace.selectedNodeData();
+  const identity = auth.identity();
+  accountWorkspaceName = "Renamed workspace";
+  await auth.refreshUser();
+  expect(auth.identity()).toBe(identity);
+  expect(workspace.selectedNodeData()).toBe(loaded);
+  expect(editor.title()).toBe("Saved draft");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(editor.canUndo()).toBe(true);
+  calls[0]!.resolve(saved("Saved draft", "b".repeat(64)));
+  expect(await saving).toBe(true);
+  expect(window.location.pathname).toBe("/w/@workspace+renamed-workspace/@one+saved-draft");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+});
+
+it("retires an in-flight save when the same node is authoritatively reloaded", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Older pending draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
+  calls[0]!.resolve(saved("Older pending draft", "b".repeat(64)));
+  expect(await saving).toBe(false);
+  expect(editor.title()).toBe("Reloaded title");
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.autoSaveStatus()).toBe("idle");
+  editor.handleTitleChange("Draft after reload");
+  const current = editor.beginIntent().drain();
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body.expected_revision).toBe("c".repeat(64));
+  calls[1]!.resolve(saved("Draft after reload", "d".repeat(64)));
+  expect(await current).toBe(true);
+});
+
+it("retires asynchronous edit admission with its loaded document", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  let finish!: (applied: boolean) => void;
+  const afterSave = vi.fn();
+  const pending = editor.runAsyncEdit(() => new Promise<boolean>((resolve) => (finish = resolve)), afterSave);
+  await waitFor(() => expect(editor.asyncEditPending()).toBe(true));
+  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
+  expect(editor.asyncEditPending()).toBe(false);
+  finish(true);
+  await pending;
+  expect(afterSave).not.toHaveBeenCalled();
+  expect(calls).toHaveLength(0);
+  expect(editor.title()).toBe("Reloaded title");
+});
+
+it("keeps admitted history across an authoritative refresh of its target document", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  let reply!: (response: Response) => void;
+  historyReply = new Promise<Response>((resolve) => (reply = resolve));
+  const intent = editor.beginIntent();
+  const loading = editor.loadHistory("one", intent);
+  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
+  const commits = [
+    { hash: "commit", message: "Saved", author_name: "User", author_email: "user@example.com", timestamp: 1 },
+  ];
+  reply(Response.json({ history: commits }));
+  await loading;
+  expect(intent.current()).toBe(true);
+  expect(editor.showHistory()).toBe(true);
+  expect(editor.history()?.commits).toEqual(commits);
+});
+
+it("allows the next queued draft to retry after an ordinary save failure", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("First draft");
+  const intent = editor.beginIntent();
+  const first = intent.drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  editor.handleTitleChange("Retry draft");
+  const retry = intent.drain();
+  calls[0]!.resolve(Response.json({ error: "invalid draft" }, { status: 422 }));
+  expect(await first).toBe(false);
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1]!.body).toEqual({ title: "Retry draft", content: "body", expected_revision: firstRevision });
+  expect(editor.autoSaveStatus()).toBe("saving");
+  calls[1]!.resolve(saved("Retry draft", "b".repeat(64)));
+  expect(await retry).toBe(true);
+  expect(workspace.saveError()).toBe(null);
+  expect(editor.hasUnsavedChanges()).toBe(false);
+  expect(editor.autoSaveStatus()).toBe("saved");
+});
+
+it("keeps comparison admission blocked when an older save fails ordinarily", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Pending draft");
+  const intent = editor.beginIntent();
+  const first = intent.drain();
+  await waitFor(() => expect(calls).toHaveLength(1));
+  editor.handleTitleChange("Newer queued draft");
+  const queued = intent.drain();
+  const comparing = editor.compareChanges();
+  expect(editor.saveIssue()).toBe("conflict");
+  calls[0]!.resolve(Response.json({ error: "invalid draft" }, { status: 422 }));
+  expect(await first).toBe(false);
+  expect(editor.saveIssue()).toBe("conflict");
+  expect(await queued).toBe(false);
+  await comparing;
+  expect(editor.recovery()?.local.title).toBe("Newer queued draft");
+  editor.closeRecovery();
+  navigate("/settings");
+  expect(await editor.beginIntent().drain()).toBe(false);
+  expect(calls).toHaveLength(1);
+  expect(editor.title()).toBe("Newer queued draft");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(currentPath).toBe("/w/workspace/one");
+});
+
+it("resumes only the latest departure after the pending draft is acknowledged", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Departing draft");
+  navigate("/settings");
+  await waitFor(() => expect(calls).toHaveLength(1));
+  navigate("/w/workspace/two");
+  expect(currentPath).toBe("/w/workspace/one");
+  calls[0]!.resolve(saved("Departing draft", "b".repeat(64)));
+  await waitFor(() => expect(currentPath).toBe("/w/workspace/two"));
+  expect(calls).toHaveLength(1);
+  expect(editor.title()).toBe("Other");
+});
+
 for (const target of ["node", "settings", "workspace", "voice", "back"] as const) {
   it(`retains a conflicted draft and blocks ${target} departure`, async () => {
     mount();
@@ -456,11 +669,13 @@ for (const outcome of ["success", "conflict"] as const) {
     await waitFor(() => expect(calls).toHaveLength(1));
     const retired = editor;
     await auth.logout();
+    expect(retired.beginIntent().current()).toBe(false);
     expect(retired.title()).toBe("");
     expect(retired.hasUnsavedChanges()).toBe(false);
     auth.login({ ...account, session_id: "replacement" });
     await waitFor(() => expect(editor).not.toBe(retired));
     await waitFor(() => expect(editor.title()).toBe("Original"));
+    expect(retired.beginIntent().current()).toBe(false);
     calls[0]!.resolve(
       outcome === "success"
         ? saved("Private draft", "b".repeat(64))
