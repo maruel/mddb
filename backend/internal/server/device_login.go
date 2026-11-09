@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/maruel/gomode/devicelogin"
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
-	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
 
 const deviceLoginPrefix = "/api/v1/auth/device/"
@@ -29,7 +29,7 @@ func mountDeviceLogin(mux *http.ServeMux, svc *handlers.Services, cfg *Config, h
 	} {
 		mux.HandleFunc("POST "+route.path, func(w http.ResponseWriter, r *http.Request) {
 			ctx := addRequestMetadataToContext(r.Context(), r)
-			w, ok := checkRateLimit(w, route.tier, reqctx.ClientIP(ctx))
+			w, ok := checkRateLimit(w, route.tier, httpserver.ClientIP(ctx))
 			if !ok {
 				return
 			}

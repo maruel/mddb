@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/maruel/gomode/httpserver/geoip"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
@@ -133,6 +134,7 @@ http = ":9090"
 data_dir = "/srv/mddb"
 base_url = "https://mddb.example.com"
 geo_db = "GeoLite2-Country.mmdb"
+allow_origins = ["CA", "local", "192.0.2.0/24"]
 trusted_proxies = ["127.0.0.1/32", "::1/128"]
 
 [oauth.google]
@@ -164,10 +166,11 @@ log_level = "debug"
 		}
 		want := tomlConfig{
 			Server: tomlServer{
-				HTTP:    ":9090",
-				DataDir: "/srv/mddb",
-				BaseURL: "https://mddb.example.com",
-				GeoDB:   "GeoLite2-Country.mmdb",
+				HTTP:         ":9090",
+				DataDir:      "/srv/mddb",
+				BaseURL:      "https://mddb.example.com",
+				GeoDB:        "GeoLite2-Country.mmdb",
+				AllowOrigins: []string{"CA", "local", "192.0.2.0/24"},
 
 				TrustedProxies: []string{"127.0.0.1/32", "::1/128"},
 			},
@@ -260,7 +263,7 @@ func TestResolveConfig(t *testing.T) {
 		if got.ConfigDir != cfgDir || got.DataDir != "data" || got.HTTP != "localhost:8080" || got.BaseURL != "http://localhost" {
 			t.Errorf("got %+v", got)
 		}
-		if got.GeoDB != "" || got.VoiceMode != voiceGatewayDisabled {
+		if got.GeoIP.DB != "" || got.VoiceMode != voiceGatewayDisabled {
 			t.Errorf("expected geo_db and voice to be off: %+v", got)
 		}
 		if got.GitHubApp != (githubAppSettings{}) {
@@ -269,6 +272,57 @@ func TestResolveConfig(t *testing.T) {
 		if len(got.TrustedProxies) != 0 {
 			t.Errorf("expected no trusted proxies: %v", got.TrustedProxies)
 		}
+	})
+
+	t.Run("IP origins", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			for _, origins := range [][]string{
+				{},
+				{"local", "tailscale", "anthropic", "192.0.2.0/24", "::1/128"},
+				{"github", "openai"},
+			} {
+				tc := defaultConfig()
+				tc.Server.AllowOrigins = origins
+				got, err := resolveConfig(&tc, cfgDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.GeoIP.DB != "" || !slices.Equal(got.GeoIP.AllowOrigins, origins) {
+					t.Fatalf("IP origins = %+v", got.GeoIP)
+				}
+			}
+			tc := defaultConfig()
+			tc.Server.GeoDB = "country.mmdb"
+			// Country presence is checked when opening the database, not during parsing.
+			tc.Server.AllowOrigins = []string{"ca", "US", "BU", "AN", "EZ", "ZZ"}
+			got, err := resolveConfig(&tc, cfgDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.GeoIP.DB != filepath.Join(cfgDir, "country.mmdb") || !slices.Equal(got.GeoIP.AllowOrigins, tc.Server.AllowOrigins) {
+				t.Fatalf("country origins = %+v", got.GeoIP)
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			for _, token := range []string{"", "US", "1A", "é", "Atlantis", "192.0.2.0/99"} {
+				t.Run(token, func(t *testing.T) {
+					tc := defaultConfig()
+					tc.Server.AllowOrigins = []string{token}
+					if token != "US" {
+						tc.Server.GeoDB = "country.mmdb"
+					}
+					_, err := resolveConfig(&tc, cfgDir)
+					if err == nil || !strings.Contains(err.Error(), "server.") {
+						t.Fatalf("origin %q: %v", token, err)
+					}
+				})
+			}
+			tc := defaultConfig()
+			tc.Server.GeoDB = "   "
+			if _, err := resolveConfig(&tc, cfgDir); err == nil || !strings.Contains(err.Error(), "server.geo_db") {
+				t.Fatalf("whitespace DB: %v", err)
+			}
+		})
 	})
 
 	t.Run("trusted proxies", func(t *testing.T) {
@@ -372,8 +426,8 @@ func TestResolveConfig(t *testing.T) {
 		if got.DataDir != "./content" {
 			t.Errorf("got data_dir %q, want ./content", got.DataDir)
 		}
-		if want := filepath.Join(cfgDir, "GeoLite2-Country.mmdb"); got.GeoDB != want {
-			t.Errorf("got geo_db %q, want %q", got.GeoDB, want)
+		if want := filepath.Join(cfgDir, "GeoLite2-Country.mmdb"); got.GeoIP.DB != want {
+			t.Errorf("got geo_db %q, want %q", got.GeoIP.DB, want)
 		}
 		wantApp := githubAppSettings{ID: 42, PrivateKeyFile: filepath.Join(cfgDir, "github-app.pem"), WebhookSecret: "secret"}
 		if got.GitHubApp != wantApp {
@@ -390,7 +444,7 @@ func TestResolveConfig(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.DataDir != "/srv/mddb" || got.GeoDB != tc.Server.GeoDB || got.GitHubApp.PrivateKeyFile != "/etc/mddb/github-app.pem" {
+		if got.DataDir != "/srv/mddb" || got.GeoIP.DB != tc.Server.GeoDB || got.GitHubApp.PrivateKeyFile != "/etc/mddb/github-app.pem" {
 			t.Errorf("got %+v", got)
 		}
 	})
@@ -413,8 +467,8 @@ func TestResolveConfig(t *testing.T) {
 		if want := filepath.Join(home, "content"); got.DataDir != want {
 			t.Errorf("got data_dir %q, want %q", got.DataDir, want)
 		}
-		if want := filepath.Join(home, "GeoLite2-Country.mmdb"); got.GeoDB != want {
-			t.Errorf("got geo_db %q, want %q", got.GeoDB, want)
+		if want := filepath.Join(home, "GeoLite2-Country.mmdb"); got.GeoIP.DB != want {
+			t.Errorf("got geo_db %q, want %q", got.GeoIP.DB, want)
 		}
 		if want := filepath.Join(home, "github-app.pem"); got.GitHubApp.PrivateKeyFile != want {
 			t.Errorf("got private_key_file %q, want %q", got.GitHubApp.PrivateKeyFile, want)
@@ -439,8 +493,8 @@ func TestResolveConfig(t *testing.T) {
 		if got.DataDir != home {
 			t.Errorf("got data_dir %q, want %q", got.DataDir, home)
 		}
-		if got.GeoDB != home {
-			t.Errorf("got geo_db %q, want %q", got.GeoDB, home)
+		if got.GeoIP.DB != home {
+			t.Errorf("got geo_db %q, want %q", got.GeoIP.DB, home)
 		}
 		if got.GitHubApp.PrivateKeyFile != home {
 			t.Errorf("got private_key_file %q, want %q", got.GitHubApp.PrivateKeyFile, home)
@@ -825,4 +879,46 @@ func TestVoiceGatewayEnvironmentIsolation(t *testing.T) {
 	if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
 		t.Fatal("provider credentials enabled voice or supplied implicit pipelines")
 	}
+}
+
+func TestResolvedConfig(t *testing.T) {
+	t.Run("openGeoIP", func(t *testing.T) {
+		// Disabled lookup and database-only enrichment need no user cache.
+		t.Setenv("HOME", "")
+		t.Setenv("XDG_CACHE_HOME", "")
+		t.Setenv("LocalAppData", "")
+		t.Setenv("home", "")
+		log := slog.New(slog.DiscardHandler)
+		t.Run("disabled", func(t *testing.T) {
+			c := resolvedConfig{}
+			checker, err := c.openGeoIP(t.Context(), log)
+			if err != nil || checker != nil {
+				t.Fatalf("disabled: checker=%v err=%v", checker, err)
+			}
+		})
+		t.Run("local filter", func(t *testing.T) {
+			cacheDir := t.TempDir()
+			for _, key := range []string{"HOME", "LocalAppData", "XDG_CACHE_HOME", "home"} {
+				t.Setenv(key, cacheDir)
+			}
+			c := resolvedConfig{GeoIP: geoip.Config{AllowOrigins: []string{"local", "203.0.113.0/24"}}}
+			checker, err := c.openGeoIP(t.Context(), log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = checker.Close() })
+			if origin, allowed := checker.CheckOrigin("127.0.0.1"); origin != "local" || !allowed {
+				t.Fatalf("local: origin=%q allowed=%v", origin, allowed)
+			}
+			if _, allowed := checker.CheckOrigin("8.8.8.8"); allowed {
+				t.Fatal("filter allowed an unknown origin")
+			}
+		})
+		t.Run("DB error precedes cache", func(t *testing.T) {
+			c := resolvedConfig{GeoIP: geoip.Config{DB: filepath.Join(t.TempDir(), "missing.mmdb")}}
+			if _, err := c.openGeoIP(t.Context(), log); err == nil || !strings.Contains(err.Error(), "geo_db") {
+				t.Fatalf("DB-only without cache location: %v", err)
+			}
+		})
+	})
 }

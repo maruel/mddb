@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/maruel/gomode/httpserver"
+	"github.com/maruel/gomode/httpserver/geoip"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
@@ -55,10 +57,11 @@ type tomlConfig struct {
 }
 
 type tomlServer struct {
-	HTTP    string `toml:"http"`
-	DataDir string `toml:"data_dir"`
-	BaseURL string `toml:"base_url"`
-	GeoDB   string `toml:"geo_db"`
+	HTTP         string   `toml:"http"`
+	DataDir      string   `toml:"data_dir"`
+	BaseURL      string   `toml:"base_url"`
+	GeoDB        string   `toml:"geo_db"`
+	AllowOrigins []string `toml:"allow_origins"`
 
 	TrustedProxies []string `toml:"trusted_proxies"`
 }
@@ -117,6 +120,7 @@ func defaultConfig() tomlConfig {
 			DataDir: "data",
 			BaseURL: "http://localhost",
 
+			AllowOrigins:   []string{},
 			TrustedProxies: []string{},
 		},
 		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped},
@@ -194,7 +198,7 @@ type resolvedConfig struct {
 	DataDir        string // relative to the working directory, or absolute
 	BaseURL        string
 	LogLevel       slog.Level
-	GeoDB          string // absolute, or empty when IP geolocation is disabled
+	GeoIP          geoip.Config // Database path is absolute when configured.
 	TrustedProxies []netip.Prefix
 	TestOAuth      bool // set only in an e2e build, which fakes the OAuth providers
 	OAuth          oauthCredentialsSet
@@ -249,12 +253,13 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	geoDB := ""
-	if tc.Server.GeoDB != "" {
-		geoDB, err = resolveConfigPath(tc.Server.GeoDB, cfgDir)
-		if err != nil {
-			return nil, fmt.Errorf("server.geo_db: %w", err)
-		}
+	geo := geoip.Config{DB: tc.Server.GeoDB, AllowOrigins: tc.Server.AllowOrigins}
+	if err := geo.Validate(); err != nil {
+		return nil, fmt.Errorf("server.%w", err)
+	}
+	geo.DB, err = resolveConfigPath(geo.DB, cfgDir)
+	if err != nil {
+		return nil, fmt.Errorf("server.geo_db: %w", err)
 	}
 	trustedProxies, err := httpserver.ParseTrustedProxies(tc.Server.TrustedProxies)
 	if err != nil {
@@ -277,7 +282,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		DataDir:        dataDir,
 		BaseURL:        tc.Server.BaseURL,
 		LogLevel:       logLevel,
-		GeoDB:          geoDB,
+		GeoIP:          geo,
 		TrustedProxies: trustedProxies,
 		TestOAuth:      testOAuth,
 		OAuth:          oauthCredentialsSet{Google: google, Microsoft: microsoft, GitHub: github},
@@ -287,6 +292,20 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		VoiceUDPPort:   tc.VoiceGateway.WebRTCUDPPort,
 		ExternalVoice:  voice,
 	}, nil
+}
+
+// openGeoIP opens the configured checker with mddb's per-user origin cache.
+// Disabled lookup and database-only enrichment do not need a cache location.
+func (c *resolvedConfig) openGeoIP(ctx context.Context, log *slog.Logger) (*geoip.Checker, error) {
+	cacheDir := ""
+	if len(c.GeoIP.AllowOrigins) > 0 {
+		base, err := os.UserCacheDir()
+		if err != nil {
+			return nil, fmt.Errorf("server.allow_origins cache directory: %w", err)
+		}
+		cacheDir = filepath.Join(base, "mddb")
+	}
+	return c.GeoIP.Open(ctx, log, cacheDir)
 }
 
 // resolveOAuthProvider validates one provider's credentials. section names the

@@ -18,14 +18,13 @@ import (
 
 	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/httpserver"
+	"github.com/maruel/gomode/httpserver/geoip"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ipgeo"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
-	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -42,7 +41,7 @@ type Config struct {
 	FastRateLimits bool // Multiply every rate limit for the e2e suite.
 	OAuth          OAuthConfig
 	GitHubApp      GitHubAppConfig
-	IPGeo          *ipgeo.Checker
+	IPGeo          *geoip.Checker
 	TrustedProxies []netip.Prefix // Direct peers whose X-Forwarded-For and X-Real-IP are honored.
 	VoiceBridge    voicegateway.MediaBridge
 	ExternalVoice  *ExternalVoiceGateway
@@ -371,33 +370,22 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	inner = decompressMiddleware(inner)
 	inner = http.NewCrossOriginProtection().Handler(inner)
 
-	f := func(w http.ResponseWriter, r *http.Request) {
-		clientIP := httpserver.ResolveClientIP(r, cfg.TrustedProxies)
-		ctx := reqctx.WithClientIP(r.Context(), clientIP)
-		var cc string
-		if cfg.IPGeo != nil {
-			cc = cfg.IPGeo.CountryCode(clientIP)
-			ctx = reqctx.WithCountryCode(ctx, cc)
-		}
-		r = r.WithContext(ctx)
-		start := time.Now()
-		rw := &responseWriter{
-			ResponseWriter:   w,
-			status:           http.StatusOK,
-			bandwidthLimiter: bandwidthLim,
-		}
-		inner.ServeHTTP(rw, r)
-		slog.InfoContext(ctx, "http",
-			"m", r.Method,
-			"p", r.URL.Path,
-			"s", rw.status,
-			"d", roundDuration(time.Since(start)),
-			"s", rw.size,
-			"ip", clientIP,
-			"cc", cc,
-		)
+	limited := inner
+	inner = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limited.ServeHTTP(&bandwidthWriter{ResponseWriter: w, bandwidthLimiter: bandwidthLim}, r)
+	})
+	opts := httpserver.Options{
+		TrustedProxies: cfg.TrustedProxies,
+		Logger:         slog.Default(),
 	}
-	return &Router{handler: http.HandlerFunc(f), limiters: limiters}
+	if cfg.IPGeo != nil {
+		opts.GeoIP = cfg.IPGeo
+	}
+	h, err := httpserver.NewHandler(inner, opts)
+	if err != nil {
+		panic(err) // No origin policy is configured, so these options cannot fail validation.
+	}
+	return &Router{handler: h, limiters: limiters}
 }
 
 // ServeHTTP routes the request through the configured middleware and handlers.
@@ -410,20 +398,13 @@ func (r *Router) Close() {
 	r.limiters.Close()
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code, response size, and apply bandwidth limiting.
-type responseWriter struct {
+// bandwidthWriter applies the host egress limit while preserving response control.
+type bandwidthWriter struct {
 	http.ResponseWriter
-	status           int
-	size             int
 	bandwidthLimiter *bandwidth.Limiter
 }
 
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (rw *responseWriter) Write(b []byte) (int, error) {
+func (rw *bandwidthWriter) Write(b []byte) (int, error) {
 	// Apply bandwidth limiting before writing
 	if rw.bandwidthLimiter != nil {
 		waitDuration := rw.bandwidthLimiter.Allow(int64(len(b)))
@@ -432,23 +413,21 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 		}
 	}
 
-	n, err := rw.ResponseWriter.Write(b)
-	rw.size += n
-	return n, err
+	return rw.ResponseWriter.Write(b)
 }
 
 // Flush implements http.Flusher, which streaming handlers assert.
-func (rw *responseWriter) Flush() {
+func (rw *bandwidthWriter) Flush() {
 	_ = rw.FlushError()
 }
 
 // FlushError flushes the underlying writer and returns its flush error.
-func (rw *responseWriter) FlushError() error {
+func (rw *bandwidthWriter) FlushError() error {
 	return http.NewResponseController(rw.ResponseWriter).Flush()
 }
 
 // Unwrap returns the underlying ResponseWriter for http.ResponseController.
-func (rw *responseWriter) Unwrap() http.ResponseWriter {
+func (rw *bandwidthWriter) Unwrap() http.ResponseWriter {
 	return rw.ResponseWriter
 }
 
@@ -462,14 +441,4 @@ func setSecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 	// Prevent XSS in older browsers (modern browsers ignore this)
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
-}
-
-// roundDuration rounds d to 3 significant digits with minimum 1µs precision.
-func roundDuration(d time.Duration) time.Duration {
-	for t := 100 * time.Second; t >= 100*time.Microsecond; t /= 10 {
-		if d >= t {
-			return d.Round(t / 100)
-		}
-	}
-	return d.Round(time.Microsecond)
 }

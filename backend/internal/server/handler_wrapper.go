@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -146,7 +147,7 @@ func getRateLimitIdentifier(tier *ratelimit.Tier, user *identity.User, r *http.R
 	if tier.Scope == ratelimit.ScopeUser && user != nil {
 		return user.ID.String()
 	}
-	return reqctx.ClientIP(r.Context())
+	return httpserver.ClientIP(r.Context())
 }
 
 // validateAuthWithContext validates JWT and session, updating context with session info.
@@ -206,7 +207,7 @@ func Wrap[In any, PtrIn interface {
 		// Rate limit check for unauthenticated endpoints
 		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, reqctx.ClientIP(ctx))
+			w, ok = checkRateLimit(w, tier, httpserver.ClientIP(ctx))
 			if !ok {
 				return
 			}
@@ -241,7 +242,7 @@ func WrapWithSvc[In any, PtrIn interface {
 		// Rate limit check for unauthenticated endpoints
 		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, reqctx.ClientIP(ctx))
+			w, ok = checkRateLimit(w, tier, httpserver.ClientIP(ctx))
 			if !ok {
 				return
 			}

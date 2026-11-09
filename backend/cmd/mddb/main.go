@@ -35,7 +35,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ipgeo"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -289,16 +288,13 @@ Flags:
 		return fmt.Errorf("failed to watch executable: %w", err)
 	}
 
-	// Open IP geolocation database if configured
-	var geoChecker *ipgeo.Checker
-	if cfg.GeoDB != "" {
-		var err error
-		geoChecker, err = ipgeo.Open(cfg.GeoDB)
-		if err != nil {
-			return fmt.Errorf("failed to open geo database: %w", err)
-		}
+	geoChecker, err := cfg.openGeoIP(ctx, slog.Default())
+	if err != nil {
+		return fmt.Errorf("failed to configure IP origins: %w", err)
+	}
+	if geoChecker != nil {
 		defer func() { _ = geoChecker.Close() }()
-		slog.InfoContext(ctx, "IP geolocation enabled", "db", cfg.GeoDB)
+		slog.InfoContext(ctx, "IP origin lookup enabled", "db", cfg.GeoIP.DB, "allow_origins", cfg.GeoIP.AllowOrigins)
 	}
 
 	// Parse GitHub App config if provided

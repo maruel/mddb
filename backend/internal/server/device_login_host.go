@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/maruel/gomode/devicelogin"
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -36,7 +36,7 @@ func (h *deviceLoginHost) Enabled() bool {
 }
 
 func (h *deviceLoginHost) ClientIP(r *http.Request) netip.Addr {
-	ip, _ := netip.ParseAddr(reqctx.ClientIP(r.Context()))
+	ip, _ := netip.ParseAddr(httpserver.ClientIP(r.Context()))
 	return ip
 }
 

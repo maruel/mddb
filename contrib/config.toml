@@ -27,9 +27,17 @@
 #base_url = "http://localhost"
 
 # MaxMind MMDB file for IP geolocation. A relative path resolves against the
-# config directory. Empty disables IP geolocation.
+# config directory. Empty skips country enrichment.
 # https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
 #geo_db = ""  # e.g. "GeoLite2-Country.mmdb"
+
+# Optional allowed origins; [] disables filtering, including with geo_db set.
+# Country codes require geo_db and must occur in it. Also accepts CIDRs or
+# local, tailscale, anthropic, github and openai.
+# Example: ["CA", "US", "local", "tailscale", "192.0.2.0/24"].
+# Unknown origins are denied when filtering is enabled. GitHub/OpenAI ranges
+# cache for 24 hours in the OS user cache directory under mddb/.
+#allow_origins = []
 
 # Address prefixes of the reverse proxies directly in front of mddb. Only a
 # request from one of them may set the client IP through X-Forwarded-For or

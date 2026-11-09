@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -68,7 +69,7 @@ func (h *AuthHandler) IssueSession(ctx context.Context, user *identity.User) (*d
 	// Set active context to first org/workspace
 	uwm.populateActiveContext(userResp)
 
-	token, sid, err := h.cfg.IssueToken(h.svc.Session, user, reqctx.ClientIP(ctx), reqctx.UserAgent(ctx), reqctx.CountryCode(ctx))
+	token, sid, err := h.cfg.IssueToken(h.svc.Session, user, httpserver.ClientIP(ctx), reqctx.UserAgent(ctx), httpserver.Origin(ctx))
 	if err != nil {
 		return nil, sid, dto.InternalWithError("Failed to generate token", err)
 	}

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/gomode/oauth/oauthserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -634,9 +635,9 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	}
 
 	// Generate JWT token with session tracking
-	clientIP := reqctx.ClientIP(ctx)
+	clientIP := httpserver.ClientIP(ctx)
 	userAgent := r.Header.Get("User-Agent")
-	countryCode := reqctx.CountryCode(r.Context())
+	countryCode := httpserver.Origin(r.Context())
 	jwtToken, sid, err := cfg.IssueToken(svc.Session, user, clientIP, userAgent, countryCode)
 	if err != nil {
 		if sid != 0 {
