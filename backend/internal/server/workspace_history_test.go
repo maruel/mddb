@@ -49,7 +49,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	if _, err := store.GetBacklinks(t.Context(), target.ID); err != nil {
 		t.Fatal(err)
 	}
-	events, unsubscribe := env.services.Broker.SubscribeEvents(ws.ID)
+	events, unsubscribe := env.services.Broker.SubscribeEvents(ws.ID, sse.EventInterest{All: true})
 	t.Cleanup(unsubscribe)
 	// Submodule metadata is absorbed by the real production creation path.
 	gitFile, err := os.ReadFile(filepath.Join(env.dataDir, ws.ID.String(), ".git"))

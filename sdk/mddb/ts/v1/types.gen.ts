@@ -59,13 +59,35 @@ export const ErrorCodeEmailNotVerified = "EMAIL_NOT_VERIFIED";
 export const ErrorCodeQuotaExceeded = "QUOTA_EXCEEDED";
 export const ErrorCodePayloadTooLarge = "PAYLOAD_TOO_LARGE";
 
+export type EventAspect =
+  | "assets"
+  | "body"
+  | "catalog"
+  | "hierarchy"
+  | "metadata"
+  | "records"
+  | "schema"
+  | "summary";
+/**
+ * Supported values.
+ */
+export const EventAspectAssets = "assets";
+export const EventAspectBody = "body";
+export const EventAspectCatalog = "catalog";
+export const EventAspectHierarchy = "hierarchy";
+export const EventAspectMetadata = "metadata";
+export const EventAspectRecords = "records";
+export const EventAspectSchema = "schema";
+export const EventAspectSummary = "summary";
+
 export type EventType =
   | "node_created"
   | "node_updated"
   | "node_deleted"
   | "node_moved"
   | "records_changed"
-  | "table_updated";
+  | "table_updated"
+  | "resync";
 /**
  * Supported values.
  */
@@ -75,6 +97,7 @@ export const EventNodeDeleted = "node_deleted";
 export const EventNodeMoved = "node_moved";
 export const EventRecordsChanged = "records_changed";
 export const EventTableUpdated = "table_updated";
+export const EventResync = "resync";
 
 export type FilterOp =
   | "equals"
@@ -1300,8 +1323,17 @@ export interface UploadNodeAssetResponse {
 
 /** WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates. */
 export interface WorkspaceEvent {
-  /** Revision identifies canonical page content; metadata-only events omit it. */
+  /** Revision identifies canonical title/body CAS, not full resource freshness. */
   revision?: string;
+  /**
+   * ChangeID is an opaque process-epoch invalidation watermark, not a read
+   * snapshot revision. Reconnection or a delivery gap requires resynchronization.
+   */
+  change_id?: string;
+  aspects?: EventAspect[];
+  parent_id?: string;
+  affected_ids?: string[];
+  old_parent_id?: string;
   type: EventType;
   node_id: string;
   record_id?: string;

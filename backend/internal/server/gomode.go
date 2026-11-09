@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"slices"
+
 	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/mcp"
 	"github.com/maruel/ksid"
@@ -24,6 +26,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -583,9 +586,8 @@ func (m *workspaceRegistry) nodeURI(id ksid.ID) string {
 }
 
 // SubscribeResourceUpdates bridges the workspace SSE broker to MCP resource
-// subscriptions, so an MCP client learns when a subscribed node changes instead
-// of polling or overwriting a concurrent edit. The handler dedups notifications
-// by resource content, so this may report any event that can touch a node.
+// subscriptions. Committed aspects route only affected projections; transport
+// forwards these authoritative invalidations without rereading resource bodies.
 func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params *mcp.SubscriptionsListenParams) (iter.Seq2[mcp.ResourceUpdate, error], error) {
 	if m.released && m.wsID == 0 {
 		needsWorkspace := params.Meta.Session != ""
@@ -633,7 +635,16 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 	}
 	// Registration precedes the handler's initial reads. Cancellation owns cleanup
 	// even if the returned iterator is never started.
-	events, unsubscribe := m.svc.Broker.SubscribeEvents(m.wsID)
+	interest := sse.EventInterest{Catalog: filter.ResourcesListChanged}
+	for uri := range subscribed {
+		if uri == voiceItemsURI {
+			interest.Summary = true
+			continue
+		}
+		_, id, _, _ := parseNodeResource(uri)
+		interest.Nodes = append(interest.Nodes, id)
+	}
+	events, unsubscribe := m.svc.Broker.SubscribeEvents(m.wsID, interest)
 	focusEvents, unsubscribeFocus := m.focus.subscribe(ctx, voiceFocusKey{user: m.user.ID, session: conversationSession(ctx)})
 	var mu sync.Mutex
 	closed := false
@@ -667,6 +678,8 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 			yield(withdraw(), nil)
 			return
 		}
+		pending := newResourceInvalidations()
+		defer pending.stop()
 		ticker := time.NewTicker(subscriptionKeepAlive)
 		defer ticker.Stop()
 		for {
@@ -690,7 +703,8 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 					return
 				}
 				update := mcp.ResourceUpdate{}
-				if bound.wsID != m.wsID {
+				workspaceChanged := bound.wsID != m.wsID
+				if workspaceChanged {
 					mu.Lock()
 					if closed {
 						mu.Unlock()
@@ -698,7 +712,7 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 					}
 					unsubscribe()
 					m = bound
-					events, unsubscribe = m.svc.Broker.SubscribeEvents(m.wsID)
+					events, unsubscribe = m.svc.Broker.SubscribeEvents(m.wsID, sse.EventInterest{Catalog: filter.ResourcesListChanged, Summary: interest.Summary})
 					mu.Unlock()
 					// Withdraw old workspace resources, including nodes outside the visible page.
 					for uri := range subscribed {
@@ -712,6 +726,9 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 				if _, want := subscribed[voiceItemsURI]; want {
 					update.ResourceURIs = append(update.ResourceURIs, voiceItemsURI)
 				}
+				if workspaceChanged {
+					update = pending.add(update, true)
+				}
 				if (update.ResourcesListChanged || len(update.ResourceURIs) > 0) && !yield(update, nil) {
 					return
 				}
@@ -723,38 +740,31 @@ func (m *workspaceRegistry) SubscribeResourceUpdates(ctx context.Context, params
 					yield(withdraw(), nil)
 					return
 				}
-				update := mcp.ResourceUpdate{ResourcesListChanged: filter.ResourcesListChanged && nodeEventChangesTree(evt.Type)}
-				if _, want := subscribed[voiceItemsURI]; want {
+				gap := evt.Type == dto.EventResync
+				update := mcp.ResourceUpdate{ResourcesListChanged: filter.ResourcesListChanged && (gap || slices.Contains(evt.Aspects, dto.EventAspectCatalog))}
+				if _, want := subscribed[voiceItemsURI]; want && (gap || slices.Contains(evt.Aspects, dto.EventAspectSummary)) {
 					update.ResourceURIs = append(update.ResourceURIs, voiceItemsURI)
 				}
-				if evt.Type == dto.EventNodeDeleted {
-					store, e := m.svc.FileStore.GetWorkspaceStore(ctx, m.wsID)
-					if e != nil {
-						yield(mcp.ResourceUpdate{}, e)
-						return
+				for uri := range subscribed {
+					_, id, _, _ := parseNodeResource(uri)
+					if uri != voiceItemsURI && sse.NodeResourceChanged(&evt, id) {
+						update.ResourceURIs = append(update.ResourceURIs, uri)
 					}
-					for uri := range subscribed {
-						if uri == voiceItemsURI {
-							continue
-						}
-						_, id, _, e := parseNodeResource(uri)
-						if e != nil {
-							continue
-						}
-						if _, e = store.ReadNodeSummary(ctx, id); errors.Is(e, content.ErrNodeNotFound) {
-							update.ResourceURIs = append(update.ResourceURIs, uri)
-							delete(subscribed, uri)
-						} else if e != nil {
-							yield(mcp.ResourceUpdate{}, e)
-							return
-						}
-					}
-				} else if _, want := subscribed[m.nodeURI(evt.NodeID)]; want {
-					update.ResourceURIs = append(update.ResourceURIs, m.nodeURI(evt.NodeID))
 				}
+				update = pending.add(update, gap)
 				if (update.ResourcesListChanged || len(update.ResourceURIs) > 0) && !yield(update, nil) {
 					return
 				}
+			case <-pending.timerC:
+				if !m.streamAuthorized() {
+					yield(withdraw(), nil)
+					return
+				}
+				update := pending.flush()
+				if (update.ResourcesListChanged || len(update.ResourceURIs) > 0) && !yield(update, nil) {
+					return
+				}
+
 			case <-ticker.C:
 				if !m.streamAuthorized() {
 					yield(withdraw(), nil)
@@ -777,17 +787,6 @@ func (m *workspaceRegistry) streamAuthorized() bool {
 	}
 	role, message, _ := m.svc.EffectiveWorkspaceRole(m.user, m.wsID)
 	return message == "" && role == m.role
-}
-
-// nodeEventChangesTree reports whether an event can change the workspace's
-// resource tree.
-func nodeEventChangesTree(eventType dto.EventType) bool {
-	switch eventType {
-	case dto.EventNodeCreated, dto.EventNodeDeleted, dto.EventNodeMoved:
-		return true
-	default:
-		return false
-	}
 }
 
 func (m *workspaceRegistry) resource(n *content.Node) mcp.ResourceDescriptor {

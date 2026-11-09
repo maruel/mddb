@@ -123,18 +123,42 @@ func (s *Services) StopBackground(ctx context.Context) error {
 	}
 }
 
-// PublishEvent publishes a workspace SSE event if the broker is configured.
-func (s *Services) PublishEvent(ctx context.Context, wsID ksid.ID, eventType dto.EventType, nodeID, actorID ksid.ID) {
+// PublishAssetEvent notifies asset-list consumers without invalidating the
+// node's page/schema representation. Saving an asset does not change index.md.
+func (s *Services) PublishAssetEvent(ctx context.Context, wsID, nodeID, actorID ksid.ID) {
+	s.publishWorkspaceEvent(ctx, wsID, actorID, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated, NodeID: nodeID, Aspects: []dto.EventAspect{dto.EventAspectAssets}})
+}
+
+// PublishNodeDeletion publishes the committed removed targets and ancestry.
+func (s *Services) PublishNodeDeletion(ctx context.Context, wsID ksid.ID, deleted content.NodeDeletion, actorID ksid.ID) {
+	event := dto.WorkspaceEvent{Type: dto.EventNodeDeleted, NodeID: deleted.NodeID, ParentID: deleted.ParentID, AffectedIDs: deleted.IDs,
+		Aspects: []dto.EventAspect{dto.EventAspectCatalog, dto.EventAspectHierarchy, dto.EventAspectSummary}}
+	if deleted.Resync {
+		event = dto.WorkspaceEvent{Type: dto.EventResync}
+	}
+	s.publishWorkspaceEvent(ctx, wsID, actorID, &event)
+}
+
+// PublishNodeMove publishes the committed ancestry transition.
+func (s *Services) PublishNodeMove(ctx context.Context, wsID, nodeID ksid.ID, move content.NodeMove, actorID ksid.ID) {
+	if !move.Changed {
+		return
+	}
+	s.publishWorkspaceEvent(ctx, wsID, actorID, &dto.WorkspaceEvent{Type: dto.EventNodeMoved, NodeID: nodeID, ParentID: move.ParentID, OldParentID: move.OldParentID,
+		Aspects: []dto.EventAspect{dto.EventAspectCatalog, dto.EventAspectHierarchy, dto.EventAspectSummary}})
+}
+
+func (s *Services) publishWorkspaceEvent(ctx context.Context, wsID, actorID ksid.ID, event *dto.WorkspaceEvent) {
 	if s.Broker == nil {
 		return
 	}
-	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
-		Type:      eventType,
-		NodeID:    nodeID,
-		ActorID:   actorID,
-		Modified:  storage.Now(),
-		RequestID: reqctx.RequestID(ctx),
-	})
+	if event.Type != dto.EventResync {
+		event.ActorID, event.RequestID = actorID, reqctx.RequestID(ctx)
+		if event.Modified == 0 {
+			event.Modified = storage.Now()
+		}
+	}
+	s.Broker.Publish(wsID, event)
 }
 
 // PublishNodeEvent publishes a node change carrying the node's own revision, so
@@ -143,7 +167,32 @@ func (s *Services) PublishNodeEvent(ctx context.Context, wsID ksid.ID, eventType
 	if s.Broker == nil {
 		return
 	}
+	var aspects []dto.EventAspect
+	if eventType == dto.EventNodeCreated {
+		aspects = []dto.EventAspect{dto.EventAspectBody, dto.EventAspectCatalog, dto.EventAspectHierarchy, dto.EventAspectSummary}
+	} else {
+		if node.Changes.Body {
+			aspects = append(aspects, dto.EventAspectBody)
+		}
+		if node.Changes.Metadata {
+			aspects = append(aspects, dto.EventAspectMetadata)
+		}
+		if node.Changes.Type {
+			aspects = append(aspects, dto.EventAspectSummary)
+		}
+		if node.Changes.Schema {
+			aspects = append(aspects, dto.EventAspectSchema)
+		}
+		if node.Changes.Title {
+			aspects = append(aspects, dto.EventAspectCatalog, dto.EventAspectSummary)
+		}
+		if len(aspects) == 0 {
+			return
+		}
+	}
 	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
+		Aspects:   aspects,
+		ParentID:  node.ParentID,
 		Type:      eventType,
 		NodeID:    node.ID,
 		ActorID:   actorID,
@@ -159,6 +208,7 @@ func (s *Services) PublishRecordEvent(ctx context.Context, wsID, nodeID, recordI
 		return
 	}
 	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
+		Aspects:   []dto.EventAspect{dto.EventAspectRecords},
 		Type:      dto.EventRecordsChanged,
 		NodeID:    nodeID,
 		RecordID:  recordID,

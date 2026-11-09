@@ -406,7 +406,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 					if i%2 == 1 {
 						parent = other.ID
 					}
-					if err := ws.MoveNode(ctx, child.ID, parent, a); err != nil {
+					if _, err := ws.MoveNode(ctx, child.ID, parent, a); err != nil {
 						moved <- err
 						return
 					}
@@ -613,14 +613,14 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if len(ids) != 3 || !slices.IsSorted(ids) {
 				t.Fatalf("traversal = %v", ids)
 			}
-			if err := ws.MoveNode(t.Context(), leaf.ID, 0, a); err != nil {
+			if _, err := ws.MoveNode(t.Context(), leaf.ID, 0, a); err != nil {
 				t.Fatal(err)
 			}
 			p, err := ws.ListNodeSummaries(t.Context(), &child.ID, 0, 2)
 			if err != nil || p.Total != 0 {
 				t.Fatalf("move index: %#v %v", p, err)
 			}
-			if err := ws.DeletePage(t.Context(), root.ID, a); err != nil {
+			if _, err := ws.DeletePage(t.Context(), root.ID, a); err != nil {
 				t.Fatal(err)
 			}
 			p, err = ws.ListNodeSummaries(t.Context(), nil, 0, 2)
@@ -684,13 +684,13 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if _, err := ws.ListNodeSummaries(ctx, nil, 0, 50); err != nil {
 				t.Fatal(err)
 			}
-			if err := ws.DeletePageFromNode(ctx, parent.ID, a); err != nil {
+			if _, _, err := ws.DeletePageFromNode(ctx, parent.ID, a); err != nil {
 				t.Fatal(err)
 			}
-			if err := ws.DeleteTableFromNode(ctx, table.ID, a); err != nil {
+			if _, _, err := ws.DeleteTableFromNode(ctx, table.ID, a); err != nil {
 				t.Fatal(err)
 			}
-			if err := ws.DeletePageFromNode(ctx, assetNode.ID, a); err != nil {
+			if _, _, err := ws.DeletePageFromNode(ctx, assetNode.ID, a); err != nil {
 				t.Fatal(err)
 			}
 			page, err := ws.ListNodeSummaries(ctx, nil, 0, 50)
@@ -808,7 +808,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("DeletePage", func(t *testing.T) {
-			if err := ws.DeletePage(ctx, nodeID, author); err != nil {
+			if _, err := ws.DeletePage(ctx, nodeID, author); err != nil {
 				t.Fatalf("failed to delete page: %v", err)
 			}
 			if _, err := ws.ReadPage(nodeID); err == nil {
@@ -1514,7 +1514,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Errorf("expected title 'My First Page', got %q", readPage.Title)
 		}
 
-		if err := ws.DeletePage(ctx, page.ID, author); err != nil {
+		if _, err := ws.DeletePage(ctx, page.ID, author); err != nil {
 			t.Fatalf("failed to delete page: %v", err)
 		}
 		if _, err := os.Stat(pagePath); !os.IsNotExist(err) {
@@ -1539,7 +1539,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("DeleteNonExistentPage", func(t *testing.T) {
-			if err := ws.DeletePage(ctx, ksid.NewID(), author); err == nil {
+			if _, err := ws.DeletePage(ctx, ksid.NewID(), author); err == nil {
 				t.Error("expected error deleting non-existent page")
 			}
 		})
@@ -1623,7 +1623,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create child: %v", err)
 			}
 
-			if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+			if _, err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
 				t.Fatalf("move: %v", err)
 			}
 
@@ -1665,7 +1665,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create child: %v", err)
 			}
 
-			if err := ws.MoveNode(ctx, child.ID, 0, author); err != nil {
+			if _, err := ws.MoveNode(ctx, child.ID, 0, author); err != nil {
 				t.Fatalf("move to root: %v", err)
 			}
 
@@ -1698,7 +1698,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create child: %v", err)
 			}
 
-			err = ws.MoveNode(ctx, parent.ID, child.ID, author)
+			_, err = ws.MoveNode(ctx, parent.ID, child.ID, author)
 			if !errors.Is(err, errCycleDetected) {
 				t.Errorf("expected cycle error, got %v", err)
 			}
@@ -1721,7 +1721,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create C: %v", err)
 			}
 
-			err = ws.MoveNode(ctx, a.ID, c.ID, author)
+			_, err = ws.MoveNode(ctx, a.ID, c.ID, author)
 			if !errors.Is(err, errCycleDetected) {
 				t.Errorf("expected cycle error for descendant, got %v", err)
 			}
@@ -1740,7 +1740,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create child: %v", err)
 			}
 
-			if err := ws.MoveNode(ctx, child.ID, parent.ID, author); err != nil {
+			if _, err := ws.MoveNode(ctx, child.ID, parent.ID, author); err != nil {
 				t.Fatalf("no-op move: %v", err)
 			}
 
@@ -1774,7 +1774,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create grandchild: %v", err)
 			}
 
-			if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+			if _, err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
 				t.Fatalf("move: %v", err)
 			}
 
@@ -1799,7 +1799,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			_, ws, _ := initWS(t)
 			ctx := t.Context()
 
-			err := ws.MoveNode(ctx, ksid.NewID(), 0, author)
+			_, err := ws.MoveNode(ctx, ksid.NewID(), 0, author)
 			if err == nil {
 				t.Error("expected error moving non-existent node")
 			}
@@ -1814,7 +1814,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create node: %v", err)
 			}
 
-			err = ws.MoveNode(ctx, node.ID, ksid.NewID(), author)
+			_, err = ws.MoveNode(ctx, node.ID, ksid.NewID(), author)
 			if err == nil {
 				t.Error("expected error moving to non-existent parent")
 			}
@@ -1846,7 +1846,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("update B: %v", err)
 			}
 
-			if err := ws.MoveNode(ctx, pageC.ID, 0, author); err != nil {
+			if _, err := ws.MoveNode(ctx, pageC.ID, 0, author); err != nil {
 				t.Fatalf("move C: %v", err)
 			}
 

@@ -44,7 +44,7 @@ type testEnv struct {
 	fileStore     *content.FileStoreService
 }
 
-func setupTestEnv(t *testing.T) *testEnv {
+func setupTestEnv(t testing.TB) *testEnv {
 	tempDir := t.TempDir()
 	dbDir := filepath.Join(tempDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: test data
@@ -165,7 +165,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 // doJSON performs an HTTP request, decodes the JSON response, and returns the status code.
 // Body is always read and closed before returning.
-func (e *testEnv) doJSON(t *testing.T, method, path string, body, response any, token string) int {
+func (e *testEnv) doJSON(t testing.TB, method, path string, body, response any, token string) int {
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)

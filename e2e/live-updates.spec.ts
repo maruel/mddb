@@ -24,6 +24,7 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
   await expect(editor).toContainText("Initial content");
   const mountedNode = await sidebarNode.elementHandle();
 
+  const visibleStarted = performance.now();
   await ws.updatePage(node.id, {
     expected_revision: (await ws.getNode(node.id)).revision ?? "",
     title: "Updated elsewhere",
@@ -32,6 +33,7 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
   await expect(title).toHaveValue("Updated elsewhere");
   await expect(editor).toContainText("Live content");
   await expect(sidebarNode).toContainText("Updated elsewhere");
+  console.log(JSON.stringify({ workload: "committed-page-to-visible", latencyMs: performance.now() - visibleStarted }));
   expect(await mountedNode!.evaluate((element) => element.isConnected)).toBe(true);
 
   await ws.updatePageFrontmatter(node.id, { icon: "🚀", cover: "" });
@@ -137,5 +139,46 @@ test("same-account API edits update the open page and preserve unsaved drafts", 
   await expect(notice).not.toBeVisible();
   await expect(title).toHaveValue("Saved locally");
   expect(await mountedNode!.evaluate((element) => element.isConnected)).toBe(true);
+  await observer.close();
+});
+
+test("hybrid page removal refreshes another client's tree without discarding its draft", async ({ page, request }) => {
+  const { readFile, writeFile } = await import("node:fs/promises");
+  const { token } = await registerUser(request, "hybrid-live-removal");
+  const client = createClient(request, token);
+  await gotoWithSession(page, token);
+  await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+  const wsID = await getWorkspaceId(page);
+  const ws = client.ws(wsID);
+  const node = await ws.createPage("0", { title: "Hybrid", content: "Private page content" });
+  const schema = await ws.createTable("0", { title: "Hybrid", properties: [] });
+  // A hybrid is a supported on-disk combination. Reuse an API-created schema
+  // rather than duplicating its storage format in this fixture.
+  await writeFile(
+    `data-e2e/${wsID}/${node.id}/metadata.json`,
+    await readFile(`data-e2e/${wsID}/${schema.id}/metadata.json`),
+  );
+  await ws.updatePageFrontmatter(node.id, { icon: "🚀", cover: "old-cover.svg" });
+  await page.reload();
+  await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+  await page.getByTestId(`sidebar-node-${node.id}`).click();
+  const observer = await page.context().newPage();
+  await observer.goto(page.url());
+  await expect(observer.getByTestId("connection-status")).toHaveText("Connected");
+  await expect(observer.getByTestId(`sidebar-node-${node.id}`)).toContainText("🚀");
+  await observer.clock.install();
+  await observer.clock.pauseAt(new Date());
+  const title = observer.getByRole("textbox", { name: "Title", exact: true });
+  await title.fill("Unsaved hybrid draft");
+  await ws.deletePage(node.id);
+  expect((await ws.getNode(node.id)).has_page).toBe(false);
+  expect((await ws.getNode(node.id)).has_table).toBe(true);
+  for (const tab of [page, observer]) {
+    await expect(tab.getByTestId(`sidebar-node-${node.id}`)).not.toContainText("🚀");
+  }
+  await expect(title).toHaveValue("Unsaved hybrid draft");
+  await expect(
+    observer.getByText("This page changed elsewhere. Refresh to load it and discard your unsaved edits."),
+  ).toBeVisible();
   await observer.close();
 });

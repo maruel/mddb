@@ -16,6 +16,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -333,6 +334,8 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 		if expectedRevision == "" || revision != expectedRevision {
 			return "", nil, &RevisionConflictError{CurrentRevision: revision}
 		}
+		previousPageTitle, previousBody := p.title, p.content
+		previousTitle := current.Title
 		mutate(p)
 		p.modified = storage.Now()
 		// Parse the exact bytes being persisted so normalization and the returned
@@ -342,6 +345,11 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 		revision, err = Revision(ctx, canonical.title, strings.NewReader(canonical.content), int64(len(canonical.content)))
 		if err != nil {
 			return "", nil, err
+		}
+		if previousBody == canonical.content && previousPageTitle == canonical.title {
+			node = current
+			node.Revision = revision
+			return "", nil, nil
 		}
 		if err := storage.WriteFile(ws.pageIndexFile(id, parent), data); err != nil {
 			return "", nil, err
@@ -353,6 +361,7 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 		node.Content, node.Revision = canonical.content, revision
 		node.Created, node.Modified = canonical.created, canonical.modified
 		node.Icon, node.Cover = canonical.icon, canonical.cover
+		node.Changes = NodeChanges{Body: previousBody != canonical.content || previousPageTitle != canonical.title, Title: previousTitle != node.Title}
 		ws.links.update(id, node.Content)
 		return "update: page " + id.String(), []string{ws.gitPath(parent, id, "index.md")}, nil
 	})
@@ -376,14 +385,18 @@ func (ws *WorkspaceFileStore) UpdatePageFrontmatter(ctx context.Context, id ksid
 		}
 
 		p := ParseMarkdown(data)
+		changed := p.icon != icon || p.cover != cover
 		p.icon = icon
 		p.cover = cover
 
-		if err := ws.writePageFile(id, parentID, p); err != nil {
-			return "", nil, err
+		if changed {
+			if err := ws.writePageFile(id, parentID, p); err != nil {
+				return "", nil, err
+			}
 		}
 
 		node = &Node{
+			Changes:  NodeChanges{Metadata: changed},
 			ID:       id,
 			ParentID: parentID,
 			Title:    p.title,
@@ -395,26 +408,44 @@ func (ws *WorkspaceFileStore) UpdatePageFrontmatter(ctx context.Context, id ksid
 			Cover:    p.cover,
 		}
 		files := []string{ws.gitPath(parentID, id, "index.md")}
+		if !changed {
+			return "", nil, nil
+		}
 		return "update: frontmatter " + id.String(), files, nil
 	})
 	return node, err
 }
 
 // DeletePage deletes a page and commits to git.
-func (ws *WorkspaceFileStore) DeletePage(ctx context.Context, id ksid.ID, author git.Author) error {
-	parentID := ws.getParent(id)
-	gitPathFile := ws.gitPath(parentID, id, "index.md")
-
-	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+func (ws *WorkspaceFileStore) DeletePage(ctx context.Context, id ksid.ID, author git.Author) (deleted NodeDeletion, err error) {
+	err = ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		deleted.NodeID, deleted.ParentID = id, ws.getParent(id)
+		ws.mu.RLock()
+		var collect func(ksid.ID)
+		collect = func(node ksid.ID) {
+			if len(deleted.IDs) == 128 {
+				deleted.Resync = true
+				return
+			}
+			deleted.IDs = append(deleted.IDs, node)
+			for _, child := range ws.pathChildren[node] {
+				collect(child)
+				if deleted.Resync {
+					return
+				}
+			}
+		}
+		collect(id)
+		ws.mu.RUnlock()
 		if err := ws.deletePage(id); err != nil {
 			return "", nil, err
 		}
-		return "delete: page " + id.String(), []string{gitPathFile}, nil
+		return "delete: page " + id.String(), []string{ws.gitPath(deleted.ParentID, id, "index.md")}, nil
 	})
 	if err == nil {
 		ws.links.remove(id)
 	}
-	return err
+	return deleted, err
 }
 
 // deletePage deletes a page without committing.
@@ -670,6 +701,16 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 func (ws *WorkspaceFileStore) WriteTable(ctx context.Context, node *Node, isNew bool, author git.Author) error {
 	parentID := node.ParentID
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		if !isNew {
+			before, err := ws.readNodeSummary(ctx, node.ID)
+			if err != nil {
+				return "", nil, err
+			}
+			node.Changes = NodeChanges{Title: before.Title != node.Title, Schema: !reflect.DeepEqual(before.Properties, node.Properties) || !reflect.DeepEqual(before.Views, node.Views)}
+			if !node.Changes.Title && !node.Changes.Schema {
+				return "", nil, nil
+			}
+		}
 		if err := ws.writeTable(node, isNew); err != nil {
 			return "", nil, err
 		}
@@ -1269,50 +1310,52 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 // MoveNode reparents a node to a new parent (or root if newParentID is zero).
 // It validates that the node exists, the new parent exists (unless root),
 // and that the move would not create a cycle in the tree.
-func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID ksid.ID, author git.Author) error {
-	if id.IsZero() {
-		return ErrNodeNotFound
-	}
-
-	// Verify node exists.
-	oldParentID := ws.getParent(id)
-	if !ws.PageExists(id) && !ws.TableExists(id) {
-		return ErrNodeNotFound
-	}
-
-	// Verify new parent exists (unless root).
-	if !newParentID.IsZero() && !ws.PageExists(newParentID) && !ws.TableExists(newParentID) {
-		return fmt.Errorf("new parent not found: %w", ErrNodeNotFound)
-	}
-
-	// No-op if already under the requested parent.
-	if oldParentID == newParentID {
-		return nil
-	}
-
-	// Cycle check: walk from newParentID up to root; if we hit id, it's a cycle.
-	for p := newParentID; !p.IsZero(); p = ws.getParent(p) {
-		if p == id {
-			return errCycleDetected
+func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID ksid.ID, author git.Author) (move NodeMove, err error) {
+	err = ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		if id.IsZero() {
+			return "", nil, ErrNodeNotFound
 		}
-	}
 
-	oldDir := ws.pageDir(id, oldParentID)
-	oldRelDir := ws.relativeDir(id, oldParentID)
+		// Verify node exists.
+		oldParentID := ws.getParent(id)
+		if !ws.PageExists(id) && !ws.TableExists(id) {
+			return "", nil, ErrNodeNotFound
+		}
 
-	// Compute new directory before moving (uses current cache state for newParentID chain).
-	newRelDir := ws.relativeDir(id, newParentID)
-	newDir := filepath.Join(ws.wsDir, newRelDir)
+		// Verify new parent exists (unless root).
+		if !newParentID.IsZero() && !ws.PageExists(newParentID) && !ws.TableExists(newParentID) {
+			return "", nil, fmt.Errorf("new parent not found: %w", ErrNodeNotFound)
+		}
 
-	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		// No-op if already under the requested parent.
+		if oldParentID == newParentID {
+			return "", nil, nil
+		}
+
+		// Cycle check: walk from newParentID up to root; if we hit id, it's a cycle.
+		for p := newParentID; !p.IsZero(); p = ws.getParent(p) {
+			if p == id {
+				return "", nil, errCycleDetected
+			}
+		}
+
+		oldDir := ws.pageDir(id, oldParentID)
+		oldRelDir := ws.relativeDir(id, oldParentID)
+
+		// Compute new directory before moving (uses current cache state for newParentID chain).
+		newRelDir := ws.relativeDir(id, newParentID)
+		newDir := filepath.Join(ws.wsDir, newRelDir)
+
 		if err := os.Rename(oldDir, newDir); err != nil {
 			return "", nil, fmt.Errorf("failed to move node: %w", err)
 		}
 		ws.setParent(id, newParentID)
+		move = NodeMove{OldParentID: oldParentID, ParentID: newParentID, Changed: true}
 
 		files := []string{oldRelDir, newRelDir}
 		return "move: node " + id.String() + " to parent " + newParentID.String(), files, nil
 	})
+	return move, err
 }
 
 // Repo returns the git Repository for the workspace. This is exported for handlers
@@ -1404,13 +1447,24 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 
 // DeletePageFromNode removes the page content (index.md) from a node.
 // The node directory is kept if table content exists.
-func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID, author git.Author) error {
+func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID, author git.Author) (remaining *Node, deleted NodeDeletion, err error) {
 	if id.IsZero() {
-		return ErrNodeNotFound // No node with ID 0 exists
+		return nil, deleted, ErrNodeNotFound // No node with ID 0 exists
 	}
 
-	parentID := ws.getParent(id)
-	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+	err = ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(id)
+		deleted = NodeDeletion{NodeID: id, ParentID: parentID, IDs: []ksid.ID{id}}
+		before, err := ws.readNodeSummary(ctx, id)
+		if err != nil {
+			return "", nil, err
+		}
+		if before.Type == NodeTypeHybrid {
+			remaining = before
+			remaining.Type = NodeTypeTable
+			remaining.Icon, remaining.Cover = "", ""
+			remaining.Changes = NodeChanges{Body: true, Metadata: true, Type: true}
+		}
 		filePath := ws.pageIndexFile(id, parentID)
 		if err := os.Remove(filePath); err != nil {
 			if os.IsNotExist(err) {
@@ -1438,7 +1492,7 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID
 	if err == nil {
 		ws.links.remove(id)
 	}
-	return err
+	return remaining, deleted, err
 }
 
 // --- Table-specific operations ---
@@ -1510,13 +1564,28 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 
 // DeleteTableFromNode removes the table content (metadata.json + data.jsonl) from a node.
 // The node directory is kept if page content exists.
-func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id ksid.ID, author git.Author) error {
+func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id ksid.ID, author git.Author) (remaining *Node, deleted NodeDeletion, err error) {
 	if id.IsZero() {
-		return errTableNotFound // No node with ID 0 exists
+		return nil, deleted, errTableNotFound // No node with ID 0 exists
 	}
 
-	parentID := ws.getParent(id)
-	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+	err = ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(id)
+		deleted = NodeDeletion{NodeID: id, ParentID: parentID, IDs: []ksid.ID{id}}
+		before, err := ws.readNodeSummary(ctx, id)
+		if err != nil {
+			return "", nil, err
+		}
+		if before.Type == NodeTypeHybrid {
+			var header *page
+			remaining, header, err = ws.readSummary(ctx, ws.pageDir(id, parentID), id, parentID)
+			if err != nil {
+				return "", nil, err
+			}
+			remaining.Title, remaining.Type = header.title, NodeTypeDocument
+			remaining.Properties, remaining.Views = nil, nil
+			remaining.Changes = NodeChanges{Schema: true, Metadata: true, Type: true, Title: before.Title != header.title}
+		}
 		var files []string
 
 		metadataFile := ws.tableMetadataFile(id, parentID)
@@ -1548,6 +1617,7 @@ func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id ksid.I
 
 		return "delete: table " + id.String(), files, nil
 	})
+	return remaining, deleted, err
 }
 
 // ListChildren returns all direct children of a node.

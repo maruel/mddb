@@ -152,6 +152,21 @@ ErrorCode defines specific error types for the API.
 | `QUOTA_EXCEEDED` | ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded. |
 | `PAYLOAD_TOO_LARGE` | ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit. |
 
+### EventAspect
+
+EventAspect identifies a changed projection independently of canonical CAS.
+
+| Value | Description |
+|-------|-------------|
+| `assets` |  |
+| `body` |  |
+| `catalog` |  |
+| `hierarchy` |  |
+| `metadata` |  |
+| `records` |  |
+| `schema` |  |
+| `summary` |  |
+
 ### EventType
 
 EventType identifies the kind of workspace event sent via SSE.
@@ -164,6 +179,7 @@ EventType identifies the kind of workspace event sent via SSE.
 | `node_moved` | EventNodeMoved is sent when a node is moved to a new parent. |
 | `records_changed` | EventRecordsChanged is sent when a table record is created, updated, or deleted. |
 | `table_updated` | EventTableUpdated is sent when a table schema or view changes. |
+| `resync` | EventResync requires an authorized refresh after an event delivery gap. |
 
 ### FilterOp
 

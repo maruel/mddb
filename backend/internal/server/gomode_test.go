@@ -602,7 +602,7 @@ type mcpToolOutcome struct {
 // setupGoModeWorkspace registers a user who owns an organization and workspace,
 // making them an editor, and switches to it. It returns the bearer token and the
 // workspace ID.
-func setupGoModeWorkspace(t *testing.T, env *testEnv, email string) (string, ksid.ID) {
+func setupGoModeWorkspace(t testing.TB, env *testEnv, email string) (string, ksid.ID) {
 	t.Helper()
 	var auth dto.AuthResponse
 	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{

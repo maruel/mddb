@@ -3,6 +3,9 @@
 package sse
 
 import (
+	"bytes"
+	"encoding/json"
+	"reflect"
 	"testing"
 	"time"
 
@@ -10,6 +13,87 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
+
+func TestEventInterest(t *testing.T) {
+	t.Parallel()
+	b := NewBroker()
+	ws, target, foreign := ksid.NewID(), ksid.NewID(), ksid.NewID()
+	events, stop := b.SubscribeEvents(ws, EventInterest{Nodes: []ksid.ID{target}, Catalog: true})
+	t.Cleanup(stop)
+	for _, kind := range []dto.EventAspect{dto.EventAspectBody, dto.EventAspectRecords} {
+		b.Publish(ws, &dto.WorkspaceEvent{NodeID: foreign, Type: dto.EventNodeUpdated, Aspects: []dto.EventAspect{kind}})
+		select {
+		case event := <-events:
+			t.Fatalf("uninterested event=%+v", event)
+		default:
+		}
+	}
+	b.Publish(ws, &dto.WorkspaceEvent{NodeID: target, Type: dto.EventNodeUpdated, Aspects: []dto.EventAspect{dto.EventAspectBody}})
+	if got := <-events; got.NodeID != target {
+		t.Fatalf("target=%+v", got)
+	}
+	b.Publish(ws, &dto.WorkspaceEvent{NodeID: foreign, Type: dto.EventNodeUpdated, Aspects: []dto.EventAspect{dto.EventAspectCatalog}})
+	if got := <-events; got.NodeID != foreign {
+		t.Fatalf("catalog=%+v", got)
+	}
+	// Moving the watched node changes its own ParentID; moving its child
+	// only changes a child list absent from this resource.
+	b.Publish(ws, &dto.WorkspaceEvent{NodeID: foreign, ParentID: target, Type: dto.EventNodeMoved, Aspects: []dto.EventAspect{dto.EventAspectHierarchy}})
+	select {
+	case event := <-events:
+		t.Fatalf("child hierarchy=%+v", event)
+	default:
+	}
+	b.Publish(ws, &dto.WorkspaceEvent{NodeID: target, ParentID: foreign, Type: dto.EventNodeMoved, Aspects: []dto.EventAspect{dto.EventAspectHierarchy}})
+	if event := <-events; event.NodeID != target {
+		t.Fatalf("own move=%+v", event)
+	}
+	// A subtree deletion carries the removed IDs, without probing each reader.
+	b.Publish(ws, &dto.WorkspaceEvent{NodeID: foreign, Type: dto.EventNodeDeleted, AffectedIDs: []ksid.ID{target}})
+	if got := <-events; got.Type != dto.EventNodeDeleted {
+		t.Fatalf("subtree=%+v", got)
+	}
+}
+
+func TestBrokerOverflowResync(t *testing.T) {
+	t.Parallel()
+	b := NewBroker()
+	ws, user, target := ksid.NewID(), ksid.NewID(), ksid.NewID()
+	events, stop := b.SubscribeEvents(ws, EventInterest{Nodes: []ksid.ID{target}})
+	t.Cleanup(stop)
+	screen, stopScreen, err := b.Subscribe(ws, user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(stopScreen)
+	for range 65 {
+		b.Publish(ws, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated, NodeID: target, Aspects: []dto.EventAspect{dto.EventAspectBody}, ActorID: user, RequestID: "private-request"})
+	}
+	got := <-events
+	if got.Type != dto.EventResync || got.ChangeID == "" || got.NodeID != 0 || got.ActorID != 0 || got.RequestID != "" {
+		t.Fatalf("gap=%+v", got)
+	}
+	frame := <-screen.C
+	_, data, ok := bytes.Cut(frame, []byte("data: "))
+	if !ok {
+		t.Fatalf("frame=%s", frame)
+	}
+	var decoded dto.WorkspaceEvent
+	if err := json.Unmarshal(bytes.TrimSpace(data), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(decoded, got) {
+		t.Fatalf("screen gap=%+v, MCP=%+v", decoded, got)
+	}
+	// Empty interests still receive scope-control events, so overflow cannot
+	// hide membership revocation from a transport with no content subscriptions.
+	control, stopControl := b.SubscribeEvents(ws, EventInterest{})
+	t.Cleanup(stopControl)
+	b.Publish(ws, &dto.WorkspaceEvent{})
+	if got := <-control; got.NodeID != 0 {
+		t.Fatalf("control=%+v", got)
+	}
+}
 
 func TestSubscribeAndPublish(t *testing.T) {
 	b := NewBroker()
@@ -105,45 +189,6 @@ func TestPublishToEmptyWorkspace(t *testing.T) {
 	})
 }
 
-func TestPublishDropsWhenFull(t *testing.T) {
-	b := NewBroker()
-	wsID := ksid.NewID()
-	userID := ksid.NewID()
-
-	sub, cleanup, err := b.Subscribe(wsID, userID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	evt := dto.WorkspaceEvent{
-		Type:     dto.EventNodeUpdated,
-		NodeID:   ksid.NewID(),
-		ActorID:  userID,
-		Modified: storage.Now(),
-	}
-
-	// Fill the buffer.
-	for range subscriberBufSize {
-		b.Publish(wsID, &evt)
-	}
-	// This should be dropped, not block.
-	b.Publish(wsID, &evt)
-
-	// Drain and count.
-	var count int
-	for range subscriberBufSize {
-		select {
-		case <-sub.C:
-			count++
-		default:
-		}
-	}
-	if count != subscriberBufSize {
-		t.Fatalf("want %d messages, got %d", subscriberBufSize, count)
-	}
-}
-
 func TestMultipleWorkspaces(t *testing.T) {
 	b := NewBroker()
 	ws1 := ksid.NewID()
@@ -189,7 +234,7 @@ func TestMultipleWorkspaces(t *testing.T) {
 func TestSubscribeEvents(t *testing.T) {
 	b := NewBroker()
 	wsID := ksid.NewID()
-	events, cleanup := b.SubscribeEvents(wsID)
+	events, cleanup := b.SubscribeEvents(wsID, EventInterest{All: true})
 
 	evt := dto.WorkspaceEvent{
 		Type:     dto.EventNodeUpdated,

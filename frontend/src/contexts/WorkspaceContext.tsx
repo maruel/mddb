@@ -20,10 +20,12 @@ import { useWorkspaceData } from "./WorkspaceDataContext";
 import { useEventSource } from "./EventSourceContext";
 import { useI18n } from "../i18n";
 import {
+  EventAspectMetadata,
   EventNodeCreated,
   EventNodeDeleted,
   EventNodeMoved,
   EventNodeUpdated,
+  EventResync,
   OrgRoleAdmin,
   OrgRoleOwner,
   WSRoleAdmin,
@@ -489,7 +491,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   createEffect(on([rootData.owner, firstLoginCheckDone, rootData.snapshotReady], initialize));
 
   // Update metadata in place so page edits retain loaded descendants and focus.
-  async function refreshNodeMetadata(id: string) {
+  // TODO(2026-11-08): incremental-clients: sequence per-node refreshes and discard
+  // responses superseded by a newer refresh request.
+  async function refreshNodeMetadata(id: string, authoritative: boolean) {
     const ws = wsApi();
     if (!ws || !findNodePath(nodes, id)) return;
     const identity = workspaceIdentity();
@@ -500,7 +504,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         produce((list) => {
           const path = findNodePath(list, id);
           const node = path?.[path.length - 1];
-          if (node && node.modified <= data.modified) {
+          if (node && (authoritative || node.modified <= data.modified)) {
             // Cleared optional fields are omitted from JSON. Remove them while
             // retaining the loaded children and this store object's identity.
             for (const key of Object.keys(node)) {
@@ -510,7 +514,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
           }
         }),
       );
-      setBreadcrumbPath((path) => path.map((node) => (node.id === id && node.modified <= data.modified ? data : node)));
+      setBreadcrumbPath((path) =>
+        path.map((node) => (node.id === id && (authoritative || node.modified <= data.modified) ? data : node)),
+      );
     } catch (err) {
       // A subsequent deletion event owns removal of a concurrently deleted node.
       if (err instanceof APIError && err.status === 404) return;
@@ -524,8 +530,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     on(lastEvent, (evt) => {
       if (!evt) return;
       if (evt.type === EventNodeUpdated) {
-        void refreshNodeMetadata(evt.node_id);
-      } else if (evt.type === EventNodeCreated || evt.type === EventNodeDeleted || evt.type === EventNodeMoved) {
+        void refreshNodeMetadata(evt.node_id, evt.aspects?.includes(EventAspectMetadata) ?? false);
+      } else if (
+        evt.type === EventResync ||
+        evt.type === EventNodeCreated ||
+        evt.type === EventNodeDeleted ||
+        evt.type === EventNodeMoved
+      ) {
         loadNodes(true);
       }
     }),

@@ -20,6 +20,7 @@ import { useUndo } from "../hooks/useUndo";
 import {
   EventRecordsChanged,
   EventTableUpdated,
+  EventResync,
   PropertyTypeUser,
   type DataRecordResponse,
   type View,
@@ -374,8 +375,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const evt = lastEvent();
     if (!evt) return;
     const nodeId = selectedNodeId();
-    if (!nodeId || evt.node_id !== nodeId) return;
-    if (evt.type === EventRecordsChanged || evt.type === EventTableUpdated) {
+    if (!nodeId || (evt.type !== EventResync && evt.node_id !== nodeId)) return;
+    if (evt.type === EventResync || evt.type === EventRecordsChanged || evt.type === EventTableUpdated) {
       loadRecords(nodeId);
     }
   });

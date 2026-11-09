@@ -1,10 +1,11 @@
-// In-process pub/sub broker keyed by workspace ID for SSE event distribution.
+// Routes workspace projection invalidations to bounded SSE and MCP subscribers with gap recovery.
 
 package sse
 
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -28,13 +29,53 @@ type Subscriber struct {
 	userID ksid.ID
 }
 
+// EventInterest routes committed effects to consumers of the affected projections.
+// All is reserved for screen consumers that maintain the complete workspace.
+type EventInterest struct {
+	All     bool
+	Catalog bool
+	Summary bool
+	Nodes   []ksid.ID
+}
+
+type eventSubscriber struct {
+	ch       chan dto.WorkspaceEvent
+	interest EventInterest
+}
+
+func (s *eventSubscriber) matches(event *dto.WorkspaceEvent) bool {
+	return s.interest.All || event.NodeID.IsZero() || event.Type == dto.EventResync ||
+		slices.ContainsFunc(s.interest.Nodes, func(id ksid.ID) bool { return NodeResourceChanged(event, id) }) ||
+		(s.interest.Catalog && slices.Contains(event.Aspects, dto.EventAspectCatalog)) ||
+		(s.interest.Summary && slices.Contains(event.Aspects, dto.EventAspectSummary))
+}
+
+// NodeResourceChanged projects committed effects onto a node resource: its own
+// page/schema/metadata and ParentID, without records, assets or child listings.
+func NodeResourceChanged(event *dto.WorkspaceEvent, id ksid.ID) bool {
+	if event.Type == dto.EventResync {
+		return true
+	}
+	if event.Type == dto.EventNodeDeleted {
+		return id == event.NodeID || slices.Contains(event.AffectedIDs, id)
+	}
+	if id != event.NodeID {
+		return false
+	}
+	return event.Type == dto.EventNodeMoved || slices.ContainsFunc(event.Aspects, func(aspect dto.EventAspect) bool {
+		return aspect == dto.EventAspectBody || aspect == dto.EventAspectMetadata || aspect == dto.EventAspectSchema || aspect == dto.EventAspectSummary
+	})
+}
+
 // Broker fans out workspace events to connected SSE subscribers.
 type Broker struct {
 	mu sync.RWMutex
 	// workspaces maps workspace ID -> set of subscribers.
 	workspaces map[ksid.ID]map[*Subscriber]struct{}
 	// events maps workspace ID -> set of structured in-process subscribers.
-	events map[ksid.ID]map[chan dto.WorkspaceEvent]struct{}
+	events map[ksid.ID]map[*eventSubscriber]struct{}
+	// epoch prevents watermarks from comparing equal across process lifetimes.
+	epoch string
 	// eventID is a monotonically increasing SSE event ID.
 	eventID atomic.Int64
 }
@@ -43,7 +84,8 @@ type Broker struct {
 func NewBroker() *Broker {
 	return &Broker{
 		workspaces: make(map[ksid.ID]map[*Subscriber]struct{}),
-		events:     make(map[ksid.ID]map[chan dto.WorkspaceEvent]struct{}),
+		events:     make(map[ksid.ID]map[*eventSubscriber]struct{}),
+		epoch:      ksid.NewID().String(),
 	}
 }
 
@@ -93,18 +135,19 @@ func (b *Broker) Subscribe(wsID, userID ksid.ID) (*Subscriber, func(), error) {
 // SubscribeEvents registers a structured in-process subscriber for the given
 // workspace. It returns the event channel and a cleanup function the caller must
 // call when done; the channel is closed by cleanup. Publishers never block, so a
-// slow consumer drops events instead of stalling them.
-func (b *Broker) SubscribeEvents(wsID ksid.ID) (events <-chan dto.WorkspaceEvent, unsubscribe func()) {
+// slow consumer receives a resync invalidation instead of losing freshness.
+func (b *Broker) SubscribeEvents(wsID ksid.ID, interest EventInterest) (events <-chan dto.WorkspaceEvent, unsubscribe func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	subs, ok := b.events[wsID]
 	if !ok {
-		subs = make(map[chan dto.WorkspaceEvent]struct{})
+		subs = make(map[*eventSubscriber]struct{})
 		b.events[wsID] = subs
 	}
 	ch := make(chan dto.WorkspaceEvent, eventBufSize)
-	subs[ch] = struct{}{}
+	sub := &eventSubscriber{ch: ch, interest: interest}
+	subs[sub] = struct{}{}
 
 	unsubscribe = func() {
 		b.mu.Lock()
@@ -113,10 +156,10 @@ func (b *Broker) SubscribeEvents(wsID ksid.ID) (events <-chan dto.WorkspaceEvent
 		if !ok {
 			return
 		}
-		if _, ok := ws[ch]; !ok {
+		if _, ok := ws[sub]; !ok {
 			return
 		}
-		delete(ws, ch)
+		delete(ws, sub)
 		close(ch)
 		if len(ws) == 0 {
 			delete(b.events, wsID)
@@ -127,30 +170,56 @@ func (b *Broker) SubscribeEvents(wsID ksid.ID) (events <-chan dto.WorkspaceEvent
 
 // Publish sends an event to all subscribers of the given workspace.
 // The event is JSON-serialized once and wrapped as an SSE frame. Slow
-// subscribers whose buffers are full will have the event dropped.
+// subscribers receive a resync marker when their bounded queue overflows.
 func (b *Broker) Publish(wsID ksid.ID, event *dto.WorkspaceEvent) {
-	data, err := json.Marshal(event)
-	if err != nil {
-		return
-	}
-
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	id := b.eventID.Add(1)
-	msg := fmt.Appendf(nil, "id: %d\nevent: workspace\ndata: %s\n\n", id, data)
-
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	published := *event
+	published.ChangeID = fmt.Sprintf("%s:%d", b.epoch, id)
+	event = &published
+	var msg []byte
+	if len(b.workspaces[wsID]) > 0 {
+		data, err := json.Marshal(event)
+		if err != nil {
+			return
+		}
+		msg = fmt.Appendf(nil, "id: %d\nevent: workspace\ndata: %s\n\n", id, data)
+	}
+	gap := dto.WorkspaceEvent{Type: dto.EventResync, ChangeID: event.ChangeID}
+	var gapMsg []byte
 
 	for s := range b.workspaces[wsID] {
-		// Non-blocking send; drop if full.
 		select {
 		case s.ch <- msg:
 		default:
+			drain(s.ch)
+			if gapMsg == nil {
+				gapData, _ := json.Marshal(gap)
+				gapMsg = fmt.Appendf(nil, "id: %d\nevent: workspace\ndata: %s\n\n", id, gapData)
+			}
+			s.ch <- gapMsg
 		}
 	}
-	for ch := range b.events[wsID] {
+	for sub := range b.events[wsID] {
+		if !sub.matches(event) {
+			continue
+		}
 		select {
-		case ch <- *event:
+		case sub.ch <- *event:
 		default:
+			drain(sub.ch)
+			sub.ch <- gap
+		}
+	}
+}
+
+func drain[T any](ch <-chan T) {
+	for {
+		select {
+		case <-ch:
+		default:
+			return
 		}
 	}
 }

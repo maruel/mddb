@@ -352,17 +352,41 @@ const (
 	EventRecordsChanged EventType = "records_changed"
 	// EventTableUpdated is sent when a table schema or view changes.
 	EventTableUpdated EventType = "table_updated"
+	// EventResync requires an authorized refresh after an event delivery gap.
+	EventResync EventType = "resync"
+)
+
+// EventAspect identifies a changed projection independently of canonical CAS.
+type EventAspect string
+
+// Committed projection effects used for selective invalidation.
+const (
+	EventAspectAssets    EventAspect = "assets"
+	EventAspectBody      EventAspect = "body"
+	EventAspectCatalog   EventAspect = "catalog"
+	EventAspectHierarchy EventAspect = "hierarchy"
+	EventAspectMetadata  EventAspect = "metadata"
+	EventAspectRecords   EventAspect = "records"
+	EventAspectSchema    EventAspect = "schema"
+	EventAspectSummary   EventAspect = "summary"
 )
 
 // WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates.
 type WorkspaceEvent struct {
-	// Revision identifies canonical page content; metadata-only events omit it.
-	Revision string    `json:"revision,omitempty"`
-	Type     EventType `json:"type"`
-	NodeID   ksid.ID   `json:"node_id"`
-	RecordID ksid.ID   `json:"record_id,omitempty"`
-	ActorID  ksid.ID   `json:"actor_id"`
-	Modified Time      `json:"modified"`
+	// Revision identifies canonical title/body CAS, not full resource freshness.
+	Revision string `json:"revision,omitempty"`
+	// ChangeID is an opaque process-epoch invalidation watermark, not a read
+	// snapshot revision. Reconnection or a delivery gap requires resynchronization.
+	ChangeID    string        `json:"change_id,omitempty"`
+	Aspects     []EventAspect `json:"aspects,omitempty"`
+	ParentID    ksid.ID       `json:"parent_id,omitempty"`
+	AffectedIDs []ksid.ID     `json:"affected_ids,omitempty"`
+	OldParentID ksid.ID       `json:"old_parent_id,omitempty"`
+	Type        EventType     `json:"type"`
+	NodeID      ksid.ID       `json:"node_id"`
+	RecordID    ksid.ID       `json:"record_id,omitempty"`
+	ActorID     ksid.ID       `json:"actor_id"`
+	Modified    Time          `json:"modified"`
 	// RequestID correlates a change with an individual HTTP write, not authorization.
 	RequestID string `json:"request_id,omitempty"`
 }

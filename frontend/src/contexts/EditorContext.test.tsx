@@ -47,9 +47,10 @@ const node = (id: string, title: string, revision: string): NodeResponse => ({
   revision,
   content: "body",
   created: 1,
-  modified: 1,
-  has_page: true,
-  has_table: false,
+  modified: firstHasPage ? 1 : 0,
+  has_page: firstHasPage,
+  has_table: firstHasTable,
+  icon: firstIcon,
 });
 let editor!: ReturnType<typeof useEditor>;
 let workspace!: ReturnType<typeof useWorkspace>;
@@ -64,6 +65,42 @@ let latestReply: Promise<Response> | null;
 let accountLocale = "en";
 let switchResponse: Promise<Response> | null;
 let nodeResponse: Promise<Response> | null;
+let firstTitle: string;
+let firstIcon: string;
+let firstHasPage: boolean;
+let firstHasTable: boolean;
+
+class FakeEventSource extends EventTarget {
+  static current: FakeEventSource;
+  onopen: ((event: Event) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  constructor(_url: string) {
+    super();
+    FakeEventSource.current = this;
+  }
+  readonly close = vi.fn();
+  resync() {
+    this.dispatchEvent(
+      new window.MessageEvent("workspace", {
+        data: JSON.stringify({ type: "resync", node_id: "0", actor_id: "0", modified: 0 }),
+      }),
+    );
+  }
+  metadata() {
+    this.dispatchEvent(
+      new window.MessageEvent("workspace", {
+        data: JSON.stringify({
+          type: "node_updated",
+          node_id: "one",
+          actor_id: "other",
+          modified: 1,
+          revision: firstRevision,
+          aspects: ["metadata"],
+        }),
+      }),
+    );
+  }
+}
 
 function Probe() {
   editor = useEditor();
@@ -138,6 +175,10 @@ beforeEach(() => {
   latestReply = null;
   switchResponse = null;
   nodeResponse = null;
+  firstTitle = "Original";
+  firstIcon = "";
+  firstHasPage = true;
+  firstHasTable = false;
   localStorage.clear();
   delete window.goModeHost;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -161,7 +202,7 @@ beforeEach(() => {
       return (
         (url.endsWith("two") ? nodeResponse : null) ??
         Response.json(
-          node(url.endsWith("one") ? "one" : "two", url.endsWith("one") ? "Original" : "Other", firstRevision),
+          node(url.endsWith("one") ? "one" : "two", url.endsWith("one") ? firstTitle : "Other", firstRevision),
         )
       );
     if (url.endsWith("/notifications/unread-count")) return Response.json({ count: 0 });
@@ -183,6 +224,94 @@ it("keeps an uncertain save outcome for explicit recovery rather than repeating 
   expect(await editor.beginIntent().drain()).toBe(false);
   expect(calls).toHaveLength(1);
 });
+
+for (const state of ["clean", "dirty", "pending"] as const) {
+  it(`resynchronizes a ${state} editor without discarding private work`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    if (state !== "clean") editor.handleTitleChange("Private draft");
+    let saving: Promise<boolean> | null = null;
+    if (state === "pending") {
+      saving = editor.beginIntent().drain();
+      await waitFor(() => expect(calls).toHaveLength(1));
+    }
+    firstTitle = "Fresh remote title";
+    FakeEventSource.current.resync();
+    if (state === "clean") {
+      await waitFor(() => expect(editor.title()).toBe("Fresh remote title"));
+      expect(editor.externalChange()).toBe(false);
+    } else {
+      await waitFor(() => expect(editor.externalChange()).toBe(true));
+      expect(editor.title()).toBe("Private draft");
+      if (saving) {
+        calls[0]!.resolve(saved("Private draft", "b".repeat(64)));
+        await saving;
+      }
+    }
+  });
+}
+
+for (const state of ["clean", "dirty", "pending"] as const) {
+  it(`applies authoritative metadata at the same timestamp with a ${state} draft`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    if (state !== "clean") editor.handleTitleChange("Private draft");
+    let saving: Promise<boolean> | null = null;
+    if (state === "pending") {
+      saving = editor.beginIntent().drain();
+      await waitFor(() => expect(calls).toHaveLength(1));
+    }
+    firstIcon = "🚀";
+    FakeEventSource.current.metadata();
+    if (state === "clean") {
+      await waitFor(() => expect(editor.icon()).toBe("🚀"));
+      expect(editor.title()).toBe("Original");
+    } else {
+      await waitFor(() => expect(editor.externalChange()).toBe(true));
+      expect(editor.title()).toBe("Private draft");
+      expect(editor.icon()).toBe("");
+      if (saving) {
+        calls[0]!.resolve(saved("Private draft", "b".repeat(64)));
+        await saving;
+      }
+    }
+  });
+}
+
+for (const state of ["clean", "dirty", "pending"] as const) {
+  it(`applies hybrid metadata withdrawal with a ${state} draft`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    firstIcon = "🚀";
+    firstHasTable = true;
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    if (state !== "clean") editor.handleTitleChange("Private draft");
+    let saving: Promise<boolean> | null = null;
+    if (state === "pending") {
+      saving = editor.beginIntent().drain();
+      await waitFor(() => expect(calls).toHaveLength(1));
+    }
+    firstHasPage = false;
+    firstIcon = "";
+    FakeEventSource.current.metadata();
+    await waitFor(() => expect(workspace.nodes[0]!.has_page).toBe(false));
+    expect(workspace.nodes[0]!.icon).toBe("");
+    if (state === "clean") {
+      await waitFor(() => expect(editor.icon()).toBe(""));
+      expect(editor.title()).toBe("Original");
+    } else {
+      await waitFor(() => expect(editor.externalChange()).toBe(true));
+      expect(editor.title()).toBe("Private draft");
+      expect(editor.icon()).toBe("🚀");
+      if (saving) {
+        calls[0]!.resolve(saved("Private draft", "b".repeat(64)));
+        await saving;
+      }
+    }
+  });
+}
 
 for (const target of ["node", "workspace"] as const) {
   it(`locks the old editor while a delayed ${target} replacement is pending`, async () => {
@@ -242,6 +371,7 @@ it("locks the selected deletion without consuming undo while its request is pend
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 it("applies the canonical acknowledged title to the editor and sidebar together", async () => {

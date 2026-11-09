@@ -285,6 +285,73 @@ func TestWorkspaceRegistry(t *testing.T) {
 			t.Fatalf("resource wire changed:\n%s\n%s", a, b)
 		}
 	})
+	t.Run("ChildHierarchyProjection", func(t *testing.T) {
+		uri := reg.nodeURI(active)
+		seq, err := reg.SubscribeResourceUpdates(t.Context(), &mcp.SubscriptionsListenParams{Notifications: mcp.SubscriptionFilter{ResourceSubscriptions: []string{uri, voiceItemsURI}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var child dto.CreatePageResponse
+		base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+		if code := env.doJSON(t, "POST", base+active.String()+"/page/create", dto.CreatePageRequest{Title: "child", Content: "child"}, &child, token); code != 200 {
+			t.Fatal(code)
+		}
+		for update, err := range seq {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(update.ResourceURIs, []string{voiceItemsURI}) {
+				t.Fatalf("child created invalidates unchanged parent=%+v", update)
+			}
+			break
+		}
+		// A move changes the watched resource's own ParentID even though a
+		// child's ancestry does not change this parent's representation.
+		seq, err = reg.SubscribeResourceUpdates(t.Context(), &mcp.SubscriptionsListenParams{Notifications: mcp.SubscriptionFilter{ResourceSubscriptions: []string{uri}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		before, err := reg.ReadResource(t.Context(), &mcp.ResourcesReadParams{URI: uri})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		other, err := store.CreatePageUnderParent(t.Context(), 0, "new parent", "", author)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if code := env.doJSON(t, "POST", base+active.String()+"/move", dto.MoveNodeRequest{NewParentID: other.ID}, nil, token); code != 200 {
+			t.Fatal(code)
+		}
+		for update, err := range seq {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(update.ResourceURIs, []string{uri}) {
+				t.Fatalf("own move missing=%+v", update)
+			}
+			break
+		}
+		after, err := reg.ReadResource(t.Context(), &mcp.ResourcesReadParams{URI: uri})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if reflect.DeepEqual(before, after) {
+			t.Fatal("own move did not actually change resource representation")
+		}
+		var moved mcpschema.ResourceNode
+		if err := json.Unmarshal([]byte(after.Contents[0].Text), &moved); err != nil {
+			t.Fatal(err)
+		}
+		if moved.ParentID != other.ID {
+			t.Fatalf("moved resource ParentID=%v", moved.ParentID)
+		}
+
+		// Restore fixture ancestry for subsequent tests.
+		if _, err := store.MoveNode(t.Context(), active, 0, author); err != nil {
+			t.Fatal(err)
+		}
+	})
 	t.Run("SubscriptionReadError", func(t *testing.T) {
 		uri := reg.nodeURI(active)
 		seq, err := reg.SubscribeResourceUpdates(t.Context(), &mcp.SubscriptionsListenParams{Notifications: mcp.SubscriptionFilter{ResourceSubscriptions: []string{uri}}})
@@ -304,16 +371,17 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err := os.WriteFile(path, []byte(strings.Repeat("x", content.MaxSnapshotMetadataBytes+1)), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		reg.svc.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeDeleted, NodeID: ksid.NewID()})
-		count := 0
+		reg.svc.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated, NodeID: active, Aspects: []dto.EventAspect{dto.EventAspectBody}})
 		for update, err := range seq {
-			if err == nil || len(update.ResourceURIs) != 0 {
-				t.Fatalf("read failure classified as withdrawal: %#v %v", update, err)
+			if err != nil || !slices.Equal(update.ResourceURIs, []string{uri}) {
+				t.Fatalf("invalidation = %#v %v", update, err)
 			}
-			count++
-		}
-		if count != 1 {
-			t.Fatalf("read errors = %d", count)
+			// Invalidation does not probe the body. The caller's subsequent read
+			// surfaces storage failure instead of treating it as a disappeared node.
+			if _, err := reg.ReadResource(t.Context(), &mcp.ResourcesReadParams{URI: uri}); err == nil {
+				t.Fatal("corrupt metadata read succeeded")
+			}
+			break
 		}
 	})
 
@@ -327,7 +395,7 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := store.DeletePage(t.Context(), n.ID, author); err != nil {
+		if _, err := store.DeletePage(t.Context(), n.ID, author); err != nil {
 			t.Fatal(err)
 		}
 		reg.svc.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeDeleted, NodeID: n.ID})
@@ -379,7 +447,7 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err := reg.svc.Workspace.Delete(wsID); err != nil {
 			t.Fatal(err)
 		}
-		reg.svc.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated, NodeID: active})
+		reg.svc.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated, NodeID: active, Aspects: []dto.EventAspect{dto.EventAspectBody}})
 		count := 0
 		for update, err := range seq {
 			if err != nil {

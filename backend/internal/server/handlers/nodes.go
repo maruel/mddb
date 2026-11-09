@@ -104,10 +104,11 @@ func (h *NodeHandler) MoveNode(ctx context.Context, wsID ksid.ID, user *identity
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	if err := ws.MoveNode(ctx, req.ID, req.NewParentID, author); err != nil {
+	move, err := ws.MoveNode(ctx, req.ID, req.NewParentID, author)
+	if err != nil {
 		return nil, dto.InternalWithError("Failed to move node", err)
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeMoved, req.ID, user.ID)
+	h.Svc.PublishNodeMove(ctx, wsID, req.ID, move, user.ID)
 	return &dto.MoveNodeResponse{Ok: true}, nil
 }
 
@@ -118,10 +119,11 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	if err := ws.DeletePage(ctx, req.ID, author); err != nil {
+	deleted, err := ws.DeletePage(ctx, req.ID, author)
+	if err != nil {
 		return nil, dto.NotFound("node")
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	h.Svc.PublishNodeDeletion(ctx, wsID, deleted, user.ID)
 	return &dto.DeleteNodeResponse{Ok: true}, nil
 }
 
@@ -335,10 +337,15 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	if err := ws.DeletePageFromNode(ctx, req.ID, author); err != nil {
+	remaining, deleted, err := ws.DeletePageFromNode(ctx, req.ID, author)
+	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	if remaining == nil {
+		h.Svc.PublishNodeDeletion(ctx, wsID, deleted, user.ID)
+	} else {
+		h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, remaining, user.ID)
+	}
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 
@@ -372,7 +379,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *ident
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeCreated, node.ID, user.ID)
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeCreated, node, user.ID)
 	return &dto.CreateTableUnderParentResponse{ID: node.ID}, nil
 }
 
@@ -425,7 +432,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventTableUpdated, req.ID, user.ID)
+	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
 	return &dto.UpdateTableResponse{ID: req.ID}, nil
 }
 
@@ -437,10 +444,15 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID ksid.ID, user *ident
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	if err := ws.DeleteTableFromNode(ctx, req.ID, author); err != nil {
+	remaining, deleted, err := ws.DeleteTableFromNode(ctx, req.ID, author)
+	if err != nil {
 		return nil, dto.NotFound("table")
 	}
-	h.Svc.PublishEvent(ctx, wsID, dto.EventNodeDeleted, req.ID, user.ID)
+	if remaining == nil {
+		h.Svc.PublishNodeDeletion(ctx, wsID, deleted, user.ID)
+	} else {
+		h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, remaining, user.ID)
+	}
 	return &dto.DeleteTableResponse{Ok: true}, nil
 }
 

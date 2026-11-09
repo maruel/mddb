@@ -11,6 +11,8 @@ import (
 
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
+	// Changes describes this mutation's committed effects, not persisted content.
+	Changes     NodeChanges  `json:"-"`
 	Revision    string       `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
 	ID          ksid.ID      `json:"id" jsonschema:"description=Unique node identifier"`
 	ParentID    ksid.ID      `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
@@ -27,6 +29,32 @@ type Node struct {
 	Type        NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
 	HasChildren bool         `json:"has_children,omitempty" jsonschema:"description=Whether this node has child nodes"`
 	Children    []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
+}
+
+// NodeChanges identifies effects computed while the mutation owns its snapshot.
+// A title change affects discovery descriptors as well as page content.
+type NodeChanges struct {
+	Body     bool
+	Metadata bool
+	Schema   bool
+	Type     bool
+	Title    bool
+}
+
+// NodeDeletion describes the removed resource set from one committed subtree
+// deletion. A large subtree requires resync rather than an unbounded event.
+type NodeDeletion struct {
+	NodeID   ksid.ID
+	ParentID ksid.ID
+	IDs      []ksid.ID
+	Resync   bool
+}
+
+// NodeMove records the ancestry transition from the committed mutation.
+type NodeMove struct {
+	OldParentID ksid.ID
+	ParentID    ksid.ID
+	Changed     bool
 }
 
 // NodeType defines what features are enabled for a node.

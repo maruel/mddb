@@ -10,7 +10,7 @@ import {
   type Accessor,
 } from "solid-js";
 import { useAuth } from "./AuthContext";
-import type { WorkspaceEvent } from "@sdk/types.gen";
+import { EventResync, type WorkspaceEvent } from "@sdk/types.gen";
 import { isLocalWriteRequest } from "../useApi";
 
 interface EventSourceContextValue {
@@ -42,7 +42,14 @@ export const EventSourceProvider: ParentComponent = (props) => {
     const url = `/api/v1/workspaces/${wsId}/events${sid ? `?session_id=${encodeURIComponent(sid)}` : ""}`;
     const es = new EventSource(url);
 
-    es.onopen = () => setConnected(true);
+    let opened = false;
+    es.onopen = () => {
+      setConnected(true);
+      // EventSource reconnects without replay. Refresh current authorized state;
+      // editors retain their existing dirty/pending draft conflict protection.
+      if (opened) setLastEvent({ type: EventResync, node_id: "0", actor_id: "0", modified: 0 });
+      opened = true;
+    };
     es.onerror = () => setConnected(false);
 
     es.addEventListener("workspace", (e: MessageEvent) => {

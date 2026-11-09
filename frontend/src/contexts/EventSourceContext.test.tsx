@@ -88,6 +88,11 @@ function LatestEvent() {
   return <output data-testid="latest-event">{lastEvent()?.actor_id}</output>;
 }
 
+function LatestEventType() {
+  const { lastEvent } = useEventSource();
+  return <output data-testid="latest-type">{lastEvent()?.type}</output>;
+}
+
 afterEach(() => {
   cleanup();
   MockEventSource.instances = [];
@@ -126,6 +131,7 @@ describe("EventSourceProvider", () => {
       <AuthContext.Provider value={authValue}>
         <EventSourceProvider>
           <ConnectionStatus />
+          <LatestEventType />
         </EventSourceProvider>
       </AuthContext.Provider>
     ));
@@ -140,11 +146,13 @@ describe("EventSourceProvider", () => {
 
     eventSource.open();
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
+    expect(screen.getByTestId("latest-type")).toBeEmptyDOMElement();
 
     eventSource.fail();
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Reconnecting");
 
     eventSource.open();
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
+    expect(screen.getByTestId("latest-type")).toHaveTextContent("resync");
   });
 });

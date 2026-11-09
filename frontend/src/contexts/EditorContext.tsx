@@ -1,4 +1,4 @@
-// Owns asynchronous conditional saves, acknowledged merge bases, conflict recovery, and editor departure authority.
+// Owns draft-safe resource refresh, conditional saves, acknowledged merge bases, conflict recovery, and editor departure authority.
 
 import {
   createContext,
@@ -22,7 +22,7 @@ import { nodeUrl, parseNodeUrl } from "../utils/urls";
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from "../utils/markdown-utils";
 import { mergeText, type TextMerge } from "./editorMerge";
 import { classifyExternalUpdate } from "./editorSync";
-import { EventNodeUpdated, type Commit } from "@sdk/types.gen";
+import { EventAspectMetadata, EventNodeUpdated, EventResync, type Commit } from "@sdk/types.gen";
 import { useUndo } from "../hooks/useUndo";
 
 /** Map of asset filename to signed URL */
@@ -262,9 +262,14 @@ export const EditorProvider: ParentComponent = (props) => {
     const evt = lastEvent();
     if (!evt) return;
     untrack(() => {
-      if (evt.type !== EventNodeUpdated || evt.node_id !== selectedNodeId()) return;
+      if (evt.type !== EventResync && (evt.type !== EventNodeUpdated || evt.node_id !== selectedNodeId())) return;
       const nodeId = selectedNodeId();
       if (!nodeId) return;
+      if (evt.type === EventResync || evt.aspects?.includes(EventAspectMetadata)) {
+        if (hasUnsavedChanges() || asyncEditPending()) setExternalChange(true);
+        else refreshFromServer();
+        return;
+      }
       const decision = classifyExternalUpdate(
         evt.modified,
         syncedModified(),

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -404,6 +405,135 @@ func TestValidGoModeOrigin(t *testing.T) {
 		req := &http.Request{Header: http.Header{"Origin": tc.origin}}
 		if got := validGoModeOrigin(req, "https://example.com/reverse/proxy"); got != tc.want {
 			t.Errorf("origin=%q got=%v want=%v", tc.origin, got, tc.want)
+		}
+	}
+}
+
+// firstFlushGate exposes the real released GET boundary before registry setup.
+type firstFlushGate struct {
+	http.ResponseWriter
+	entered chan struct{}
+	release <-chan struct{}
+	once    sync.Once
+}
+
+func (w *firstFlushGate) Flush() {
+	w.ResponseWriter.(http.Flusher).Flush()
+	w.once.Do(func() { close(w.entered); <-w.release })
+}
+
+func (w *firstFlushGate) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+func TestGoModeMCPStreamSetupAuthority(t *testing.T) {
+	for _, version := range []string{"2025-06-18", "2025-11-25"} {
+		for _, outcome := range []string{"role", "cancel"} {
+			t.Run(version+"/"+outcome, func(t *testing.T) {
+				t.Parallel()
+				env := setupTestEnv(t)
+				env.services.Broker = sse.NewBroker()
+				token, wsID := setupGoModeWorkspace(t, env, "startup-authority@example.com")
+				entered, release, served := make(chan struct{}), make(chan struct{}), make(chan struct{})
+				var releaseOnce sync.Once
+				resume := func() { releaseOnce.Do(func() { close(release) }) }
+				t.Cleanup(resume)
+				proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodGet && r.URL.Path == goModeMCPEndpoint {
+						defer close(served)
+						env.server.Config.Handler.ServeHTTP(&firstFlushGate{ResponseWriter: w, entered: entered, release: release}, r)
+					} else {
+						env.server.Config.Handler.ServeHTTP(w, r)
+					}
+				}))
+				t.Cleanup(proxy.Close)
+				endpoint := proxy.URL + goModeMCPEndpoint + "?workspaceId=" + wsID.String()
+				body, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": map[string]any{"protocolVersion": version, "clientInfo": map[string]string{"name": "startup-test", "version": "1"}, "capabilities": map[string]any{}}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, endpoint, bytes.NewReader(body))
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Authorization", "Bearer "+token)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Mcp-Protocol-Version", version)
+				initialized, err := proxy.Client().Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				session := initialized.Header.Get("Mcp-Session-Id")
+				if err := initialized.Body.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if initialized.StatusCode != http.StatusOK || session == "" {
+					t.Fatalf("initialize status=%d session=%q", initialized.StatusCode, session)
+				}
+				ctx, cancel := context.WithCancel(t.Context())
+				t.Cleanup(cancel)
+				req, err = http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Authorization", "Bearer "+token)
+				req.Header.Set("Mcp-Session-Id", session)
+				req.Header.Set("Mcp-Protocol-Version", version)
+				req.Header.Set("Accept", "text/event-stream")
+				response, err := proxy.Client().Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var wg sync.WaitGroup
+				done := make(chan error, 1)
+				wg.Go(func() { _, e := io.Copy(io.Discard, response.Body); done <- e })
+				t.Cleanup(func() { cancel(); resume(); _ = response.Body.Close(); wg.Wait() })
+				select {
+				case <-entered:
+				case <-time.After(2 * time.Second):
+					t.Fatal("released GET did not reach first flush")
+				}
+				if outcome == "cancel" {
+					cancel()
+				} else {
+					u, e := env.userService.GetByEmail("startup-authority@example.com")
+					if e != nil {
+						t.Fatal(e)
+					}
+					workspace, e := env.wsService.Get(wsID)
+					if e != nil {
+						t.Fatal(e)
+					}
+					membership, e := env.orgMemService.Get(u.ID, workspace.OrganizationID)
+					if e != nil {
+						t.Fatal(e)
+					}
+					if _, e = env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); e != nil {
+						t.Fatal(e)
+					}
+					wm, e := env.wsMemService.Get(u.ID, wsID)
+					if e != nil {
+						t.Fatal(e)
+					}
+					if _, e = env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); e != nil {
+						t.Fatal(e)
+					}
+					// This invalidation is deliberately published before registry registration.
+					env.services.Broker.Publish(wsID, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated})
+				}
+				resume()
+				select {
+				case e := <-done:
+					if outcome == "role" && e != nil {
+						t.Fatalf("stream ended with error: %v", e)
+					}
+				case <-time.After(2 * time.Second):
+					t.Fatal("startup authority change did not stop the stream before cleanup")
+				}
+				select {
+				case <-served:
+				case <-time.After(2 * time.Second):
+					t.Fatal("canceled startup handler did not release ownership")
+				}
+			})
 		}
 	}
 }
