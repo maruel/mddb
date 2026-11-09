@@ -1,4 +1,4 @@
-// Browser coverage for lazy Pele diagrams, editable source, safe fallback, and history disclosure.
+// Browser coverage for Pele diagrams, native caret reconciliation, editable source, and history disclosure.
 import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
 import type { Locator } from "@playwright/test";
 import type { EditorView } from "prosemirror-view";
@@ -31,6 +31,57 @@ async function sourceCaret(source: Locator, offset: number) {
 
 // Isolate application imports from the service worker's background asset precache.
 test.use({ serviceWorkers: "block" });
+
+for (const width of [390, 1280]) {
+  for (const kind of ["prose", "code", "mermaid"]) {
+    test(`Native caret survives focus reconciliation in ${kind} at ${width}px`, async ({ page, request }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const { token } = await registerUser(request, "caret");
+      const client = createClient(request, token);
+      await gotoWithSession(page, token);
+      await expect(page.locator("header")).toBeVisible({ timeout: 15000 });
+      const wsID = await getWorkspaceId(page);
+      const source = kind === "prose" ? "First paragraph" : "flowchart LR\naccTitle: Pipeline\nBuild --> Test";
+      const content = kind === "prose" ? source : `\`\`\`${kind === "mermaid" ? "mermaid" : "text"}\n${source}\n\`\`\``;
+      const node = await client.ws(wsID).createPage("0", { title: "Caret", content });
+      await page.goto(`/w/@${wsID}/@${node.id}`);
+      const editor = page.getByTestId("wysiwyg-editor");
+      const editable = editor.locator(kind === "prose" ? "p" : "pre code").first();
+      await expect(editable).toHaveText(source);
+      if (kind === "mermaid") await expect(editor.locator(".mermaid-diagram > svg")).toHaveCount(1);
+
+      // Keep the initial focus timer pending until native navigation has moved
+      // the caret, then let it run before the selectionchange notification.
+      await page.clock.install();
+      await page.clock.pauseAt(new Date());
+      await editable.click();
+      await page.keyboard.press("Control+Home");
+      await expect.poll(() => sourceCaret(editable, 0)).toEqual({ native: true, model: true });
+      const release = await page.evaluateHandle(() => {
+        const hold = (event: Event) => event.stopImmediatePropagation();
+        document.addEventListener("selectionchange", hold, true);
+        return () => {
+          document.removeEventListener("selectionchange", hold, true);
+          document.dispatchEvent(new Event("selectionchange"));
+        };
+      });
+      const offset = kind === "prose" ? 1 : 13;
+      try {
+        await page.keyboard.press(kind === "prose" ? "ArrowRight" : "ArrowDown");
+        await expect.poll(() => sourceCaret(editable, offset)).toEqual({ native: true, model: false });
+        await page.clock.runFor(50);
+        await expect.poll(() => sourceCaret(editable, offset)).toMatchObject({ native: true });
+      } finally {
+        await release.evaluate((fn) => fn());
+        await release.dispose();
+        await page.clock.resume();
+      }
+      await expect.poll(() => sourceCaret(editable, offset)).toEqual({ native: true, model: true });
+      await page.keyboard.type("X");
+      await expect(editable).toHaveText(source.slice(0, offset) + "X" + source.slice(offset));
+    });
+  }
+}
 
 for (const width of [390, 1280]) {
   test(`Mermaid diagrams in the editor and history at ${width}px`, async ({ page, request }, testInfo) => {
