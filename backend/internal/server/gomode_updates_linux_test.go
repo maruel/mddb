@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"net/http"
@@ -18,8 +19,10 @@ import (
 	"time"
 
 	"github.com/maruel/gomode/mcp"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -126,6 +129,23 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 					}
 					writers = append(writers, w)
 				}
+				screens := make([]*invalidationScreenWriter, 0, subscribers)
+				screenH := &handlers.SSEHandler{Svc: env.services, Cfg: &handlers.Config{Revision: "benchmark"}}
+				for range subscribers {
+					// Screen admission is per user; model distinct logged-in readers.
+					screenUser := *user
+					screenUser.ID = ksid.NewID()
+					w := &invalidationScreenWriter{header: make(http.Header), ready: make(chan struct{}, 1), events: make(chan invalidationScreenReceipt, 64)}
+					request := httptest.NewRequestWithContext(reqctx.WithUser(ctx, &screenUser), http.MethodGet, "/events", nil)
+					request.SetPathValue("wsID", wsID.String())
+					wg.Go(func() { screenH.ServeHTTP(w, request) })
+					select {
+					case <-w.ready:
+					case <-time.After(5 * time.Second):
+						b.Fatal("screen not connected")
+					}
+					screens = append(screens, w)
+				}
 				reg.reads.Store(0)
 				reg.scanned.Store(0)
 				reg.catalog.Store(0)
@@ -139,7 +159,7 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 				if err := syscall.Getrusage(syscall.RUSAGE_SELF, &before); err != nil {
 					b.Fatal(err)
 				}
-				var latency, targetLatency time.Duration
+				var latency, targetLatency, screenLatency time.Duration
 				iteration := 0
 				b.ReportAllocs()
 				b.ResetTimer()
@@ -181,6 +201,21 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 							b.Fatal("committed target did not reach context")
 						}
 					}
+					for _, w := range screens {
+						for range 5 {
+							select {
+							case receipt := <-w.events:
+								if receipt.at.Before(started) {
+									b.Fatal("stale screen receipt")
+								}
+								if receipt.node == watched.ID {
+									screenLatency += receipt.at.Sub(targetStarted) / time.Duration(subscribers)
+								}
+							case <-time.After(5 * time.Second):
+								b.Fatal("screen missed committed mutation")
+							}
+						}
+					}
 					latency += time.Since(started)
 					targetLatency += lastApplied.Sub(targetStarted)
 					iteration++
@@ -197,6 +232,14 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 					items += w.itemEvents.Load()
 					targets += w.targetEvents.Load()
 				}
+				var screenBytes, screenEvents int64
+				for _, w := range screens {
+					screenBytes += w.bytes.Load()
+					screenEvents += w.count.Load()
+				}
+				b.ReportMetric(float64(screenBytes)/float64(b.N), "screen-delivery-B/op")
+				b.ReportMetric(float64(screenEvents)/float64(b.N), "screen-events/op")
+				b.ReportMetric(float64(screenLatency.Nanoseconds())/float64(b.N), "screen-target-ns/op")
 				b.ReportMetric(float64(catalogs)/float64(b.N), "catalog-events/op")
 				b.ReportMetric(float64(items)/float64(b.N), "item-events/op")
 				b.ReportMetric(float64(targets)/float64(b.N), "target-events/op")
@@ -318,4 +361,140 @@ func (w *invalidationMeasuredWriter) Write(p []byte) (int, error) {
 type invalidationApplied struct {
 	err error
 	at  time.Time
+}
+
+// invalidationScreenWriter parses real SSE handler output to time wire receipt.
+// It measures transport availability, not browser rendering or visible latency.
+type invalidationScreenWriter struct {
+	header http.Header
+	ready  chan struct{}
+	events chan invalidationScreenReceipt
+	bytes  atomic.Int64
+	count  atomic.Int64
+}
+
+func (w *invalidationScreenWriter) Header() http.Header { return w.header }
+func (*invalidationScreenWriter) WriteHeader(int)       {}
+func (*invalidationScreenWriter) Flush()                {}
+func (w *invalidationScreenWriter) Write(p []byte) (int, error) {
+	frame := string(p)
+	if strings.HasPrefix(frame, "event: server\n") {
+		w.ready <- struct{}{}
+	}
+	if strings.Contains(frame, "\nevent: workspace\n") {
+		_, data, ok := strings.Cut(frame, "\ndata: ")
+		if !ok {
+			return 0, errors.New("workspace frame has no payload")
+		}
+		var event dto.WorkspaceEvent
+		if err := json.Unmarshal([]byte(strings.TrimSpace(data)), &event); err != nil {
+			return 0, err
+		}
+		w.bytes.Add(int64(len(p)))
+		w.count.Add(1)
+		w.events <- invalidationScreenReceipt{node: event.NodeID, at: time.Now()}
+	}
+	return len(p), nil
+}
+
+type invalidationScreenReceipt struct {
+	node ksid.ID
+	at   time.Time
+}
+
+// BenchmarkConversationWatchBursts measures an authenticated HTTP context read
+// after committed offscreen page and record writes.
+// Setup registers 32 bounded watches through actual tools;
+// the measured boundary is context-read completion, not model application.
+func BenchmarkConversationWatchBursts(b *testing.B) {
+	env := setupTestEnv(b)
+	token, ws := setupGoModeWorkspace(b, env, "watch-bursts@example.com")
+	endpoint := goModeMCPEndpoint + "?workspaceId=" + ws.String()
+	store, err := env.services.FileStore.GetWorkspaceStore(b.Context(), ws)
+	if err != nil {
+		b.Fatal(err)
+	}
+	user, err := env.services.User.GetByEmail("watch-bursts@example.com")
+	if err != nil {
+		b.Fatal(err)
+	}
+	author := handlers.GitAuthor(user)
+	page, err := store.CreatePageUnderParent(b.Context(), 0, "Offscreen", "body", author)
+	if err != nil {
+		b.Fatal(err)
+	}
+	table, err := store.CreateTableUnderParent(b.Context(), 0, "Records", nil, author)
+	if err != nil {
+		b.Fatal(err)
+	}
+	meta := map[string]any{"openai/session": "burst-conversation"}
+	call := func(name string, args map[string]any) {
+		callMCPNamedAt(b, env, token, endpoint, "tools/call", map[string]any{"name": name, "arguments": args, "_meta": meta}, name)
+	}
+	call("node_read", map[string]any{"nodeId": page.ID.String()})
+	call("records_query", map[string]any{"nodeId": table.ID.String(), "limit": 1})
+	for range 30 {
+		node, err := store.CreatePageUnderParent(b.Context(), 0, "Other dependency", "body", author)
+		if err != nil {
+			b.Fatal(err)
+		}
+		call("node_read", map[string]any{"nodeId": node.ID.String()})
+	}
+	nodeH := handlers.NodeHandler{Svc: env.services}
+	var before, after syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &before); err != nil {
+		b.Fatal(err)
+	}
+	var elapsed time.Duration
+	var bytes int
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		started := time.Now()
+		for j := 0; j < 8; j++ {
+			if _, err := nodeH.UpdatePageFrontmatter(b.Context(), ws, user, &dto.UpdatePageFrontmatterRequest{ID: page.ID, Icon: fmt.Sprintf("icon-%d-%d", i, j)}); err != nil {
+				b.Fatal(err)
+			}
+			if _, err := nodeH.CreateRecord(b.Context(), ws, user, &dto.CreateRecordRequest{ID: table.ID, Data: map[string]any{"value": j}}); err != nil {
+				b.Fatal(err)
+			}
+		}
+		raw := callMCPNamedAt(b, env, token, endpoint, "resources/read", map[string]any{"uri": voiceContextURI, "_meta": meta}, voiceContextURI)
+		var response mcp.ResourcesReadResult
+		if err := json.Unmarshal(raw, &response); err != nil {
+			b.Fatal(err)
+		}
+		var projection struct {
+			Resources []struct {
+				State string `json:"state"`
+			} `json:"resources"`
+			OmittedCount int `json:"omittedCount"`
+		}
+		if err := json.Unmarshal([]byte(response.Contents[0].Text), &projection); err != nil {
+			b.Fatal(err)
+		}
+		if len(projection.Resources)+projection.OmittedCount != 32 {
+			b.Fatalf("watch bound: %d", len(projection.Resources))
+		}
+		changed := 0
+		for _, r := range projection.Resources {
+			if r.State == "changed" {
+				changed++
+			}
+		}
+		if changed != 2 {
+			b.Fatalf("changed resources=%d", changed)
+		}
+		bytes += len(raw)
+		elapsed += time.Since(started)
+	}
+	b.StopTimer()
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &after); err != nil {
+		b.Fatal(err)
+	}
+	cpu := time.Duration(after.Utime.Nano() - before.Utime.Nano() + after.Stime.Nano() - before.Stime.Nano())
+	b.ReportMetric(float64(elapsed.Nanoseconds())/float64(b.N), "burst-to-context-ns/op")
+	b.ReportMetric(float64(cpu.Nanoseconds())/float64(b.N), "process-CPU-ns/op")
+	b.ReportMetric(float64(bytes)/float64(b.N), "HTTP-result-B/op")
+	b.ReportMetric(1, "context-reads/op")
 }

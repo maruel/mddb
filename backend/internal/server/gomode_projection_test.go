@@ -3,6 +3,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -59,11 +60,11 @@ func TestWorkspaceRegistry(t *testing.T) {
 			if err := json.Unmarshal(raw, &out); err != nil {
 				t.Fatal(err)
 			}
-			if len(out.Resources) > 51 {
+			if len(out.Resources) > 52 {
 				t.Fatalf("unbounded resources: %d", len(out.Resources))
 			}
 			for _, r := range out.Resources {
-				if r.URI != voiceItemsURI {
+				if r.URI != voiceItemsURI && r.URI != voiceContextURI {
 					ids = append(ids, r.Name)
 				}
 			}
@@ -156,11 +157,11 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(out.Items) != 20 || !out.Items[0].Active || out.Items[0].ID != active.String() || out.OmittedCount != 35 {
+		if len(out.Items) != 20 || out.OmittedCount != 35 {
 			t.Fatalf("items = %#v", out)
 		}
 	})
-	t.Run("NestedActiveItem", func(t *testing.T) {
+	t.Run("NestedFocusIndependentOfCatalog", func(t *testing.T) {
 		n, err := store.CreatePageUnderParent(t.Context(), active, "Nested", "nested", author)
 		if err != nil {
 			t.Fatal(err)
@@ -173,8 +174,12 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(out.Items) != 20 || out.Items[0].ID != n.ID.String() || !out.Items[0].Active || out.OmittedCount != 36 {
+		if len(out.Items) != 20 || slices.ContainsFunc(out.Items, func(item mcpschema.ServiceItem) bool { return item.ID == n.ID.String() }) || out.OmittedCount != 35 {
 			t.Fatalf("nested active projection: %#v", out)
+		}
+		current, e := reg.conversationState(ctx)
+		if e != nil || current.Focus == nil || current.Focus.ID != n.ID.String() {
+			t.Fatalf("offscreen focus missing: %+v %v", current, e)
 		}
 	})
 
@@ -213,15 +218,12 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resource, err := reg.snapshotResource(&snap, next)
-		if err != nil {
-			t.Fatal(err)
-		}
+		resource := reg.snapshotDetail(&snap, next)
 		raw, err := reg.ReadResource(t.Context(), &mcp.ResourcesReadParams{URI: resource.NextContentURI})
 		if err != nil {
 			t.Fatal(err)
 		}
-		var resourceChunk mcpschema.ResourceNode
+		var resourceChunk mcpschema.NodeDetail
 		if err := json.Unmarshal([]byte(raw.Contents[0].Text), &resourceChunk); err != nil {
 			t.Fatal(err)
 		}
@@ -259,30 +261,27 @@ func TestWorkspaceRegistry(t *testing.T) {
 		}
 		snap.Node.Content = original.Content
 		next := "" // Compare the pre-existing fields independently of chunk additions.
-		got, err := reg.snapshotResource(&snap, next)
+		got := reg.snapshotDetail(&snap, next)
+		tool := reg.readNode(t.Context(), &mcp.ToolRequest[mcpschema.ReadNodeInput]{Arguments: mcpschema.ReadNodeInput{NodeID: active.String()}})
+		if tool.IsError {
+			t.Fatalf("node_read failed: %+v", tool)
+		}
+		toolJSON, err := json.Marshal(tool.Structured.(mcpschema.ReadNodeOutput).Node)
 		if err != nil {
 			t.Fatal(err)
 		}
-		a, err := json.Marshal(original)
+		resourceJSON, err := json.Marshal(got)
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := json.Marshal(got)
-		if err != nil {
-			t.Fatal(err)
+		if !bytes.Equal(toolJSON, resourceJSON) {
+			t.Fatalf("tool and resource disagree on the same canonical snapshot:\ntool %s\nresource %s", toolJSON, resourceJSON)
 		}
-		var want, actual map[string]any
-		if err := json.Unmarshal(a, &want); err != nil {
-			t.Fatal(err)
+		if len(got.Properties) != 3 || got.Properties[0].RelationConfig == nil || !got.Properties[0].RelationConfig.IsDualLink || got.Properties[1].RollupConfig.Aggregation != "sum" || got.Properties[2].FormulaConfig.Expression != "Value+1" {
+			t.Fatalf("incomplete canonical schema: %+v", got.Properties)
 		}
-		if err := json.Unmarshal(b, &actual); err != nil {
-			t.Fatal(err)
-		}
-		delete(want, "revision")
-		delete(actual, "revision")
-		delete(actual, "contentBytes")
-		if !reflect.DeepEqual(want, actual) {
-			t.Fatalf("resource wire changed:\n%s\n%s", a, b)
+		if len(got.Views) != 1 || len(got.Views[0].Filters) != 1 || got.Views[0].Filters[0].And[0].Value != "a" || got.Created == 0 || got.Modified == 0 {
+			t.Fatalf("incomplete canonical metadata: %+v", got)
 		}
 	})
 	t.Run("ChildHierarchyProjection", func(t *testing.T) {
@@ -339,11 +338,11 @@ func TestWorkspaceRegistry(t *testing.T) {
 		if reflect.DeepEqual(before, after) {
 			t.Fatal("own move did not actually change resource representation")
 		}
-		var moved mcpschema.ResourceNode
+		var moved mcpschema.NodeDetail
 		if err := json.Unmarshal([]byte(after.Contents[0].Text), &moved); err != nil {
 			t.Fatal(err)
 		}
-		if moved.ParentID != other.ID {
+		if moved.ParentID != other.ID.String() {
 			t.Fatalf("moved resource ParentID=%v", moved.ParentID)
 		}
 

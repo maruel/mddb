@@ -171,9 +171,10 @@ export async function installBrowserTools(page: Page) {
         const frame = JSON.parse(raw) as Record<string, unknown>;
         fixture.sent.push(frame);
         if (frame.kind === "session.setup") queueMicrotask(() => this.receive({ kind: "session.ready" }));
-        // Complete the fixture's greeting turn, just as a gateway with no
-        // generated audio does, so passive context can flush when idle.
-        if (frame.kind === "user.message") queueMicrotask(() => this.receive({ kind: "turn.status", state: "idle" }));
+        // Complete greeting and tool turns as a gateway with no generated
+        // audio does. Quiet context received during a tool waits for turn idle.
+        if (frame.kind === "user.message" || frame.kind === "tool.result")
+          queueMicrotask(() => this.receive({ kind: "turn.status", state: "idle" }));
       }
       receive(frame: Record<string, unknown>) {
         this.onmessage?.(new MessageEvent("message", { data: JSON.stringify(frame) }));

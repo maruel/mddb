@@ -21,6 +21,7 @@ import (
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -119,6 +120,7 @@ func setupTestEnv(t testing.TB) *testEnv {
 		EmailVerif:    nil, // disabled
 		Email:         nil, // disabled
 		RootRepo:      rootRepo,
+		Broker:        sse.NewBroker(),
 	}
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

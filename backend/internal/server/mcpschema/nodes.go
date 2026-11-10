@@ -26,6 +26,9 @@ type NodeSummary struct {
 
 // ListNodesOutput defines the list nodes output wire contract.
 type ListNodesOutput struct {
+	URI        string        `json:"uri"`
+	Revision   string        `json:"revision"`
+	NextURI    string        `json:"nextURI,omitempty"`
 	NextCursor string        `json:"nextCursor,omitempty"`
 	Nodes      []NodeSummary `json:"nodes"`
 }
@@ -35,25 +38,28 @@ type ReadNodeOutput struct {
 	Node NodeDetail `json:"node"`
 }
 
-// NodeDetail defines the node detail wire contract.
+// NodeDetail is the canonical bounded snapshot shared by node tools, resources,
+// and mutation acknowledgements. Revision covers title/body CAS, while metadata
+// can change independently. A continuation is another window, not a deletion.
 type NodeDetail struct {
-	Revision          string         `json:"revision,omitempty"`
-	ContentBytes      int64          `json:"contentBytes,omitempty"`
-	ContentTruncated  bool           `json:"contentTruncated,omitempty"`
-	NextContentCursor string         `json:"nextContentCursor,omitempty"`
-	ID                string         `json:"id"`
-	ParentID          string         `json:"parentId,omitempty"`
-	Title             string         `json:"title"`
-	Type              string         `json:"type"`
-	Content           string         `json:"content,omitempty"`
-	Properties        []NodeProperty `json:"properties,omitempty"`
-	Modified          string         `json:"modified,omitempty"`
-}
-
-// NodeProperty defines the node property wire contract.
-type NodeProperty struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Revision          string     `json:"revision,omitempty"`
+	ContentBytes      int64      `json:"contentBytes,omitempty"`
+	ContentTruncated  bool       `json:"contentTruncated,omitempty"`
+	NextContentCursor string     `json:"nextContentCursor,omitempty"`
+	NextContentURI    string     `json:"nextContentURI,omitempty"`
+	ID                string     `json:"id"`
+	ParentID          string     `json:"parentId,omitempty"`
+	Title             string     `json:"title"`
+	Type              string     `json:"type"`
+	Content           string     `json:"content,omitempty"`
+	Properties        []Property `json:"properties,omitempty"`
+	Views             []View     `json:"views,omitempty"`
+	Created           float64    `json:"created"`
+	Modified          float64    `json:"modified"`
+	Tags              []string   `json:"tags,omitempty"`
+	FaviconURL        string     `json:"faviconUrl,omitempty"`
+	Icon              string     `json:"icon,omitempty"`
+	Cover             string     `json:"cover,omitempty"`
 }
 
 // UpdateNodeInput defines the update node input wire contract.

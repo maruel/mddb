@@ -69,19 +69,11 @@ const WorkspaceLayout: ParentComponent = (props) => {
     setSaveError: setRecordSaveError,
   } = useRecords();
 
-  // The voice agent watches the open document so it can be told when the page
-  // changes underneath it.
-  const voiceResourceSubscriptions = (): string[] => {
-    const wsId = user()?.workspace_id;
-    const nodeId = selectedNodeData()?.id === selectedNodeId() ? selectedNodeId() : null;
-    return wsId && nodeId ? [`mddb://workspaces/${wsId}/nodes/${nodeId}`] : [];
-  };
-
   const goMode = useGoMode();
   const voiceOwner = createMemo(() => `${authIdentity()}:${user()?.workspace_id ?? ""}`);
   createEffect(
     on(voiceOwner, () => {
-      goMode.watchResources(voiceResourceSubscriptions, lastEvent);
+      goMode.shareWorkspaceEvents(lastEvent);
     }),
   );
 

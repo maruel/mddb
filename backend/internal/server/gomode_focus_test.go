@@ -44,13 +44,13 @@ func TestVoiceFocusHTTPAndConversationIsolation(t *testing.T) {
 		t.Fatal("focus did not apply")
 		return out
 	}
-	read := func(session string) mcpschema.ServiceItemsOutput {
-		raw := callMCPNamedAt(t, env, token, endpoint, "resources/read", map[string]any{"uri": voiceItemsURI, "_meta": map[string]any{"openai/session": session}}, voiceItemsURI)
+	read := func(session string) mcpschema.ConversationContext {
+		raw := callMCPNamedAt(t, env, token, endpoint, "resources/read", map[string]any{"uri": voiceContextURI, "_meta": map[string]any{"openai/session": session}}, voiceContextURI)
 		var resourceRead mcp.ResourcesReadResult
 		if err := json.Unmarshal(raw, &resourceRead); err != nil {
 			t.Fatal(err)
 		}
-		var out mcpschema.ServiceItemsOutput
+		var out mcpschema.ConversationContext
 		if err := json.Unmarshal([]byte(resourceRead.Contents[0].Text), &out); err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +60,7 @@ func TestVoiceFocusHTTPAndConversationIsolation(t *testing.T) {
 	publish("b", b.ID)
 	for session, want := range map[string]ksid.ID{"a": a.ID, "b": b.ID} {
 		items := read(session)
-		if len(items.Items) == 0 || !items.Items[0].Active || items.Items[0].ID != want.String() {
+		if items.Focus == nil || items.Focus.ID != want.String() {
 			t.Fatalf("session %s items = %+v", session, items)
 		}
 		raw := callMCPNamedAt(t, env, token, endpoint, "server/discover", map[string]any{"_meta": map[string]any{"openai/session": session}}, "")
@@ -72,16 +72,14 @@ func TestVoiceFocusHTTPAndConversationIsolation(t *testing.T) {
 			t.Fatalf("session %s instructions = %s", session, discovered.Instructions)
 		}
 	}
-	for _, item := range read("").Items {
-		if item.Active {
-			t.Fatal("ambiguous sessionless focus marked active")
-		}
+	if read("").Focus != nil {
+		t.Fatal("ambiguous sessionless focus inherited a selection")
 	}
 	// Reading another node and listing the root are useful MCP operations, but
 	// cannot move a browser's authoritative visible selection.
 	for name, args := range map[string]map[string]string{"node_read": {"nodeId": b.ID.String()}, "nodes_list": {}} {
 		callMCPNamedAt(t, env, token, endpoint, "tools/call", map[string]any{"name": name, "arguments": args, "_meta": map[string]any{"openai/session": "a"}}, name)
-		if got := read("a").Items[0]; got.ID != a.ID.String() || !got.Active {
+		if got := read("a").Focus; got == nil || got.ID != a.ID.String() {
 			t.Fatalf("%s moved browser focus: %+v", name, got)
 		}
 	}
@@ -90,7 +88,7 @@ func TestVoiceFocusHTTPAndConversationIsolation(t *testing.T) {
 	if status := env.doJSON(t, http.MethodPost, url, dto.UpdateVoiceFocusRequest{Session: "a", NodeID: b.ID, Version: 0}, &out, token); status != http.StatusOK || out.Applied {
 		t.Fatalf("stale publication = %d,%+v", status, out)
 	}
-	if read("a").Items[0].ID != a.ID.String() {
+	if got := read("a").Focus; got == nil || got.ID != a.ID.String() {
 		t.Fatal("stale update changed focus")
 	}
 	if status := env.doJSON(t, http.MethodPost, url, dto.UpdateVoiceFocusRequest{Session: "a", NodeID: ksid.ID(999), Version: va.Version}, nil, token); status != http.StatusNotFound {
@@ -107,10 +105,8 @@ func TestVoiceFocusHTTPAndConversationIsolation(t *testing.T) {
 		t.Fatalf("unauthorized workspace = %d", status)
 	}
 	publish("a", 0)
-	for _, item := range read("a").Items {
-		if item.Active {
-			t.Fatal("clear retained active node")
-		}
+	if read("a").Focus != nil {
+		t.Fatal("clear retained focused node")
 	}
 }
 
@@ -214,7 +210,7 @@ func TestVoiceWorkspaceExplicitRouting(t *testing.T) {
 		if err := json.Unmarshal([]byte(resourceRead.Contents[0].Text), &items); err != nil {
 			t.Fatal(err)
 		}
-		if len(items.Items) != 1 || !items.Items[0].Active || items.Items[0].ID != page.ID.String() || items.Items[0].Reference != "mddb://workspaces/"+id.String()+"/nodes/"+page.ID.String() {
+		if len(items.Items) != 1 || items.Items[0].ID != page.ID.String() || items.Items[0].Reference != "mddb://workspaces/"+id.String()+"/nodes/"+page.ID.String() {
 			t.Fatalf("workspace %s items = %+v", id, items)
 		}
 		// Resource catalogs without explicit workspace routing remain generic,
@@ -224,7 +220,7 @@ func TestVoiceWorkspaceExplicitRouting(t *testing.T) {
 		if err := json.Unmarshal(raw, &listed); err != nil {
 			t.Fatal(err)
 		}
-		if len(listed.Resources) != 1 || listed.Resources[0].URI != voiceItemsURI {
+		if len(listed.Resources) != 2 || listed.Resources[0].URI != voiceItemsURI || listed.Resources[1].URI != voiceContextURI {
 			t.Fatalf("unbound catalog = %+v", listed.Resources)
 		}
 	}
@@ -322,5 +318,48 @@ func TestVoiceFocusConcurrentNotificationsAndSessionLimit(t *testing.T) {
 	meta.Session = string(make([]byte, 257))
 	if _, err := withVoiceSession(t.Context(), meta); err == nil {
 		t.Fatal("oversized conversation accepted")
+	}
+}
+
+func TestGoModeFocusCommittedWatchFailure(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, ws := setupGoModeWorkspace(t, env, "focus-advisory@example.com")
+	var page dto.CreatePageResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/workspaces/"+ws.String()+"/nodes/0/page/create", dto.CreatePageRequest{Title: "Focus"}, &page, token); status != http.StatusOK {
+		t.Fatalf("create: %d", status)
+	}
+	url := "/api/v1/workspaces/" + ws.String() + "/gomode/focus"
+	var claim dto.UpdateVoiceFocusResponse
+	if status := env.doJSON(t, http.MethodPost, url, dto.UpdateVoiceFocusRequest{Session: "advisory", NodeID: page.ID, BrowserSelection: true}, &claim, token); status != http.StatusOK || claim.Applied {
+		t.Fatalf("claim: %d %+v", status, claim)
+	}
+	// Shutdown can close the background owner while an authenticated focus request
+	// is in flight. The CAS commit is still distinct from advisory watch setup.
+	if err := env.services.StopBackground(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	var result dto.UpdateVoiceFocusResponse
+	if status := env.doJSON(t, http.MethodPost, url, dto.UpdateVoiceFocusRequest{Session: "advisory", NodeID: page.ID, BrowserSelection: true, Version: claim.Version}, &result, token); status != http.StatusOK {
+		t.Fatalf("committed focus reported failure: %d %+v", status, result)
+	}
+	if !result.Applied || result.Version <= claim.Version {
+		t.Fatalf("committed outcome lost: %+v", result)
+	}
+	raw := callMCPNamedAt(t, env, token, goModeMCPEndpoint+"?workspaceId="+ws.String(), "resources/read", map[string]any{"uri": voiceContextURI, "_meta": map[string]any{"openai/session": "advisory"}}, voiceContextURI)
+	var resource mcp.ResourcesReadResult
+	if err := json.Unmarshal(raw, &resource); err != nil {
+		t.Fatal(err)
+	}
+	var projection mcpschema.ConversationContext
+	if len(resource.Contents) != 1 {
+		t.Fatalf("focus resource: %s", raw)
+	}
+	if err := json.Unmarshal([]byte(resource.Contents[0].Text), &projection); err != nil || projection.Focus == nil || projection.Focus.ID != page.ID.String() {
+		t.Fatalf("watch failure retired committed focus: %+v,%v", projection, err)
+	}
+	var retry dto.UpdateVoiceFocusResponse
+	if status := env.doJSON(t, http.MethodPost, url, dto.UpdateVoiceFocusRequest{Session: "advisory", NodeID: page.ID, BrowserSelection: true, Version: claim.Version}, &retry, token); status != http.StatusOK || retry.Applied || retry.Version != result.Version {
+		t.Fatalf("published CAS lease not retained: %d %+v", status, retry)
 	}
 }

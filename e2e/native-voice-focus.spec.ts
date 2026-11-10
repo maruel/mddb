@@ -12,12 +12,12 @@ import {
   waitNativeReady,
 } from "./gomode-fixtures";
 
-async function activeNodes(request: APIRequestContext, token: string, workspace: string, conversation: string) {
+async function focusedNodes(request: APIRequestContext, token: string, workspace: string, conversation: string) {
   const response = await request.post(`/api/v1/gomode/mcp?workspaceId=${workspace}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Mcp-Method": "resources/read",
-      "Mcp-Name": "gomode://items",
+      "Mcp-Name": "mddb://conversation/context",
       "Mcp-Protocol-Version": "2026-07-28",
     },
     data: {
@@ -25,7 +25,7 @@ async function activeNodes(request: APIRequestContext, token: string, workspace:
       id: "native-focus",
       method: "resources/read",
       params: {
-        uri: "gomode://items",
+        uri: "mddb://conversation/context",
         _meta: {
           "openai/session": conversation,
           "io.modelcontextprotocol/protocolVersion": "2026-07-28",
@@ -39,8 +39,8 @@ async function activeNodes(request: APIRequestContext, token: string, workspace:
   const body = await response.json();
   expect(body.error).toBeUndefined();
   expect(body.result.contents).toHaveLength(1);
-  const items = JSON.parse(body.result.contents[0].text).items as Array<{ id: string; active?: boolean }>;
-  return items.filter((item) => item.active).map((item) => item.id);
+  const context = JSON.parse(body.result.contents[0].text) as { focus: { id: string } | null };
+  return context.focus ? [context.focus.id] : [];
 }
 
 test("manual native navigation tracks and clears the current conversation before any tool invocation", async ({
@@ -63,7 +63,7 @@ test("manual native navigation tracks and clears the current conversation before
   await installNativeTools(page, request, "native-first");
   await gotoWithSession(page, token, `/w/@${workspace.id}/@${first.id}`);
   await waitNativeReady(page);
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-first")).toEqual([first.id]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-first")).toEqual([first.id]);
   await expect
     .poll(() => page.evaluate(() => window.nativeToolFixture.readiness.at(-1)?.voiceSessionPrepared))
     .toBe("native-first");
@@ -80,21 +80,21 @@ test("manual native navigation tracks and clears the current conversation before
 
   await page.getByTestId(`sidebar-node-${second.id}`).click();
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Second native page");
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-first")).toEqual([second.id]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-first")).toEqual([second.id]);
   await page.getByTestId("user-menu-button").click();
   await page.getByRole("menuitem", { name: "Profile", exact: true }).click();
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-first")).toEqual([]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-first")).toEqual([]);
   await page.goBack();
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Second native page");
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-first")).toEqual([second.id]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-first")).toEqual([second.id]);
   await changeNativeVoiceSession(page, null);
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-first")).toEqual([]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-first")).toEqual([]);
   await page.getByTestId(`sidebar-node-${first.id}`).click();
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Refreshed native content");
-  expect(await activeNodes(request, token, workspace.id, "native-first")).toEqual([]);
+  expect(await focusedNodes(request, token, workspace.id, "native-first")).toEqual([]);
   await changeNativeVoiceSession(page, "native-second");
-  await expect.poll(() => activeNodes(request, token, workspace.id, "native-second")).toEqual([first.id]);
-  expect(await activeNodes(request, token, workspace.id, "native-first")).toEqual([]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "native-second")).toEqual([first.id]);
+  expect(await focusedNodes(request, token, workspace.id, "native-first")).toEqual([]);
   expect(await page.evaluate(() => window.nativeToolFixture.results)).toEqual([]);
 });
 
@@ -110,7 +110,7 @@ test("explicit native focus retries the same selected node after failed publicat
   await waitNativeReady(page);
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Retry native context");
   await changeNativeVoiceSession(page, null);
-  await expect.poll(() => activeNodes(request, token, workspace.id, "before-retry")).toEqual([]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "before-retry")).toEqual([]);
   let fail = true;
   let attempts = 0;
   await page.route("**/gomode/focus", async (route) => {
@@ -124,13 +124,13 @@ test("explicit native focus retries the same selected node after failed publicat
     .poll(() => page.evaluate(() => window.nativeToolFixture.readiness.at(-1)?.voiceSessionPrepared))
     .toBe("retry-native");
   expect(attempts).toBeGreaterThan(0);
-  expect(await activeNodes(request, token, workspace.id, "retry-native")).toEqual([]);
+  expect(await focusedNodes(request, token, workspace.id, "retry-native")).toEqual([]);
   const failedAttempts = attempts;
   fail = false;
   await invokeNativeFocus(page, node.id, "retry-selected", "retry-native");
   expect(await nativeResult(page, "retry-selected")).toEqual({ nodeId: node.id, status: "focused" });
   await expect.poll(() => attempts).toBeGreaterThan(failedAttempts);
-  await expect.poll(() => activeNodes(request, token, workspace.id, "retry-native")).toEqual([node.id]);
+  await expect.poll(() => focusedNodes(request, token, workspace.id, "retry-native")).toEqual([node.id]);
 });
 
 for (const boundary of ["retirement", "logout"] as const) {
@@ -186,7 +186,7 @@ for (const boundary of ["retirement", "logout"] as const) {
     await expect.poll(() => held - fulfilled).toBe(0);
     await expect(page.getByRole("status").filter({ hasText: "Voice context could not update" })).toHaveCount(0);
     if (boundary === "retirement")
-      await expect.poll(() => activeNodes(request, token, workspace.id, "pending-native")).toEqual([]);
+      await expect.poll(() => focusedNodes(request, token, workspace.id, "pending-native")).toEqual([]);
     expect(
       await page.evaluate(() =>
         window.nativeToolFixture.readiness.some((item) => item.voiceSessionPrepared === "pending-native"),

@@ -33,7 +33,6 @@ type ServiceItem struct {
 	Reference string `json:"reference"`
 	Title     string `json:"title"`
 	State     string `json:"state"`
-	Active    bool   `json:"active,omitempty"`
 }
 
 // ServiceItemsOutput carries a bounded baseline with an explicit omitted count.

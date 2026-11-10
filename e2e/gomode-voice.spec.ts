@@ -1,6 +1,7 @@
 // Exercises voice settings, microphone permissions, and scoped authorization across gateway origins.
 
 import { waitForWorkspace, test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
+import { installBrowserTools } from "./gomode-fixtures";
 import type { VoiceChoicesResp } from "@maruel/gomode/sdk/voicegateway/v2/types.gen.ts";
 
 // Individual tests grant capture explicitly; auto-grant UI would bypass denied permissions.
@@ -329,12 +330,13 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
   const originating = page.waitForRequest(
     (req) => new URL(req.url()).pathname === "/api/v1/gomode/mcp" && req.method() === "POST",
   );
+  await installBrowserTools(page);
   await gotoWithSession(page, token);
   await waitForWorkspace(page);
-  // Workspace views reuse their screen event stream. Settings exercises the
-  // independent MCP subscription and its captured session/workspace authority.
+  // A connected conversation exercises MCP work with captured session authority.
   await page.getByTestId("user-menu-button").click();
   await page.getByRole("menuitem", { name: "Profile", exact: true }).click();
+  await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
   const queued = await originating;
   const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
   if (!cookie) throw new Error("Missing host cookie");

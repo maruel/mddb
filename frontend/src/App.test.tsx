@@ -523,14 +523,15 @@ describe("App", () => {
       expect(screen.getByRole("button", { name: "Enable microphone" })).toHaveAccessibleDescription(
         "Microphone requires HTTPS or a supported browser.",
       );
-      // The mounted workspace already owns its event stream. Settings has no
-      // screen stream, so the route-independent overlay uses MCP there.
+      // An idle overlay has no connected conversation or watched-resource
+      // owner. Navigating away from the screen feed does not open a voice stream.
       expect(subscriptionSignals).toHaveLength(0);
       fireEvent.click(screen.getByTestId("user-menu-button"));
       fireEvent.click(screen.getByRole("menuitem", { name: "Profile" }));
-      await waitFor(() => expect(subscriptionSignals).toHaveLength(1));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Toggle settings menu" })).toBeTruthy());
+      expect(subscriptionSignals).toHaveLength(0);
       view.unmount();
-      expect(subscriptionSignals[0]?.aborted).toBe(true);
+      expect(subscriptionSignals).toHaveLength(0);
     });
 
     it("keeps credentials out of storage and shows the main app after the login form submits", async () => {

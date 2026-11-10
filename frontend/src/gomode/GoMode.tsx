@@ -20,8 +20,9 @@ import { useWorkspaceData } from "../contexts/WorkspaceDataContext";
 import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useI18n } from "../i18n";
+import { workspaceResourceEvents } from "./workspaceResourceEvents";
 import { voiceAuthorization } from "./voiceAuthorization";
-import VoiceResourceUpdates from "./VoiceResourceUpdates";
+import type { McpResourceNotification } from "@maruel/gomode/web/McpClient";
 import { createVoiceFocusPublisher } from "./voiceFocus";
 import styles from "./GoMode.module.css";
 import type { WorkspaceEvent } from "@sdk/types.gen";
@@ -31,7 +32,7 @@ import { createAuthFetch } from "../useApi";
 
 interface GoModeContextValue {
   preparation: Accessor<FrontendPreparationScope | null>;
-  watchResources(resources: Accessor<string[]>, events?: Accessor<WorkspaceEvent | null>): void;
+  shareWorkspaceEvents(events: Accessor<WorkspaceEvent | null>): void;
 }
 const GoModeContext = createContext<GoModeContextValue>();
 
@@ -42,23 +43,20 @@ export const GoModeProvider: ParentComponent = (props) => {
   const navigation = useWorkspaceNavigation();
   const [preparation, setPreparation] = createSignal<FrontendPreparationScope | null>(null);
   const owner = createMemo(() => `${identity()}:${user()?.session_id ?? ""}:${user()?.workspace_id ?? ""}`);
-  const [watched, setWatched] = createSignal<{
+  const [eventSource, setEventSource] = createSignal<{
     owner: string;
-    resources: Accessor<string[]>;
-    events?: Accessor<WorkspaceEvent | null>;
+    events: Accessor<WorkspaceEvent | null>;
   } | null>(null);
   const workspaceEvents = () => {
-    const current = watched();
-    return current?.owner === owner() ? (current.events ?? null) : null;
+    const current = eventSource();
+    return current?.owner === owner() ? current.events : null;
   };
-  const resources = createMemo(
-    () => {
-      const current = watched();
-      return current?.owner === owner() ? current.resources() : [];
-    },
-    [],
-    { equals: (a, b) => a.length === b.length && a.every((uri, i) => uri === b[i]) },
-  );
+  const resourceEvents = createMemo<readonly McpResourceNotification[] | null>(() => {
+    const event = workspaceEvents()?.();
+    if (!event) return null;
+    const workspace = user()?.workspace_id;
+    return workspace ? workspaceResourceEvents(workspace, event) : null;
+  });
 
   createEffect(
     on([frontendIdentity, owner], ([lease]) => {
@@ -123,11 +121,11 @@ export const GoModeProvider: ParentComponent = (props) => {
 
   const context: GoModeContextValue = {
     preparation,
-    watchResources(watchedResources, events) {
-      const registration = { owner: owner(), resources: watchedResources, events };
-      setWatched(registration);
+    shareWorkspaceEvents(events) {
+      const registration = { owner: owner(), events };
+      setEventSource(registration);
       onCleanup(() => {
-        if (untrack(watched) === registration) setWatched(null);
+        if (untrack(eventSource) === registration) setEventSource(null);
       });
     },
   };
@@ -162,15 +160,12 @@ export const GoModeProvider: ParentComponent = (props) => {
                     return url.href;
                   }}
                   gatewayHeaders={session ? { "X-MDDB-Session": session } : {}}
+                  resourceEvents={workspaceEvents() ? resourceEvents : undefined}
                   messages={messages}
                   setupFailed={t("voice.setupFailed") || ""}
                   errorClass={styles.error}
                   onError={(error) => console.error("Could not configure mddb voice gateway", error)}
-                >
-                  {(runtime) => (
-                    <VoiceResourceUpdates runtime={runtime} resources={resources} events={workspaceEvents} />
-                  )}
-                </BrowserVoiceShell>
+                />
               </div>
             );
           }}

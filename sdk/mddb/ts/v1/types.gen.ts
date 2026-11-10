@@ -1331,6 +1331,11 @@ export interface UploadNodeAssetResponse {
 
 /** WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates. */
 export interface WorkspaceEvent {
+  /**
+   * SummaryParents identifies at most two listings whose returned child summaries
+   * may change HasChildren after a committed hierarchy mutation.
+   */
+  summary_parents?: string[];
   /** Revision identifies canonical title/body CAS, not full resource freshness. */
   revision?: string;
   /**

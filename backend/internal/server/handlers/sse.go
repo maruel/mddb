@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/maruel/gomode/sse"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	workspacefeed "github.com/maruel/mddb/backend/internal/server/sse"
 )
 
 const sseKeepAliveInterval = 30 * time.Second
@@ -37,13 +39,14 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, cleanup, err := h.Svc.Broker.Subscribe(wsID, user.ID)
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	events, err := h.Svc.Broker.Subscribe(ctx, wsID, user.ID, &workspacefeed.EventInterest{All: true})
 	if err != nil {
 		slog.WarnContext(r.Context(), "SSE subscribe failed", "ws", wsID, "user", user.ID, "err", err)
 		http.Error(w, err.Error(), http.StatusTooManyRequests)
 		return
 	}
-	defer cleanup()
 
 	// Every write is deadline-bounded so a client that stops reading cannot pin
 	// this handler and its subscription.
@@ -60,13 +63,17 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(sseKeepAliveInterval)
 	defer ticker.Stop()
 
-	ctx := r.Context()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg, ok := <-sub.C:
+		case change, ok := <-events.Events:
 			if !ok {
+				return
+			}
+			msg, err := change.SSE()
+			if err != nil {
+				slog.ErrorContext(ctx, "encode workspace event", "err", err)
 				return
 			}
 			if err := stream.Writef("%s", msg); err != nil {

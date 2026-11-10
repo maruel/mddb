@@ -353,8 +353,14 @@ func TestGoModeMCPUsesDefaultWorkspaceAfterLRUClear(t *testing.T) {
 	if err := json.Unmarshal(result, &listed); err != nil {
 		t.Fatalf("decode resources/list: %v", err)
 	}
-	if len(listed.Resources) != 2 || listed.Resources[0].URI != voiceItemsURI || listed.Resources[1].Name != page.ID.String() {
+	if len(listed.Resources) != 3 || listed.Resources[0].URI != voiceItemsURI || listed.Resources[1].URI != voiceContextURI || listed.Resources[2].Name != page.ID.String() {
 		t.Fatalf("resources = %#v, want the default workspace page", listed.Resources)
+	}
+	for i, resource := range listed.Resources {
+		marked := resource.Meta[gomode.ModelContextMetaKey] == true
+		if marked != (i < 2) {
+			t.Fatalf("resource %q model context = %v", resource.URI, marked)
+		}
 	}
 }
 
@@ -405,7 +411,8 @@ func TestGoModeMCP(t *testing.T) {
 		t.Fatalf("decode resources/list: %v", err)
 	}
 	want := map[string]string{
-		"items":                "Workspace nodes and current selection",
+		"items":                "Workspace root nodes",
+		"context":              "Conversation focus and watched resources",
 		root.ID.String():       "Root",
 		child.ID.String():      "Child",
 		grandchild.ID.String(): "Grandchild",
@@ -473,6 +480,8 @@ func TestMCPToolSchemas(t *testing.T) {
 		"page_create":      {},
 		"table_create":     {},
 		"node_append":      {},
+		"record_read":      {},
+		"records_query":    {},
 	}
 	specs := registry.allSpecs()
 	if len(specs) != len(expectedHeaders) {
@@ -669,7 +678,7 @@ func TestGoModeMCPWriteTools(t *testing.T) {
 		t.Fatalf("table_create = %#v, want child table", table)
 	}
 	tableRead := callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": table.StructuredContent.Node.ID})
-	if node := tableRead.StructuredContent.Node; tableRead.IsError || len(node.Properties) != 2 || node.Properties[0] != (mcpschema.NodeProperty{Name: "Task", Type: "text"}) || node.Properties[1] != (mcpschema.NodeProperty{Name: "Done", Type: "checkbox"}) {
+	if node := tableRead.StructuredContent.Node; tableRead.IsError || len(node.Properties) != 2 || node.Properties[0].Name != "Task" || node.Properties[0].Type != "text" || node.Properties[1].Name != "Done" || node.Properties[1].Type != "checkbox" {
 		t.Fatalf("node_read table = %#v, want persisted column schema", tableRead)
 	}
 	rootTable := callMCPTool(t, env, token, "table_create", map[string]any{"title": "Root table", "properties": []any{}})
@@ -768,7 +777,7 @@ func callMCPNamed(t *testing.T, e *testEnv, token, method string, params map[str
 	return callMCPNamedAt(t, e, token, goModeMCPEndpoint, method, params, name)
 }
 
-func callMCPNamedAt(t *testing.T, e *testEnv, token, endpoint, method string, params map[string]any, name string) json.RawMessage {
+func callMCPNamedAt(t testing.TB, e *testEnv, token, endpoint, method string, params map[string]any, name string) json.RawMessage {
 	meta, _ := params["_meta"].(map[string]any)
 	params["_meta"] = map[string]any{
 		"io.modelcontextprotocol/protocolVersion":    mcp.ProtocolVersion,

@@ -166,9 +166,9 @@ func TestWorkspaceInvalidationAspects(t *testing.T) {
 	if code := env.doJSON(t, http.MethodPost, base+"0/page/create", dto.CreatePageRequest{Title: "Original", Content: "body"}, &created, token); code != http.StatusOK {
 		t.Fatal(code)
 	}
-	all, stop := env.services.Broker.SubscribeEvents(wsID, sse.EventInterest{All: true})
+	all, stop := subscribeWorkspaceChanges(t, env.services.Broker, wsID, &sse.EventInterest{All: true})
 	t.Cleanup(stop)
-	catalog, stopCatalog := env.services.Broker.SubscribeEvents(wsID, sse.EventInterest{Catalog: true})
+	catalog, stopCatalog := subscribeWorkspaceChanges(t, env.services.Broker, wsID, &sse.EventInterest{Catalog: true})
 	t.Cleanup(stopCatalog)
 	previous := pageRevisionHTTP(t, env, token, wsID, created.ID)
 	var result dto.UpdatePageResponse
@@ -320,7 +320,7 @@ func TestWatchedResourceEffects(t *testing.T) {
 		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			events, stop := env.services.Broker.SubscribeEvents(wsID, sse.EventInterest{Nodes: []ksid.ID{test.id}})
+			events, stop := subscribeWorkspaceChanges(t, env.services.Broker, wsID, &sse.EventInterest{Nodes: []ksid.ID{test.id}})
 			t.Cleanup(stop)
 			before, err := reg.ReadResource(t.Context(), &mcp.ResourcesReadParams{URI: reg.nodeURI(test.id)})
 			if err != nil {
@@ -354,7 +354,7 @@ func TestConditionalPageWrites(t *testing.T) {
 		t.Fatal(status)
 	}
 	revision := pageRevisionHTTP(t, env, token, wsID, created.ID)
-	events, unsubscribe := env.services.Broker.SubscribeEvents(wsID, sse.EventInterest{All: true})
+	events, unsubscribe := subscribeWorkspaceChanges(t, env.services.Broker, wsID, &sse.EventInterest{All: true})
 	t.Cleanup(unsubscribe)
 	var saved dto.UpdatePageResponse
 	if status := env.doJSON(t, http.MethodPost, base+created.ID.String()+"/page", dto.UpdatePageRequest{Title: "  Canonical  ", Content: "\n\nCanonical body", ExpectedRevision: revision}, &saved, token); status != http.StatusOK {

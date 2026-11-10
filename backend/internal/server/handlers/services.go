@@ -1,4 +1,4 @@
-// Defines shared service dependencies for handlers.
+// Owns handler services and publishes scoped workspace projection effects with bounded summary ancestry.
 
 package handlers
 
@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"sync"
 	"time"
 
@@ -158,6 +159,33 @@ func (s *Services) publishWorkspaceEvent(ctx context.Context, wsID, actorID ksid
 			event.Modified = storage.Now()
 		}
 	}
+	if slices.Contains(event.Aspects, dto.EventAspectHierarchy) {
+		store, err := s.FileStore.GetWorkspaceStore(ctx, wsID)
+		if err == nil {
+			parents := []ksid.ID{event.ParentID}
+			if event.Type == dto.EventNodeMoved && event.OldParentID != event.ParentID {
+				parents = append(parents, event.OldParentID)
+			}
+			for _, id := range parents {
+				if id == 0 {
+					continue
+				}
+				var parent ksid.ID
+				parent, err = store.NodeParent(ctx, id)
+				if err != nil {
+					break
+				}
+				if !slices.Contains(event.SummaryParents, parent) {
+					event.SummaryParents = append(event.SummaryParents, parent)
+				}
+			}
+		}
+		if err != nil {
+			// Ancestry cannot be proven after a concurrent removal/cancellation. Do not
+			// leave an authorized list with an undelivered summary change.
+			event = &dto.WorkspaceEvent{Type: dto.EventResync}
+		}
+	}
 	s.Broker.Publish(wsID, event)
 }
 
@@ -190,7 +218,7 @@ func (s *Services) PublishNodeEvent(ctx context.Context, wsID ksid.ID, eventType
 			return
 		}
 	}
-	s.Broker.Publish(wsID, &dto.WorkspaceEvent{
+	s.publishWorkspaceEvent(ctx, wsID, actorID, &dto.WorkspaceEvent{
 		Aspects:   aspects,
 		ParentID:  node.ParentID,
 		Type:      eventType,

@@ -4,11 +4,14 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/maruel/ksid"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/sse"
@@ -49,7 +52,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	if _, err := store.GetBacklinks(t.Context(), target.ID); err != nil {
 		t.Fatal(err)
 	}
-	events, unsubscribe := env.services.Broker.SubscribeEvents(ws.ID, sse.EventInterest{All: true})
+	events, unsubscribe := subscribeWorkspaceChanges(t, env.services.Broker, ws.ID, &sse.EventInterest{All: true})
 	t.Cleanup(unsubscribe)
 	// Submodule metadata is absorbed by the real production creation path.
 	gitFile, err := os.ReadFile(filepath.Join(env.dataDir, ws.ID.String(), ".git"))
@@ -143,4 +146,14 @@ func TestWorkspaceHistory(t *testing.T) {
 	if status := env.doJSON(t, http.MethodGet, base+table.ID.String()+"/table/records", nil, &records, auth.Token); status != http.StatusOK || len(records.Records) != 1 || records.Records[0].ID != record.ID {
 		t.Fatalf("saved records=%d %+v", status, records)
 	}
+}
+
+func subscribeWorkspaceChanges(t *testing.T, broker *sse.Broker, wsID ksid.ID, interest *sse.EventInterest) (<-chan *sse.Change, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(t.Context())
+	events, err := broker.Subscribe(ctx, wsID, 0, interest)
+	if err != nil {
+		cancel()
+		t.Fatal(err)
+	}
+	return events.Events, cancel
 }

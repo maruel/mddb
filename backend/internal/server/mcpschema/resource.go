@@ -1,31 +1,8 @@
-// Defines complete bounded MCP node resource schemas separately from storage runtime state.
+// Defines nested canonical MCP node schema and view contracts separately from storage runtime state.
 
 package mcpschema
 
 import "github.com/maruel/ksid"
-
-// ResourceNode preserves the existing node resource shape, adding chunk continuation.
-type ResourceNode struct {
-	ID               ksid.ID        `json:"id"`
-	ParentID         ksid.ID        `json:"parent_id,omitempty"`
-	Title            string         `json:"title"`
-	Content          string         `json:"content,omitempty"`
-	Properties       []Property     `json:"properties,omitempty"`
-	Views            []View         `json:"views,omitempty"`
-	Created          float64        `json:"created"`
-	Modified         float64        `json:"modified"`
-	Tags             []string       `json:"tags,omitempty"`
-	FaviconURL       string         `json:"favicon_url,omitempty"`
-	Icon             string         `json:"icon,omitempty"`
-	Cover            string         `json:"cover,omitempty"`
-	Type             string         `json:"type"`
-	HasChildren      bool           `json:"has_children,omitempty"`
-	Children         []ResourceNode `json:"children,omitempty"`
-	Revision         string         `json:"revision,omitempty"`
-	ContentBytes     int64          `json:"contentBytes,omitempty"`
-	ContentTruncated bool           `json:"contentTruncated,omitempty"`
-	NextContentURI   string         `json:"nextContentURI,omitempty"`
-}
 
 // SelectOption preserves the node resource schema.
 type SelectOption struct {

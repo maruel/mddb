@@ -2052,6 +2052,16 @@ func (ws *WorkspaceFileStore) listNodeSummaries(ctx context.Context, parent *ksi
 	return out, nil
 }
 
+// NodeParent reads indexed ancestry without loading node content or metadata.
+// It shares the repository read boundary with the discovery projection.
+func (ws *WorkspaceFileStore) NodeParent(ctx context.Context, id ksid.ID) (parent ksid.ID, err error) {
+	err = ws.repo.ReadTx(ctx, func(*git.SavedFiles) error {
+		parent, _, err = ws.indexedNodePath(ctx, id)
+		return err
+	})
+	return parent, err
+}
+
 // ReadNodeSummary reads bounded metadata without loading or hashing the body.
 func (ws *WorkspaceFileStore) ReadNodeSummary(ctx context.Context, id ksid.ID) (out *Node, err error) {
 	err = ws.repo.ReadTx(ctx, func(*git.SavedFiles) error { out, err = ws.readNodeSummary(ctx, id); return err })

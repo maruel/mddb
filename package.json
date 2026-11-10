@@ -20,7 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@maruel/gomode": "github:maruel/gomode#f1339437c71fce0b8a3880d4f2e2b08db5f728e8",
+    "@maruel/gomode": "github:maruel/gomode#498de607ae73c87e21cbd575892ab6339eab0412",
     "@solid-primitives/i18n": "2.2.1",
     "@solidjs/router": "1.0.0",
     "dompurify": "3.4.15",

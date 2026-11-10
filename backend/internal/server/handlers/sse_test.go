@@ -70,18 +70,16 @@ func TestSSEHandler(t *testing.T) {
 
 			done := make(chan struct{})
 			var wg sync.WaitGroup
+			t.Cleanup(func() { cancel(); wg.Wait() })
 			wg.Go(func() {
 				h.ServeHTTP(w, r)
 				close(done)
 			})
 
-			// Wait for subscriber to be registered.
-			deadline := time.Now().Add(2 * time.Second)
-			for broker.SubscriberCount(wsID) == 0 && time.Now().Before(deadline) {
-				time.Sleep(10 * time.Millisecond)
-			}
-			if broker.SubscriberCount(wsID) == 0 {
-				t.Fatal("subscriber not registered")
+			select {
+			case <-w.flushed:
+			case <-time.After(2 * time.Second):
+				t.Fatal("initial server frame missing")
 			}
 
 			// Publish an event.
@@ -92,10 +90,10 @@ func TestSSEHandler(t *testing.T) {
 				Modified: storage.Now(),
 			})
 
-			// Wait for the event to be written.
-			deadline = time.Now().Add(2 * time.Second)
-			for !strings.Contains(w.Body(), "event: workspace") && time.Now().Before(deadline) {
-				time.Sleep(10 * time.Millisecond)
+			select {
+			case <-w.flushed:
+			case <-time.After(2 * time.Second):
+				t.Fatal("workspace frame missing")
 			}
 
 			cancel()
@@ -143,12 +141,19 @@ func TestSSEHandler(t *testing.T) {
 				synctest.Wait()
 				cancel()
 				wg.Wait()
+				synctest.Wait()
 				want := "event: server\ndata: {\"revision\":\"heartbeat-test\"}\n\nevent: heartbeat\ndata: {}\n\n"
 				if got := w.Body(); got != want {
 					t.Fatalf("frames = %q, want %q", got, want)
 				}
-				if broker.SubscriberCount(wsID) != 0 {
-					t.Fatal("heartbeat connection retained its subscription")
+				// Reclaim every screen admission slot before cleanup cancels the
+				// replacement feeds. A retained heartbeat subscription consumes one.
+				admission, stop := context.WithCancel(t.Context())
+				t.Cleanup(stop)
+				for range 5 {
+					if _, err := broker.Subscribe(admission, wsID, user.ID, &sse.EventInterest{All: true}); err != nil {
+						t.Fatalf("heartbeat retained screen admission: %v", err)
+					}
 				}
 			})
 		})
@@ -171,14 +176,17 @@ func TestSSEHandler(t *testing.T) {
 
 			done := make(chan struct{})
 			var wg sync.WaitGroup
+			t.Cleanup(func() { cancel(); wg.Wait() })
 			wg.Go(func() {
 				h.ServeHTTP(w, r)
 				close(done)
 			})
-			deadline := time.Now().Add(2 * time.Second)
-			for !strings.Contains(w.Body(), "event: server") && time.Now().Before(deadline) {
-				time.Sleep(10 * time.Millisecond)
+			select {
+			case <-w.flushed:
+			case <-time.After(2 * time.Second):
+				t.Fatal("initial server frame missing")
 			}
+
 			cancel()
 			select {
 			case <-done:
@@ -225,15 +233,22 @@ func (d *deadlineRecorder) Deadlines() []time.Time {
 type flushRecorder struct {
 	*httptest.ResponseRecorder
 
-	mu sync.RWMutex
+	mu      sync.RWMutex
+	flushed chan struct{}
 }
 
 func newFlushRecorder() *flushRecorder {
-	return &flushRecorder{ResponseRecorder: httptest.NewRecorder()}
+	return &flushRecorder{ResponseRecorder: httptest.NewRecorder(), flushed: make(chan struct{}, 2)}
 }
 
 func (f *flushRecorder) Flush() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.ResponseRecorder.Flush()
+	select {
+	case f.flushed <- struct{}{}:
+	default:
+	}
 }
 
 func (f *flushRecorder) Write(p []byte) (int, error) {
