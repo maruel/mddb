@@ -144,7 +144,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           if (availResp.available) {
             try {
               const instResp = await client.listGitHubAppInstallations();
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
               setGhInstallations(instResp.installations || []);
             } catch {
               setGhInstallations([]);
@@ -356,7 +356,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGhSelectedRepo("");
       setError(null);
       const resp = await api().listGitHubAppRepos({ installation_id: instId });
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
       setGhAppRepos(resp.repos || []);
     } catch (err) {
       setError(`${t("errors.failedToLoad")}: ${String(err)}`);

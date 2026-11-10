@@ -31,7 +31,7 @@ test.describe("Remove Organization Member", () => {
 
     // Verify user B appears in org members list.
     const members = await orgApi.listUsers();
-    expect(members.users.find((u) => u.id === userBId)).toBeTruthy();
+    expect(members.users?.find((u) => u.id === userBId)).toBeTruthy();
 
     // Navigate to org settings members page.
     await page.goto(`/settings/org/${orgId}`);
@@ -72,7 +72,7 @@ test.describe("Remove Organization Member", () => {
 
     // Verify via API that user B lost both org and workspace memberships.
     const membersAfter = await orgApi.listUsers();
-    expect(membersAfter.users.find((u) => u.id === userBId)).toBeUndefined();
+    expect(membersAfter.users?.find((u) => u.id === userBId)).toBeUndefined();
 
     const meBAfter = await clientB.getMe();
     expect(meBAfter.organizations?.find((o) => o.organization_id === orgId)).toBeUndefined();

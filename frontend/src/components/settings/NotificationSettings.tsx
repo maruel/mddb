@@ -55,10 +55,10 @@ export default function NotificationSettings() {
   const getChannels = (type: string): ChannelSetDTO => {
     const p = prefs();
     if (!p) return { email: false, web: false };
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
     const override = p.overrides?.[type];
     if (override) return override;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
     return p.defaults?.[type] ?? { email: false, web: false };
   };
 

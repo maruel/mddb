@@ -72,14 +72,12 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
       });
       if (!current(client)) return;
       if (offset === 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setNotifications(result.notifications ?? []);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setNotifications((prev) => [...prev, ...(result.notifications ?? [])]);
       }
       setUnreadCount(result.unread_count);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
       setHasMore((result.notifications?.length ?? 0) >= PAGE_SIZE);
     } catch {
       // Silently ignore

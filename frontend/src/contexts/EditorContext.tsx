@@ -616,7 +616,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       const resp = await ws.getNodeTitles({ IDs: linkedIds.join(",") });
       if (!saveCurrent(scope)) return;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
       setLinkedNodeTitles(resp.titles || {});
     } catch {
       // Silent failure - just use stored titles in links
@@ -763,7 +763,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       const data = await ws.listNodeVersions(nodeId, { Limit: 100 });
       if (!current()) return;
-      setHistory({ commits: data.history.filter((item): item is Commit => Boolean(item)), intent });
+      setHistory({ commits: (data.history ?? []).filter((item): item is Commit => Boolean(item)), intent });
       setShowHistory(true);
     } catch (err) {
       if (current()) setLoadError(`${t("errors.failedToLoad")}: ${String(err)}`);

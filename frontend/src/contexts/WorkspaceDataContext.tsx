@@ -68,7 +68,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (disposed || generation !== request || owner() !== captured) return [];
         batch(() => {
-          setNodesStore(reconcile(response.nodes));
+          setNodesStore(reconcile(response.nodes ?? []));
           setLoadedOwner(captured);
           setLoadError(null);
           if (initializationReadOwner === captured) {
@@ -76,7 +76,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
             setInitializationPending(false);
           }
         });
-        return response.nodes;
+        return response.nodes ?? [];
       } catch (error) {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
         if (!disposed && generation === request && owner() === captured)

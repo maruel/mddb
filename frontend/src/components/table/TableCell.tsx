@@ -38,7 +38,7 @@ export function TableCell(props: TableCellProps) {
   let inputRef: HTMLInputElement | HTMLSelectElement | undefined;
 
   const getCellValue = () => {
-    return props.record.data[props.column.name] ?? "";
+    return props.record.data?.[props.column.name] ?? "";
   };
 
   const handleClick = () => {

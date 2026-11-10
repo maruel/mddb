@@ -65,7 +65,7 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/users/role` |  | `UpdateWSMemberRoleRequest` | `UserResponse` |
 | GET | `/api/v1/workspaces/{wsID}/invitations` |  |  | `ListWSInvitationsResponse` |
 | POST | `/api/v1/workspaces/{wsID}/invitations` |  | `CreateWSInvitationRequest` | `WSInvitationResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/titles` |  | Query: `GetNodeTitlesRequest` | `GetNodeTitlesResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/titles` |  | Query: `GetNodeTitlesRequestQuery` | `GetNodeTitlesResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}` |  |  | `NodeResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/children` |  |  | `ListNodeChildrenResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/move` |  | `MoveNodeRequest` | `OkResponse` |
@@ -84,17 +84,17 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/create` |  | `CreateViewRequest` | `CreateViewResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}` |  | `UpdateViewRequest` | `UpdateViewResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` |  |  | `OkResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` |  | Query: `ListRecordsRequest` | `ListRecordsResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` |  | Query: `ListRecordsRequestQuery` | `ListRecordsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  |  | `GetRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/create` |  | `CreateRecordRequest` | `CreateRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  | `UpdateRecordRequest` | `UpdateRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` |  |  | `OkResponse` |
-| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` |  | Query: `ListNodeVersionsRequest` | `ListNodeVersionsResponse` |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` |  | Query: `ListNodeVersionsRequestQuery` | `ListNodeVersionsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}` |  |  | `GetNodeVersionResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/assets` |  |  | `ListNodeAssetsResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/search` |  | `SearchRequest` | `SearchResponse` |
-| GET | `/api/v1/notifications` |  | Query: `ListNotificationsRequest` | `ListNotificationsResponse` |
+| GET | `/api/v1/notifications` |  | Query: `ListNotificationsRequestQuery` | `ListNotificationsResponse` |
 | GET | `/api/v1/notifications/unread-count` |  |  | `UnreadCountResponse` |
 | POST | `/api/v1/notifications/{id}/read` |  |  | `OkResponse` |
 | POST | `/api/v1/notifications/read-all` |  |  | `OkResponse` |
@@ -104,6 +104,36 @@ Type notation: `JSONValue` means any valid JSON value.
 | GET | `/api/v1/notifications/vapid-key` |  |  | `VAPIDKeyResponse` |
 | POST | `/api/v1/notifications/subscribe` |  | `PushSubscribeRequest` | `OkResponse` |
 | POST | `/api/v1/notifications/unsubscribe` |  | `PushUnsubscribeRequest` | `OkResponse` |
+
+### GetNodeTitlesRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `ids` | `string` | yes |
+
+### ListRecordsRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `view_id` | `string` | yes |
+| `filters` | `string` | yes |
+| `sorts` | `string` | yes |
+| `offset` | `int` | yes |
+| `limit` | `int` | yes |
+
+### ListNodeVersionsRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `limit` | `int` | yes |
+
+### ListNotificationsRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `limit` | `int` | yes |
+| `offset` | `int` | yes |
+| `unread_only` | `boolean` | yes |
 
 ## Errors
 
@@ -306,7 +336,7 @@ AdminOrgDetail contains organization details for the admin dashboard.
 | `member_count` | `int` |  | yes |
 | `workspace_count` | `int` |  | yes |
 | `created` | `number` |  | yes |
-| `workspaces` | `AdminWorkspaceDetail[]` |  | yes |
+| `workspaces` | `AdminWorkspaceDetail[] \| null` |  | yes |
 
 ### AdminRequestMetrics
 
@@ -332,7 +362,7 @@ AdminServerDetail contains server-wide dashboard data.
 | `workspace_count` | `int` |  | yes |
 | `total_storage` | `int64` |  | yes |
 | `active_sessions` | `int` |  | yes |
-| `organizations` | `AdminOrgDetail[]` |  | yes |
+| `organizations` | `AdminOrgDetail[] \| null` |  | yes |
 | `request_metrics` | `AdminRequestMetrics` |  | yes |
 
 ### SMTPConfigResponse
@@ -558,7 +588,7 @@ Used by API login and registration endpoints.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `token` | `string` |  | yes |
-| `user` | `UserResponse` |  |  |
+| `user` | `UserResponse \| null` |  | yes |
 
 ### AcceptInvitationRequest
 
@@ -575,7 +605,7 @@ ProvidersResponse is a response containing the list of configured OAuth provider
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `providers` | `OAuthProvider[]` |  | yes |
+| `providers` | `OAuthProvider[] \| null` |  | yes |
 
 ### SessionResponse
 
@@ -598,7 +628,7 @@ ListSessionsResponse is a response containing user's sessions.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `sessions` | `SessionResponse[]` |  | yes |
+| `sessions` | `SessionResponse[] \| null` |  | yes |
 
 ### RevokeSessionRequest
 
@@ -658,7 +688,7 @@ SwitchWorkspaceResponse is a response from switching workspace.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `user` | `UserResponse` |  |  |
+| `user` | `UserResponse \| null` |  | yes |
 
 ### UpdateUserSettingsRequest
 
@@ -790,7 +820,7 @@ ListUsersResponse is a response containing a list of users.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `users` | `UserResponse[]` |  | yes |
+| `users` | `UserResponse[] \| null` |  | yes |
 
 ### UpdateOrgMemberRoleRequest
 
@@ -829,7 +859,7 @@ ListOrgInvitationsResponse is a response containing a list of organization invit
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `invitations` | `OrgInvitationResponse[]` |  | yes |
+| `invitations` | `OrgInvitationResponse[] \| null` |  | yes |
 
 ### CreateOrgInvitationRequest
 
@@ -1008,7 +1038,7 @@ ListGitHubAppReposResponse is a response containing GitHub App repos.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `repos` | `GitHubAppRepoResponse[]` |  | yes |
+| `repos` | `GitHubAppRepoResponse[] \| null` |  | yes |
 
 ### GitHubAppInstallationResponse
 
@@ -1025,7 +1055,7 @@ ListGitHubAppInstallationsResponse is a response containing GitHub App installat
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `installations` | `GitHubAppInstallationResponse[]` |  | yes |
+| `installations` | `GitHubAppInstallationResponse[] \| null` |  | yes |
 
 ### GitHubAppAvailableResponse
 
@@ -1053,7 +1083,7 @@ ListWorkspaceMembersResponse is a response containing current workspace members.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `members` | `WorkspaceMemberResponse[]` |  | yes |
+| `members` | `WorkspaceMemberResponse[] \| null` |  | yes |
 
 ### ResolveUsersRequest
 
@@ -1061,7 +1091,7 @@ ResolveUsersRequest is a request to resolve user IDs to display info.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ids` | `string[]` |  | yes |
+| `ids` | `string[] \| null` |  | yes |
 
 ### ResolvedUser
 
@@ -1082,7 +1112,7 @@ ResolveUsersResponse is a response containing resolved user details.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `users` | `ResolvedUser[]` |  | yes |
+| `users` | `ResolvedUser[] \| null` |  | yes |
 
 ### UpdateWSMemberRoleRequest
 
@@ -1113,7 +1143,7 @@ ListWSInvitationsResponse is a response containing a list of workspace invitatio
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `invitations` | `WSInvitationResponse[]` |  | yes |
+| `invitations` | `WSInvitationResponse[] \| null` |  | yes |
 
 ### CreateWSInvitationRequest
 
@@ -1131,7 +1161,7 @@ GetNodeTitlesRequest is a request to get titles for multiple nodes.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `IDs` | `string` | Comma-separated node IDs<br>Query parameter: `ids`. | yes |
+| `IDs` | `string \| null` | Comma-separated node IDs<br>Query parameter: `ids`. | yes |
 
 ### GetNodeTitlesResponse
 
@@ -1139,7 +1169,7 @@ GetNodeTitlesResponse is a response containing a map of node IDs to titles.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `titles` | `Record<string, string>` |  | yes |
+| `titles` | `Record<string, string> \| null` |  | yes |
 
 ### SelectOption
 
@@ -1259,7 +1289,7 @@ ListNodeChildrenResponse is a response containing children of a node.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `nodes` | `NodeResponse[]` |  | yes |
+| `nodes` | `NodeResponse[] \| null` |  | yes |
 
 ### MoveNodeRequest
 
@@ -1376,7 +1406,7 @@ The parent ID is in the path ({id}); use "0" for root.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `title` | `string` |  | yes |
-| `properties` | `Property[]` |  | yes |
+| `properties` | `Property[] \| null` |  | yes |
 
 ### CreateTableUnderParentResponse
 
@@ -1394,7 +1424,7 @@ GetTableSchemaResponse is a response containing table schema.
 |-------|------|-------------|----------|
 | `id` | `string` |  | yes |
 | `title` | `string` |  | yes |
-| `properties` | `Property[]` |  | yes |
+| `properties` | `Property[] \| null` |  | yes |
 | `views` | `View[]` |  |  |
 | `created` | `number` |  | yes |
 | `modified` | `number` |  | yes |
@@ -1407,7 +1437,7 @@ Now used for /nodes/{id}/table endpoint.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `title` | `string` |  | yes |
-| `properties` | `Property[]` |  | yes |
+| `properties` | `Property[] \| null` |  | yes |
 
 ### UpdateTableResponse
 
@@ -1475,7 +1505,7 @@ DataRecordResponse is the API representation of a data record.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `string` |  | yes |
-| `data` | `Record<string, JSONValue>` |  | yes |
+| `data` | `Record<string, JSONValue> \| null` |  | yes |
 | `created` | `number` |  | yes |
 | `modified` | `number` |  | yes |
 
@@ -1485,7 +1515,7 @@ ListRecordsResponse is a response containing a list of records.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `records` | `DataRecordResponse[]` |  | yes |
+| `records` | `DataRecordResponse[] \| null` |  | yes |
 
 ### GetRecordResponse
 
@@ -1494,7 +1524,7 @@ GetRecordResponse is a response containing a record.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `string` |  | yes |
-| `data` | `Record<string, JSONValue>` |  | yes |
+| `data` | `Record<string, JSONValue> \| null` |  | yes |
 | `created` | `number` |  | yes |
 | `modified` | `number` |  | yes |
 
@@ -1505,7 +1535,7 @@ Now used for /nodes/{id}/table/records/create endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `data` | `Record<string, JSONValue>` |  | yes |
+| `data` | `Record<string, JSONValue> \| null` |  | yes |
 
 ### CreateRecordResponse
 
@@ -1522,7 +1552,7 @@ Now used for /nodes/{id}/table/records/{rid} endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `data` | `Record<string, JSONValue>` |  | yes |
+| `data` | `Record<string, JSONValue> \| null` |  | yes |
 
 ### UpdateRecordResponse
 
@@ -1558,7 +1588,7 @@ ListNodeVersionsResponse is a response containing node version history.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `history` | `Commit[]` |  | yes |
+| `history` | `(Commit \| null)[] \| null` |  | yes |
 
 ### GetNodeVersionResponse
 
@@ -1587,7 +1617,7 @@ ListNodeAssetsResponse is a response containing a list of assets.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `assets` | `AssetSummary[]` |  | yes |
+| `assets` | `AssetSummary[] \| null` |  | yes |
 
 ### SearchRequest
 
@@ -1613,7 +1643,7 @@ SearchResult represents a single search result.
 | `title` | `string` |  | yes |
 | `snippet` | `string` |  | yes |
 | `score` | `float64` |  | yes |
-| `matches` | `Record<string, string>` |  | yes |
+| `matches` | `Record<string, string> \| null` |  | yes |
 | `modified` | `number` |  | yes |
 
 ### SearchResponse
@@ -1622,7 +1652,7 @@ SearchResponse is the response to a search request.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `results` | `SearchResult[]` |  | yes |
+| `results` | `SearchResult[] \| null` |  | yes |
 
 ### ListNotificationsRequest
 
@@ -1656,7 +1686,7 @@ ListNotificationsResponse is a response containing paginated notifications.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `notifications` | `NotificationDTO[]` |  | yes |
+| `notifications` | `NotificationDTO[] \| null` |  | yes |
 | `total` | `int` |  | yes |
 | `unread_count` | `int` |  | yes |
 
@@ -1683,8 +1713,8 @@ NotificationPrefsDTO holds user notification preferences.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `defaults` | `Record<string, ChannelSetDTO>` |  | yes |
-| `overrides` | `Record<string, ChannelSetDTO>` |  | yes |
+| `defaults` | `Record<string, ChannelSetDTO> \| null` |  | yes |
+| `overrides` | `Record<string, ChannelSetDTO> \| null` |  | yes |
 
 ### UpdateNotificationPrefsRequest
 
@@ -1692,7 +1722,7 @@ UpdateNotificationPrefsRequest updates notification channel preferences.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `overrides` | `Record<string, ChannelSetDTO>` |  | yes |
+| `overrides` | `Record<string, ChannelSetDTO> \| null` |  | yes |
 
 ### VAPIDKeyResponse
 

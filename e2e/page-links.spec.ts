@@ -105,8 +105,8 @@ test.describe("Page Links with Dynamic Titles", () => {
 
     // Verify titles are returned
     expect(titlesData.titles).toBeDefined();
-    expect(titlesData.titles[page1ID]).toBe("Page One");
-    expect(titlesData.titles[page2ID]).toBe("Page Two");
+    expect(titlesData.titles?.[page1ID]).toBe("Page One");
+    expect(titlesData.titles?.[page2ID]).toBe("Page Two");
   });
 
   test("backlinks are returned when getting a page", async ({ page, request }) => {

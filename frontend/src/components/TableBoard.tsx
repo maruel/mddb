@@ -24,7 +24,7 @@ interface TableBoardProps {
 // Multi-select records can appear in multiple groups.
 function getRecordGroupIds(record: DataRecordResponse, col: Property): string[] {
   // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
-  const raw = String(record.data[col.name] ?? "");
+  const raw = String(record.data?.[col.name] ?? "");
   if (!raw) return ["__none__"];
   if (col.type === PropertyTypeMultiSelect) {
     const ids = raw

@@ -12,7 +12,7 @@ export function updateRecordField(
   newValue: string,
   onUpdate?: (id: string, data: Record<string, unknown>) => void,
 ): void {
-  if (record.data[fieldName] === newValue || !onUpdate) return;
+  if (record.data?.[fieldName] === newValue || !onUpdate) return;
   const newData = { ...record.data, [fieldName]: newValue };
   onUpdate(record.id, newData);
 }
@@ -31,7 +31,7 @@ export function handleEnterBlur(e: KeyboardEvent): void {
  */
 export function getFieldValue(record: DataRecordResponse, fieldName: string | undefined): string {
   if (!fieldName) return "";
-  const value = record.data[fieldName];
+  const value = record.data?.[fieldName];
   // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
   return value !== null && value !== undefined ? String(value) : "";
 }

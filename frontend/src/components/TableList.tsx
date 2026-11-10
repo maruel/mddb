@@ -43,7 +43,7 @@ export default function TableList(props: TableListProps) {
                   <span class={styles.fields}>
                     <For each={bodyColumns()}>
                       {(col) => {
-                        const val = record.data[col.name];
+                        const val = record.data?.[col.name];
                         if (val === undefined || val === null || val === "") return null;
                         return (
                           <span class={styles.field}>

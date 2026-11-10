@@ -238,6 +238,6 @@ test("failed subpage creation reports failure and a retry retains the draft and 
   expect(children).toHaveLength(1);
   const parent = await ws.getNode(source.id);
   expect(parent.title).toBe("Private parent draft");
-  expect(parent.content).toContain(children[0]!.id);
+  expect(parent.content).toContain(children?.[0]?.id);
   expect(creates).toBe(2);
 });

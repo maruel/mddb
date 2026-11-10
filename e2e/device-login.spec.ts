@@ -85,7 +85,7 @@ test("another-device login preserves user permissions and supports individual re
     await expect(display.getByRole("button", { name: "Enable browser notifications", exact: true })).toBeVisible();
     const approverApi = createClient(request, token);
     const sessions = await approverApi.listSessions();
-    const created = sessions.sessions.find((s) => !s.is_current);
+    const created = sessions.sessions?.find((s) => !s.is_current);
     expect(created).toBeDefined();
     if (!created) throw new Error("Missing display session");
     expect(created.expires_at - created.created).toBeGreaterThan(31 * 24 * 3600 - 1);

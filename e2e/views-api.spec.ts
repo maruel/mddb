@@ -28,7 +28,7 @@ test.describe("Table Views API", () => {
     // Verify all records returned by default
     const defaultListParams = { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     const listData = await client.ws(wsID).listRecords(tableID, defaultListParams);
-    expect(listData.records.length).toBe(2);
+    expect(listData.records?.length).toBe(2);
 
     // Create a View with filter (Age > 18)
     const viewData = await client.ws(wsID).createView(tableID, { name: "Adults", type: "table" });
@@ -40,8 +40,8 @@ test.describe("Table Views API", () => {
     // List with ViewID → only Alice
     const viewListParams = { ViewID: viewID, Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     const listViewData = await client.ws(wsID).listRecords(tableID, viewListParams);
-    expect(listViewData.records.length).toBe(1);
-    expect((listViewData.records[0] as DataRecordResponse).data.Name).toBe("Alice");
+    expect(listViewData.records?.length).toBe(1);
+    expect((listViewData.records?.[0] as DataRecordResponse).data?.Name).toBe("Alice");
 
     // Ad-hoc filter (Age < 15) → only Bob
     const filterListParams = {
@@ -52,8 +52,8 @@ test.describe("Table Views API", () => {
       Limit: 100,
     };
     const listAdHocData = await client.ws(wsID).listRecords(tableID, filterListParams);
-    expect(listAdHocData.records.length).toBe(1);
-    expect((listAdHocData.records[0] as DataRecordResponse).data.Name).toBe("Bob");
+    expect(listAdHocData.records?.length).toBe(1);
+    expect((listAdHocData.records?.[0] as DataRecordResponse).data?.Name).toBe("Bob");
   });
 
   test("sort records via API", async ({ page, request }) => {
@@ -86,7 +86,7 @@ test.describe("Table Views API", () => {
       Limit: 100,
     };
     const nameAsc = await client.ws(wsID).listRecords(tableID, nameAscParams);
-    const namesAsc = nameAsc.records.map((r: DataRecordResponse) => r.data.Name);
+    const namesAsc = nameAsc.records?.map((r: DataRecordResponse) => r.data?.Name);
     expect(namesAsc).toEqual(["Alice", "Bob", "Charlie"]);
 
     // Sort by Score desc
@@ -98,7 +98,7 @@ test.describe("Table Views API", () => {
       Limit: 100,
     };
     const scoreDesc = await client.ws(wsID).listRecords(tableID, scoreDescParams);
-    const scoresDesc = scoreDesc.records.map((r: DataRecordResponse) => r.data.Name);
+    const scoresDesc = scoreDesc.records?.map((r: DataRecordResponse) => r.data?.Name);
     expect(scoresDesc).toEqual(["Alice", "Bob", "Charlie"]);
 
     // Compound sort: Score asc, then Name asc (add ties)
@@ -114,7 +114,7 @@ test.describe("Table Views API", () => {
       Limit: 100,
     };
     const compound = await client.ws(wsID).listRecords(tableID, compoundParams);
-    const compoundNames = compound.records.map((r: DataRecordResponse) => r.data.Name);
+    const compoundNames = compound.records?.map((r: DataRecordResponse) => r.data?.Name);
     expect(compoundNames).toEqual(["Charlie", "Bob", "Diana", "Alice"]);
   });
 
@@ -144,7 +144,7 @@ test.describe("Table Views API", () => {
     // Query with ViewID (sort applied server-side)
     const params = { ViewID: view.id, Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     const data = await client.ws(wsID).listRecords(tableID, params);
-    const names = data.records.map((r: DataRecordResponse) => r.data.Name);
+    const names = data.records?.map((r: DataRecordResponse) => r.data?.Name);
     expect(names).toEqual(["Apple", "Zebra"]);
   });
 
@@ -179,7 +179,7 @@ test.describe("Table Views API", () => {
       Limit: 100,
     };
     const data = await client.ws(wsID).listRecords(tableID, params);
-    const names = data.records.map((r: DataRecordResponse) => r.data.Name);
+    const names = data.records?.map((r: DataRecordResponse) => r.data?.Name);
     expect(names).toEqual(["Diana", "Charlie", "Alice"]);
   });
 });

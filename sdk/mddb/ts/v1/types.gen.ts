@@ -238,7 +238,7 @@ export interface AdminOrgDetail {
   member_count: number /* int */;
   workspace_count: number /* int */;
   created: number;
-  workspaces: AdminWorkspaceDetail[];
+  workspaces: AdminWorkspaceDetail[] | null;
 }
 
 /** AdminRequestMetrics contains request throughput metrics. */
@@ -258,7 +258,7 @@ export interface AdminServerDetail {
   workspace_count: number /* int */;
   total_storage: number /* int64 */;
   active_sessions: number /* int */;
-  organizations: AdminOrgDetail[];
+  organizations: AdminOrgDetail[] | null;
   request_metrics: AdminRequestMetrics;
 }
 
@@ -436,7 +436,7 @@ export interface RegisterRequest {
  */
 export interface AuthResponse {
   token: string;
-  user?: UserResponse;
+  user: UserResponse | null;
 }
 
 /**
@@ -449,7 +449,7 @@ export interface AcceptInvitationRequest {
 
 /** ProvidersResponse is a response containing the list of configured OAuth providers. */
 export interface ProvidersResponse {
-  providers: OAuthProvider[];
+  providers: OAuthProvider[] | null;
 }
 
 /** SessionResponse is the API representation of a session. */
@@ -466,7 +466,7 @@ export interface SessionResponse {
 
 /** ListSessionsResponse is a response containing user's sessions. */
 export interface ListSessionsResponse {
-  sessions: SessionResponse[];
+  sessions: SessionResponse[] | null;
 }
 
 /** RevokeSessionRequest is a request to revoke a specific session. */
@@ -506,7 +506,7 @@ export interface SwitchWorkspaceRequest {
 
 /** SwitchWorkspaceResponse is a response from switching workspace. */
 export interface SwitchWorkspaceResponse {
-  user?: UserResponse;
+  user: UserResponse | null;
 }
 
 /** UpdateUserSettingsRequest is a request to update user global settings. */
@@ -605,7 +605,7 @@ export interface UpdateOrgPreferencesRequest {
 
 /** ListUsersResponse is a response containing a list of users. */
 export interface ListUsersResponse {
-  users: UserResponse[];
+  users: UserResponse[] | null;
 }
 
 /** UpdateOrgMemberRoleRequest is a request to update a user's organization role. */
@@ -632,7 +632,7 @@ export interface OrgInvitationResponse {
 
 /** ListOrgInvitationsResponse is a response containing a list of organization invitations. */
 export interface ListOrgInvitationsResponse {
-  invitations: OrgInvitationResponse[];
+  invitations: OrgInvitationResponse[] | null;
 }
 
 /** CreateOrgInvitationRequest is a request to create an organization invitation. */
@@ -769,7 +769,7 @@ export interface GitHubAppRepoResponse {
 
 /** ListGitHubAppReposResponse is a response containing GitHub App repos. */
 export interface ListGitHubAppReposResponse {
-  repos: GitHubAppRepoResponse[];
+  repos: GitHubAppRepoResponse[] | null;
 }
 
 /** GitHubAppInstallationResponse represents a GitHub App installation. */
@@ -780,7 +780,7 @@ export interface GitHubAppInstallationResponse {
 
 /** ListGitHubAppInstallationsResponse is a response containing GitHub App installations. */
 export interface ListGitHubAppInstallationsResponse {
-  installations: GitHubAppInstallationResponse[];
+  installations: GitHubAppInstallationResponse[] | null;
 }
 
 /** GitHubAppAvailableResponse indicates whether GitHub App is configured. */
@@ -801,12 +801,12 @@ export interface WorkspaceMemberResponse {
 
 /** ListWorkspaceMembersResponse is a response containing current workspace members. */
 export interface ListWorkspaceMembersResponse {
-  members: WorkspaceMemberResponse[];
+  members: WorkspaceMemberResponse[] | null;
 }
 
 /** ResolveUsersRequest is a request to resolve user IDs to display info. */
 export interface ResolveUsersRequest {
-  ids: string[];
+  ids: string[] | null;
 }
 
 /**
@@ -823,7 +823,7 @@ export interface ResolvedUser {
 
 /** ResolveUsersResponse is a response containing resolved user details. */
 export interface ResolveUsersResponse {
-  users: ResolvedUser[];
+  users: ResolvedUser[] | null;
 }
 
 /** UpdateWSMemberRoleRequest is a request to update a user's workspace role. */
@@ -845,7 +845,7 @@ export interface WSInvitationResponse {
 
 /** ListWSInvitationsResponse is a response containing a list of workspace invitations. */
 export interface ListWSInvitationsResponse {
-  invitations: WSInvitationResponse[];
+  invitations: WSInvitationResponse[] | null;
 }
 
 /** CreateWSInvitationRequest is a request to create a workspace invitation. */
@@ -859,12 +859,12 @@ export interface CreateWSInvitationRequest {
 /** GetNodeTitlesRequest is a request to get titles for multiple nodes. */
 export interface GetNodeTitlesRequest {
   /** Comma-separated node IDs */
-  IDs: string;
+  IDs: string | null;
 }
 
 /** GetNodeTitlesResponse is a response containing a map of node IDs to titles. */
 export interface GetNodeTitlesResponse {
-  titles: { [key: string]: string};
+  titles: { [key: string]: string} | null;
 }
 
 /** SelectOption represents an option for select/multi_select properties. */
@@ -957,7 +957,7 @@ export interface NodeResponse {
 
 /** ListNodeChildrenResponse is a response containing children of a node. */
 export interface ListNodeChildrenResponse {
-  nodes: NodeResponse[];
+  nodes: NodeResponse[] | null;
 }
 
 /** MoveNodeRequest is a request to move a node to a new parent. */
@@ -1047,7 +1047,7 @@ export interface UpdatePageFrontmatterResponse {
  */
 export interface CreateTableRequest {
   title: string;
-  properties: Property[];
+  properties: Property[] | null;
 }
 
 /** CreateTableUnderParentResponse is a response from creating a table under a parent. */
@@ -1059,7 +1059,7 @@ export interface CreateTableUnderParentResponse {
 export interface GetTableSchemaResponse {
   id: string;
   title: string;
-  properties: Property[];
+  properties: Property[] | null;
   views?: View[];
   created: number;
   modified: number;
@@ -1071,7 +1071,7 @@ export interface GetTableSchemaResponse {
  */
 export interface UpdateTableRequest {
   title: string;
-  properties: Property[];
+  properties: Property[] | null;
 }
 
 /** UpdateTableResponse is a response from updating a table. */
@@ -1123,20 +1123,20 @@ export interface ListRecordsRequest {
 /** DataRecordResponse is the API representation of a data record. */
 export interface DataRecordResponse {
   id: string;
-  data: { [key: string]: unknown};
+  data: { [key: string]: unknown} | null;
   created: number;
   modified: number;
 }
 
 /** ListRecordsResponse is a response containing a list of records. */
 export interface ListRecordsResponse {
-  records: DataRecordResponse[];
+  records: DataRecordResponse[] | null;
 }
 
 /** GetRecordResponse is a response containing a record. */
 export interface GetRecordResponse {
   id: string;
-  data: { [key: string]: unknown};
+  data: { [key: string]: unknown} | null;
   created: number;
   modified: number;
 }
@@ -1146,7 +1146,7 @@ export interface GetRecordResponse {
  * Now used for /nodes/{id}/table/records/create endpoint.
  */
 export interface CreateRecordRequest {
-  data: { [key: string]: unknown};
+  data: { [key: string]: unknown} | null;
 }
 
 /** CreateRecordResponse is a response from creating a record. */
@@ -1159,7 +1159,7 @@ export interface CreateRecordResponse {
  * Now used for /nodes/{id}/table/records/{rid} endpoint.
  */
 export interface UpdateRecordRequest {
-  data: { [key: string]: unknown};
+  data: { [key: string]: unknown} | null;
 }
 
 /** UpdateRecordResponse is a response from updating a record. */
@@ -1184,7 +1184,7 @@ export interface Commit {
 
 /** ListNodeVersionsResponse is a response containing node version history. */
 export interface ListNodeVersionsResponse {
-  history: Commit[];
+  history: (Commit | null)[] | null;
 }
 
 /** GetNodeVersionResponse is a response containing node content at a version. */
@@ -1204,7 +1204,7 @@ export interface AssetSummary {
 
 /** ListNodeAssetsResponse is a response containing a list of assets. */
 export interface ListNodeAssetsResponse {
-  assets: AssetSummary[];
+  assets: AssetSummary[] | null;
 }
 
 /** SearchRequest is a request to search pages and tables. */
@@ -1225,13 +1225,13 @@ export interface SearchResult {
   title: string;
   snippet: string;
   score: number /* float64 */;
-  matches: { [key: string]: string};
+  matches: { [key: string]: string} | null;
   modified: number;
 }
 
 /** SearchResponse is the response to a search request. */
 export interface SearchResponse {
-  results: SearchResult[];
+  results: SearchResult[] | null;
 }
 
 /** ListNotificationsRequest is a request to list notifications for the authenticated user. */
@@ -1256,7 +1256,7 @@ export interface NotificationDTO {
 
 /** ListNotificationsResponse is a response containing paginated notifications. */
 export interface ListNotificationsResponse {
-  notifications: NotificationDTO[];
+  notifications: NotificationDTO[] | null;
   total: number /* int */;
   unread_count: number /* int */;
 }
@@ -1274,13 +1274,13 @@ export interface ChannelSetDTO {
 
 /** NotificationPrefsDTO holds user notification preferences. */
 export interface NotificationPrefsDTO {
-  defaults: { [key: string]: ChannelSetDTO};
-  overrides: { [key: string]: ChannelSetDTO};
+  defaults: { [key: string]: ChannelSetDTO} | null;
+  overrides: { [key: string]: ChannelSetDTO} | null;
 }
 
 /** UpdateNotificationPrefsRequest updates notification channel preferences. */
 export interface UpdateNotificationPrefsRequest {
-  overrides: { [key: string]: ChannelSetDTO};
+  overrides: { [key: string]: ChannelSetDTO} | null;
 }
 
 /** VAPIDKeyResponse returns the server's VAPID public key. */

@@ -113,7 +113,7 @@ test.describe("Table Creation and Basic Operations", () => {
     const listParams = { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     await expect(async () => {
       const data = await client.ws(wsID).listRecords(tableId, listParams);
-      const edited = data.records.find((r: DataRecordResponse) => (r.data.Name as string) === "Edited Item 1");
+      const edited = data.records?.find((r: DataRecordResponse) => (r.data?.Name as string) === "Edited Item 1");
       expect(edited).toBeTruthy();
     }).toPass({ timeout: 5000 });
   });
@@ -149,7 +149,7 @@ test.describe("Table Creation and Basic Operations", () => {
     const listParams = { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     await expect(async () => {
       const data = await client.ws(wsID).listRecords(tableId, listParams);
-      expect(data.records.length).toBe(1);
+      expect(data.records?.length).toBe(1);
     }).toPass({ timeout: 5000 });
   });
 });
@@ -371,7 +371,7 @@ test.describe("Table Sort UI", () => {
         Limit: 100,
       };
       const data = await client.ws(wsID).listRecords(tableId, listParams);
-      const names = data.records.map((r: DataRecordResponse) => r.data.Name);
+      const names = data.records?.map((r: DataRecordResponse) => r.data?.Name);
       expect(names).toEqual(["Apple", "Mango", "Zebra"]);
     }).toPass({ timeout: 5000 });
   });

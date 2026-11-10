@@ -51,7 +51,7 @@ export function FieldValue(props: FieldValueProps): JSXElement {
     // Outside RecordsProvider context — user columns will fall back to showing the raw ID.
   }
 
-  const rawValue = () => props.record.data[props.column.name] ?? "";
+  const rawValue = () => props.record.data?.[props.column.name] ?? "";
   // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
   const strValue = () => String(rawValue());
   const chips = () =>

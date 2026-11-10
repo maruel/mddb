@@ -414,7 +414,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     try {
       const data = await ws.listNodeChildren(nodeId);
       if (identity !== workspaceIdentity()) return;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
       const children = data.nodes?.filter((node): node is NodeResponse => Boolean(node)) || [];
 
       setNodesStore(

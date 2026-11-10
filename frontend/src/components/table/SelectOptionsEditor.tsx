@@ -27,7 +27,7 @@ function generateOptionId(existing: SelectOption[]): string {
 interface SelectOptionsEditorProps {
   column: Property;
   allColumns: Property[];
-  records: { data: Record<string, unknown> }[];
+  records: { data: Record<string, unknown> | null }[];
   position: { x: number; y: number };
   onUpdateColumns: (cols: Property[]) => Promise<void>;
   onClose: () => void;
@@ -138,7 +138,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
   const usageCount = (id: string): number => {
     return props.records.filter((r) => {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Preserve JavaScript display for arbitrary record values.
-      const v = String(r.data[props.column.name] ?? "");
+      const v = String(r.data?.[props.column.name] ?? "");
       return v
         .split(",")
         .map((s) => s.trim())

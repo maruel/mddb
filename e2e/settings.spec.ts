@@ -49,7 +49,7 @@ test("member invitation forms send the API role values", async ({ page, request 
   await expect
     .poll(
       async () =>
-        (await client.org(orgID).listOrgInvitations()).invitations.find((i) => i.email === invitee.email)?.role,
+        (await client.org(orgID).listOrgInvitations()).invitations?.find((i) => i.email === invitee.email)?.role,
     )
     .toBe("org:admin");
 
@@ -60,7 +60,7 @@ test("member invitation forms send the API role values", async ({ page, request 
   await wsForm.locator('button[type="submit"]').click();
   await expect
     .poll(
-      async () => (await client.ws(wsID).listWSInvitations()).invitations.find((i) => i.email === invitee.email)?.role,
+      async () => (await client.ws(wsID).listWSInvitations()).invitations?.find((i) => i.email === invitee.email)?.role,
     )
     .toBe("ws:editor");
 });

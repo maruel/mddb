@@ -230,7 +230,7 @@ test.describe("Select Column UX", () => {
     // Verify via API
     await expect(async () => {
       const data = await client.ws(wsID).getRecord(tableData.id, rec.id);
-      expect(String(data.data["Status"])).toBe("opt1");
+      expect(String(data.data?.["Status"])).toBe("opt1");
     }).toPass({ timeout: 5000 });
   });
 

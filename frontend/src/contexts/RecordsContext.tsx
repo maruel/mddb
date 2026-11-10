@@ -153,7 +153,6 @@ export const RecordsProvider: ParentComponent = (props) => {
     setResolvedUsers(new Map());
     ws.listWorkspaceMembers()
       .then((res) => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         if (identity === workspaceIdentity()) setWorkspaceMembers(res.members ?? []);
       })
       .catch(() => {
@@ -179,7 +178,6 @@ export const RecordsProvider: ParentComponent = (props) => {
     const unknownIds = new Set<string>();
     for (const rec of loadedRecords) {
       for (const col of userCols) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         const v = rec.data?.[col];
         if (typeof v === "string" && v && !memberIds.has(v)) {
           unknownIds.add(v);
@@ -203,7 +201,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (toFetch.length > 0) {
       try {
         const res = await ws.resolveUsers({ ids: toFetch });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
         for (const u of res.users ?? []) {
           merged.set(u.id, u);
         }
@@ -228,7 +226,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     // Simple filter
     if (!filter.property) return true;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
     const fieldValue = record.data?.[filter.property];
     const filterValue = filter.value;
 
@@ -290,9 +288,8 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     return [...recs].sort((a, b) => {
       for (const sort of sorts) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         const aVal = a.data?.[sort.property];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
         const bVal = b.data?.[sort.property];
 
         let cmp: number;
@@ -455,7 +452,6 @@ export const RecordsProvider: ParentComponent = (props) => {
       });
       if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
       const loadedRecords = data.records || [];
       setRecords(loadedRecords);
       const more = loadedRecords.length === PAGE_SIZE;
@@ -531,7 +527,6 @@ export const RecordsProvider: ParentComponent = (props) => {
       });
       if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
       const newRecords = data.records || [];
       const allRecs = [...records(), ...newRecords];
       setRecords(allRecs);
@@ -754,7 +749,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
+
       await ws.createRecord(nodeId, { data: record.data || {} });
       if (!operationCurrent()) return;
       await loadRecords(nodeId);

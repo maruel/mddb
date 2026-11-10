@@ -59,7 +59,7 @@ export default function LinkedAccountsSection(props: Props) {
   createEffect(() => {
     api()
       .listProviders()
-      .then((resp) => setAvailableProviders(resp.providers))
+      .then((resp) => setAvailableProviders(resp.providers ?? []))
       .catch((err: unknown) => console.error("Failed to fetch providers:", err));
   });
 

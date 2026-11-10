@@ -61,11 +61,11 @@ export default function TableGallery(props: TableGalleryProps) {
                     {(col) => (
                       <div class={styles.imageContainer}>
                         <Show
-                          when={record.data[col().name]}
+                          when={record.data?.[col().name]}
                           fallback={<div class={styles.imagePlaceholder}>{t("table.noImage")}</div>}
                         >
                           <img
-                            src={String(record.data[col().name])}
+                            src={String(record.data?.[col().name])}
                             alt={getRecordTitle(record, props.columns) || "Record"}
                             class={styles.image}
                             onError={(e) => {
