@@ -1,7 +1,7 @@
 // Exercises editor representation, undo, and refresh ownership while uploads or departure are pending.
 
 import type { Page } from "@playwright/test";
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, waitForWorkspace, gotoWithSession } from "./helpers";
 import { gate } from "./gomode-fixtures";
 
 async function dropImage(page: Page) {
@@ -21,7 +21,7 @@ async function dropImage(page: Page) {
 test("an upload and waiting departure preserve typing across attempted mode changes", async ({ page, request }) => {
   const { token } = await registerUser(request, "upload-mode-ownership");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Mode source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Mode target", content: "Other body" });
@@ -62,7 +62,7 @@ test("locked global mode shortcuts and same-mode clicks preserve undo after fail
 }) => {
   const { token } = await registerUser(request, "locked-mode-undo");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Undo source", content: "Original body" });
   await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -105,7 +105,7 @@ test("locked global mode shortcuts and same-mode clicks preserve undo after fail
 test("an admitted upload prevents an external refresh from replacing its source draft", async ({ page, request }) => {
   const { token } = await registerUser(request, "upload-refresh-ownership");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Refresh source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Refresh target", content: "Other body" });
@@ -160,7 +160,7 @@ test("an admitted upload prevents an external refresh from replacing its source 
 test("a locked Markdown draft cannot be round-tripped by the global shortcut", async ({ page, request }) => {
   const { token } = await registerUser(request, "locked-markdown-representation");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Markdown deletion source", content: "Original body" });
   await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -211,7 +211,7 @@ for (const { outcome, stage, uploadFirst } of [
   }) => {
     const { token } = await registerUser(request, `history-upload-${outcome}`);
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
     const ws = client.ws(wsID);
     const other =
@@ -335,7 +335,7 @@ for (const destination of ["same", "other"] as const) {
   }) => {
     const { token } = await registerUser(request, `sidebar-history-upload-${destination}`);
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const ws = createClient(request, token).ws(wsID);
     const source = await ws.createPage("0", { title: "Sidebar History source", content: "Original body" });
     const target = await ws.createPage("0", { title: "Sidebar History target", content: "Other body" });
@@ -393,7 +393,7 @@ for (const held of ["create", "refresh"] as const) {
   test(`a sidebar creation does not steal a later route after its ${held} response`, async ({ page, request }) => {
     const { token } = await registerUser(request, `sidebar-create-intent-${held}`);
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const ws = createClient(request, token).ws(wsID);
     const source = await ws.createPage("0", { title: "Sidebar create source" });
     const target = await ws.createPage("0", { title: "Sidebar chosen target" });
@@ -455,7 +455,7 @@ test("a selected deletion cannot replace a newer destination whose content is st
 }) => {
   const { token } = await registerUser(request, "delete-route-intent");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Deleting source" });
   const target = await ws.createPage("0", { title: "Chosen after deletion", content: "Chosen destination body" });

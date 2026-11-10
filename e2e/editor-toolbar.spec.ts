@@ -4,7 +4,7 @@ import {
   test,
   expect,
   registerUser,
-  getWorkspaceId,
+  waitForWorkspace,
   switchToMarkdownMode,
   createClient,
   gotoWithSession,
@@ -13,9 +13,8 @@ import {
 test("selecting multiple lines and clicking Checkbox converts all lines to task list", async ({ page, request }) => {
   const { token } = await registerUser(request, "toolbar-checkbox-multi");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
 
   // Create a page with multiple lines
   const client = createClient(request, token);
@@ -25,7 +24,7 @@ test("selecting multiple lines and clicking Checkbox converts all lines to task 
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // Navigate to the page
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -58,9 +57,8 @@ test("selecting multiple lines and clicking Checkbox converts all lines to task 
 test("underline formatting is preserved when switching to markdown mode", async ({ page, request }) => {
   const { token } = await registerUser(request, "toolbar-underline");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
 
   // Create a page with plain text
   const client = createClient(request, token);
@@ -70,7 +68,7 @@ test("underline formatting is preserved when switching to markdown mode", async 
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // Navigate to the page
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();

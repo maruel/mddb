@@ -1,13 +1,12 @@
 // E2E test for task block cursor positioning when navigating with arrow keys.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("right arrow from end of task line places cursor after checkbox, not before", async ({ page, request }) => {
   const { token } = await registerUser(request, "task-cursor");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
 
   // Create a page with two task items
   const client = createClient(request, token);
@@ -17,7 +16,7 @@ test("right arrow from end of task line places cursor after checkbox, not before
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // Navigate to the page
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();

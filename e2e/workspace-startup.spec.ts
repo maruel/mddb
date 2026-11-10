@@ -1,5 +1,5 @@
 // Exercises visible first-workspace retry, canonical readiness, and idempotent provisioning on mobile and desktop.
-import { test, expect, registerUser, createClient, gotoWithSession, getWorkspaceId } from "./helpers";
+import { test, expect, registerUser, createClient, gotoWithSession, waitForWorkspace } from "./helpers";
 import { gate } from "./gomode-fixtures";
 
 test.use({ serviceWorkers: "block" });
@@ -34,6 +34,7 @@ for (const width of [390, 1280]) {
     try {
       await page.getByRole("button", { name: "Try again", exact: true }).click();
       await requested.promise;
+      await expect(page.getByTestId("workspace-tree")).toHaveAttribute("aria-busy", "true");
       await expect(page.getByTestId("wysiwyg-editor")).toHaveCount(0);
       await expect(page.locator('[data-testid^="sidebar-node-"]')).toHaveCount(0);
     } finally {
@@ -45,7 +46,7 @@ for (const width of [390, 1280]) {
     const user = await client.getMe();
     expect(user.organizations).toHaveLength(1);
     expect(user.workspaces).toHaveLength(1);
-    expect((await client.ws(await getWorkspaceId(page)).listNodeChildren("0")).nodes).toHaveLength(1);
+    expect((await client.ws(await waitForWorkspace(page)).listNodeChildren("0")).nodes).toHaveLength(1);
   });
 }
 
@@ -114,7 +115,7 @@ for (const failure of ["welcome", "final-read"] as const) {
     expect(welcomeAttempts).toBe(failure === "welcome" ? 2 : 1);
     expect(rootReads).toBe(failure === "welcome" ? 2 : 3);
     const roots = await createClient(request, token)
-      .ws(await getWorkspaceId(page))
+      .ws(await waitForWorkspace(page))
       .listNodeChildren("0");
     expect(roots.nodes).toHaveLength(1);
   });

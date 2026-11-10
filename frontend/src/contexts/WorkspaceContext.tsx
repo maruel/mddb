@@ -77,7 +77,7 @@ interface WorkspaceContextValue {
   switchWorkspace: (wsId: string) => Promise<void>;
   createOrganization: (data: { name: string }) => Promise<void>;
   createWorkspace: (data: { name: string }) => Promise<void>;
-  loadNodes: (force?: boolean) => Promise<void>;
+  refreshRoots: () => Promise<void>;
   loadNode: (id: string, options: NodeLoadOptions) => Promise<NodeResponse | undefined>;
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
@@ -311,9 +311,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  const loadNodes = async (force?: boolean) => {
+  const refreshRoots = async () => {
     try {
-      await rootData.loadNodes(force === true);
+      await rootData.refreshRoots();
     } catch (error) {
       console.warn("Workspace refresh failed", error);
     }
@@ -424,7 +424,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       // A root snapshot that began earlier must publish before this detail read.
       if (loadingNodes()) {
         try {
-          await rootData.loadNodes(false);
+          await rootData.prepareWorkspace();
         } catch {
           // The canonical owner publishes preparation failure and owns retry.
           // No detail request started, so there is no route error to publish.
@@ -473,7 +473,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         evt.type === EventNodeDeleted ||
         evt.type === EventNodeMoved
       ) {
-        void loadNodes(true).catch((backgroundError: unknown) => reportError(backgroundError));
+        void refreshRoots().catch((backgroundError: unknown) => reportError(backgroundError));
       }
     }),
   );
@@ -547,7 +547,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     switchWorkspace,
     createOrganization,
     createWorkspace,
-    loadNodes,
+    refreshRoots,
     loadNode,
     fetchNodeChildren,
     removeNode,

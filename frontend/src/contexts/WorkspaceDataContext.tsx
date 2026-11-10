@@ -49,7 +49,12 @@ interface WorkspaceDataContextValue {
   ready: Accessor<boolean>;
   needsWorkspace: Accessor<boolean>;
   preparationError: Accessor<string | null>;
-  loadNodes: (force: boolean) => Promise<NodeResponse[]>;
+  // Await initial preparation or reuse its canonical snapshot without retrying failure.
+  prepareWorkspace: () => Promise<NodeResponse[]>;
+  // Read canonical roots while retaining usable data; join preparation already in flight.
+  refreshRoots: () => Promise<NodeResponse[]>;
+  // Explicitly resume the failed stage with current identity and permissions.
+  retryPreparation: () => Promise<NodeResponse[]>;
 }
 const WorkspaceDataContext = createContext<WorkspaceDataContextValue>();
 
@@ -184,18 +189,35 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
     })();
     return operation.completion.promise;
   };
-  const begin = (force: boolean): Promise<NodeResponse[]> => {
+  const prepareWorkspace = (): Promise<NodeResponse[]> => {
     const active = state();
     if (active.kind === "running") return active.operation.completion.promise;
-    if (!i18nReady() && !ready()) return Promise.resolve([]);
-    if (!force && ready()) return Promise.resolve([...nodes]);
-    if (active.kind === "failed") {
-      const operation = active.operation;
-      retire();
-      return operation.kind === "provision" ? start("workspace", "roots") : start(operation.mode, operation.stage);
-    }
+    if (ready()) return Promise.resolve([...nodes]);
+    if (active.kind === "failed") return active.operation.completion.promise;
+    if (!i18nReady()) return Promise.resolve([]);
     if (!auth.user()?.workspace_id && !workspaceEntry()) return Promise.resolve([]);
-    return start(ready() ? "refresh" : workspaceEntry() ? "workspace" : "read-only", "roots");
+    return start(workspaceEntry() ? "workspace" : "read-only", "roots");
+  };
+  const refreshRoots = (): Promise<NodeResponse[]> => {
+    const active = state();
+    if (active.kind === "running" || active.kind === "failed") return active.operation.completion.promise;
+    return ready() ? start("refresh", "roots") : prepareWorkspace();
+  };
+  const retryPreparation = (): Promise<NodeResponse[]> => {
+    const active = state();
+    if (active.kind !== "failed") return prepareWorkspace();
+    if (!i18nReady() && !ready()) return Promise.resolve([]);
+    const operation = active.operation;
+    retire();
+    if (operation.kind === "provision") {
+      if (!workspaceEntry()) {
+        setState({ kind: "needs-workspace" });
+        return Promise.resolve([]);
+      }
+      return start("workspace", "roots");
+    }
+    const mode = operation.mode === "refresh" ? "refresh" : workspaceEntry() ? "workspace" : "read-only";
+    return start(mode, operation.stage);
   };
   const observe = (preparation: Promise<NodeResponse[]>) => {
     void preparation.catch((error: unknown) => {
@@ -204,7 +226,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       console.warn("Workspace preparation failed", error);
     });
   };
-  const prepare = () => {
+  const prepareForRoute = () => {
     const user = auth.user();
     const captured = scope();
     if (captured === null || !user || !i18nReady()) return;
@@ -223,13 +245,13 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       observe(start("workspace", "welcome"));
       return;
     }
-    observe(begin(false));
+    observe(prepareWorkspace());
   };
   createEffect(
     on([scope, workspaceEntry, i18nReady], ([captured, entry], previous) => {
       const replaced = !previous || previous[0] !== captured;
       const changedPolicy = previous && previous[1] !== entry;
-      if (replaced || changedPolicy) retire();
+      if (replaced || (changedPolicy && state().kind === "running")) retire();
       if (replaced) {
         batch(() => {
           setNodesStore(reconcile([]));
@@ -239,7 +261,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       // Translation readiness can start idle work, but cannot restart a failed
       // stage or replace a request that already owns valid translated input.
       if (state().kind === "running" || state().kind === "failed") return;
-      prepare();
+      prepareForRoute();
     }),
   );
   onCleanup(() => {
@@ -257,7 +279,9 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       const active = state();
       return active.kind === "failed" ? active.error : null;
     },
-    loadNodes: begin,
+    prepareWorkspace,
+    refreshRoots,
+    retryPreparation,
   };
   return <WorkspaceDataContext.Provider value={value}>{props.children}</WorkspaceDataContext.Provider>;
 };

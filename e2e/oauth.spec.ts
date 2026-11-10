@@ -1,5 +1,5 @@
 // E2E tests for OAuth2 authentication flow.
-import { test, expect, registerUser, gotoWithSession } from "./helpers";
+import { waitForWorkspace, test, expect, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("API routing", () => {
   test("unknown /api/v1/ routes return 404, not SPA", async ({ request }) => {
@@ -53,7 +53,7 @@ test.describe("OAuth Login", () => {
       const button = page.getByRole("link", { name: new RegExp(provider, "i") });
       await expect(button).toBeVisible();
       await button.click();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+      await waitForWorkspace(page);
 
       // Fake providers share an account across runs. Release this login through
       // the browser flow so repetitions don't exhaust its real session quota.
@@ -87,7 +87,7 @@ test.describe("OAuth Login", () => {
     await gotoWithSession(page, token);
 
     // Should be logged in - sidebar indicates logged in state
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Token should be cleared from URL
     expect(page.url()).not.toContain("token=");

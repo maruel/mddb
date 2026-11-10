@@ -1,6 +1,6 @@
 // E2E tests for user settings and language switching.
 import type { Page } from "@playwright/test";
-import { test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
+import { waitForWorkspace, test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 
 // Helper to open user menu and click an option
 async function openUserMenuAndClick(page: Page, optionText: string) {
@@ -18,7 +18,7 @@ test("member invitation forms send the API role values", async ({ page, request 
   const owner = await registerUser(request, "invite-owner");
   const invitee = await registerUser(request, "invite-member");
   await gotoWithSession(page, owner.token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.setViewportSize({ width: 390, height: 900 });
 
@@ -69,7 +69,7 @@ test.describe("User Profile Settings", () => {
   test.screenshot("navigate to profile and verify user info displayed", async ({ page, request, takeScreenshot }) => {
     const { email, token } = await registerUser(request, "profile-view");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Profile");
 
@@ -86,7 +86,7 @@ test.describe("User Profile Settings", () => {
   test("change language setting and verify UI updates", async ({ page, request }) => {
     const { token } = await registerUser(request, "language-change");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Profile");
     await expect(page).toHaveURL("/settings/user", { timeout: 5000 });
@@ -109,7 +109,7 @@ test.describe("User Profile Settings", () => {
   test("icon-only save stays reachable and saves with the keyboard", async ({ page, request }, testInfo) => {
     const { token } = await registerUser(request, "theme-change");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Profile");
     await expect(page).toHaveURL("/settings/user", { timeout: 5000 });
@@ -146,7 +146,7 @@ test.describe("User Profile Settings", () => {
   test("back button returns to previous page", async ({ page, request }) => {
     const { token } = await registerUser(request, "profile-back");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Profile");
     await expect(page).toHaveURL("/settings/user", { timeout: 5000 });
@@ -156,7 +156,7 @@ test.describe("User Profile Settings", () => {
     await backButton.click();
 
     // Should return to workspace view
-    await expect(page.locator("aside")).toBeVisible({ timeout: 5000 });
+    await waitForWorkspace(page);
     await expect(page).not.toHaveURL("/settings/user");
   });
 });
@@ -165,7 +165,7 @@ test.describe("Workspace Settings", () => {
   test("navigate to workspace settings via sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-settings");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Hover over workspace header to reveal settings button, then click
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -185,7 +185,7 @@ test.describe("Workspace Settings", () => {
   test.screenshot("workspace settings tabs navigation", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "ws-tabs");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to settings via sidebar settings button
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -219,7 +219,7 @@ test.describe("Workspace Settings", () => {
   test("members list shows current user", async ({ page, request }) => {
     const { email, token } = await registerUser(request, "members-list");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to settings via sidebar settings button
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -242,7 +242,7 @@ test.describe("Workspace Settings", () => {
     const { token } = await registerUser(request, "rename-ws");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     const wsID = (await client.getMe()).workspace_id!;
 
     // Navigate to settings via sidebar settings button
@@ -280,7 +280,7 @@ test.describe("Authentication", () => {
   test("logout clears session and redirects to login", async ({ page, request }) => {
     const { token } = await registerUser(request, "logout-test");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Logout");
 

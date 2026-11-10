@@ -1,6 +1,6 @@
 // Exercises cookie authentication, cross-site protection, and delayed session/resource ownership in real browsers.
 
-import { test, expect, installAuthBridge } from "./helpers";
+import { test, expect, installAuthBridge, waitForWorkspace } from "./helpers";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
@@ -104,7 +104,7 @@ test("a delayed import cannot switch or poll using a replacement session", async
   const { registerUser, gotoWithSession, createClient } = await import("./helpers");
   const { token, email } = await registerUser(request, "cookie-import-owner");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible();
+  await waitForWorkspace(page);
   const client = createClient(request, token);
   const original = await client.getMe();
   const imported = await client
@@ -160,7 +160,7 @@ test("a late autosave response cannot restore the old session's navigation", asy
   const { registerUser, gotoWithSession, createClient } = await import("./helpers");
   const { token, email } = await registerUser(request, "cookie-autosave-owner");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible();
+  await waitForWorkspace(page);
   const original = await createClient(request, token).getMe();
   const replacement = await createClient(request).login({ email, password: "testpassword123" });
   let release!: () => void;
@@ -205,7 +205,7 @@ test("a delayed table update cannot replace another page's editor or subsequent 
   const { token } = await registerUser(request, "cookie-table-owner");
   const client = createClient(request, token);
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible();
+  await waitForWorkspace(page);
   const user = await client.getMe();
   const ws = client.ws(user.workspace_id!);
   const table = await ws.createTable("0", { title: "Origin table A", properties: [] });
@@ -253,11 +253,10 @@ test("a delayed table update cannot replace another page's editor or subsequent 
 test.describe("History preview ownership", () => {
   test.use({ serviceWorkers: "block" });
   test("history previews retain their resource, request order and dismissal", async ({ page, request }) => {
-    const { registerUser, gotoWithSession, createClient, getWorkspaceId } = await import("./helpers");
+    const { registerUser, gotoWithSession, createClient } = await import("./helpers");
     const { token } = await registerUser(request, "cookie-history-owner");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible();
-    const ws = createClient(request, token).ws(await getWorkspaceId(page));
+    const ws = createClient(request, token).ws(await waitForWorkspace(page));
     const origin = await ws.createPage("0", { title: "History A", content: "Historical origin A" });
     await ws.updatePage(origin.id, {
       expected_revision: (await ws.getNode(origin.id)).revision ?? "",

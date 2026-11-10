@@ -1,5 +1,5 @@
 // E2E tests for workspace and organization creation flow.
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test.describe("First Login Flow", () => {
   test("new user gets auto-created org, workspace, and welcome page", async ({ page, request }) => {
@@ -7,7 +7,7 @@ test.describe("First Login Flow", () => {
     await gotoWithSession(page, token);
 
     // Wait for first-login flow to complete
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Should have a workspace URL
     await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 10000 });
@@ -25,7 +25,7 @@ test.describe("First Login Flow", () => {
   test("first login creates org named after user", async ({ page, request }) => {
     const { token } = await registerUser(request, "org-name");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Get user info to check org name
     const meResponse = await request.get("/api/v1/auth/me", {
@@ -48,7 +48,7 @@ test.describe("Workspace Switching", () => {
   test("create and switch to a new workspace", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-switch");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Get current user info
     const meResponse = await request.get("/api/v1/auth/me", {
@@ -67,7 +67,7 @@ test.describe("Workspace Switching", () => {
 
     // Reload to see the new workspace
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Open workspace menu
     const wsMenu = page.locator('[class*="WorkspaceMenu"]').locator("button").first();
@@ -89,9 +89,8 @@ test.describe("Workspace Switching", () => {
   test("switching workspace clears selected node", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-clear");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID1 = await getWorkspaceId(page);
+    const wsID1 = await waitForWorkspace(page);
 
     // Create a page in first workspace
     const client = createClient(request, token);
@@ -102,7 +101,7 @@ test.describe("Workspace Switching", () => {
 
     // Navigate to the page
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).click();
     await expect(page.getByText("Content in workspace 1", { exact: true })).toBeVisible({ timeout: 5000 });
 
@@ -129,7 +128,7 @@ test.describe("Workspace Switching", () => {
     // Navigate to root URL - this will redirect to the saved workspace (WS2)
     // Note: Reloading with explicit /w/ws1/... URL would stay on WS1 (URL is trusted)
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // The first workspace page should NOT be visible (we're now in WS2)
     await expect(page.getByText("Content in workspace 1", { exact: true })).not.toBeVisible({ timeout: 3000 });
@@ -140,7 +139,7 @@ test.describe("Organization Features", () => {
   test("create a new organization", async ({ page, request }) => {
     const { token } = await registerUser(request, "org-create");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Look for org menu or create org button
     const orgMenu = page.locator('[class*="OrgMenu"]').locator("button").first();
@@ -162,7 +161,7 @@ test.describe("Organization Features", () => {
         await createButton.click();
 
         // Should switch to new org
-        await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+        await waitForWorkspace(page);
       }
     }
 
@@ -179,7 +178,7 @@ test.describe("User Menu", () => {
   test("user menu shows user name and email", async ({ page, request }) => {
     const { email, token } = await registerUser(request, "user-menu");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Click on user menu avatar button (shows initials)
     const avatarButton = page.locator('[class*="avatarButton"]').first();
@@ -193,7 +192,7 @@ test.describe("User Menu", () => {
   test("user menu has profile and logout options", async ({ page, request }) => {
     const { token } = await registerUser(request, "menu-options");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Click on user menu avatar button
     const avatarButton = page.locator('[class*="avatarButton"]').first();
@@ -211,7 +210,7 @@ test.describe("Footer Links", () => {
   test("privacy and terms links in settings sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "footer-links");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Open user menu and navigate to settings
     const userMenu = page.locator('[class*="avatarButton"]');
@@ -253,7 +252,7 @@ test.describe("Sidebar Workspace Display", () => {
   test("sidebar shows workspace header and settings", async ({ page, request }) => {
     const { token } = await registerUser(request, "sidebar-ws");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Sidebar should contain workspace header
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -272,7 +271,7 @@ test.describe("Sidebar Workspace Display", () => {
   test("workspace settings button is clickable", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-settings-click");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Hover over workspace header to reveal settings button
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -290,7 +289,7 @@ test.describe("Sidebar Workspace Display", () => {
   test("header shows user menu", async ({ page, request }) => {
     const { token } = await registerUser(request, "header-user");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Header should be visible
     const header = page.locator("header");
@@ -306,7 +305,7 @@ test.describe("Sidebar Workspace Display", () => {
 
     const { token } = await registerUser(request, "sidebar-mobile");
     await gotoWithSession(page, token);
-    // On mobile, wait for header instead (sidebar starts hidden)
+    await waitForWorkspace(page);
     const header = page.locator("header");
     await expect(header).toBeVisible({ timeout: 15000 });
 
@@ -329,10 +328,9 @@ test.describe("Sidebar Workspace Display", () => {
   test("sidebar workspace header visible with long page title", async ({ page, request }) => {
     const { token } = await registerUser(request, "ws-long-title");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     // Get workspace ID
-    const wsId = await getWorkspaceId(page);
+    const wsId = await waitForWorkspace(page);
 
     // Create a page with a very long title
     const longTitle = "This Is A Very Long Page Title That Should Test Overflow Behavior";
@@ -344,7 +342,7 @@ test.describe("Sidebar Workspace Display", () => {
 
     // Reload and navigate to the page
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
     // Workspace header should still be visible at top of sidebar

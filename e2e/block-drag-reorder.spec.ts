@@ -4,15 +4,14 @@
 // drag events needed for ProseMirror's drag-and-drop system.
 
 import type { Page } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 // Helper to setup editor with test content
 async function setupEditorWithBlocks(page: Page, request: Parameters<typeof registerUser>[0]) {
   const { token } = await registerUser(request, "block-dnd");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create test page with simple blocks for drag testing
   const markdownContent = `First paragraph
@@ -28,7 +27,7 @@ Third paragraph`;
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${pageResp.id}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 

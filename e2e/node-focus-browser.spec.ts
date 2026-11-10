@@ -1,6 +1,6 @@
 // Exercises prepared node focus through the production browser voice session and its WebRTC channel.
 
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, waitForWorkspace, gotoWithSession } from "./helpers";
 import { browserFocus, browserResult, gate, installBrowserTools } from "./gomode-fixtures";
 
 test.use({ launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] } });
@@ -66,7 +66,7 @@ test("browser hang-up cancels a pending lookup and releases the transport and mi
   await gotoWithSession(page, token);
   await expect(page.getByTestId("wysiwyg-editor")).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("user-menu-button")).toBeVisible();
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const target = await createClient(request, token)
     .ws(workspaceId)
     .createPage("0", { title: "Late browser target", content: "Late content" });

@@ -1,14 +1,14 @@
 // Verifies live page updates and draft protection for writes from the same account.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("same-account API edits update the open page and preserve unsaved drafts", async ({ page, request }) => {
   const { token } = await registerUser(request, "live-updates");
   const client = createClient(request, token);
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  await waitForWorkspace(page);
   await expect(page.getByTestId("connection-status")).toHaveText("Connected");
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = client.ws(wsID);
 
   const parent = await ws.createPage("0", { title: "Expanded parent", content: "Parent content" });
@@ -148,7 +148,7 @@ test("hybrid page removal refreshes another client's tree without discarding its
   const client = createClient(request, token);
   await gotoWithSession(page, token);
   await expect(page.getByTestId("connection-status")).toHaveText("Connected");
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = client.ws(wsID);
   const node = await ws.createPage("0", { title: "Hybrid", content: "Private page content" });
   const schema = await ws.createTable("0", { title: "Hybrid", properties: [] });
@@ -188,7 +188,7 @@ test("network recovery refreshes remote changes and retains an unsaved draft", a
   const client = createClient(request, token);
   await gotoWithSession(page, token);
   await expect(page.getByTestId("connection-status")).toHaveText("Connected");
-  const ws = client.ws(await getWorkspaceId(page));
+  const ws = client.ws(await waitForWorkspace(page));
   const node = await ws.createPage("0", { title: "Network page", content: "Original" });
   await page.reload();
   await page.getByTestId(`sidebar-node-${node.id}`).click();

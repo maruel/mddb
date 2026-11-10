@@ -1,13 +1,12 @@
 // End-to-end coverage for dialog-contained field dropdowns and import-dialog focus behavior.
 
-import { test, expect, createClient, getWorkspaceId, registerUser, gotoWithSession } from "./helpers";
+import { test, expect, createClient, waitForWorkspace, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("Interaction primitives", () => {
   test("record detail keeps select and multi-select dropdowns inside its drawer", async ({ page, request }) => {
     const { token } = await registerUser(request, "record-detail-dropdowns");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const workspaceId = await getWorkspaceId(page);
+    const workspaceId = await waitForWorkspace(page);
     const client = createClient(request, token);
     const table = await client.ws(workspaceId).createTable("0", {
       title: "Drawer dropdowns",
@@ -36,7 +35,7 @@ test.describe("Interaction primitives", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${table.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 

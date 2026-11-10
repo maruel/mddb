@@ -1,13 +1,12 @@
 // Diagnostic tests for block handle visibility and text alignment issues.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("diagnose: block handle visibility on hover", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-handle-visual");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create a test page with multiple block types
   const markdownContent = `Simple paragraph
@@ -34,7 +33,7 @@ code block
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -91,9 +90,8 @@ code block
 test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ page, request }) => {
   const { token } = await registerUser(request, "text-alignment-diagnostic");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create a page with various list types
   const markdownContent = `- Bullet item 1
@@ -118,7 +116,7 @@ test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ pag
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });

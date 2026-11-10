@@ -1,13 +1,12 @@
 // E2E tests for copy and paste functionality in the block editor.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("paste standard HTML lists into the editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-test");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
   const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste Test",
@@ -16,7 +15,7 @@ test("paste standard HTML lists into the editor", async ({ page, request }) => {
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -74,9 +73,8 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
   const pageResp = await client.ws(wsId).createPage("0", {
     title: "Copy Test",
@@ -85,7 +83,7 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -111,9 +109,8 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
 test("paste HTML headings into the editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-h");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
   const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste Headings",
@@ -122,7 +119,7 @@ test("paste HTML headings into the editor", async ({ page, request }) => {
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -161,9 +158,8 @@ test("copy headings from editor as markdown", async ({ page, request, context })
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
   const pageResp = await client.ws(wsId).createPage("0", {
     title: "Copy Headings",
@@ -172,7 +168,7 @@ test("copy headings from editor as markdown", async ({ page, request, context })
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -200,9 +196,8 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
 
   // Create page with mixed heading/paragraph/list content
@@ -213,7 +208,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -248,7 +243,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   const nodeId2 = page2Resp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId2}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -274,9 +269,8 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
 test("paste markdown into editor", async ({ page, request }) => {
   const { token } = await registerUser(request, "paste-md");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
   const client = createClient(request, token);
   const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste MD Test",
@@ -285,7 +279,7 @@ test("paste markdown into editor", async ({ page, request }) => {
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 

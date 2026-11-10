@@ -1,5 +1,5 @@
 // E2E tests for page parent-child hierarchy and nesting.
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, waitForWorkspace, gotoWithSession } from "./helpers";
 
 test.describe("Page Hierarchy", () => {
   test.screenshot("create and navigate page hierarchy", async ({ page, request, takeScreenshot }) => {
@@ -11,7 +11,7 @@ test.describe("Page Hierarchy", () => {
     await gotoWithSession(page, token);
 
     // Wait for the app to load and authenticate - sidebar indicates logged in state
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // 3. Wait for auto-created welcome page to appear in sidebar
     // The first-login flow auto-creates a welcome page
@@ -24,7 +24,7 @@ test.describe("Page Hierarchy", () => {
     const topLevelPageId = welcomeNodeId!.replace("sidebar-node-", "") as string;
 
     // 4. Get the workspace ID from the URL
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // 5. Create a child page via API
     const childData = await client.ws(wsID).createPage(topLevelPageId, {
@@ -35,7 +35,7 @@ test.describe("Page Hierarchy", () => {
 
     // 6. Refresh to see the child page
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // 7. Click on the parent to expand it and see children
     const parentNode = page.locator(`[data-testid="sidebar-node-${topLevelPageId}"]`);
@@ -64,7 +64,7 @@ test.describe("Page Hierarchy", () => {
 
     // 12. Reload and verify the hierarchy
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to parent page by clicking on its pageItem (not the whole li, which may click child)
     const parentPageItem = page.locator(`[data-testid="sidebar-node-${topLevelPageId}"] > div`).first();
@@ -110,9 +110,8 @@ test.describe("Page Hierarchy", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Get the welcome page ID
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
@@ -136,7 +135,7 @@ test.describe("Page Hierarchy", () => {
 
     // Reload to see the hierarchy
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to root page and expand to see the child
     const rootNode = page.locator(`[data-testid="sidebar-node-${rootPageId}"] > div`).first();
@@ -184,9 +183,8 @@ test.describe("Page Hierarchy", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Get root page
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
@@ -209,7 +207,7 @@ test.describe("Page Hierarchy", () => {
 
     // Reload and expand hierarchy
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     const rootNode = page.locator(`[data-testid="sidebar-node-${rootPageId}"] > div`).first();
     await rootNode.click();
@@ -252,9 +250,8 @@ test.describe("Page Hierarchy", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two sibling pages at root level
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -271,7 +268,7 @@ test.describe("Page Hierarchy", () => {
 
     // Reload and navigate to Page Two (second sibling)
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
     await page2Node.click();
@@ -299,9 +296,8 @@ test.describe("Page Hierarchy", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two sibling pages via API
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -318,7 +314,7 @@ test.describe("Page Hierarchy", () => {
 
     // Reload to see both pages
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Both pages should be visible at top level (use data-testid for precision)
     const firstPageNode = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);

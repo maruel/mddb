@@ -1,6 +1,7 @@
 // Pairs isolated display and approver browsers through normal mddb sessions and revocation.
 
 import {
+  waitForWorkspace,
   test,
   expect,
   registerUser,
@@ -25,7 +26,7 @@ test("another-device login preserves user permissions and supports individual re
     const consoleErrors: string[] = [];
     for (const page of [approver, display]) page.on("pageerror", (err) => consoleErrors.push(err.message));
     await gotoWithSession(approver, token);
-    await expect(approver).toHaveURL(/\/w\/@/, { timeout: 15000 });
+    await waitForWorkspace(approver);
     await approver.goto("/device");
     await display.goto("/login");
     await display.getByRole("link", { name: "Sign in with another device" }).click();
@@ -187,7 +188,7 @@ test("closing approval leaves the display signed out and approval requires sign 
     await expect(approver.getByRole("link", { name: "Sign in with another device" })).toHaveCount(0);
     // Use the ordinary token handoff to authenticate, then return to manual approval.
     await gotoWithSession(approver, token);
-    await expect(approver).toHaveURL(/\/w\/@/, { timeout: 15000 });
+    await waitForWorkspace(approver);
     await approver.goto("/device");
     await display.goto("/device-login");
     const code = display.locator("section p").filter({ hasText: /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/ });

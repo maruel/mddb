@@ -27,7 +27,7 @@ export default function Onboarding() {
           class={styles.retry}
           type="button"
           onClick={() =>
-            void data.loadNodes(true).catch((error: unknown) => console.warn("Workspace retry failed", error))
+            void data.retryPreparation().catch((error: unknown) => console.warn("Workspace retry failed", error))
           }
         >
           {t("recovery.retry")}

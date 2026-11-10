@@ -1,15 +1,14 @@
 // E2E tests for page links with dynamic title resolution.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test.describe("Page Links with Dynamic Titles", () => {
   test.screenshot("link displays current title of linked page", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "page-links");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create parent page
     const parentData = await client.ws(wsID).createPage("0", {
@@ -33,7 +32,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to parent page - click specifically on the pageItem, not the whole node (which includes children)
     const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
@@ -64,7 +63,7 @@ test.describe("Page Links with Dynamic Titles", () => {
 
     // Reload parent page
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate back to parent page
     await parentPageItem.click();
@@ -81,9 +80,8 @@ test.describe("Page Links with Dynamic Titles", () => {
     const { token } = await registerUser(request, "titles-api");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -113,9 +111,8 @@ test.describe("Page Links with Dynamic Titles", () => {
     const { token } = await registerUser(request, "backlinks");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create source and target pages
     const targetData = await client.ws(wsID).createPage("0", {
@@ -146,9 +143,8 @@ test.describe("Page Links with Dynamic Titles", () => {
   test("/page slash command creates link that shows in parent", async ({ page, request }) => {
     const { token } = await registerUser(request, "slash-page-link");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a parent page
     const createResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
@@ -159,7 +155,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     const parentData = await createResponse.json();
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to parent page
     const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
@@ -211,9 +207,8 @@ test.describe("Page Links with Dynamic Titles", () => {
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, "invalid-link");
       await gotoWithSession(page, token);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
 
       // Create parent page
       const parentResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
@@ -250,7 +245,7 @@ test.describe("Page Links with Dynamic Titles", () => {
       expect(updateResponse.ok()).toBe(true);
 
       await page.reload();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+      await waitForWorkspace(page);
 
       // Navigate to parent page
       const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
@@ -280,7 +275,7 @@ test.describe("Page Links with Dynamic Titles", () => {
 
       // Reload to get updated linkedNodeTitles
       await page.reload();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+      await waitForWorkspace(page);
 
       // Navigate back to parent page
       await parentPageItem.click();
@@ -297,9 +292,8 @@ test.describe("Page Links with Dynamic Titles", () => {
     const { token } = await registerUser(request, "click-link");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create source page
     const sourceData = await client.ws(wsID).createPage("0", {
@@ -322,7 +316,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to source page
     const sourceNode = page.locator(`[data-testid="sidebar-node-${sourceData.id}"]`);

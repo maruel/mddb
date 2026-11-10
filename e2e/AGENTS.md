@@ -24,13 +24,13 @@ Import `test`, `expect`, and helpers from `./helpers`:
   `request.get` or `request.post`, so tests share the backend's generated contracts.
 - `gotoWithSession(page, token, path?)` installs a normal API-issued credential as an HttpOnly Secure
   host cookie for unrelated UI setup. Authentication tests must exercise the actual browser login routes.
-- `getWorkspaceId(page)` reads the workspace ID from the URL.
+- `waitForWorkspace(page)` waits for the usable workspace tree and returns its ID.
 - `switchToMarkdownMode`, `getEditorContent`, and `fillEditorContent` drive the editor.
 - `test.screenshot(title, fn)` tags a test `@screenshot`; the `takeScreenshot` fixture captures images.
 
 ## App Behavior
 
-- Open the app with `gotoWithSession(page, token)` and wait for `aside` before touching the sidebar.
+- Open the app with `gotoWithSession(page, token)`, then call `waitForWorkspace(page)` before workspace interactions.
 - Autosave runs 2 s after the last edit, or at once when the user opens another node. Poll the API with
   `expect(...).toPass()` to observe the save.
 - Sidebar nodes carry `data-testid="sidebar-node-<id>"`. Their `delete-node-button` appears on hover.

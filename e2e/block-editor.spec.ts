@@ -1,14 +1,13 @@
 // E2E tests for flat block editor: input rules, drag handles, context menu, keyboard navigation.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("create blocks via input rules", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-editor");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   // Get workspace ID from URL
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create a test page via API with markdown content containing all block types
   const markdownContent = `- Bullet one
@@ -44,7 +43,7 @@ Another paragraph`;
 
   // Reload to see the page in sidebar
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // Navigate to the page via sidebar
   const pageNode = page.locator(`[data-testid="sidebar-node-${nodeId}"]`);
@@ -71,9 +70,8 @@ Another paragraph`;
 test("drag handles are present on all blocks", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-drag");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create a test page with multiple blocks of different types
   const markdownContent = `Apple paragraph
@@ -101,7 +99,7 @@ code block
 
   // Reload and navigate to the page
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });

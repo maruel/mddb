@@ -212,9 +212,13 @@ async function readFixtureResponse(
   }
 }
 
-// Helper to get workspace ID from URL
-export async function getWorkspaceId(page: Page): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/@[^/]+/, { timeout: 5000 });
+// Wait for the workspace shell before extracting its stable ID from the route.
+export async function waitForWorkspace(page: Page): Promise<string> {
+  const tree = page.getByTestId("workspace-tree");
+  // Mobile keeps its prepared tree mounted while the sidebar is closed.
+  await expect(tree).toBeAttached({ timeout: 15000 });
+  await expect(tree).toHaveAttribute("aria-busy", "false", { timeout: 15000 });
+  await expect(page).toHaveURL(/\/w\/@[^/]+/);
   const url = page.url();
   const wsMatch = url.match(/\/w\/@([^+/]+)/);
   expect(wsMatch).toBeTruthy();

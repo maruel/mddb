@@ -5,7 +5,7 @@ import {
   expect,
   registerUser,
   createClient,
-  getWorkspaceId,
+  waitForWorkspace,
   gotoWithSession,
   switchToMarkdownMode,
 } from "./helpers";
@@ -23,7 +23,7 @@ test("legacy bridge3 focus navigates without inventing a conversation identity",
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const target = await createClient(request, token)
     .ws(workspaceId)
     .createPage("0", { title: "Legacy native target", content: "Legacy content" });
@@ -46,7 +46,7 @@ for (const fromSettings of [false, true]) {
     await installNativeTools(page, request);
     await gotoWithSession(page, token);
     await waitNativeReady(page);
-    const workspaceId = await getWorkspaceId(page);
+    const workspaceId = await waitForWorkspace(page);
     const workspace = createClient(request, token).ws(workspaceId);
     const parent = await workspace.createPage("0", { title: "Unexpanded parent", content: "Parent" });
     const branch = await workspace.createPage(parent.id, { title: "Collapsed branch", content: "Branch" });
@@ -72,7 +72,7 @@ test("invalid and forbidden native targets leave the draft and route intact", as
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const workspace = createClient(request, token).ws(workspaceId);
   const source = await workspace.createPage("0", { title: "Draft source", content: "Saved source" });
   await page.goto(`/w/@${workspaceId}/@${source.id}`);
@@ -106,7 +106,7 @@ test("canceling or choosing another route during validation prevents a late focu
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const workspace = createClient(request, token).ws(workspaceId);
   const target = await workspace.createPage("0", { title: "Delayed target", content: "Late target" });
   for (const cancellation of ["native", "navigation"] as const) {
@@ -150,7 +150,7 @@ test("native focus awaits source save acknowledgement before loading the target"
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const workspace = createClient(request, token).ws(workspaceId);
   const source = await workspace.createPage("0", { title: "Save source", content: "Saved source" });
   const target = await workspace.createPage("0", { title: "Save target", content: "Focused target" });
@@ -204,7 +204,7 @@ test("a replacement route owns the view while a committed focus target is still 
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const target = await createClient(request, token)
     .ws(workspaceId)
     .createPage("0", { title: "Loading focus target", content: "Retired target content" });
@@ -244,7 +244,7 @@ for (const replacement of ["session", "workspace"] as const) {
     await waitNativeReady(page);
     const client = createClient(request, token);
     const before = await client.getMe();
-    const workspaceId = await getWorkspaceId(page);
+    const workspaceId = await waitForWorkspace(page);
     const target = await client
       .ws(workspaceId)
       .createPage("0", { title: "Retired lookup target", content: "Old lookup" });
@@ -296,7 +296,7 @@ test("a target disappearing after validation reports failure without repeatedly 
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const target = await createClient(request, token)
     .ws(workspaceId)
     .createPage("0", { title: "Disappearing target", content: "Target" });

@@ -1,6 +1,6 @@
 // E2E tests for navigating to a table with a specific ?view= query parameter.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import { nodeUrl } from "../frontend/src/utils/urls";
 
 test("navigating with ?view= param activates the correct non-default view", async ({ page, request }) => {
@@ -8,8 +8,7 @@ test("navigating with ?view= param activates the correct non-default view", asyn
   const client = createClient(request, token);
 
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
 
   // Create a table then two extra views so the default (first) view is NOT the requested one.
   const tableData = await client.ws(wsID).createTable("0", {
@@ -25,7 +24,7 @@ test("navigating with ?view= param activates the correct non-default view", asyn
   // Navigate directly to the table requesting the LAST view (not the default first view).
   const url = nodeUrl(wsID, undefined, tableID) + `?view=${viewCId}`;
   await page.goto(url);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  await waitForWorkspace(page);
 
   // Wait for view tabs to render.
   await expect(page.locator('[data-testid="add-view-button"]')).toBeVisible({ timeout: 10000 });

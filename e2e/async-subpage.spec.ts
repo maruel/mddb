@@ -1,13 +1,13 @@
 // Exercises asynchronous subpage insertion, departure ownership, and failed History intents.
 
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, waitForWorkspace, gotoWithSession } from "./helpers";
 import { gate } from "./gomode-fixtures";
 
 for (const destination of ["node", "workspace", "deletion", "History"] as const) {
   test(`a subpage creation preserves its parent link before ${destination}`, async ({ page, request }) => {
     const { token } = await registerUser(request, `subpage-owner-${destination.toLowerCase()}`);
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
     const ws = client.ws(wsID);
     const other =
@@ -104,7 +104,7 @@ test("a failed History departure cannot reopen History after later editor-link n
 }) => {
   const { token } = await registerUser(request, "failed-history-intent");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const target = await ws.createPage("0", { title: "History intent target", content: "Target body" });
   const source = await ws.createPage("0", {
@@ -146,7 +146,7 @@ test("a subpage admitted during History fetch is linked before preview replaces 
 }) => {
   const { token } = await registerUser(request, "subpage-during-history");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Preview parent", content: "" });
   await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -205,7 +205,7 @@ test("failed subpage creation reports failure and a retry retains the draft and 
 }) => {
   const { token } = await registerUser(request, "subpage-creation-retry");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Retry parent", content: "" });
   await page.goto(`/w/@${wsID}/@${source.id}`);

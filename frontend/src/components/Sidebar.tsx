@@ -267,6 +267,7 @@ export default function Sidebar(props: SidebarProps) {
       <ul
         role="tree"
         aria-label={t("app.workspaceTree")}
+        aria-busy={props.loading}
         class={styles.pageList}
         data-testid="workspace-tree"
         classList={{ [`${styles.rootDropTarget}`]: isRootDropTarget() }}

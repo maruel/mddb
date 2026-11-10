@@ -7,7 +7,7 @@ import {
   fillEditorContent,
   switchToMarkdownMode,
   createClient,
-  getWorkspaceId,
+  waitForWorkspace,
 } from "./helpers";
 
 test.describe("Page rename with navigation", () => {
@@ -18,10 +18,9 @@ test.describe("Page rename with navigation", () => {
 
     // 2. Login via token
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // 3. Get workspace ID from URL
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // 4. Create two pages via API
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -38,7 +37,7 @@ test.describe("Page rename with navigation", () => {
 
     // 5. Reload to see both pages
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // 6. Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
@@ -81,7 +80,7 @@ test.describe("Page rename with navigation", () => {
 
     // 12. Reload page and verify rename still persists (survives page refresh)
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page1Node.click();
     await expect(titleInput).toHaveValue("RENAMED PAGE TITLE");
   });
@@ -92,9 +91,8 @@ test.describe("Page rename with navigation", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -104,7 +102,7 @@ test.describe("Page rename with navigation", () => {
     const pageID = pageData.id as string;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
@@ -124,7 +122,7 @@ test.describe("Page rename with navigation", () => {
 
     // Reload and verify the rename persisted
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await pageNode.click();
     await expect(titleInput).toHaveValue("Updated Title");
@@ -140,9 +138,8 @@ test.describe("Page rename with navigation", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -158,7 +155,7 @@ test.describe("Page rename with navigation", () => {
     const page2ID = page2Data.id as string;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
@@ -193,9 +190,8 @@ test.describe("Page rename with navigation", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -211,7 +207,7 @@ test.describe("Page rename with navigation", () => {
     const page2ID = page2Data.id as string;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
@@ -248,9 +244,8 @@ test.describe("Page rename with navigation", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -266,7 +261,7 @@ test.describe("Page rename with navigation", () => {
     const page2ID = page2Data.id as string;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);

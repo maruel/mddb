@@ -1,15 +1,14 @@
 // Browser journeys for select option persistence, dropdowns, table cells, and filters.
 
 import type { Page, APIRequestContext } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { Property } from "../sdk/mddb/ts/v1/types.gen";
 
 // Helper: create a table with a select column and navigate to it.
 async function setupSelectTable(page: Page, request: APIRequestContext, prefix: string) {
   const { token } = await registerUser(request, prefix);
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const client = createClient(request, token);
 
   const tableData = await client.ws(wsID).createTable("0", {
@@ -27,7 +26,7 @@ async function setupSelectTable(page: Page, request: APIRequestContext, prefix: 
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
   await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 
@@ -77,8 +76,7 @@ test.describe("Select Dropdown Interaction", () => {
   async function setupAndNavigate(page: Page, request: APIRequestContext, prefix: string) {
     const { token } = await registerUser(request, prefix);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
 
     const tableData = await client.ws(wsID).createTable("0", {
@@ -97,7 +95,7 @@ test.describe("Select Dropdown Interaction", () => {
     await client.ws(wsID).createRecord(tableData.id, { data: { Status: "" } });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
     // Wait for a data row to render (add-row has no row-handle)
@@ -160,8 +158,7 @@ test.describe("Select Column UX", () => {
   test("select chip renders in table cell (read mode)", async ({ page, request }) => {
     const { token } = await registerUser(request, "chip-render");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
 
     const tableData = await client.ws(wsID).createTable("0", {
@@ -177,7 +174,7 @@ test.describe("Select Column UX", () => {
     await client.ws(wsID).createRecord(tableData.id, { data: { Tag: "todo" } });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 
@@ -188,8 +185,7 @@ test.describe("Select Column UX", () => {
   test("keyboard navigation selects option in single-select dropdown", async ({ page, request }) => {
     const { token } = await registerUser(request, "kbd-select");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
 
     const tableData = await client.ws(wsID).createTable("0", {
@@ -210,7 +206,7 @@ test.describe("Select Column UX", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
     // Wait for the data row to render (add-row has no row-handle).
@@ -237,8 +233,7 @@ test.describe("Select Column UX", () => {
   test("multi-select dropdown opens and shows checkmarks when all options selected", async ({ page, request }) => {
     const { token } = await registerUser(request, "multi-all-sel");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
 
     const tableData = await client.ws(wsID).createTable("0", {
@@ -260,7 +255,7 @@ test.describe("Select Column UX", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
     // Wait for a data row to render (add-row has no row-handle)
@@ -288,8 +283,7 @@ test.describe("Select Filter Option Picker", () => {
   test("filter select column by clicking option chip in filter panel", async ({ page, request }) => {
     const { token } = await registerUser(request, "filter-picker");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
 
     const tableData = await client.ws(wsID).createTable("0", {
@@ -313,7 +307,7 @@ test.describe("Select Filter Option Picker", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 

@@ -1,7 +1,7 @@
 // E2E tests for table creation, record CRUD, view modes, and sort UI.
 
 import type { Page, APIRequestContext } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse, Property } from "../sdk/mddb/ts/v1/types.gen";
 
 // Helper: create a table with records and navigate to it.
@@ -14,8 +14,7 @@ async function setupTable(
 ) {
   const { token } = await registerUser(request, prefix);
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const client = createClient(request, token);
 
   const tableData = await client.ws(wsID).createTable("0", {
@@ -28,7 +27,7 @@ async function setupTable(
   }
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
   await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 
@@ -46,9 +45,8 @@ test.describe("Table Creation and Basic Operations", () => {
   test.screenshot("create a table with properties and view it", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "table-create");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
     const tableData = await client.ws(wsID).createTable("0", {
       title: "Test Table",
@@ -68,7 +66,7 @@ test.describe("Table Creation and Basic Operations", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
 
     const tableElement = page.locator("table");
@@ -346,7 +344,7 @@ test.describe("Table Sort UI", () => {
 
     // Reload to pick up the new view
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
     await expect(page.locator("table")).toBeVisible({ timeout: 5000 });
 
@@ -564,9 +562,8 @@ test.describe("Table and Page Hybrid", () => {
   test("table node shows table view with records section", async ({ page, request }) => {
     const { token } = await registerUser(request, "hybrid-node");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const client = createClient(request, token);
     const tableData = await client.ws(wsID).createTable("0", {
       title: "Table Only Node",
@@ -574,7 +571,7 @@ test.describe("Table and Page Hybrid", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
 
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Table Only Node", { timeout: 5000 });

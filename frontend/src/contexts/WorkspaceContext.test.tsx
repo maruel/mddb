@@ -240,7 +240,7 @@ it("retires metadata at root-read start and queues new metadata behind the older
   await old.started;
   const root = Promise.withResolvers<Response>();
   roots.push(root.promise);
-  const refresh = data.loadNodes(true);
+  const refresh = data.refreshRoots();
   expect(oldRequest.signal.aborted).toBe(true);
   const queued = body("one");
   const count = requests.length;
@@ -261,7 +261,7 @@ it("does not request queued metadata for a node removed by the pending root snap
   await mount();
   const root = Promise.withResolvers<Response>();
   roots.push(root.promise);
-  const refresh = data.loadNodes(true);
+  const refresh = data.refreshRoots();
   Events.current.metadata("one");
   await setImmediate();
   root.resolve(Response.json({ nodes: [node("two")] }));
@@ -393,7 +393,7 @@ it("leaves canonical preparation failure with its owner when a queued metadata r
   await mount();
   const pending = Promise.withResolvers<Response>();
   roots.push(pending.promise);
-  const refresh = data.loadNodes(true);
+  const refresh = data.refreshRoots();
   const observed = refresh.catch(() => undefined);
   Events.current.metadata("one");
   await setImmediate();

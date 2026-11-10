@@ -2,14 +2,13 @@
 // When switching workspaces while viewing a node, the frontend should not
 // repeatedly request the old node from the new workspace.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("switching workspace while viewing a node does not cause 404 loop", async ({ page, request }) => {
   const { token } = await registerUser(request, "ws-loop");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsID1 = await getWorkspaceId(page);
+  const wsID1 = await waitForWorkspace(page);
 
   // Create a page in workspace 1 and navigate to it
   const client = createClient(request, token);
@@ -19,7 +18,7 @@ test("switching workspace while viewing a node does not cause 404 loop", async (
   });
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
   await expect(page.getByText("This page only exists in workspace 1", { exact: true })).toBeVisible({ timeout: 5000 });
 
@@ -39,7 +38,7 @@ test("switching workspace while viewing a node does not cause 404 loop", async (
 
   // Reload to pick up the new workspace in the workspace list
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // Navigate back to the WS1 page so URL contains the old node ID
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -71,7 +70,7 @@ test("switching workspace while viewing a node does not cause 404 loop", async (
   }).toPass({ timeout: 5000 });
 
   // Wait for the sidebar to stabilize in the new workspace
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   // The old node's content must not be visible
   await expect(page.getByText("This page only exists in workspace 1", { exact: true })).not.toBeVisible({

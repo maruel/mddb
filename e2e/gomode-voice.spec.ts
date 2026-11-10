@@ -1,6 +1,6 @@
 // Exercises voice settings, microphone permissions, and scoped authorization across gateway origins.
 
-import { test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
+import { waitForWorkspace, test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 import type { VoiceChoicesResp } from "@maruel/gomode/sdk/voicegateway/v2/types.gen.ts";
 
 // Individual tests grant capture explicitly; auto-grant UI would bypass denied permissions.
@@ -90,7 +90,7 @@ for (const external of [true, false]) {
       }
     });
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
     if (!external) await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("button", { name: "Voice settings", exact: true }).click();
     await page.getByRole("tab", { name: "Select parts", exact: true }).click();
@@ -295,7 +295,7 @@ test("voice token failure stops the offer without forwarding login credentials",
     }
   });
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  await waitForWorkspace(page);
   await page.getByRole("button", { name: "Connecter l’assistant vocal", exact: true }).click();
   await expect(page.getByText("Impossible d’autoriser la voix. Réessayez.", { exact: true })).toBeVisible();
   expect(offers).toBe(0);
@@ -330,7 +330,7 @@ test("a late retry of browser MCP work cannot use replacement-cookie authority",
     (req) => new URL(req.url()).pathname === "/api/v1/gomode/mcp" && req.method() === "POST",
   );
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+  await waitForWorkspace(page);
   // Workspace views reuse their screen event stream. Settings exercises the
   // independent MCP subscription and its captured session/workspace authority.
   await page.getByTestId("user-menu-button").click();

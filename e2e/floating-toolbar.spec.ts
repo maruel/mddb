@@ -1,7 +1,7 @@
 // Browser coverage for toolbar selection and undo across asynchronous editor metadata updates.
 
 import type { Route } from "@playwright/test";
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 // Reports whether Playwright already continued the route on our behalf.
 // Unregistering a route continues every handler still in flight, so a delayed
@@ -14,9 +14,8 @@ test.describe("Floating Toolbar Visibility", () => {
   test("toolbar lifecycle: hidden -> visible on selection -> hidden on blur", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-lifecycle");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with simple content
     const client = createClient(request, token);
@@ -26,7 +25,7 @@ test.describe("Floating Toolbar Visibility", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -74,15 +73,14 @@ test.describe("Floating Toolbar Visibility", () => {
         const { token } = await registerUser(request, "toolbar-late-titles");
         const client = createClient(request, token);
         await gotoWithSession(page, token);
-        await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
-        const wsID = await getWorkspaceId(page);
+        const wsID = await waitForWorkspace(page);
         const target = await client.ws(wsID).createPage("0", { title: "Linked target", content: "Target content" });
         const node = await client.ws(wsID).createPage("0", {
           title: "Delayed link titles",
           content: `Hello world\n\n[Linked target](/w/@${wsID}/@${target.id})`,
         });
         await page.reload();
-        await expect(page.locator("aside")).toBeVisible();
+        await waitForWorkspace(page);
 
         let metadataRequested!: () => void;
         const requested = new Promise<void>((resolve) => {
@@ -176,9 +174,8 @@ test.describe("Floating Toolbar Visibility", () => {
   test("toolbar appears on double-click word selection", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-dblclick");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with multiple words
     const client = createClient(request, token);
@@ -188,7 +185,7 @@ test.describe("Floating Toolbar Visibility", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -224,9 +221,8 @@ test.describe("Floating Toolbar Visibility", () => {
   test("toolbar stays within editor bounds when sidebar is open", async ({ page, request }) => {
     const { token } = await registerUser(request, "float-toolbar-bounds");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with content
     const client = createClient(request, token);
@@ -236,7 +232,7 @@ test.describe("Floating Toolbar Visibility", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();

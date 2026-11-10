@@ -1,7 +1,7 @@
 // Verifies browser voice reserves viewport space while document, table and settings bottoms remain reachable.
 
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
-import { test, expect, registerUser, createClient, getWorkspaceId, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, createClient, waitForWorkspace, gotoWithSession } from "./helpers";
 
 async function expectReservedViewport(page: Page) {
   const panel = page.getByTestId("voice-overlay");
@@ -61,7 +61,7 @@ async function exerciseReservedViewport(page: Page, request: APIRequestContext, 
   await expect(page.getByRole("combobox", { name: "Model", exact: true })).toHaveValue("layout");
   await page.getByRole("button", { name: "Close voice settings", exact: true }).click();
   await expect(page.getByTestId("voice-overlay").getByRole("alert")).toHaveCount(0);
-  const workspaceId = await getWorkspaceId(page);
+  const workspaceId = await waitForWorkspace(page);
   const workspace = createClient(request, token).ws(workspaceId);
   const document = await workspace.createPage("0", {
     title: "Voice viewport document",

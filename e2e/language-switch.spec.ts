@@ -1,12 +1,12 @@
 // E2E tests for language switching in settings.
 
-import { test, expect, registerUser, gotoWithSession } from "./helpers";
+import { waitForWorkspace, test, expect, registerUser, gotoWithSession } from "./helpers";
 
 test.describe("Language Settings", () => {
   test("changing language updates settings page labels immediately", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-settings-page");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Open user menu and go to profile/settings
     const userMenu = page.locator('[data-testid="user-menu-button"]');
@@ -53,7 +53,7 @@ test.describe("Language Settings", () => {
   test("changing language in settings updates UI without refresh", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-switch");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Verify we start in English - check sidebar "Create Workspace" button text
     // (in French it's "Créer un espace de travail")
@@ -94,7 +94,7 @@ test.describe("Language Settings", () => {
     await backButton.click();
 
     // Wait for sidebar to be visible
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // The key test: UI should show French without a page refresh
     // Create workspace button should now be in French
@@ -105,7 +105,7 @@ test.describe("Language Settings", () => {
   test("language persists after page reload", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-persist");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // Verify we start in English - check Create Workspace button text
     const createWsButtonEn = page.locator("aside button", { hasText: "Create Workspace" });
@@ -136,13 +136,13 @@ test.describe("Language Settings", () => {
     await backButton.click();
 
     // Wait for sidebar to be visible
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Reload the page
     await page.reload();
 
     // Wait for app to load
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // UI should be in French after reload - Create workspace button should be in French
     const createWsButtonFr = page.locator("aside button", { hasText: "Créer un espace de travail" });
@@ -152,7 +152,7 @@ test.describe("Language Settings", () => {
   test("switching back to English works", async ({ page, request }) => {
     const { token } = await registerUser(request, "lang-switch-back");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+    await waitForWorkspace(page);
 
     // First change to French
     const userMenu = page.locator('[data-testid="user-menu-button"]');
@@ -184,7 +184,7 @@ test.describe("Language Settings", () => {
     const backButton = page.locator("header button", { hasText: /←/ });
     await backButton.click();
 
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Should be back to English - Create workspace button should be in English
     const createWsButtonEn = page.locator("aside button", { hasText: "Create Workspace" });

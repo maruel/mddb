@@ -3,7 +3,7 @@ import {
   test,
   expect,
   registerUser,
-  getWorkspaceId,
+  waitForWorkspace,
   fillEditorContent,
   createClient,
   gotoWithSession,
@@ -20,7 +20,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
     await gotoWithSession(page, token);
 
     // Wait for app to load
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await takeScreenshot("mobile-initial");
 
     // On mobile, sidebar should be hidden by default
@@ -56,7 +56,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
   test("clicking backdrop closes mobile sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-backdrop");
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Open sidebar
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');
@@ -82,9 +82,8 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
   test("selecting a page closes mobile sidebar", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-select");
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -94,7 +93,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
     });
 
     await page.reload();
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Open sidebar
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');
@@ -120,9 +119,8 @@ test.describe("Mobile UI - Layout", () => {
   test.screenshot("content area uses full width on mobile", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "mobile-layout");
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -132,7 +130,7 @@ test.describe("Mobile UI - Layout", () => {
     });
 
     await page.reload();
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Open sidebar and select page
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');
@@ -153,9 +151,8 @@ test.describe("Mobile UI - Layout", () => {
   test("editor works on mobile with virtual keyboard consideration", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-editor");
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -165,7 +162,7 @@ test.describe("Mobile UI - Layout", () => {
     });
 
     await page.reload();
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to page
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');
@@ -204,9 +201,8 @@ test.describe("Mobile UI - Touch Interactions", () => {
   test("tap on sidebar node navigates correctly", async ({ page, request }) => {
     const { token } = await registerUser(request, "mobile-tap");
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create multiple pages
     const page1Response = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
@@ -222,7 +218,7 @@ test.describe("Mobile UI - Touch Interactions", () => {
     const page2Data = await page2Response.json();
 
     await page.reload();
-    await expect(page.locator("header")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Open sidebar
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');

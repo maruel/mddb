@@ -1,13 +1,12 @@
 // Test for block handle visibility bug fix.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 
 test("block handle should be visible when block is hovered", async ({ page, request }) => {
   const { token } = await registerUser(request, "block-handle-fix");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   // Create a simple page with one bullet item
   const client = createClient(request, token);
@@ -18,7 +17,7 @@ test("block handle should be visible when block is hovered", async ({ page, requ
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -53,9 +52,8 @@ test("block handle should be visible when block is hovered", async ({ page, requ
 test("numbered list items should have data-number attribute for CSS content", async ({ page, request }) => {
   const { token } = await registerUser(request, "number-data-attr");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   const client = createClient(request, token);
   // Use markdown with explicit blank lines between list and other content
@@ -73,7 +71,7 @@ test("numbered list items should have data-number attribute for CSS content", as
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -104,9 +102,8 @@ test("numbered list items should have data-number attribute for CSS content", as
 test("bullet list items should display with proper text alignment", async ({ page, request }) => {
   const { token } = await registerUser(request, "bullet-alignment");
   await gotoWithSession(page, token);
-  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-  const wsId = await getWorkspaceId(page);
+  const wsId = await waitForWorkspace(page);
 
   const client = createClient(request, token);
   const markdownContent = `
@@ -121,7 +118,7 @@ test("bullet list items should display with proper text alignment", async ({ pag
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+  await waitForWorkspace(page);
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });

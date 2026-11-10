@@ -5,7 +5,7 @@ import {
   expect,
   registerUser,
   createClient,
-  getWorkspaceId,
+  waitForWorkspace,
   gotoWithSession,
   fillEditorContent,
 } from "./helpers";
@@ -15,7 +15,7 @@ import type { UpdatePageRequest } from "../sdk/mddb/ts/v1/types.gen";
 test("returning title and native body undo to acknowledged text avoids a draft write", async ({ page, request }) => {
   const { token } = await registerUser(request, "draft-undo-clean");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
   const target = await ws.createPage("0", { title: "Other page", content: "Other body" });
@@ -54,7 +54,7 @@ test("a closed comparison keeps review available for a clean draft and writes an
 }) => {
   const { token } = await registerUser(request, "draft-review-clean");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
   const target = await ws.createPage("0", { title: "Other page", content: "Other body" });
@@ -112,7 +112,7 @@ test("a closed comparison keeps review available for a clean draft and writes an
 test("a lost save response keeps the draft for inspection without resubmitting", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-lost-response");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Uncertain source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Uncertain target", content: "Other body" });
@@ -143,7 +143,7 @@ test("a failed latest read after an uncertain recovery save keeps unknown-outcom
 }) => {
   const { token } = await registerUser(request, "recovery-unknown-read");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Original", content: "Original body" });
   await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -192,7 +192,7 @@ test("a failed latest read after an uncertain recovery save keeps unknown-outcom
 test("the old editor cannot accept edits while the destination load is pending", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-departure-load");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Departure source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Departure target", content: "Other body" });
@@ -227,7 +227,7 @@ test("the old editor cannot accept edits while the destination load is pending",
 test("navigation waits for both serialized saves and uses the acknowledged revision", async ({ page, request }) => {
   const { token } = await registerUser(request, "conditional-queue");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Queue source", content: "body" });
   const target = await ws.createPage("0", { title: "Queue target", content: "target" });
@@ -283,7 +283,7 @@ test("a conflict preserves draft and focus until explicit copy and discard recov
   await installNativeTools(page, request);
   await gotoWithSession(page, token);
   await waitNativeReady(page);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Conflict source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Conflict target", content: "Other body" });
@@ -334,7 +334,7 @@ for (const scenario of ["independent", "overlapping"] as const) {
     await page.setViewportSize(scenario === "independent" ? { width: 1280, height: 900 } : { width: 390, height: 844 });
     const { token } = await registerUser(request, `recover-${scenario}`);
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const ws = createClient(request, token).ws(wsID);
     const source = await ws.createPage("0", { title: "Original title", content: "one\ntwo\nthree\n" });
     await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -462,7 +462,7 @@ for (const locale of ["en", "de"] as const) {
     const client = createClient(request, token);
     if (locale === "de") await client.updateUserSettings({ settings: { theme: "system", language: locale } });
     await gotoWithSession(page, token);
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const ws = client.ws(wsID);
     const original = Array.from({ length: 180 }, (_, i) => `Unchanged section ${i} 🌳\n`);
     const ours = [...original],
@@ -601,7 +601,7 @@ for (const preference of ["native zoom", "default font"] as const) {
       }
       const { token } = await registerUser(request, `recovery-${preference.replaceAll(" ", "-")}`);
       await gotoWithSession(page, token);
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
       const ws = createClient(request, token).ws(wsID);
       const source = await ws.createPage("0", { title: "Original title", content: "Original body" });
       await page.goto(`/w/@${wsID}/@${source.id}`);
@@ -650,7 +650,7 @@ for (const asset of ["body", "cover"] as const) {
     test(`${asset} upload is applied before ${departure}`, async ({ page, request }) => {
       const { token } = await registerUser(request, `upload-${asset}-${departure === "node" ? "node" : "delete"}`);
       await gotoWithSession(page, token);
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
       const ws = createClient(request, token).ws(wsID);
       const source = await ws.createPage("0", { title: "Uploading source", content: "Original body" });
       const target = await ws.createPage("0", { title: "Upload destination", content: "Other body" });
@@ -735,7 +735,7 @@ for (const asset of ["body", "cover"] as const) {
 test("an upload failure keeps the source draft and blocks its waiting departure", async ({ page, request }) => {
   const { token } = await registerUser(request, "upload-departure-failure");
   await gotoWithSession(page, token);
-  const wsID = await getWorkspaceId(page);
+  const wsID = await waitForWorkspace(page);
   const ws = createClient(request, token).ws(wsID);
   const source = await ws.createPage("0", { title: "Upload failure source", content: "Original body" });
   const target = await ws.createPage("0", { title: "Upload failure target", content: "Other body" });

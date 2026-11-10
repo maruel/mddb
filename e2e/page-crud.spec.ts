@@ -3,7 +3,7 @@ import {
   test,
   expect,
   registerUser,
-  getWorkspaceId,
+  waitForWorkspace,
   fillEditorContent,
   createClient,
   gotoWithSession,
@@ -14,10 +14,10 @@ test.describe("Page CRUD Operations", () => {
     const { token } = await registerUser(request, "delete-page");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await expect(page.getByTestId("connection-status")).toHaveText("Connected", { timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page to delete
     const pageData = await client.ws(wsID).createPage("0", {
@@ -28,7 +28,7 @@ test.describe("Page CRUD Operations", () => {
 
     // Reload to see the page
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
@@ -81,9 +81,8 @@ test.describe("Page CRUD Operations", () => {
     const { token } = await registerUser(request, "sidebar-sync");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -93,7 +92,7 @@ test.describe("Page CRUD Operations", () => {
     const pageID = pageData.id;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
@@ -118,9 +117,8 @@ test.describe("Page CRUD Operations", () => {
     const { token } = await registerUser(request, "unsaved-ind");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -130,7 +128,7 @@ test.describe("Page CRUD Operations", () => {
     const pageID = pageData.id;
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageID}"]`).click();
@@ -162,8 +160,7 @@ test.describe("Page CRUD Operations", () => {
     const { token } = await registerUser(request, "autosave-feedback");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const pageData = await client.ws(wsID).createPage("0", {
       title: "Autosave feedback",
       content: "Initial content",
@@ -210,9 +207,8 @@ test.describe("Page Navigation", () => {
     const { token } = await registerUser(request, "browser-nav");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).createPage("0", {
@@ -226,7 +222,7 @@ test.describe("Page Navigation", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await takeScreenshot("workspace-with-pages");
 
     // Navigate to page 1
@@ -254,9 +250,8 @@ test.describe("Page Navigation", () => {
     const { token } = await registerUser(request, "url-slug");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with a specific title
     const pageData = await client.ws(wsID).createPage("0", {
@@ -265,7 +260,7 @@ test.describe("Page Navigation", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -279,9 +274,8 @@ test.describe("Page Navigation", () => {
     const { token } = await registerUser(request, "direct-url");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -291,7 +285,7 @@ test.describe("Page Navigation", () => {
 
     // Navigate directly to the page URL
     await gotoWithSession(page, token, `/w/@${wsID}/@${pageData.id}`);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Page content should be visible
     await expect(page.getByText("Loaded via direct URL", { exact: true })).toBeVisible({ timeout: 5000 });
@@ -307,9 +301,8 @@ test.describe("Page Navigation", () => {
       const { token } = await registerUser(request, "direct-grandchild");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
 
       // Create parent -> child -> grandchild hierarchy
       const parentData = await client.ws(wsID).createPage("0", {
@@ -329,7 +322,7 @@ test.describe("Page Navigation", () => {
 
       // Navigate directly to grandchild URL (fresh page load)
       await gotoWithSession(page, token, `/w/@${wsID}/@${grandchildData.id}`);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+      await waitForWorkspace(page);
 
       // Grandchild content should be visible
       await expect(page.getByText("Grandchild content", { exact: true })).toBeVisible({ timeout: 5000 });
@@ -354,9 +347,8 @@ test.describe("Page Navigation", () => {
     const { token } = await registerUser(request, "direct-greatgrand");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create 4-level hierarchy: parent -> child -> grandchild -> great-grandchild
     const parentData = await client.ws(wsID).createPage("0", {
@@ -381,7 +373,7 @@ test.describe("Page Navigation", () => {
 
     // Navigate directly to great-grandchild URL
     await gotoWithSession(page, token, `/w/@${wsID}/@${greatGrandchildData.id}`);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Content should be visible
     await expect(page.getByText("Deep content", { exact: true })).toBeVisible({ timeout: 5000 });
@@ -399,9 +391,8 @@ test.describe("Page Navigation", () => {
     const { token } = await registerUser(request, "breadcrumb");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create parent page
     const parentData = await client.ws(wsID).createPage("0", {
@@ -422,7 +413,7 @@ test.describe("Page Navigation", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Expand hierarchy and navigate to grandchild
     await page.locator(`[data-testid="sidebar-node-${parentData.id}"]`).click();
@@ -459,9 +450,8 @@ test.describe("Editor Features", () => {
     const { token } = await registerUser(request, "wysiwyg-editor");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with markdown content
     const pageData = await client.ws(wsID).createPage("0", {
@@ -470,7 +460,7 @@ test.describe("Editor Features", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -494,9 +484,8 @@ test.describe("Editor Features", () => {
       const { token } = await registerUser(request, "round-trip");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
 
       // Create an empty page via API
       const pageData = await client.ws(wsID).createPage("0", {
@@ -506,7 +495,7 @@ test.describe("Editor Features", () => {
 
       // Reload and verify in UI
       await page.reload();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
+      await waitForWorkspace(page);
 
       await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -654,9 +643,8 @@ function hello() {
     const { token } = await registerUser(request, "editor-height");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with 10 lines of content
     const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join("\n");
@@ -666,7 +654,7 @@ function hello() {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -703,9 +691,8 @@ function hello() {
     const { token } = await registerUser(request, "slash-cmd");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create an empty page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -714,7 +701,7 @@ function hello() {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -850,9 +837,8 @@ function hello() {
       const { token } = await registerUser(request, "slash-bottom");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
 
       // Create a page with lots of content to push cursor near bottom
       const manyLines = Array(30).fill("This is a line of text to fill the page.").join("\n\n");
@@ -862,7 +848,7 @@ function hello() {
       });
 
       await page.reload();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+      await waitForWorkspace(page);
 
       // Navigate to the page
       await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -925,9 +911,8 @@ function hello() {
       const { token } = await registerUser(request, "slash-subpage");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
 
       // Create a page at root level
       const pageData = await client.ws(wsID).createPage("0", {
@@ -937,7 +922,7 @@ function hello() {
       const pageId = pageData.id;
 
       await page.reload();
-      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+      await waitForWorkspace(page);
 
       // Navigate to the page
       const pageNode = page.locator(`[data-testid="sidebar-node-${pageId}"]`);
@@ -1025,9 +1010,8 @@ function hello() {
     const { token } = await registerUser(request, "version-history");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const pageData = await client.ws(wsID).createPage("0", {
@@ -1046,7 +1030,7 @@ function hello() {
     }
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Right-click on the sidebar node to open context menu
     const sidebarNode = page.locator(`[data-testid="sidebar-node-${pageData.id}"]`);

@@ -3,7 +3,7 @@ import {
   test,
   expect,
   registerUser,
-  getWorkspaceId,
+  waitForWorkspace,
   fillEditorContent,
   createClient,
   gotoWithSession,
@@ -21,9 +21,8 @@ test.describe("Error Handling - Invalid Routes", () => {
   test("navigating to non-existent page shows appropriate error or handles gracefully", async ({ page, request }) => {
     const { token } = await registerUser(request, "invalid-page");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Try to navigate to a non-existent page ID
     await gotoWithSession(page, token, `/w/@${wsID}/@nonexistent-page-id-12345`);
@@ -43,7 +42,7 @@ test.describe("Error Handling - Invalid Routes", () => {
   test("navigating to non-existent workspace shows error", async ({ page, request }) => {
     const { token } = await registerUser(request, "invalid-ws");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // Try to navigate to a non-existent workspace
     await gotoWithSession(page, token, `/w/@invalid-workspace-12345/@some-page`);
@@ -80,9 +79,8 @@ test.describe("Error Handling - API Failures", () => {
   test("network error during save shows error message", async ({ page, request }) => {
     const { token } = await registerUser(request, "network-error");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -92,7 +90,7 @@ test.describe("Error Handling - API Failures", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Network Error Test", { timeout: 5000 });
@@ -115,9 +113,8 @@ test.describe("Error Handling - Concurrent Edits", () => {
   test("editing same page in two tabs - last writer wins", async ({ page, request, context }) => {
     const { token } = await registerUser(request, "concurrent-edit");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -129,11 +126,11 @@ test.describe("Error Handling - Concurrent Edits", () => {
     // Open same page in second tab
     const page2 = await context.newPage();
     await gotoWithSession(page2, token, `/w/@${wsID}/@${pageData.id}`);
-    await expect(page2.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page2);
 
     // Navigate to page in first tab
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Concurrent Edit Test", { timeout: 5000 });
 
@@ -159,9 +156,8 @@ test.describe("Edge Cases", () => {
   test("empty page title is handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "empty-title");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -171,7 +167,7 @@ test.describe("Edge Cases", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Title to Clear", { timeout: 5000 });
@@ -192,7 +188,7 @@ test.describe("Edge Cases", () => {
 
     // Page should still be accessible (though might show empty title in sidebar)
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     // The page node should still exist in sidebar
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageData.id}"]`);
@@ -202,9 +198,8 @@ test.describe("Edge Cases", () => {
   test("very long title is handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "long-title");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page
     const client = createClient(request, token);
@@ -214,7 +209,7 @@ test.describe("Edge Cases", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -242,9 +237,8 @@ test.describe("Edge Cases", () => {
   test("special characters in title are handled", async ({ page, request }) => {
     const { token } = await registerUser(request, "special-chars");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create a page with special characters
     const specialTitle = "Test <script>alert(1)</script> & \"quotes\" 'apostrophe' 中文 émojis 🎉";
@@ -255,7 +249,7 @@ test.describe("Edge Cases", () => {
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -272,9 +266,8 @@ test.describe("Edge Cases", () => {
   test("WYSIWYG editor renders code blocks correctly", async ({ page, request }) => {
     const { token } = await registerUser(request, "code-blocks");
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     const markdownContent = `# Code Example
 
@@ -294,7 +287,7 @@ Inline \`code\` here.
     });
 
     await page.reload();
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await waitForWorkspace(page);
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 

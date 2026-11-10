@@ -1,6 +1,6 @@
 // E2E tests for table views API: filters, sorts, and view CRUD.
 
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse } from "../sdk/mddb/ts/v1/types.gen";
 
 test.describe("Table Views API", () => {
@@ -9,8 +9,7 @@ test.describe("Table Views API", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     // Create Table
     const tableData = await client.ws(wsID).createTable("0", {
@@ -61,8 +60,7 @@ test.describe("Table Views API", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     const tableData = await client.ws(wsID).createTable("0", {
       title: "Sort API Table",
@@ -123,8 +121,7 @@ test.describe("Table Views API", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     const tableData = await client.ws(wsID).createTable("0", {
       title: "Sort Persist Table",
@@ -153,8 +150,7 @@ test.describe("Table Views API", () => {
     const client = createClient(request, token);
 
     await gotoWithSession(page, token);
-    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
 
     const tableData = await client.ws(wsID).createTable("0", {
       title: "Filter Sort Table",

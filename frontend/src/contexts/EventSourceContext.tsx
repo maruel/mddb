@@ -9,7 +9,7 @@ import {
   type ParentComponent,
   type Accessor,
 } from "solid-js";
-import { observeNetworkChanges } from "../networkChanges";
+import { observeNetworkChanges } from "@maruel/gomode/web/NetworkChanges";
 import { useAuth } from "./AuthContext";
 import { EventResync, type WorkspaceEvent } from "@sdk/types.gen";
 import { isLocalWriteRequest } from "../useApi";

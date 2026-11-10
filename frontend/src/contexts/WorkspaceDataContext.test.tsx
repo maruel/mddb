@@ -158,7 +158,7 @@ it("completes a cold-settings empty snapshot without route-owned provisioning an
   rootResponses.push(empty());
   mount("/settings/user", true);
   await waitFor(() => expect(product.preparation()?.ready()).toBe(true));
-  for (let i = 0; i < 3; i++) await data.loadNodes(false);
+  for (let i = 0; i < 3; i++) await data.prepareWorkspace();
   expect(rootRequests).toHaveLength(1);
   expect(writes).toEqual([]);
 });
@@ -171,7 +171,7 @@ it("defers a forced initial read until the replacement owner's dictionary is rea
   expect(i18n.ready()).toBe(false);
   auth.setUser({ ...account, workspace_id: "replacement" });
   rootResponses.push(empty());
-  const forced = data.loadNodes(true);
+  const forced = data.refreshRoots();
   expect(rootRequests).toHaveLength(1);
   await forced;
   await waitFor(() => expect(data.ready()).toBe(true));
@@ -246,6 +246,155 @@ it("aborts an old workspace read before its held response is released", async ()
   await waitFor(() => expect(data.nodes).toEqual([]));
 });
 
+it("keeps cached roots usable after a refresh fails without restarting the failed read", async () => {
+  rootResponses.push(Response.json({ nodes: [node("current")] }));
+  mount("/settings/user", true);
+  await waitFor(() => expect(data.ready()).toBe(true));
+  rootResponses.push(Response.json({ error: { code: "NOT_FOUND", message: "Refresh unavailable" } }, { status: 404 }));
+  await expect(data.refreshRoots()).rejects.toThrow("Refresh unavailable");
+  expect(data.ready()).toBe(true);
+  await expect(data.prepareWorkspace()).resolves.toEqual([node("current")]);
+  await expect(data.refreshRoots()).rejects.toThrow("Refresh unavailable");
+  expect(data.preparationError()).toContain("Refresh unavailable");
+  expect(rootRequests).toHaveLength(2);
+  rootResponses.push(empty());
+  await data.retryPreparation();
+  expect(data.preparationError()).toBeNull();
+  expect(data.nodes).toEqual([]);
+  expect(rootRequests).toHaveLength(3);
+});
+
+it("requires explicit retry after failure and joins canonical reads without replacing their owner", async () => {
+  rootResponses.push(Response.json({ error: { code: "NOT_FOUND", message: "Roots unavailable" } }, { status: 404 }));
+  mount("/settings/user", true);
+  await waitFor(() => expect(data.preparationError()).toContain("Roots unavailable"));
+  await expect(data.prepareWorkspace()).rejects.toThrow("Roots unavailable");
+  await expect(data.refreshRoots()).rejects.toThrow("Roots unavailable");
+  expect(rootRequests).toHaveLength(1);
+  rootResponses.push(empty());
+  await data.retryPreparation();
+  await data.prepareWorkspace();
+  expect(rootRequests).toHaveLength(2);
+  const response = Promise.withResolvers<Response>();
+  rootResponses.push(response.promise);
+  const refresh = data.refreshRoots();
+  const preparation = data.prepareWorkspace();
+  const joinedRefresh = data.refreshRoots();
+  expect(rootRequests).toHaveLength(3);
+  expect(data.ready()).toBe(true);
+  response.resolve(Response.json({ nodes: [node("current")] }));
+  await Promise.all([refresh, preparation, joinedRefresh]);
+  expect(data.nodes[0]?.id).toBe("current");
+  expect(rootRequests).toHaveLength(3);
+});
+
+for (const initial of ["workspace", "settings"] as const) {
+  it(`keeps failed ${initial} roots across route changes and retries with current route admission`, async () => {
+    user = { ...account, workspace_role: WSRoleAdmin };
+    rootResponses.push(Response.json({ error: { code: "NOT_FOUND", message: "Roots unavailable" } }, { status: 404 }));
+    mount(initial === "workspace" ? "/w/@workspace" : "/settings/user", true);
+    await waitFor(() => expect(data.preparationError()).toContain("Roots unavailable"));
+    const failure = data.preparationError();
+    rootResponses.push(empty());
+    if (initial === "settings") {
+      welcomeResponses.push(Response.json({ id: "welcome" }));
+      rootResponses.push(Response.json({ nodes: [node("welcome")] }));
+    }
+    const destination = initial === "workspace" ? "/settings/user" : "/w/@workspace";
+    navigate(destination);
+    await waitFor(() => expect(window.location.pathname).toBe(destination));
+    expect(rootRequests).toHaveLength(1);
+    expect(writes).toHaveLength(0);
+    expect(data.preparationError()).toBe(failure);
+    expect(rootSignals[0]!.aborted).toBe(false);
+    await data.retryPreparation();
+    expect(rootSignals[0]!.aborted).toBe(true);
+    expect(data.preparationError()).toBeNull();
+    expect(data.ready()).toBe(true);
+    if (initial === "workspace") {
+      expect(writes).toHaveLength(0);
+      expect(rootRequests).toHaveLength(2);
+      welcomeResponses.push(Response.json({ id: "welcome" }));
+      rootResponses.push(Response.json({ nodes: [node("welcome")] }));
+      navigate("/w/@workspace");
+      await waitFor(() => expect(data.nodes[0]?.id).toBe("welcome"));
+    }
+    expect(writes).toHaveLength(1);
+    expect(rootRequests).toHaveLength(3);
+  });
+}
+
+it("retains a failed refresh and its cached snapshot through both route policies", async () => {
+  user = { ...account, workspace_role: WSRoleAdmin };
+  rootResponses.push(Response.json({ nodes: [node("current")] }));
+  mount("/w/@workspace", true);
+  await waitFor(() => expect(data.ready()).toBe(true));
+  rootResponses.push(Response.json({ error: { code: "NOT_FOUND", message: "Refresh unavailable" } }, { status: 404 }));
+  await expect(data.refreshRoots()).rejects.toThrow("Refresh unavailable");
+  const failure = data.preparationError();
+  rootResponses.push(empty());
+  for (const destination of ["/settings/user", "/w/@workspace"]) {
+    navigate(destination);
+    await waitFor(() => expect(window.location.pathname).toBe(destination));
+    expect(data.preparationError()).toBe(failure);
+    expect(data.nodes[0]?.id).toBe("current");
+    expect(data.ready()).toBe(true);
+    expect(rootRequests).toHaveLength(2);
+  }
+  await data.retryPreparation();
+  expect(data.preparationError()).toBeNull();
+  expect(data.nodes).toEqual([]);
+  navigate("/settings/user");
+  navigate("/w/@workspace");
+  expect(rootRequests).toHaveLength(3);
+  expect(writes).toHaveLength(0);
+});
+
+for (const stage of ["welcome", "final-read"] as const) {
+  it(`retains the failed ${stage} stage on settings entry and retries without a welcome write`, async () => {
+    user = { ...account, workspace_role: WSRoleAdmin };
+    rootResponses.push(empty());
+    const failure = Response.json(
+      { error: { code: "NOT_FOUND", message: "Preparation unavailable" } },
+      { status: 404 },
+    );
+    welcomeResponses.push(stage === "welcome" ? failure : Response.json({ id: "welcome" }));
+    if (stage === "final-read") rootResponses.push(failure);
+    mount("/w/@workspace", true);
+    await waitFor(() => expect(data.preparationError()).toContain("Preparation unavailable"));
+    const error = data.preparationError();
+    const reads = rootRequests.length;
+    rootResponses.push(empty());
+    navigate("/settings/user");
+    await waitFor(() => expect(window.location.pathname).toBe("/settings/user"));
+    expect(data.preparationError()).toBe(error);
+    expect(rootRequests).toHaveLength(reads);
+    await data.retryPreparation();
+    expect(writes).toHaveLength(1);
+    expect(rootRequests).toHaveLength(reads + 1);
+    expect(data.preparationError()).toBeNull();
+    expect(data.ready()).toBe(true);
+  });
+}
+
+it("keeps provisioning failure until explicit retry and respects read-only settings on retry", async () => {
+  user = { ...account, workspace_id: undefined, workspace_role: undefined, organizations: [], workspaces: [] };
+  welcomeResponses.push(
+    Response.json({ error: { code: "NOT_FOUND", message: "Provision unavailable" } }, { status: 404 }),
+  );
+  mount("/w/@workspace", true);
+  await waitFor(() => expect(data.preparationError()).toContain("Provision unavailable"));
+  const failure = data.preparationError();
+  navigate("/settings/user");
+  await waitFor(() => expect(window.location.pathname).toBe("/settings/user"));
+  expect(data.preparationError()).toBe(failure);
+  expect(writes).toHaveLength(1);
+  await data.retryPreparation();
+  expect(data.preparationError()).toBeNull();
+  expect(data.needsWorkspace()).toBe(true);
+  expect(writes).toHaveLength(1);
+});
+
 it("retries a failed welcome write before publishing its final roots", async () => {
   user = { ...account, workspace_role: WSRoleAdmin };
   rootResponses.push(empty());
@@ -256,7 +405,7 @@ it("retries a failed welcome write before publishing its final roots", async () 
   expect(product.preparation()?.ready()).toBe(false);
   welcomeResponses.push(Response.json({ id: "welcome" }));
   rootResponses.push(Response.json({ nodes: [node("welcome")] }));
-  await data.loadNodes(true);
+  await data.retryPreparation();
   expect(writes).toHaveLength(2);
   expect(rootRequests).toHaveLength(2);
   expect(data.preparationError()).toBeNull();
@@ -271,7 +420,7 @@ it("settles a failed welcome retry by reading when current permission no longer 
   await waitFor(() => expect(data.preparationError()).not.toBeNull());
   auth.setUser({ ...user, workspace_role: WSRoleViewer });
   rootResponses.push(empty());
-  await data.loadNodes(true);
+  await data.retryPreparation();
   expect(writes).toHaveLength(1);
   expect(data.preparationError()).toBeNull();
   expect(data.ready()).toBe(true);
@@ -309,11 +458,11 @@ it("recovers initial failure without resetting usable readiness for ordinary ref
   await waitFor(() => expect(data.preparationError()).not.toBeNull());
   expect(product.preparation()?.ready()).toBe(false);
   rootResponses.push(empty());
-  await data.loadNodes(true);
+  await data.retryPreparation();
   expect(product.preparation()?.ready()).toBe(true);
   const next = Promise.withResolvers<Response>();
   rootResponses.push(next.promise);
-  const refresh = data.loadNodes(true);
+  const refresh = data.refreshRoots();
   expect(product.preparation()?.ready()).toBe(true);
   next.resolve(empty());
   await refresh;
@@ -325,7 +474,7 @@ it("invalidates replacement workspaces and ignores old snapshots, without strand
   mount("/settings/user", true);
   await waitFor(() => expect(rootRequests).toHaveLength(1));
   const first = product.preparation()!;
-  const retiredRead = data.loadNodes(false);
+  const retiredRead = data.prepareWorkspace();
   const retiredResult = retiredRead.catch((error: unknown) => error);
   rootResponses.push(empty());
   auth.setUser({ ...account, workspace_id: "replacement" });
@@ -381,7 +530,7 @@ it("enriches cold settings on workspace entry without revoking usable readiness 
   welcome.resolve(Response.json({ id: "welcome" }));
   await waitFor(() => expect(data.nodes).toHaveLength(1));
   rootResponses.push(empty());
-  await data.loadNodes(true);
+  await data.refreshRoots();
   navigate("/settings/user");
   navigate("/w/@workspace");
   expect(writes).toHaveLength(1);
@@ -447,7 +596,7 @@ for (const recoveredNodes of [[], [node("welcome")]]) {
     expect(writes).toHaveLength(1);
     expect(product.preparation()?.ready()).toBe(false);
     rootResponses.push(Response.json({ nodes: recoveredNodes }));
-    await data.loadNodes(true);
+    await data.retryPreparation();
     expect(data.nodes).toEqual(recoveredNodes);
     expect(data.preparationError()).toBeNull();
     expect(product.preparation()?.ready()).toBe(true);

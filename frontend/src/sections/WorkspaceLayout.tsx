@@ -55,7 +55,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     setSaveError,
     switchWorkspace,
     createWorkspace,
-    loadNodes,
+    refreshRoots,
     fetchNodeChildren,
     removeNode,
     moveNode,
@@ -319,7 +319,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           importPollInterval = undefined;
           // Reload nodes if import completed
           if (status.status === "completed") {
-            void loadNodes(true).catch((backgroundError: unknown) => reportError(backgroundError));
+            void refreshRoots().catch((backgroundError: unknown) => reportError(backgroundError));
           }
         }
       } catch {
@@ -426,7 +426,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         if (!isCurrent()) return;
         newNodeId = result.id;
       }
-      await loadNodes(true);
+      await refreshRoots();
       if (!isCurrent()) return;
       const u = user();
       const wsId = u?.workspace_id;
@@ -499,7 +499,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         if (nextNode && wsId) {
           intent.navigate(nodeUrl(wsId, wsName, nextNode.id, nextNode.title));
         } else if (wsId) {
-          await loadNodes(true);
+          await refreshRoots();
           if (!isCurrent()) return;
           // Navigate to workspace root, let WorkspaceRoot handle redirect
           intent.navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
@@ -666,7 +666,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
                   class={styles.preparationRetry}
                   onClick={() =>
                     void workspaceData
-                      .loadNodes(true)
+                      .retryPreparation()
                       .catch((failure: unknown) => console.warn("Workspace preparation retry failed", failure))
                   }
                 >

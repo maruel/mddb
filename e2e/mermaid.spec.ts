@@ -1,5 +1,5 @@
 // Browser coverage for Pele diagrams, native caret reconciliation, editable source, and history disclosure.
-import { test, expect, registerUser, getWorkspaceId, createClient, gotoWithSession } from "./helpers";
+import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { Locator } from "@playwright/test";
 import type { EditorView } from "prosemirror-view";
 
@@ -39,8 +39,7 @@ for (const width of [390, 1280]) {
       const { token } = await registerUser(request, "caret");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
-      await expect(page.locator("header")).toBeVisible({ timeout: 15000 });
-      const wsID = await getWorkspaceId(page);
+      const wsID = await waitForWorkspace(page);
       const source = kind === "prose" ? "First paragraph" : "flowchart LR\naccTitle: Pipeline\nBuild --> Test";
       const content = kind === "prose" ? source : `\`\`\`${kind === "mermaid" ? "mermaid" : "text"}\n${source}\n\`\`\``;
       const node = await client.ws(wsID).createPage("0", { title: "Caret", content });
@@ -97,9 +96,9 @@ for (const width of [390, 1280]) {
     const { token } = await registerUser(request, "pele");
     const client = createClient(request, token);
     await gotoWithSession(page, token);
-    await expect(page.locator("header")).toBeVisible({ timeout: 15000 });
+    const workspaceId = await waitForWorkspace(page);
     expect(rendererRequests).toEqual([]);
-    const ws = client.ws(await getWorkspaceId(page));
+    const ws = client.ws(workspaceId);
     const flowchart = "flowchart LR\naccTitle: Pipeline\naccDescr: Build and test\nBuild --> Test";
     const sources = [
       flowchart,
@@ -112,7 +111,7 @@ for (const width of [390, 1280]) {
       "invalid diagram syntax %%%",
     ];
     const content = sources.map((source) => `\`\`\`mermaid\n${source}\n\`\`\``).join("\n\n");
-    const wsID = await getWorkspaceId(page);
+    const wsID = await waitForWorkspace(page);
     const plain = await ws.createPage("0", { title: "Source", content: content.replace(/```mermaid/g, "```text") });
     const baselineStart = Date.now();
     await page.goto(`/w/@${wsID}/@${plain.id}`);
