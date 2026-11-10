@@ -115,7 +115,7 @@ func TestCompressWriter(t *testing.T) {
 		t.Run("reaches the connection through wrappers", func(t *testing.T) {
 			errConn := errors.New("connection reset")
 			inner := &failingWriter{ResponseRecorder: httptest.NewRecorder(), err: errConn}
-			cw := &compressWriter{ResponseWriter: &bandwidthWriter{ResponseWriter: inner}, encoding: "gzip"}
+			cw := &compressWriter{ResponseWriter: &bandwidthWriter{ResponseWriter: inner, ctx: t.Context()}, encoding: "gzip"}
 			rc := http.NewResponseController(cw)
 			deadline := time.Now().Add(time.Minute)
 			if err := rc.SetWriteDeadline(deadline); err != nil {

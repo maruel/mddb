@@ -3,7 +3,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -144,6 +146,44 @@ func TestRouter(t *testing.T) {
 				t.Fatalf("cross-site registration: %d, users=%d", w.Code, env.services.User.Count())
 			}
 		})
+		t.Run("cancels bandwidth wait", func(t *testing.T) {
+			env := setupTestEnv(t)
+			cfg := &Config{ServerConfig: &storage.ServerConfig{
+				JWTSecret:  testJWTSecret,
+				Quotas:     storage.DefaultServerQuotas(false),
+				RateLimits: storage.DefaultRateLimits(),
+			}}
+			cfg.Quotas.MaxEgressBandwidthBps = 1
+			synctest.Test(t, func(t *testing.T) {
+				router := NewRouter(env.services, cfg)
+				t.Cleanup(router.Close)
+				ctx, cancel := context.WithCancel(t.Context())
+				t.Cleanup(cancel)
+				w := httptest.NewRecorder()
+				done := make(chan struct{})
+				t.Cleanup(func() { <-done })
+				go func() {
+					router.ServeHTTP(w, httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/health", nil))
+					close(done)
+				}()
+				synctest.Wait()
+				select {
+				case <-done:
+					t.Fatal("response did not wait for bandwidth")
+				default:
+				}
+				cancel()
+				synctest.Wait()
+				select {
+				case <-done:
+					if w.Body.Len() != 0 {
+						t.Fatalf("canceled response wrote %q", w.Body.String())
+					}
+				default:
+					t.Error("request stayed blocked after cancellation")
+				}
+			})
+		})
 	})
 
 	t.Run("Close", func(t *testing.T) {
@@ -181,7 +221,7 @@ func TestBandwidthWriter(t *testing.T) {
 	t.Run("Write", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			rw := &bandwidthWriter{ResponseWriter: w, bandwidthLimiter: bandwidth.NewLimiter(8)}
+			rw := &bandwidthWriter{ResponseWriter: w, ctx: t.Context(), bandwidthLimiter: bandwidth.NewLimiter(8)}
 			start := time.Now()
 			for _, b := range []string{"12345678", "abcd"} {
 				if _, err := rw.Write([]byte(b)); err != nil {
@@ -194,6 +234,34 @@ func TestBandwidthWriter(t *testing.T) {
 			if got := w.Body.String(); got != "12345678abcd" {
 				t.Fatalf("body = %q", got)
 			}
+		})
+		t.Run("canceled", func(t *testing.T) {
+			for _, limit := range []int64{0, 8} {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				w := httptest.NewRecorder()
+				rw := &bandwidthWriter{ResponseWriter: w, ctx: ctx, bandwidthLimiter: bandwidth.NewLimiter(limit)}
+				n, err := rw.Write([]byte("abcd"))
+				if n != 0 || !errors.Is(err, context.Canceled) || w.Body.Len() != 0 {
+					t.Fatalf("limit %d: write = %d, %v; body = %q", limit, n, err, w.Body.String())
+				}
+			}
+		})
+		t.Run("deadline", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+				t.Cleanup(cancel)
+				w := httptest.NewRecorder()
+				rw := &bandwidthWriter{ResponseWriter: w, ctx: ctx, bandwidthLimiter: bandwidth.NewLimiter(8)}
+				start := time.Now()
+				n, err := rw.Write([]byte("1234567890123456"))
+				if n != 0 || !errors.Is(err, context.DeadlineExceeded) || w.Body.Len() != 0 {
+					t.Fatalf("write = %d, %v; body = %q", n, err, w.Body.String())
+				}
+				if elapsed := time.Since(start); elapsed != 100*time.Millisecond {
+					t.Fatalf("deadline returned after %s", elapsed)
+				}
+			})
 		})
 	})
 }

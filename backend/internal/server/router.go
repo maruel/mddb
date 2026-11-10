@@ -8,6 +8,7 @@ package server
 //go:generate go run ../cmd/gen-api-sdk
 
 import (
+	"context"
 	"crypto/rsa"
 	"io/fs"
 	"log/slog"
@@ -373,7 +374,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 
 	limited := inner
 	inner = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		limited.ServeHTTP(&bandwidthWriter{ResponseWriter: w, bandwidthLimiter: bandwidthLim}, r)
+		limited.ServeHTTP(&bandwidthWriter{ResponseWriter: w, ctx: r.Context(), bandwidthLimiter: bandwidthLim}, r)
 	})
 	opts := httpserver.Options{
 		TrustedProxies: cfg.TrustedProxies,
@@ -403,18 +404,31 @@ func (r *Router) Close() {
 type bandwidthWriter struct {
 	http.ResponseWriter
 
+	ctx              context.Context
 	bandwidthLimiter *bandwidth.Limiter
 }
 
 func (rw *bandwidthWriter) Write(b []byte) (int, error) {
+	if err := rw.ctx.Err(); err != nil {
+		return 0, err
+	}
 	// Apply bandwidth limiting before writing
 	if rw.bandwidthLimiter != nil {
 		waitDuration := rw.bandwidthLimiter.Allow(int64(len(b)))
 		if waitDuration > 0 {
-			time.Sleep(waitDuration)
+			timer := time.NewTimer(waitDuration)
+			defer timer.Stop()
+			select {
+			case <-rw.ctx.Done():
+				return 0, rw.ctx.Err()
+			case <-timer.C:
+			}
 		}
 	}
 
+	if err := rw.ctx.Err(); err != nil {
+		return 0, err
+	}
 	return rw.ResponseWriter.Write(b)
 }
 
