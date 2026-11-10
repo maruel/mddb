@@ -55,6 +55,16 @@ let i18n!: ReturnType<typeof useI18n>;
 let auth!: ReturnType<typeof useAuth>;
 let product!: ReturnType<typeof useGoMode>;
 let navigate!: ReturnType<typeof useNavigate>;
+class InitialEventSource {
+  static latest: InitialEventSource;
+  onopen: ((event: Event) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  addEventListener = vi.fn();
+  close = vi.fn();
+  constructor() {
+    InitialEventSource.latest = this;
+  }
+}
 let rootResponses: Array<Promise<Response> | Response>;
 let rootRequests: string[];
 let rootSignals: AbortSignal[];
@@ -151,6 +161,7 @@ afterEach(() => {
   cleanup();
   delete window.goModeHost;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 it("completes a cold-settings empty snapshot without route-owned provisioning and caches empty success", async () => {
@@ -213,20 +224,29 @@ it("prepares nullable empty roots through welcome initialization and the canonic
   expect(writes).toHaveLength(1);
 });
 
-it("waits for route-owned welcome initialization and its final canonical read", async () => {
+it("keeps stream invalidations behind welcome initialization and its final canonical read", async () => {
+  vi.stubGlobal("EventSource", InitialEventSource);
   user = { ...account, workspace_role: WSRoleAdmin };
   const welcome = Promise.withResolvers<Response>();
   const final = Promise.withResolvers<Response>();
-  rootResponses.push(empty(), final.promise);
+  const fresh = Promise.withResolvers<Response>();
+  rootResponses.push(empty(), final.promise, fresh.promise);
   welcomeResponses.push(welcome.promise);
   mount("/w/@workspace", true);
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(product.preparation()?.ready()).toBe(false);
   expect(data.ready()).toBe(false);
+  InitialEventSource.latest.onopen?.(new Event("open"));
+  expect(rootRequests).toHaveLength(1);
+  expect(data.ready()).toBe(false);
+  expect(product.preparation()?.ready()).toBe(false);
   welcome.resolve(Response.json({ id: "welcome" }));
   await waitFor(() => expect(rootRequests).toHaveLength(2));
+  InitialEventSource.latest.onopen?.(new Event("open"));
+  final.resolve(empty());
+  await waitFor(() => expect(rootRequests).toHaveLength(3));
   expect(product.preparation()?.ready()).toBe(false);
-  final.resolve(Response.json({ nodes: [node("welcome")] }));
+  fresh.resolve(Response.json({ nodes: [node("welcome")] }));
   await waitFor(() => expect(product.preparation()?.ready()).toBe(true));
 });
 
@@ -264,7 +284,7 @@ it("keeps cached roots usable after a refresh fails without restarting the faile
   expect(rootRequests).toHaveLength(3);
 });
 
-it("requires explicit retry after failure and joins canonical reads without replacing their owner", async () => {
+it("requires explicit retry after failure and queues invalidated canonical reads under the same owner", async () => {
   rootResponses.push(Response.json({ error: { code: "NOT_FOUND", message: "Roots unavailable" } }, { status: 404 }));
   mount("/settings/user", true);
   await waitFor(() => expect(data.preparationError()).toContain("Roots unavailable"));
@@ -276,16 +296,21 @@ it("requires explicit retry after failure and joins canonical reads without repl
   await data.prepareWorkspace();
   expect(rootRequests).toHaveLength(2);
   const response = Promise.withResolvers<Response>();
-  rootResponses.push(response.promise);
+  const fresh = Promise.withResolvers<Response>();
+  rootResponses.push(response.promise, fresh.promise);
   const refresh = data.refreshRoots();
   const preparation = data.prepareWorkspace();
   const joinedRefresh = data.refreshRoots();
   expect(rootRequests).toHaveLength(3);
   expect(data.ready()).toBe(true);
-  response.resolve(Response.json({ nodes: [node("current")] }));
+  response.resolve(Response.json({ nodes: [node("obsolete")] }));
+  await waitFor(() => expect(rootRequests).toHaveLength(4));
+  expect(rootSignals[2]!.aborted).toBe(false);
+  expect(data.nodes.some((entry) => entry.id === "obsolete")).toBe(false);
+  fresh.resolve(Response.json({ nodes: [node("current")] }));
   await Promise.all([refresh, preparation, joinedRefresh]);
   expect(data.nodes[0]?.id).toBe("current");
-  expect(rootRequests).toHaveLength(3);
+  expect(rootRequests).toHaveLength(4);
 });
 
 for (const initial of ["workspace", "settings"] as const) {
@@ -474,7 +499,7 @@ it("invalidates replacement workspaces and ignores old snapshots, without strand
   mount("/settings/user", true);
   await waitFor(() => expect(rootRequests).toHaveLength(1));
   const first = product.preparation()!;
-  const retiredRead = data.prepareWorkspace();
+  const retiredRead = data.refreshRoots();
   const retiredResult = retiredRead.catch((error: unknown) => error);
   rootResponses.push(empty());
   auth.setUser({ ...account, workspace_id: "replacement" });
@@ -483,6 +508,7 @@ it("invalidates replacement workspaces and ignores old snapshots, without strand
   old.resolve(Response.json({ nodes: [node("retired")] }));
   expect(await retiredResult).toMatchObject({ name: "AbortError" });
   expect(data.nodes).toEqual([]);
+  expect(rootRequests).toHaveLength(2);
   navigate("/w/@replacement");
   expect(product.preparation()?.ready()).toBe(true);
 });
@@ -604,3 +630,84 @@ for (const recoveredNodes of [[], [node("welcome")]]) {
     expect(writes).toHaveLength(1);
   });
 }
+
+it("refreshes a pre-subscription root snapshot when the first stream opens", async () => {
+  vi.stubGlobal("EventSource", InitialEventSource);
+  const initial = Promise.withResolvers<Response>();
+  rootResponses.push(initial.promise, Response.json({ nodes: [node("fresh")] }));
+  mount("/w/@workspace", true);
+  await waitFor(() => expect(rootRequests).toHaveLength(1));
+  InitialEventSource.latest.onopen?.(new Event("open"));
+  initial.resolve(Response.json({ nodes: [node("obsolete")] }));
+  await waitFor(() => expect(data.nodes.map((value) => value.id)).toEqual(["fresh"]));
+  expect(rootRequests).toHaveLength(2);
+  expect(product.preparation()?.ready()).toBe(true);
+});
+
+it("coalesces forced refreshes behind an obsolete root read and ignores its failure", async () => {
+  const initial = Promise.withResolvers<Response>();
+  rootResponses.push(initial.promise, Response.json({ nodes: [node("fresh")] }));
+  mount("/settings/user", true);
+  await waitFor(() => expect(rootRequests).toHaveLength(1));
+  const first = data.refreshRoots();
+  const second = data.refreshRoots();
+  initial.resolve(Response.json({ error: { code: "NOT_FOUND", message: "Old read failed" } }, { status: 404 }));
+  await Promise.all([first, second]);
+  expect(data.nodes.map((value) => value.id)).toEqual(["fresh"]);
+  expect(data.preparationError()).toBeNull();
+  expect(rootRequests).toHaveLength(2);
+});
+
+it("repeats an initial selected-page read that predates first stream synchronization", async () => {
+  vi.stubGlobal("EventSource", InitialEventSource);
+  const initial = Promise.withResolvers<Response>();
+  let pageReads = 0;
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input).endsWith("/nodes/page")) {
+      pageReads++;
+      return pageReads === 1
+        ? initial.promise
+        : Promise.resolve(Response.json({ ...node("page"), title: "Fresh page" }));
+    }
+    return fetch(input, init);
+  });
+  rootResponses.push(Response.json({ nodes: [node("page")] }), Response.json({ nodes: [node("page")] }));
+  mount("/w/@workspace", true);
+  await waitFor(() => expect(data.ready()).toBe(true));
+  const loading = workspace.loadNode("page", { refresh: false });
+  await waitFor(() => expect(pageReads).toBe(1));
+  InitialEventSource.latest.onopen?.(new Event("open"));
+  initial.resolve(Response.json({ ...node("page"), title: "Obsolete page" }));
+  await loading;
+  expect(workspace.selectedNodeData()?.title).toBe("Fresh page");
+  expect(pageReads).toBe(2);
+});
+
+it("rejects an obsolete child-list snapshot after the synchronized root snapshot commits", async () => {
+  vi.stubGlobal("EventSource", InitialEventSource);
+  const initial = Promise.withResolvers<Response>();
+  let childReads = 0;
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input).endsWith("/nodes/parent/children")) {
+      childReads++;
+      return childReads === 1 ? initial.promise : Promise.resolve(Response.json({ nodes: [node("fresh child")] }));
+    }
+    return fetch(input, init);
+  });
+  rootResponses.push(Response.json({ nodes: [node("parent")] }), Response.json({ nodes: [node("parent")] }));
+  mount("/w/@workspace", true);
+  await waitFor(() => expect(data.ready()).toBe(true));
+  const loading = workspace.fetchNodeChildren("parent");
+  await waitFor(() => expect(childReads).toBe(1));
+  InitialEventSource.latest.onopen?.(new Event("open"));
+  await waitFor(() => {
+    expect(rootRequests).toHaveLength(2);
+    expect(data.loadingNodes()).toBe(false);
+  });
+  initial.resolve(Response.json({ nodes: [node("obsolete child")] }));
+  await loading;
+  expect(data.nodes[0]?.children?.map((value) => value.id)).toEqual(["fresh child"]);
+  expect(childReads).toBe(2);
+});

@@ -44,7 +44,6 @@ export const EventSourceProvider: ParentComponent = (props) => {
     let source: EventSource | null = null;
     let watchdog: ReturnType<typeof setTimeout> | null = null;
     let active = true;
-    let resyncOnOpen = false;
     const close = () => {
       if (watchdog !== null) clearTimeout(watchdog);
       watchdog = null;
@@ -53,7 +52,6 @@ export const EventSourceProvider: ParentComponent = (props) => {
       retired?.close();
     };
     const connect = () => {
-      if (source !== null || !navigator.onLine) resyncOnOpen = true;
       close();
       setConnected(false);
       if (!active || !navigator.onLine) return;
@@ -71,14 +69,12 @@ export const EventSourceProvider: ParentComponent = (props) => {
         if (!current()) return;
         alive();
         setConnected(true);
-        // Streams do not replay events. Refresh authorized state after recovery;
-        // editors retain dirty/pending draft conflict protection.
-        if (resyncOnOpen) setLastEvent({ type: EventResync, node_id: "0", actor_id: "0", modified: 0 });
-        resyncOnOpen = true;
+        // Every open establishes the subscription boundary. Initial REST reads
+        // can predate it too; refresh through the same draft-preserving path.
+        setLastEvent({ type: EventResync, node_id: "0", actor_id: "0", modified: 0 });
       };
       es.onerror = () => {
         if (!current()) return;
-        resyncOnOpen = true;
         setConnected(false);
         // Native EventSource owns reported transport retries and terminal HTTP
         // failures. The watchdog only detects sockets that stop reporting activity.

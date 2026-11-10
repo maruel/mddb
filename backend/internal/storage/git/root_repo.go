@@ -144,7 +144,9 @@ func (rr *RootRepo) AddWorkspaceSubmodule(ctx context.Context, wsID string) erro
 	// Absorb the submodule's .git directory into .git/modules/ so that
 	// deinit works correctly on removal (some git versions leave a real
 	// .git dir after submodule add --force on an existing repo).
-	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs"); err != nil {
+	// Limit migration to this workspace: absorbing every module traverses and
+	// can repair unrelated repositories while holding the root history lock.
+	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs", wsID); err != nil {
 		return fmt.Errorf("absorb workspace git directories: %w", err)
 	}
 	authorStr := fmt.Sprintf("%s <%s>", rr.repo.defaultName, rr.repo.defaultEmail)
@@ -161,7 +163,7 @@ func (rr *RootRepo) RemoveWorkspaceSubmodule(ctx context.Context, wsID string) e
 
 	// Absorb .git dir into parent if needed (handles repos added before
 	// absorbgitdirs was called in AddWorkspaceSubmodule).
-	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs"); err != nil {
+	if err := rr.repo.gitRun(ctx, "submodule", "absorbgitdirs", wsID); err != nil {
 		return fmt.Errorf("absorb workspace git directories: %w", err)
 	}
 

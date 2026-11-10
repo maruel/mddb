@@ -127,7 +127,7 @@ function Probe() {
       () => location.pathname,
       (path) => {
         const id = path.split("/").at(-1);
-        if (id && path.startsWith("/w/")) void workspace.loadNode(stripSlug(id), { refresh: false });
+        if (id && path.startsWith("/w/")) void workspace.loadNode(stripSlug(id), { refresh: false, navigation: true });
       },
     ),
   );
@@ -482,6 +482,269 @@ for (const state of ["clean", "dirty", "pending"] as const) {
         await saving;
       }
     }
+  });
+}
+
+for (const openBeforeReturn of [false, true]) {
+  it(`synchronizes the active document when first open occurs ${openBeforeReturn ? "before" : "after"} returning from a canceled destination`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    const destination = Promise.withResolvers<Response>();
+    nodeResponse = destination.promise;
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    navigate("/w/workspace/two");
+    await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+    firstTitle = "Fresh active page";
+    if (openBeforeReturn) FakeEventSource.current.onopen?.(new Event("open"));
+    navigate("/w/workspace/one");
+    await waitFor(() => expect(currentPath).toBe("/w/workspace/one"));
+    if (!openBeforeReturn) FakeEventSource.current.onopen?.(new Event("open"));
+    await waitFor(() => expect(editor.title()).toBe("Fresh active page"));
+    destination.resolve(Response.json(node("two", "Canceled destination", firstRevision)));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(workspace.selectedNodeId()).toBe("one");
+    expect(workspace.loadingNodeId()).toBeNull();
+    expect(editor.editingLocked()).toBe(false);
+  });
+}
+
+it("retains a running first-open refresh when navigation interrupts it and returns", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const destination = Promise.withResolvers<Response>();
+  const interrupted = Promise.withResolvers<Response>();
+  let reads = 0;
+  let returned = false;
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input).endsWith("/nodes/one")) {
+      reads++;
+      if (returned) return Promise.resolve(Response.json(node("one", "Fresh returned page", firstRevision)));
+      if (reads > 1) return interrupted.promise.then((response) => response.clone());
+    }
+    return fetch(input, init);
+  });
+  nodeResponse = destination.promise;
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  FakeEventSource.current.onopen?.(new Event("open"));
+  await waitFor(() => expect(workspace.loadingNodeId()).toBe("one"));
+  navigate("/w/workspace/two");
+  await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+  returned = true;
+  navigate("/w/workspace/one");
+  await waitFor(() => expect(editor.title()).toBe("Fresh returned page"));
+  interrupted.resolve(Response.json(node("one", "Obsolete interrupted refresh", firstRevision)));
+  destination.resolve(Response.json(node("two", "Canceled destination", firstRevision)));
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(editor.title()).toBe("Fresh returned page");
+  expect(workspace.selectedNodeId()).toBe("one");
+});
+
+for (const replacement of ["destination", "account"] as const) {
+  it(`retires the selected document's deferred refresh after ${replacement} replacement`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    const destination = Promise.withResolvers<Response>();
+    let reads = 0;
+    const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+    vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+      if (String(input).endsWith("/nodes/one")) reads++;
+      if (String(input).endsWith("/nodes/two")) return destination.promise.then((response) => response.clone());
+      return fetch(input, init);
+    });
+    mount();
+    await waitFor(() => expect(editor.title()).toBe("Original"));
+    navigate("/w/workspace/two");
+    await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+    FakeEventSource.current.onopen?.(new Event("open"));
+    if (replacement === "destination") {
+      destination.resolve(Response.json(node("two", "Other", firstRevision)));
+      await waitFor(() => expect(editor.title()).toBe("Other"));
+    } else {
+      auth.setUser({ ...account, workspace_id: "replacement" });
+      await waitFor(() => expect(workspace.selectedNodeId()).toBeNull());
+    }
+    expect(reads).toBe(1);
+    firstTitle = "Fresh replacement read";
+    navigate(replacement === "destination" ? "/w/workspace/one" : "/w/replacement/one");
+    await waitFor(() => expect(editor.title()).toBe("Fresh replacement read"));
+    destination.resolve(Response.json(node("two", "Retired destination", firstRevision)));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(editor.title()).toBe("Fresh replacement read");
+    expect(reads).toBe(2);
+  });
+}
+
+it("retains the deferred refresh's draft guard after returning to its document", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const destination = Promise.withResolvers<Response>();
+  const refreshing = Promise.withResolvers<Response>();
+  let reads = 0;
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input).endsWith("/nodes/one") && ++reads > 1) return refreshing.promise;
+    return fetch(input, init);
+  });
+  nodeResponse = destination.promise;
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  navigate("/w/workspace/two");
+  await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+  FakeEventSource.current.onopen?.(new Event("open"));
+  navigate("/w/workspace/one");
+  await waitFor(() => expect(reads).toBe(2));
+  editor.handleContentChange("Private returned draft");
+  refreshing.resolve(Response.json(node("one", "Fresh remote title", firstRevision)));
+  await waitFor(() => expect(editor.externalChange()).toBe(true));
+  expect(editor.content()).toBe("Private returned draft");
+  expect(editor.title()).toBe("Original");
+  await waitFor(() => expect(workspace.breadcrumbPath().at(-1)?.title).toBe("Fresh remote title"));
+  destination.resolve(Response.json(node("two", "Canceled destination", firstRevision)));
+});
+
+it("resumes the active document's deferred refresh when a workspace switch fails", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const switching = Promise.withResolvers<Response>();
+  switchResponse = switching.promise;
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  const switched = workspace.switchWorkspace("other");
+  await waitFor(() => expect(workspace.switchingWorkspace()).toBe(true));
+  firstTitle = "Fresh after failed switch";
+  FakeEventSource.current.onopen?.(new Event("open"));
+  switching.reject(new TypeError("Switch connection lost"));
+  await switched;
+  await waitFor(() => expect(editor.title()).toBe("Fresh after failed switch"));
+  expect(workspace.selectedNodeId()).toBe("one");
+});
+
+it("retains complete dirty breadcrumbs when ancestor refresh fails and retries successfully", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const failing = Promise.withResolvers<Response>();
+  let refreshing = false;
+  let parentReads = 0;
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    const id = String(input).split("/").at(-1);
+    if (id === "one")
+      return Promise.resolve(Response.json({ ...node("one", "Original", firstRevision), parent_id: "parent" }));
+    if (id === "parent") {
+      parentReads++;
+      return refreshing
+        ? failing.promise
+        : Promise.resolve(Response.json(node("parent", "Complete parent", firstRevision)));
+    }
+    return fetch(input, init);
+  });
+  mount();
+  await waitFor(() => expect(workspace.breadcrumbPath()).toHaveLength(2));
+  editor.handleContentChange("Private body");
+  refreshing = true;
+  FakeEventSource.current.onopen?.(new Event("open"));
+  await waitFor(() => expect(parentReads).toBe(2));
+  failing.reject(new TypeError("Ancestor connection lost"));
+  await waitFor(() => expect(warning).toHaveBeenCalledWith("Breadcrumb refresh failed", expect.any(TypeError)));
+  expect(workspace.loadError()).toContain("Ancestor connection lost");
+  expect(workspace.breadcrumbPath().map((entry) => entry.title)).toEqual(["Complete parent", "Original"]);
+  expect(editor.content()).toBe("Private body");
+  refreshing = false;
+  FakeEventSource.current.resync();
+  await waitFor(() => expect(parentReads).toBe(3));
+  expect(workspace.breadcrumbPath()).toHaveLength(2);
+  expect(editor.hasUnsavedChanges()).toBe(true);
+});
+
+it("keeps first-open refresh subordinate to an admitted destination and edits that destination", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const destination = Promise.withResolvers<Response>();
+  let destinationReads = 0;
+  const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input).endsWith("/nodes/two")) {
+      destinationReads++;
+      return destinationReads === 1
+        ? destination.promise
+        : Promise.resolve(Response.json(node("two", "Other", firstRevision)));
+    }
+    if (String(input).endsWith("/nodes/two/page") && init?.method === "POST")
+      return Promise.resolve(Response.json({ node: node("two", "Destination draft", "b".repeat(64)) }));
+    return fetch(input, init);
+  });
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  navigate("/w/workspace/two");
+  await waitFor(() => expect(workspace.loadingNodeId()).toBe("two"));
+  FakeEventSource.current.onopen?.(new Event("open"));
+  expect(editor.editingLocked()).toBe(true);
+  destination.resolve(Response.json(node("two", "Other", firstRevision)));
+  await waitFor(() => expect(editor.title()).toBe("Other"));
+  expect(currentPath).toBe("/w/workspace/two");
+  expect(workspace.selectedNodeId()).toBe("two");
+  expect(destinationReads).toBe(2);
+  expect(editor.editingLocked()).toBe(false);
+  editor.handleTitleChange("Destination draft");
+  const saving = editor.beginIntent().drain();
+  await waitFor(() =>
+    expect(
+      vi
+        .mocked(globalThis.fetch)
+        .mock.calls.some(
+          ([url, init]) => String(url).endsWith("/nodes/two/page") && String(init?.body).includes("Destination draft"),
+        ),
+    ).toBe(true),
+  );
+  expect(await saving).toBe(true);
+});
+
+for (const { pendingPath, dirty } of [
+  { pendingPath: true, dirty: true },
+  { pendingPath: false, dirty: true },
+  { pendingPath: true, dirty: false },
+]) {
+  it(`rebuilds the entire ${pendingPath ? "pending" : "loaded"} breadcrumb after first open with a ${dirty ? "dirty" : "clean"} editor`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    const top = Promise.withResolvers<Response>();
+    let moved = false;
+    let topReads = 0;
+    const fetch = vi.mocked(globalThis.fetch).getMockImplementation()!;
+    vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+      const id = String(input).split("/").at(-1);
+      if (id === "one")
+        return Promise.resolve(
+          Response.json({
+            ...node("one", "Original", firstRevision),
+            content: moved ? "Fresh body" : "body",
+            parent_id: "middle",
+          }),
+        );
+      if (id === "middle")
+        return Promise.resolve(
+          Response.json({
+            ...node("middle", moved ? "Renamed middle" : "Old middle", firstRevision),
+            parent_id: moved ? "0" : "top",
+          }),
+        );
+      if (id === "top") {
+        topReads++;
+        return top.promise;
+      }
+      return fetch(input, init);
+    });
+    mount();
+    await waitFor(() => expect(topReads).toBe(1));
+    if (!pendingPath) {
+      top.resolve(Response.json(node("top", "Old top", firstRevision)));
+      await waitFor(() => expect(workspace.breadcrumbPath()).toHaveLength(3));
+    }
+    if (dirty) editor.handleContentChange("Private body");
+    moved = true;
+    FakeEventSource.current.onopen?.(new Event("open"));
+    top.resolve(Response.json(node("top", "Old top", firstRevision)));
+    await waitFor(() =>
+      expect(workspace.breadcrumbPath().map((entry) => entry.title)).toEqual(["Renamed middle", "Original"]),
+    );
+    expect(editor.content()).toBe(dirty ? "Private body" : "Fresh body");
+    expect(editor.hasUnsavedChanges()).toBe(dirty);
   });
 }
 

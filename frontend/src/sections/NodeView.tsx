@@ -170,8 +170,12 @@ export default function NodeView() {
     on(
       () => stripSlug(params.nodeId),
       (nodeId) => {
-        if (nodeId && nodeId !== selectedNodeId()) {
-          void loadNode(nodeId, { refresh: false, canApply: () => stripSlug(params.nodeId) === nodeId });
+        if (nodeId) {
+          void loadNode(nodeId, {
+            refresh: false,
+            navigation: true,
+            canApply: () => stripSlug(params.nodeId) === nodeId,
+          });
         }
       },
     ),

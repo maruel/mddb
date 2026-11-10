@@ -33,6 +33,7 @@ interface WorkspacePreparation extends OperationOwner {
   client: ReturnType<Api["ws"]>;
   mode: PreparationMode;
   stage: PreparationStage;
+  refreshVersion: number;
 }
 type PreparationOperation =
   WorkspacePreparation | (OperationOwner & { kind: "provision"; user: UserResponse; api: Api });
@@ -102,6 +103,21 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
     });
     return roots;
   };
+  const readRoots = async (operation: WorkspacePreparation): Promise<NodeResponse[]> => {
+    // Preparation owns one root read at a time, including its post-welcome
+    // stage. Invalidations discard obsolete results without replaying writes
+    // or settling preparation before the canonical fresh read succeeds.
+    for (;;) {
+      const version = operation.refreshVersion;
+      try {
+        const response = await operation.client.listNodeChildren("0", operation.controller.signal);
+        if (!current(operation) || version === operation.refreshVersion) return response.nodes ?? [];
+      } catch (error) {
+        if (!current(operation) || version === operation.refreshVersion) throw error;
+        console.warn("Superseded workspace read failed", error);
+      }
+    }
+  };
   const run = async (operation: PreparationOperation): Promise<NodeResponse[]> => {
     const { user, controller } = operation;
     const signal = controller.signal;
@@ -132,9 +148,8 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
     }
     const client = operation.client;
     if (operation.stage === "roots") {
-      const response = await client.listNodeChildren("0", signal);
+      const roots = await readRoots(operation);
       if (!current(operation)) return [];
-      const roots = response.nodes ?? [];
       if (
         operation.mode !== "workspace" ||
         roots.length > 0 ||
@@ -161,8 +176,7 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       }
       operation.stage = "final-read";
     }
-    const canonical = await client.listNodeChildren("0", signal);
-    return publish(operation, canonical.nodes ?? []);
+    return publish(operation, await readRoots(operation));
   };
   const start = (mode: PreparationMode, stage: PreparationStage): Promise<NodeResponse[]> => {
     const user = auth.user();
@@ -174,7 +188,15 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
       completion: Promise.withResolvers<NodeResponse[]>(),
     };
     const operation: PreparationOperation = user.workspace_id
-      ? { ...lifetime, kind: "workspace", user, client: auth.api().ws(user.workspace_id), mode, stage }
+      ? {
+          ...lifetime,
+          kind: "workspace",
+          user,
+          client: auth.api().ws(user.workspace_id),
+          mode,
+          stage,
+          refreshVersion: 0,
+        }
       : { ...lifetime, kind: "provision", user, api: auth.api() };
     setState({ kind: "running", operation });
     void (async () => {
@@ -200,7 +222,11 @@ export const WorkspaceDataProvider: ParentComponent = (props) => {
   };
   const refreshRoots = (): Promise<NodeResponse[]> => {
     const active = state();
-    if (active.kind === "running" || active.kind === "failed") return active.operation.completion.promise;
+    if (active.kind === "running") {
+      if (active.operation.kind === "workspace") active.operation.refreshVersion++;
+      return active.operation.completion.promise;
+    }
+    if (active.kind === "failed") return active.operation.completion.promise;
     return ready() ? start("refresh", "roots") : prepareWorkspace();
   };
   const retryPreparation = (): Promise<NodeResponse[]> => {

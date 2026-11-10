@@ -85,6 +85,11 @@ for (const failure of ["welcome", "final-read"] as const) {
     await page.setViewportSize({ width: failure === "welcome" ? 390 : 1280, height: 900 });
     await page.clock.install();
     const { token } = await registerUser(request, `startup-${failure}`);
+    const stream = gate();
+    await page.route("**/api/v1/workspaces/*/events**", async (route) => {
+      await stream.promise;
+      await route.continue();
+    });
     let welcomeAttempts = 0;
     let rootReads = 0;
     await page.route("**/api/v1/workspaces/*/nodes/0/page/create", async (route) => {
@@ -99,10 +104,17 @@ for (const failure of ["welcome", "final-read"] as const) {
         await route.fulfill({ status: 404, json: { error: { code: "NOT_FOUND", message: "Roots unavailable" } } });
       } else await route.continue();
     });
-    await gotoWithSession(page, token);
-    await expect(page).toHaveURL(/\/w\//, { timeout: 15000 });
     const message = failure === "welcome" ? "Welcome unavailable" : "Roots unavailable";
-    await expect(page.getByRole("alert")).toContainText(message);
+    try {
+      await gotoWithSession(page, token);
+      await expect(page).toHaveURL(/\/w\//, { timeout: 15000 });
+      await expect(page.getByRole("alert")).toContainText(message);
+    } finally {
+      stream.resolve();
+    }
+    // Opening a subscription cannot replay a failed preparation stage. The
+    // explicit user retry retains ownership even after first-open freshness.
+    await expect(page.getByTestId("connection-status")).toHaveText("Connected");
     await page.clock.fastForward(9000);
     await expect(page.getByRole("alert")).toContainText(message);
     const retry = page.getByRole("button", { name: "Try again", exact: true });

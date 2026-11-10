@@ -240,7 +240,7 @@ describe("EventSourceProvider", () => {
     expect(screen.getByTestId("latest-event")).toHaveTextContent(testUser.id);
   });
 
-  it("reports reconnecting after a connection failure and connected after recovery", () => {
+  it("resynchronizes initial REST state on the first open and after recovery", () => {
     vi.stubGlobal("EventSource", MockEventSource);
 
     render(() => (
@@ -262,7 +262,7 @@ describe("EventSourceProvider", () => {
 
     eventSource.open();
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
-    expect(screen.getByTestId("latest-type")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("latest-type")).toHaveTextContent("resync");
 
     eventSource.fail();
     expect(screen.getByTestId("connection-status")).toHaveTextContent("Reconnecting");

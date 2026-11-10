@@ -35,6 +35,7 @@ import { findNodePath, reconcileBreadcrumbPath, reconcileMovedNode, reconcileSel
 
 interface NodeLoadOptions {
   refresh: boolean;
+  navigation?: boolean;
   canApply?: () => boolean;
 }
 
@@ -123,6 +124,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   onCleanup(() => {
     disposed = true;
     retireAllMetadata();
+    deferredNodeRefresh = null;
     nodeRequest++;
   });
 
@@ -156,8 +158,27 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Track loaded state to prevent duplicate calls
   const [failedNodeId, setFailedNodeId] = createSignal<string | null>(null);
   const [loadedNodeId, setLoadedNodeId] = createSignal<string | null>(null);
+  const [admittedNodeId, setAdmittedNodeId] = createSignal<string | null>(null);
   const workspaceIdentity = () => `${authIdentity()}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
   let nodeRequest = 0;
+  let streamEpoch = 0;
+  let deferredNodeRefresh: { id: string; identity: string; options: NodeLoadOptions } | null = null;
+
+  createEffect(
+    on([loadingNodeId, switchingWorkspace, admittedNodeId, selectedNodeId], () => {
+      const refresh = deferredNodeRefresh;
+      if (refresh === null) return;
+      if (disposed || refresh.identity !== workspaceIdentity() || refresh.id !== selectedNodeId()) {
+        deferredNodeRefresh = null;
+        return;
+      }
+      if (loadingNodeId() !== null || switchingWorkspace() || admittedNodeId() !== refresh.id) return;
+      // Preserve the original draft guard while waiting for route ownership to
+      // return. Completing a different destination retires this intent instead.
+      deferredNodeRefresh = null;
+      void loadNode(refresh.id, refresh.options);
+    }),
+  );
 
   let previousIdentity = workspaceIdentity();
   createEffect(() => {
@@ -165,7 +186,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (identity === previousIdentity) return;
     previousIdentity = identity;
     nodeRequest++;
+    deferredNodeRefresh = null;
     batch(() => {
+      setAdmittedNodeId(null);
       setSelectedNodeId(null);
       setSelectedNodeData(null);
       setBreadcrumbPath([]);
@@ -319,20 +342,67 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   };
 
+  async function readSubscribedSnapshot<T>(read: () => Promise<T>, current: () => boolean): Promise<T | undefined> {
+    for (;;) {
+      if (!current()) return undefined;
+      const epoch = streamEpoch;
+      let result: T;
+      try {
+        result = await read();
+      } catch (error) {
+        if (!current()) return undefined;
+        if (epoch !== streamEpoch) {
+          console.warn("Pre-subscription workspace read failed", error);
+          continue;
+        }
+        throw error;
+      }
+      if (!current()) return undefined;
+      // A stream open establishes a newer subscription boundary even when the
+      // first page/branch is still loading and has no consumer to refresh it.
+      if (epoch === streamEpoch) return result;
+    }
+  }
+
   async function loadNode(id: string, options: NodeLoadOptions): Promise<NodeResponse | undefined> {
     const ws = wsApi();
     if (!ws) return undefined;
+    // Route admission also retires an abandoned destination when returning to
+    // an already loaded document. Background callbacks cannot own this step.
+    if (options.navigation) setAdmittedNodeId(id);
+    if (options.navigation && loadingNodeId() !== null && loadingNodeId() !== id) {
+      nodeRequest++;
+      setLoadingNodeId(null);
+      setFailedNodeId(null);
+    }
+    // Background refreshes inherit the admitted destination's ownership. Its
+    // pending read will cross the subscription boundary itself if necessary.
+    if (options.refresh && ((loadingNodeId() !== null && loadingNodeId() !== id) || switchingWorkspace())) {
+      if (selectedNodeId() === id) deferredNodeRefresh = { id, identity: workspaceIdentity(), options };
+      return undefined;
+    }
     if (!options.refresh && (loadingNodeId() === id || loadedNodeId() === id)) return undefined;
 
     const identity = workspaceIdentity();
+    // A navigation may interrupt an already running refresh as well as block
+    // a new one. Keep the same guarded intent until it settles or loses owner.
+    const refreshIntent = options.refresh ? { id, identity, options } : null;
+    if (refreshIntent !== null) deferredNodeRefresh = refreshIntent;
     const request = ++nodeRequest;
+    const current = () => request === nodeRequest && identity === workspaceIdentity() && !disposed;
 
     try {
       setFailedNodeId(null);
       setLoadingNodeId(id);
-      const nodeData = await ws.getNode(id);
-      if (request !== nodeRequest || identity !== workspaceIdentity() || disposed) return undefined;
-      if (options.canApply && !options.canApply()) return undefined;
+      const nodeData = await readSubscribedSnapshot(() => ws.getNode(id), current);
+      if (nodeData === undefined) return undefined;
+      if (options.canApply && !options.canApply()) {
+        // A protected body can still receive canonical hierarchy metadata. This
+        // also finishes a refresh whose body was applied before navigation
+        // interrupted its ancestor reads and retired that publication guard.
+        if (selectedNodeId() === id) await refreshBreadcrumbPath(id, current, { node: nodeData, epoch: streamEpoch });
+        return undefined;
+      }
 
       batch(() => {
         setSelectedNodeId(nodeData.id);
@@ -341,21 +411,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadedNodeId(nodeData.id);
       setLoadError(null);
 
-      // Build breadcrumb path
-      const path: NodeResponse[] = [nodeData];
-      let currentNode = nodeData;
-      while (currentNode.parent_id && currentNode.parent_id !== "0") {
-        try {
-          const parentNode = await ws.getNode(currentNode.parent_id);
-          if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
-          path.unshift(parentNode);
-          currentNode = parentNode;
-        } catch {
-          break;
-        }
-      }
-      if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
-      setBreadcrumbPath(path);
+      await refreshBreadcrumbPath(id, current, { node: nodeData, epoch: streamEpoch });
+      if (!current()) return undefined;
 
       return nodeData;
     } catch (err) {
@@ -365,8 +422,35 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       }
       return undefined;
     } finally {
-      if (request === nodeRequest) setLoadingNodeId(null);
+      if (request === nodeRequest) {
+        if (deferredNodeRefresh === refreshIntent) deferredNodeRefresh = null;
+        setLoadingNodeId(null);
+      }
     }
+  }
+
+  async function refreshBreadcrumbPath(
+    id: string,
+    current: () => boolean,
+    initial?: { node: NodeResponse; epoch: number },
+  ): Promise<void> {
+    const ws = wsApi();
+    if (!ws) return;
+    // The whole hierarchy belongs to one subscription boundary. Retrying only
+    // the final ancestor would retain already accumulated, obsolete parents.
+    const path = await readSubscribedSnapshot(async () => {
+      const epoch = streamEpoch;
+      let currentNode = initial?.epoch === streamEpoch ? initial.node : await ws.getNode(id);
+      initial = undefined;
+      const result = [currentNode];
+      while (currentNode.parent_id && currentNode.parent_id !== "0") {
+        if (!current() || epoch !== streamEpoch) break;
+        currentNode = await ws.getNode(currentNode.parent_id);
+        result.unshift(currentNode);
+      }
+      return result;
+    }, current);
+    if (path !== undefined) setBreadcrumbPath(path);
   }
 
   async function fetchNodeChildren(nodeId: string): Promise<void> {
@@ -375,8 +459,11 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     const identity = workspaceIdentity();
 
     try {
-      const data = await ws.listNodeChildren(nodeId);
-      if (identity !== workspaceIdentity()) return;
+      const data = await readSubscribedSnapshot(
+        () => ws.listNodeChildren(nodeId),
+        () => !disposed && identity === workspaceIdentity(),
+      );
+      if (data === undefined) return;
 
       const children = data.nodes?.filter((node): node is NodeResponse => Boolean(node)) || [];
 
@@ -432,8 +519,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         }
       }
       if (!current()) return;
-      const data = await ws.getNode(id, controller.signal);
-      if (!current()) return;
+      const data = await readSubscribedSnapshot(() => ws.getNode(id, controller.signal), current);
+      if (data === undefined) return;
       setNodesStore(
         produce((list) => {
           const path = findNodePath(list, id);
@@ -465,6 +552,22 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   createEffect(
     on(lastEvent, (evt) => {
       if (!evt) return;
+      if (evt.type === EventResync) {
+        streamEpoch++;
+        const id = selectedNodeId();
+        const request = nodeRequest;
+        const identity = workspaceIdentity();
+        // Pending navigation builds its own path. Otherwise refresh hierarchy
+        // independently so a dirty editor never has to replace its body.
+        if (id && loadingNodeId() === null) {
+          const current = () => !disposed && nodeRequest === request && identity === workspaceIdentity();
+          void refreshBreadcrumbPath(id, current).catch((error: unknown) => {
+            if (!current()) return;
+            setLoadError(`${t("errors.failedToLoad")}: ${String(error)}`);
+            console.warn("Breadcrumb refresh failed", error);
+          });
+        }
+      }
       if (evt.type === EventNodeUpdated) {
         void refreshNodeMetadata(evt.node_id, evt.aspects?.includes(EventAspectMetadata) ?? false);
       } else if (

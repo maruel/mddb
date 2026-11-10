@@ -21,6 +21,57 @@ import (
 func TestRootRepo(t *testing.T) {
 	t.Parallel()
 
+	for _, operation := range []string{"add", "remove", "database"} {
+		t.Run("unrelated unavailable workspace/"+operation, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "db"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			rr, err := NewRootRepo(t.Context(), dir, "Test", "test@example.com")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range []string{"unavailable", "target"} {
+				path := filepath.Join(dir, id)
+				if err := os.Mkdir(path, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				initGitRepo(t, path)
+				if id == "unavailable" || operation != "add" {
+					if err := rr.AddWorkspaceSubmodule(t.Context(), id); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			// Another workspace can be temporarily unavailable during external
+			// recovery. Root operations must neither open nor repair its Git data.
+			path := filepath.Join(dir, "unavailable", ".git")
+			unavailable := "gitdir: ../.git/modules/missing\n"
+			if err := os.WriteFile(path, []byte(unavailable), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			switch operation {
+			case "add":
+				err = rr.AddWorkspaceSubmodule(t.Context(), "target")
+			case "remove":
+				err = rr.RemoveWorkspaceSubmodule(t.Context(), "target")
+			case "database":
+				if err := os.WriteFile(filepath.Join(dir, "db", "rows.jsonl"), []byte("persisted\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				err = rr.CommitDBChanges(t.Context(), Author{}, "record saved database")
+			}
+			if err != nil {
+				t.Fatalf("%s opened unrelated workspace metadata: %v", operation, err)
+			}
+			got, err := os.ReadFile(path) //nolint:gosec // G304: test-owned workspace path.
+			if err != nil || string(got) != unavailable {
+				t.Fatalf("unrelated Git pointer changed: %q %v", got, err)
+			}
+		})
+	}
+
 	t.Run("RunCommitRecovery", func(t *testing.T) {
 		t.Run("recovers pending snapshot without another mutation", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
