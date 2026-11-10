@@ -12,6 +12,8 @@ import type { DataRecordResponse, Property } from "@sdk/types.gen";
 // Canned records state provided through the real RecordsContext instead of a module mock.
 const recordsValue: RecordsContextValue = {
   records: () => [],
+  failedRecordDrafts: () => [],
+  dismissRecordDraft: vi.fn(),
   workspaceMembers: () => [],
   resolvedUsers: () => new Map(),
   hasMore: () => false,
@@ -80,12 +82,14 @@ describe("TableTable", () => {
     {
       id: "rec-1",
       data: { Name: "Alice", Age: 30, Active: true, Birthday: "1994-05-15", Status: "active" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
     {
       id: "rec-2",
       data: { Name: "Bob", Age: 25, Active: false, Birthday: "1999-08-20", Status: "inactive" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },

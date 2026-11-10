@@ -523,6 +523,8 @@ export const dict: Dictionary = {
     titleRequired: "Titel ist erforderlich",
     failedToLoad: "Laden fehlgeschlagen",
     failedToSave: "Speichern fehlgeschlagen",
+    recordDraft:
+      "Dieser Datensatz konnte nicht gespeichert werden. Kopiere deine Änderungen, bevor du die Tabelle verlässt.",
     failedToDelete: "Löschen fehlgeschlagen",
     failedToCreate: "Erstellen fehlgeschlagen",
     failedToSwitch: "Arbeitsbereichswechsel fehlgeschlagen",

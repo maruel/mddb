@@ -82,7 +82,11 @@ type GetNodeVersionResponse struct {
 
 // UpdateTableResponse is a response from updating a table.
 type UpdateTableResponse struct {
-	ID ksid.ID `json:"id"`
+	ID             ksid.ID    `json:"id"`
+	Title          string     `json:"title"`
+	Properties     []Property `json:"properties"`
+	Views          []View     `json:"views"`
+	SchemaRevision string     `json:"schema_revision"`
 }
 
 // DeleteTableResponse is a response from deleting a table.
@@ -113,11 +117,12 @@ type CreateRecordResponse struct {
 
 // UpdateRecordResponse is a response from updating a record.
 type UpdateRecordResponse struct {
-	ID ksid.ID `json:"id"`
+	Record DataRecordResponse `json:"record"`
 }
 
 // GetRecordResponse is a response containing a record.
 type GetRecordResponse struct {
+	Revision string         `json:"revision"`
 	ID       ksid.ID        `json:"id"`
 	Data     map[string]any `json:"data"`
 	Created  Time           `json:"created"`
@@ -433,25 +438,26 @@ type PullGitResponse = OkResponse
 
 // NodeResponse is the API representation of a node.
 type NodeResponse struct {
-	Revision    string            `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
-	ID          ksid.ID           `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID    ksid.ID           `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
-	Title       string            `json:"title" jsonschema:"description=Node title"`
-	Content     string            `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties  []Property        `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
-	Views       []View            `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
-	Created     Time              `json:"created" jsonschema:"description=Node creation Unix timestamp"`
-	Modified    Time              `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
-	Tags        []string          `json:"tags,omitempty" jsonschema:"description=Node tags"`
-	FaviconURL  string            `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
-	Icon        string            `json:"icon,omitempty" jsonschema:"description=Page icon: emoji character or MDI icon name"`
-	Cover       string            `json:"cover,omitempty" jsonschema:"description=Cover image asset filename"`
-	HasPage     bool              `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
-	HasTable    bool              `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
-	HasChildren bool              `json:"has_children,omitempty" jsonschema:"description=Whether node has child nodes"`
-	Children    []NodeResponse    `json:"children,omitempty" jsonschema:"description=Nested nodes"`
-	AssetURLs   map[string]string `json:"asset_urls,omitempty" jsonschema:"description=Map of asset filename to signed URL"`
-	Backlinks   []BacklinkInfo    `json:"backlinks,omitempty" jsonschema:"description=Pages that link to this page"`
+	Revision       string            `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
+	SchemaRevision string            `json:"schema_revision,omitempty" jsonschema:"description=Canonical table schema revision"`
+	ID             ksid.ID           `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID       ksid.ID           `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title          string            `json:"title" jsonschema:"description=Node title"`
+	Content        string            `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties     []Property        `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
+	Views          []View            `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
+	Created        Time              `json:"created" jsonschema:"description=Node creation Unix timestamp"`
+	Modified       Time              `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Tags           []string          `json:"tags,omitempty" jsonschema:"description=Node tags"`
+	FaviconURL     string            `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
+	Icon           string            `json:"icon,omitempty" jsonschema:"description=Page icon: emoji character or MDI icon name"`
+	Cover          string            `json:"cover,omitempty" jsonschema:"description=Cover image asset filename"`
+	HasPage        bool              `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
+	HasTable       bool              `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
+	HasChildren    bool              `json:"has_children,omitempty" jsonschema:"description=Whether node has child nodes"`
+	Children       []NodeResponse    `json:"children,omitempty" jsonschema:"description=Nested nodes"`
+	AssetURLs      map[string]string `json:"asset_urls,omitempty" jsonschema:"description=Map of asset filename to signed URL"`
+	Backlinks      []BacklinkInfo    `json:"backlinks,omitempty" jsonschema:"description=Pages that link to this page"`
 }
 
 // GetPageResponse is a response containing page content.
@@ -485,12 +491,13 @@ type DeletePageResponse = OkResponse
 
 // GetTableSchemaResponse is a response containing table schema.
 type GetTableSchemaResponse struct {
-	ID         ksid.ID    `json:"id" jsonschema:"description=Node identifier"`
-	Title      string     `json:"title" jsonschema:"description=Table title"`
-	Properties []Property `json:"properties" jsonschema:"description=Table schema"`
-	Views      []View     `json:"views,omitempty" jsonschema:"description=Saved view configurations"`
-	Created    Time       `json:"created" jsonschema:"description=Table creation Unix timestamp"`
-	Modified   Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	SchemaRevision string     `json:"schema_revision" jsonschema:"description=Revision of the table schema"`
+	ID             ksid.ID    `json:"id" jsonschema:"description=Node identifier"`
+	Title          string     `json:"title" jsonschema:"description=Table title"`
+	Properties     []Property `json:"properties" jsonschema:"description=Table schema"`
+	Views          []View     `json:"views,omitempty" jsonschema:"description=Saved view configurations"`
+	Created        Time       `json:"created" jsonschema:"description=Table creation Unix timestamp"`
+	Modified       Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }
 
 // CreateTableUnderParentResponse is a response from creating a table under a parent.
@@ -516,6 +523,7 @@ type BacklinkInfo struct {
 
 // DataRecordResponse is the API representation of a data record.
 type DataRecordResponse struct {
+	Revision string         `json:"revision" jsonschema:"description=Canonical record revision"`
 	ID       ksid.ID        `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
 	Created  Time           `json:"created" jsonschema:"description=Record creation Unix timestamp"`

@@ -24,6 +24,58 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
+func TestMutateTableConcurrentViews(t *testing.T) {
+	t.Parallel()
+	_, ws, _ := initWS(t)
+	author := git.Author{Name: "Test", Email: "test@example.com"}
+	table, err := ws.CreateTableUnderParent(t.Context(), 0, "Table", nil, author)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := []ksid.ID{ksid.NewID(), ksid.NewID()}
+	errCh := make(chan error, len(ids))
+	var workers sync.WaitGroup
+	for _, id := range ids {
+		workers.Go(func() {
+			_, err := ws.MutateTable(t.Context(), table.ID, author, func(node *Node) error {
+				node.Views = append(node.Views, View{ID: id, Name: id.String()})
+				return nil
+			})
+			errCh <- err
+		})
+	}
+	workers.Wait()
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := ws.ReadTable(table.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids {
+		if !slices.ContainsFunc(got.Views, func(view View) bool { return view.ID == id }) {
+			t.Fatalf("view %s missing from %v", id, got.Views)
+		}
+	}
+}
+
+func replaceTestRecord(t *testing.T, ctx context.Context, ws *WorkspaceFileStore, tableID ksid.ID, original *DataRecord, data map[string]any, author git.Author) error {
+	t.Helper()
+	table, err := ws.ReadTable(tableID)
+	if err != nil {
+		return err
+	}
+	revision, err := RecordRevision(original)
+	if err != nil {
+		return err
+	}
+	_, err = ws.ReplaceRecord(ctx, tableID, original.ID, data, revision, table.SchemaRevision, author)
+	return err
+}
+
 // testFileStore creates a FileStoreService for testing with unlimited quota.
 // It also creates a workspace in the service for quota testing.
 func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
@@ -983,7 +1035,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 					Created:  record.Created,
 					Modified: storage.Now(),
 				}
-				if err := ws.UpdateRecord(ctx, tableID, updated, author); err != nil {
+				if err := replaceTestRecord(t, ctx, ws, tableID, record, updated.Data, author); err != nil {
 					t.Fatalf("failed to update record: %v", err)
 				}
 
@@ -1060,7 +1112,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				Created:  initialRecord.Created,
 				Modified: storage.Now(),
 			}
-			if err := ws.UpdateRecord(ctx, testTableID, updatedRecord, author); err != nil {
+			if err := replaceTestRecord(t, ctx, ws, testTableID, initialRecord, updatedRecord.Data, author); err != nil {
 				t.Fatalf("failed to update record: %v", err)
 			}
 
@@ -1123,8 +1175,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				Modified: storage.Now(),
 			}
 
-			parentID := ws.getParent(testTableID)
-			if err := ws.updateRecord(testTableID, parentID, updatedRecord); err != nil {
+			if err := replaceTestRecord(t, ctx, ws, testTableID, initialRecord, updatedRecord.Data, author); err != nil {
 				t.Fatalf("failed to update record: %v", err)
 			}
 
@@ -1135,6 +1186,9 @@ func TestWorkspaceFileStore(t *testing.T) {
 			found := false
 			for r := range it {
 				if r.ID == initialRecord.ID {
+					if r.Data == nil {
+						t.Fatal("nil data was persisted")
+					}
 					found = true
 					break
 				}
@@ -2051,7 +2105,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				Modified: record.Modified,
 			}
 
-			err = ws.UpdateRecord(ctx, tableID, updatedRecord, author)
+			err = replaceTestRecord(t, ctx, ws, tableID, record, updatedRecord.Data, author)
 			if err != nil {
 				t.Errorf("same-size update should succeed: %v", err)
 			}

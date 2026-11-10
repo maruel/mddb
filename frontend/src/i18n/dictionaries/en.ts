@@ -521,6 +521,7 @@ export const dict: Dictionary = {
     titleRequired: "Title is required",
     failedToLoad: "Failed to load",
     failedToSave: "Failed to save",
+    recordDraft: "This record could not be saved. Copy your changes before leaving this table.",
     failedToDelete: "Failed to delete",
     failedToCreate: "Failed to create",
     failedToSwitch: "Failed to switch workspace",

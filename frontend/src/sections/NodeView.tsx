@@ -82,6 +82,8 @@ export default function NodeView() {
   });
   const {
     records,
+    failedRecordDrafts,
+    dismissRecordDraft,
     hasMore,
     loadMoreRecords,
     addRecord,
@@ -190,17 +192,27 @@ export default function NodeView() {
     const nodeData = selectedNodeData();
     const ws = wsApi();
     if (!nodeData || nodeData.id !== nodeId || selectedNodeId() !== nodeId || !ws) return;
+    if (!nodeData.schema_revision) {
+      setSaveError(t("errors.failedToSave"));
+      return;
+    }
     const ownsNode = () => isCurrent() && selectedNodeId() === nodeId && selectedNodeData() === nodeData;
     try {
       setSavingNodeId(nodeId);
-      await ws.updateTable(nodeId, {
+      const saved = await ws.updateTable(nodeId, {
         title: nodeData.title,
         properties: updatedProperties,
+        expected_title: nodeData.title,
+        expected_schema_revision: nodeData.schema_revision,
       });
       if (!ownsNode()) return;
-      // Update selectedNodeData directly — loadNode() skips re-fetching the current node
-      // due to a loadedNodeId guard, so we apply the new properties optimistically.
-      setSelectedNodeData({ ...nodeData, properties: updatedProperties });
+      setSelectedNodeData({
+        ...nodeData,
+        title: saved.title,
+        properties: saved.properties ?? undefined,
+        views: saved.views ?? undefined,
+        schema_revision: saved.schema_revision,
+      });
       setSaveError(null);
     } catch (err) {
       if (ownsNode()) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
@@ -474,6 +486,17 @@ export default function NodeView() {
 
               <Show when={selectedNodeData()?.has_table}>
                 <div class={styles.tableView}>
+                  <For each={failedRecordDrafts()}>
+                    {(draft) => (
+                      <section class={styles.recordDraft} role="alert">
+                        <p>{t("errors.recordDraft")}</p>
+                        <pre class={styles.recordDraftContent}>{draft.data}</pre>
+                        <button type="button" onClick={() => dismissRecordDraft(draft.id)}>
+                          {t("common.close")}
+                        </button>
+                      </section>
+                    )}
+                  </For>
                   <div class={styles.viewBar}>
                     <ViewTabs />
                     <Show when={viewType() !== "table"}>

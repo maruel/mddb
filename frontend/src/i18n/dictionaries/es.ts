@@ -522,6 +522,7 @@ export const dict: Dictionary = {
     titleRequired: "El título es obligatorio",
     failedToLoad: "Error al cargar",
     failedToSave: "Error al guardar",
+    recordDraft: "No se pudo guardar este registro. Copia los cambios antes de salir de esta tabla.",
     failedToDelete: "Error al eliminar",
     failedToCreate: "Error al crear",
     failedToSwitch: "Error al cambiar de espacio",

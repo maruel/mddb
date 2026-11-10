@@ -116,6 +116,50 @@ test.describe("Table Creation and Basic Operations", () => {
     }).toPass({ timeout: 5000 });
   });
 
+  test("preserves an attempted record edit when another client saves first", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "record-conflict",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }],
+    );
+    const ws = client.ws(wsID);
+    const list = await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 });
+    const record = list.records![0]!;
+    const schema = await ws.getNode(tableId);
+    expect(schema.schema_revision).toBeTruthy();
+
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/${record.id}`, async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      await held;
+      await route.continue();
+    });
+    await page.locator("td").getByText("Original", { exact: true }).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("My edit");
+    const pending = page.waitForRequest(
+      (req) => req.method() === "POST" && req.url().endsWith(`/records/${record.id}`),
+    );
+    await input.press("Enter");
+    await pending;
+    await ws.updateRecord(tableId, record.id, {
+      data: { Name: "Other edit" },
+      expected_revision: record.revision,
+      expected_schema_revision: schema.schema_revision!,
+    });
+    release();
+    await expect(
+      page.getByText("This record could not be saved. Copy your changes before leaving this table."),
+    ).toBeVisible();
+    await expect(page.locator("pre").filter({ hasText: "My edit" })).toBeVisible();
+    expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "Other edit" });
+  });
+
   test("delete a record from table", async ({ page, request }) => {
     await setupTable(page, request, "table-delete", [{ name: "Name", type: "text" }], [{ Name: "Record To Delete" }]);
 

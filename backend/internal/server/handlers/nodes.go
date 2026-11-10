@@ -1,4 +1,4 @@
-// Handles hierarchical nodes and revision-conditional page replacement and append.
+// Handles hierarchical nodes and revision-conditional page and table mutations.
 
 package handlers
 
@@ -396,17 +396,17 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identity.Us
 	}
 
 	return &dto.GetTableSchemaResponse{
-		ID:         node.ID,
-		Title:      node.Title,
-		Properties: propertiesToDTO(node.Properties),
-		Created:    node.Created,
-		Modified:   node.Modified,
+		SchemaRevision: node.SchemaRevision,
+		ID:             node.ID,
+		Title:          node.Title,
+		Properties:     propertiesToDTO(node.Properties),
+		Views:          viewsToDTO(node.Views),
+		Created:        node.Created,
+		Modified:       node.Modified,
 	}, nil
 }
 
 // UpdateTable updates a table's schema.
-// TODO(2026-11-07): table-record-concurrency: add a revision precondition and
-// transactional check for schema/title replacement. Page CAS does not protect it.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -419,21 +419,26 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 		return nil, dto.QuotaExceeded("columns per table", eq.MaxColumnsPerTable)
 	}
 
-	node, err := ws.ReadTable(req.ID)
+	node, err := ws.MutateTable(ctx, req.ID, GitAuthor(user), func(node *content.Node) error {
+		if node.SchemaRevision != req.ExpectedSchemaRevision || node.Title != req.ExpectedTitle {
+			return dto.NewAPIError(409, dto.ErrorCodeConflict, "Table changed; read the current table before writing again").WithDetail("recovery", "read_current").WithDetail("current_schema_revision", node.SchemaRevision).WithDetail("current_title", node.Title)
+		}
+		node.Title = req.Title
+		node.Properties = propertiesToEntity(req.Properties)
+		node.Modified = storage.Now()
+		return nil
+	})
 	if err != nil {
-		return nil, dto.NotFound("table")
-	}
-
-	node.Title = req.Title
-	node.Properties = propertiesToEntity(req.Properties)
-	node.Modified = storage.Now()
-
-	author := GitAuthor(user)
-	if err := ws.WriteTable(ctx, node, false, author); err != nil {
-		return nil, dto.NotFound("table")
+		if apiErr, ok := errors.AsType[*dto.APIError](err); ok {
+			return nil, apiErr
+		}
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
+		}
+		return nil, dto.InternalWithError("Failed to update table", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
-	return &dto.UpdateTableResponse{ID: req.ID}, nil
+	return &dto.UpdateTableResponse{ID: node.ID, Title: node.Title, Properties: propertiesToDTO(node.Properties), Views: viewsToDTO(node.Views), SchemaRevision: node.SchemaRevision}, nil
 }
 
 // DeleteTable removes the table content from a node.
@@ -473,7 +478,11 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity
 		}
 		recordList := make([]dto.DataRecordResponse, len(records))
 		for i, record := range records {
-			recordList[i] = *dataRecordToResponse(record)
+			response, err := dataRecordToResponse(record)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to compute record revision", err)
+			}
+			recordList[i] = *response
 		}
 		return &dto.ListRecordsResponse{Records: recordList}, nil
 	}
@@ -558,7 +567,11 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity
 
 	recordList := make([]dto.DataRecordResponse, len(records))
 	for i, record := range records {
-		recordList[i] = *dataRecordToResponse(record)
+		response, err := dataRecordToResponse(record)
+		if err != nil {
+			return nil, dto.InternalWithError("Failed to compute record revision", err)
+		}
+		recordList[i] = *response
 	}
 	return &dto.ListRecordsResponse{Records: recordList}, nil
 }
@@ -600,55 +613,37 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 }
 
 // UpdateRecord updates an existing record in a table.
-// TODO(2026-11-07): table-record-concurrency: revision-guard record replacement
-// transactionally and return canonical state/conflicts. Page CAS does not protect it.
 func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	// Read table to get columns for type coercion
-	node, err := ws.ReadTable(req.ID)
+	record, err := ws.ReplaceRecord(ctx, req.ID, req.RID, req.Data, req.ExpectedRevision, req.ExpectedSchemaRevision, GitAuthor(user))
 	if err != nil {
-		return nil, dto.NotFound("table")
-	}
-
-	// Find existing record to preserve Created time
-	it, err := ws.IterRecords(req.ID)
-	if err != nil {
-		return nil, dto.NotFound("record")
-	}
-	var existing *content.DataRecord
-	for r := range it {
-		if r.ID == req.RID {
-			existing = r
-			break
+		if errors.Is(err, content.ErrRevisionConflict) {
+			conflict := dto.NewAPIError(409, dto.ErrorCodeConflict, "Record or table changed; read the current state before writing again").WithDetail("recovery", "read_current")
+			if revision, ok := errors.AsType[*content.RevisionConflictError](err); ok {
+				conflict = conflict.WithDetail("current_revision", revision.CurrentRevision)
+			}
+			if revision, ok := errors.AsType[*content.SchemaRevisionConflictError](err); ok {
+				conflict = conflict.WithDetail("current_schema_revision", revision.CurrentRevision)
+			}
+			return nil, conflict
 		}
-	}
-	if existing == nil {
-		return nil, dto.NotFound("record")
-	}
-
-	// Coerce data types based on property schema
-	coercedData := content.CoerceRecordData(req.Data, node.Properties)
-	// Ensure Data is never nil - JSON marshaling treats nil and {} differently
-	if coercedData == nil {
-		coercedData = make(map[string]any)
-	}
-
-	record := &content.DataRecord{
-		ID:       req.RID,
-		Data:     coercedData,
-		Created:  existing.Created,
-		Modified: storage.Now(),
-	}
-
-	author := GitAuthor(user)
-	if err := ws.UpdateRecord(ctx, req.ID, record, author); err != nil {
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
+		}
+		if errors.Is(err, content.ErrRecordNotFound) {
+			return nil, dto.NotFound("record")
+		}
 		return nil, dto.InternalWithError("Failed to update record", err)
 	}
+	response, err := dataRecordToResponse(record)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to compute record revision", err)
+	}
 	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, req.RID, user.ID)
-	return &dto.UpdateRecordResponse{ID: req.RID}, nil
+	return &dto.UpdateRecordResponse{Record: *response}, nil
 }
 
 // GetRecord retrieves a single record from a table.
@@ -663,7 +658,12 @@ func (h *NodeHandler) GetRecord(ctx context.Context, wsID ksid.ID, _ *identity.U
 	}
 	for record := range it {
 		if record.ID == req.RID {
+			revision, err := content.RecordRevision(record)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to compute record revision", err)
+			}
 			return &dto.GetRecordResponse{
+				Revision: revision,
 				ID:       record.ID,
 				Data:     record.Data,
 				Created:  record.Created,

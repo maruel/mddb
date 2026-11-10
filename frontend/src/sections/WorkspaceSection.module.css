@@ -207,6 +207,22 @@
   overflow-y: auto;
 }
 
+.recordDraft {
+  max-width: 100%;
+  padding: var(--s-3);
+  color: var(--c-text);
+  background: var(--c-surface-danger-subtle);
+  border: 1px solid var(--c-border-danger-strong);
+  border-radius: var(--radius-md);
+}
+
+.recordDraftContent {
+  max-height: 16rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .tableView {
   display: flex;
   flex: 1;

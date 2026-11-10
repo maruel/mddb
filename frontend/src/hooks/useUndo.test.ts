@@ -6,6 +6,31 @@ import { createRoot } from "solid-js";
 import { useUndo } from "./useUndo";
 
 describe("useUndo", () => {
+  it("retains failed undo and redo actions", async () => {
+    await createRoot(async (dispose) => {
+      const { push, undo, redo, canUndo, canRedo } = useUndo();
+      let failUndo = true;
+      push({
+        description: "record",
+        undo: async () => {
+          if (failUndo) throw new Error("conflict");
+        },
+        redo: async () => {
+          throw new Error("conflict");
+        },
+      });
+      await expect(undo()).rejects.toThrow("conflict");
+      expect(canUndo()).toBe(true);
+      expect(canRedo()).toBe(false);
+      failUndo = false;
+      await undo();
+      await expect(redo()).rejects.toThrow("conflict");
+      expect(canUndo()).toBe(false);
+      expect(canRedo()).toBe(true);
+      dispose();
+    });
+  });
+
   it("starts with empty stacks", () => {
     createRoot((dispose) => {
       const { canUndo, canRedo } = useUndo();

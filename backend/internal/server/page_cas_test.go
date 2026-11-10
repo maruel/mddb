@@ -1,4 +1,4 @@
-// Tests conditional HTTP/MCP page mutations, canonical responses, and rejected-write event isolation.
+// Tests conditional HTTP/MCP page and table mutations and rejected-write isolation.
 
 package server
 
@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"unicode/utf8"
 
@@ -23,6 +24,137 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
+
+func TestTableRevisionPreventsStaleSchemaReplacement(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, wsID := setupGoModeWorkspace(t, env, "table-revision@example.com")
+	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+	var table dto.CreateTableUnderParentResponse
+	if status := env.doJSON(t, http.MethodPost, base+"0/table/create", dto.CreateTableRequest{Title: "Original"}, &table, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	path := base + table.ID.String()
+	var original dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, path, nil, &original, token); status != http.StatusOK || original.SchemaRevision == "" {
+		t.Fatalf("get table: status %d, revision %q", status, original.SchemaRevision)
+	}
+	var view dto.CreateViewResponse
+	if status := env.doJSON(t, http.MethodPost, path+"/views/create", dto.CreateViewRequest{Name: "Concurrent", Type: "table"}, &view, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	change := dto.UpdateTableRequest{Title: "Changed", Properties: []dto.Property{{Name: "key", Type: "text"}}, ExpectedTitle: original.Title, ExpectedSchemaRevision: original.SchemaRevision}
+	var updated dto.UpdateTableResponse
+	if status := env.doJSON(t, http.MethodPost, path+"/table", change, &updated, token); status != http.StatusOK || updated.Title != "Changed" || updated.SchemaRevision == original.SchemaRevision || len(updated.Views) != 1 || updated.Views[0].ID != view.ID {
+		t.Fatalf("updated table: status %d, result %+v", status, updated)
+	}
+	var schema dto.GetTableSchemaResponse
+	if status := env.doJSON(t, http.MethodGet, path+"/table", nil, &schema, token); status != http.StatusOK || schema.SchemaRevision != updated.SchemaRevision || len(schema.Views) != 1 || schema.Views[0].ID != view.ID {
+		t.Fatalf("table schema: status %d, result %+v", status, schema)
+	}
+	change.ExpectedTitle = updated.Title
+	if status := env.doJSON(t, http.MethodPost, path+"/table", change, nil, token); status != http.StatusConflict {
+		t.Fatalf("stale schema: status %d", status)
+	}
+	change.ExpectedTitle = original.Title
+	change.ExpectedSchemaRevision = updated.SchemaRevision
+	if status := env.doJSON(t, http.MethodPost, path+"/table", change, nil, token); status != http.StatusConflict {
+		t.Fatalf("stale title: status %d", status)
+	}
+}
+
+func TestRecordRevisionPreventsStaleReplacement(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, wsID := setupGoModeWorkspace(t, env, "record-revision@example.com")
+	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+	var table dto.CreateTableUnderParentResponse
+	if status := env.doJSON(t, http.MethodPost, base+"0/table/create", dto.CreateTableRequest{Title: "Table"}, &table, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	path := base + table.ID.String()
+	var node dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, path, nil, &node, token); status != http.StatusOK || node.SchemaRevision == "" {
+		t.Fatalf("get table: status %d, node %+v", status, node)
+	}
+	var created dto.CreateRecordResponse
+	if status := env.doJSON(t, http.MethodPost, path+"/table/records/create", dto.CreateRecordRequest{Data: map[string]any{"key": "original"}}, &created, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	recordPath := path + "/table/records/" + created.ID.String()
+	var original dto.GetRecordResponse
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); status != http.StatusOK || original.Revision == "" {
+		t.Fatalf("get record: status %d, record %+v", status, original)
+	}
+	if status := env.doJSON(t, http.MethodPost, path+"/views/create", dto.CreateViewRequest{Name: "Unrelated", Type: "table"}, nil, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	change := dto.UpdateRecordRequest{Data: map[string]any{"key": "first"}, ExpectedRevision: original.Revision, ExpectedSchemaRevision: node.SchemaRevision}
+	var saved dto.UpdateRecordResponse
+	if status := env.doJSON(t, http.MethodPost, recordPath, change, &saved, token); status != http.StatusOK || saved.Record.Revision == original.Revision {
+		t.Fatalf("first write: status %d, record %+v", status, saved.Record)
+	}
+	change.Data = map[string]any{"key": "stale"}
+	if status := env.doJSON(t, http.MethodPost, recordPath, change, nil, token); status != http.StatusConflict {
+		t.Fatalf("stale write: status %d", status)
+	}
+	var current dto.GetRecordResponse
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &current, token); status != http.StatusOK || current.Data["key"] != "first" || current.Revision != saved.Record.Revision {
+		t.Fatalf("current record: status %d, record %+v", status, current)
+	}
+	var updated dto.UpdateTableResponse
+	tableChange := dto.UpdateTableRequest{Title: "Table", Properties: []dto.Property{{Name: "key", Type: "number"}}, ExpectedTitle: node.Title, ExpectedSchemaRevision: node.SchemaRevision}
+	if status := env.doJSON(t, http.MethodPost, path+"/table", tableChange, &updated, token); status != http.StatusOK || updated.SchemaRevision == node.SchemaRevision {
+		t.Fatalf("schema update: status %d, result %+v", status, updated)
+	}
+	change.ExpectedRevision = current.Revision
+	if status := env.doJSON(t, http.MethodPost, recordPath, change, nil, token); status != http.StatusConflict {
+		t.Fatalf("stale schema write: status %d", status)
+	}
+}
+
+func TestConcurrentRecordReplacements(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, wsID := setupGoModeWorkspace(t, env, "record-race@example.com")
+	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+	var table dto.CreateTableUnderParentResponse
+	if status := env.doJSON(t, http.MethodPost, base+"0/table/create", dto.CreateTableRequest{Title: "Table"}, &table, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	path := base + table.ID.String()
+	var node dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, path, nil, &node, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	var created dto.CreateRecordResponse
+	if status := env.doJSON(t, http.MethodPost, path+"/table/records/create", dto.CreateRecordRequest{Data: map[string]any{"key": "original"}}, &created, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	recordPath := path + "/table/records/" + created.ID.String()
+	var record dto.GetRecordResponse
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &record, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	results := make(chan int, 2)
+	var workers sync.WaitGroup
+	for _, value := range []string{"first", "second"} {
+		workers.Go(func() {
+			request := dto.UpdateRecordRequest{Data: map[string]any{"key": value}, ExpectedRevision: record.Revision, ExpectedSchemaRevision: node.SchemaRevision}
+			results <- env.doJSON(t, http.MethodPost, recordPath, request, nil, token)
+		})
+	}
+	workers.Wait()
+	close(results)
+	var statuses []int
+	for status := range results {
+		statuses = append(statuses, status)
+	}
+	slices.Sort(statuses)
+	if !slices.Equal(statuses, []int{http.StatusOK, http.StatusConflict}) {
+		t.Fatalf("concurrent writes: statuses %v", statuses)
+	}
+}
 
 func TestWorkspaceInvalidationAspects(t *testing.T) {
 	t.Parallel()

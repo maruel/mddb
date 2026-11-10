@@ -136,22 +136,23 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	hasTable := n.Type == content.NodeTypeTable || n.Type == content.NodeTypeHybrid
 
 	resp := &dto.NodeResponse{
-		Revision:    n.Revision,
-		ID:          n.ID,
-		ParentID:    n.ParentID,
-		Title:       n.Title,
-		Content:     n.Content,
-		Properties:  propertiesToDTO(n.Properties),
-		Views:       viewsToDTO(n.Views),
-		Created:     n.Created,
-		Modified:    n.Modified,
-		Tags:        n.Tags,
-		FaviconURL:  n.FaviconURL,
-		Icon:        n.Icon,
-		Cover:       n.Cover,
-		HasPage:     hasPage,
-		HasTable:    hasTable,
-		HasChildren: n.HasChildren,
+		Revision:       n.Revision,
+		SchemaRevision: n.SchemaRevision,
+		ID:             n.ID,
+		ParentID:       n.ParentID,
+		Title:          n.Title,
+		Content:        n.Content,
+		Properties:     propertiesToDTO(n.Properties),
+		Views:          viewsToDTO(n.Views),
+		Created:        n.Created,
+		Modified:       n.Modified,
+		Tags:           n.Tags,
+		FaviconURL:     n.FaviconURL,
+		Icon:           n.Icon,
+		Cover:          n.Cover,
+		HasPage:        hasPage,
+		HasTable:       hasTable,
+		HasChildren:    n.HasChildren,
 	}
 	if len(n.Children) > 0 {
 		resp.Children = make([]dto.NodeResponse, 0, len(n.Children))
@@ -164,13 +165,18 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	return resp
 }
 
-func dataRecordToResponse(r *content.DataRecord) *dto.DataRecordResponse {
+func dataRecordToResponse(r *content.DataRecord) (*dto.DataRecordResponse, error) {
+	revision, err := content.RecordRevision(r)
+	if err != nil {
+		return nil, err
+	}
 	return &dto.DataRecordResponse{
+		Revision: revision,
 		ID:       r.ID,
 		Data:     r.Data,
 		Created:  r.Created,
 		Modified: r.Modified,
-	}
+	}, nil
 }
 
 func commitToDTO(c *git.Commit) *dto.Commit {

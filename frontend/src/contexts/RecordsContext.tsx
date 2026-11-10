@@ -38,6 +38,8 @@ export const DEFAULT_VIEW_ID = "__default__";
 
 export interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
+  failedRecordDrafts: Accessor<Array<{ id: number; data: string }>>;
+  dismissRecordDraft: (id: number) => void;
   workspaceMembers: Accessor<WorkspaceMemberResponse[]>;
   // Map from user ID string to resolved user info (includes ghosts).
   resolvedUsers: Accessor<Map<string, ResolvedUser>>;
@@ -98,10 +100,15 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   // Application-level undo stack for record CRUD operations.
   const undoActions = useUndo();
+  // Successful local edits share a revision so successive undo actions can
+  // follow one another without accepting changes made by another client.
+  const undoRevisions = new Map<string, string>();
   // Prevents re-entering undo tracking when undo/redo calls CRUD functions.
   let isUndoing = false;
 
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
+  const [failedRecordDrafts, setFailedRecordDrafts] = createSignal<Array<{ id: number; data: string }>>([]);
+  let nextDraftId = 0;
   const [hasMore, setHasMore] = createSignal(false);
 
   // Workspace members for user-type column picker and ghost resolution.
@@ -385,6 +392,8 @@ export const RecordsProvider: ParentComponent = (props) => {
   });
 
   function clearRecords() {
+    undoRevisions.clear();
+    setFailedRecordDrafts([]);
     debouncedServerReload.cancel();
     recordsRequest++;
     setLoadingRecords(false);
@@ -612,14 +621,32 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     // Capture previous field values before overwriting.
     const prevRecord = records().find((r) => r.id === recordId);
-    const prevData: Record<string, unknown> = prevRecord?.data ? { ...prevRecord.data } : {};
+    const schemaRevision = selectedNodeData()?.schema_revision;
+    if (!prevRecord || !schemaRevision) {
+      setFailedRecordDrafts((drafts) => [...drafts, { id: nextDraftId++, data: JSON.stringify(data, null, 2) }]);
+      setSaveError(t("errors.failedToSave"));
+      return;
+    }
+    const prevData: Record<string, unknown> = prevRecord.data ? { ...prevRecord.data } : {};
+    const previousUndoRevision = undoRevisions.get(recordId);
+    if (previousUndoRevision && previousUndoRevision !== prevRecord.revision) {
+      undoActions.clear();
+      undoRevisions.clear();
+    }
 
+    let committed = false;
     try {
       setSavingRecordId(recordId);
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.updateRecord(nodeId, recordId, { data });
+      const saved = await ws.updateRecord(nodeId, recordId, {
+        data,
+        expected_revision: prevRecord.revision,
+        expected_schema_revision: schemaRevision,
+      });
+      committed = true;
       if (!operationCurrent()) return;
+      undoRevisions.set(recordId, saved.record.revision);
       await loadRecords(nodeId);
       if (!operationCurrent()) return;
       setSaveError(null);
@@ -636,10 +663,13 @@ export const RecordsProvider: ParentComponent = (props) => {
             const ws2 = ws;
             isUndoing = true;
             try {
-              await ws2.updateRecord(capturedNodeId, capturedRecordId, {
+              const result = await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedPrevData,
+                expected_revision: undoRevisions.get(capturedRecordId) ?? saved.record.revision,
+                expected_schema_revision: schemaRevision,
               });
               if (!operationCurrent()) return;
+              undoRevisions.set(capturedRecordId, result.record.revision);
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -650,10 +680,13 @@ export const RecordsProvider: ParentComponent = (props) => {
             const ws2 = ws;
             isUndoing = true;
             try {
-              await ws2.updateRecord(capturedNodeId, capturedRecordId, {
+              const result = await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedNewData,
+                expected_revision: undoRevisions.get(capturedRecordId) ?? saved.record.revision,
+                expected_schema_revision: schemaRevision,
               });
               if (!operationCurrent()) return;
+              undoRevisions.set(capturedRecordId, result.record.revision);
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -662,7 +695,10 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+      if (operationCurrent() && !committed) {
+        setFailedRecordDrafts((drafts) => [...drafts, { id: nextDraftId++, data: JSON.stringify(data, null, 2) }]);
+      }
+      if (operationCurrent()) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -868,8 +904,19 @@ export const RecordsProvider: ParentComponent = (props) => {
     }
   }
 
+  async function runHistory(redo: boolean) {
+    try {
+      await (redo ? undoActions.redo() : undoActions.undo());
+      setSaveError(null);
+    } catch (err) {
+      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+    }
+  }
+
   const value: RecordsContextValue = {
     records,
+    failedRecordDrafts,
+    dismissRecordDraft: (id) => setFailedRecordDrafts((drafts) => drafts.filter((draft) => draft.id !== id)),
     workspaceMembers,
     resolvedUsers,
     hasMore,
@@ -900,8 +947,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     updateView,
     deleteView,
     clearErrors,
-    undo: undoActions.undo,
-    redo: undoActions.redo,
+    undo: () => runHistory(false),
+    redo: () => runHistory(true),
     canUndo: undoActions.canUndo,
     canRedo: undoActions.canRedo,
   };

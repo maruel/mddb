@@ -28,12 +28,14 @@ describe("TableGrid", () => {
     {
       id: "rec-1",
       data: { Title: "Product A", Description: "A great product", Price: 99, Status: "active" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
     {
       id: "rec-2",
       data: { Title: "Product B", Description: "Another product", Price: 149, Status: "draft" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
@@ -72,6 +74,7 @@ describe("TableGrid", () => {
       {
         id: "rec-1",
         data: { Description: "No title", Price: 50 },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },
@@ -111,6 +114,7 @@ describe("TableGrid", () => {
       {
         id: "rec-1",
         data: { Title: "Partial", Description: null },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },

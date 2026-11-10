@@ -53,24 +53,28 @@ describe("TableBoard", () => {
     {
       id: "rec-1",
       data: { Title: "Task 1", Status: "todo", Priority: "High", Assignee: "Alice" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
     {
       id: "rec-2",
       data: { Title: "Task 2", Status: "in_progress", Priority: "Medium", Assignee: "Bob" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
     {
       id: "rec-3",
       data: { Title: "Task 3", Status: "done", Priority: "Low", Assignee: "Charlie" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
     {
       id: "rec-4",
       data: { Title: "Task 4", Status: "", Priority: "High", Assignee: "Diana" },
+      revision: "0".repeat(64),
       created: 1704067200,
       modified: 1704067200,
     },
@@ -150,6 +154,7 @@ describe("TableBoard", () => {
       {
         id: "rec-1",
         data: { Status: "todo", Priority: "High" },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },
@@ -235,12 +240,14 @@ describe("TableBoard", () => {
       {
         id: "rec-1",
         data: { Name: "Issue 1", Tags: "bug" },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },
       {
         id: "rec-2",
         data: { Name: "Issue 2", Tags: "feature" },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },
@@ -262,6 +269,7 @@ describe("TableBoard", () => {
       {
         id: "rec-1",
         data: { Title: "Task 1", Status: "todo", Priority: "High" },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },
@@ -284,6 +292,7 @@ describe("TableBoard", () => {
       {
         id: "rec-1",
         data: { Title: "Task 1", Status: "custom_status", Priority: "High" },
+        revision: "0".repeat(64),
         created: 1704067200,
         modified: 1704067200,
       },

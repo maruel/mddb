@@ -3,6 +3,10 @@
 package content
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/maruel/ksid"
@@ -12,23 +16,24 @@ import (
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
 	// Changes describes this mutation's committed effects, not persisted content.
-	Changes     NodeChanges  `json:"-"`
-	Revision    string       `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
-	ID          ksid.ID      `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID    ksid.ID      `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
-	Title       string       `json:"title" jsonschema:"description=Node title"`
-	Content     string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties  []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
-	Views       []View       `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
-	Created     storage.Time `json:"created" jsonschema:"description=Node creation timestamp"`
-	Modified    storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
-	Tags        []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
-	FaviconURL  string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
-	Icon        string       `json:"icon,omitempty" jsonschema:"description=Node icon (emoji or local asset path)"`
-	Cover       string       `json:"cover,omitempty" jsonschema:"description=Cover image (local asset path)"`
-	Type        NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
-	HasChildren bool         `json:"has_children,omitempty" jsonschema:"description=Whether this node has child nodes"`
-	Children    []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
+	Changes        NodeChanges  `json:"-"`
+	Revision       string       `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
+	SchemaRevision string       `json:"-"`
+	ID             ksid.ID      `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID       ksid.ID      `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title          string       `json:"title" jsonschema:"description=Node title"`
+	Content        string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties     []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
+	Views          []View       `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
+	Created        storage.Time `json:"created" jsonschema:"description=Node creation timestamp"`
+	Modified       storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Tags           []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
+	FaviconURL     string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
+	Icon           string       `json:"icon,omitempty" jsonschema:"description=Node icon (emoji or local asset path)"`
+	Cover          string       `json:"cover,omitempty" jsonschema:"description=Cover image (local asset path)"`
+	Type           NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
+	HasChildren    bool         `json:"has_children,omitempty" jsonschema:"description=Whether this node has child nodes"`
+	Children       []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
 // NodeChanges identifies effects computed while the mutation owns its snapshot.
@@ -195,6 +200,16 @@ func (r *DataRecord) SetValue(name string, value any) {
 // SetTime sets a time value as epoch seconds in the record's Data map.
 func (r *DataRecord) SetTime(name string, t time.Time) {
 	r.SetValue(name, float64(t.Unix()))
+}
+
+// RecordRevision hashes the canonical JSON representation of a record.
+func RecordRevision(record *DataRecord) (string, error) {
+	data, err := json.Marshal(record)
+	if err != nil {
+		return "", fmt.Errorf("encode record revision: %w", err)
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // Asset represents an uploaded file/image associated with a node.

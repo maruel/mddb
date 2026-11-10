@@ -6,6 +6,8 @@ package content
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -589,15 +591,27 @@ func (ws *WorkspaceFileStore) readNodeFromPath(path string, id, parentID ksid.ID
 			node.Title = title
 		}
 		if props, ok := metadata["properties"]; ok {
-			if propsData, err := json.Marshal(props); err == nil {
-				_ = json.Unmarshal(propsData, &node.Properties)
+			propsData, err := json.Marshal(props)
+			if err != nil {
+				return nil, nil, fmt.Errorf("encode table properties: %w", err)
+			}
+			if err := json.Unmarshal(propsData, &node.Properties); err != nil {
+				return nil, nil, fmt.Errorf("decode table properties: %w", err)
 			}
 		}
 		if views, ok := metadata["views"]; ok {
-			// Views are complex structures, marshal/unmarshal to avoid manual map walking
-			if viewsData, err := json.Marshal(views); err == nil {
-				_ = json.Unmarshal(viewsData, &node.Views)
+			viewsData, err := json.Marshal(views)
+			if err != nil {
+				return nil, nil, fmt.Errorf("encode table views: %w", err)
 			}
+			if err := json.Unmarshal(viewsData, &node.Views); err != nil {
+				return nil, nil, fmt.Errorf("decode table views: %w", err)
+			}
+		}
+		var err error
+		node.SchemaRevision, err = tableSchemaRevision(node.Properties)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
@@ -650,7 +664,7 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 	data, err := os.ReadFile(metadataFile) //nolint:gosec // G304: metadataFile is constructed from validated id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, errTableNotFound
+			return nil, ErrTableNotFound
 		}
 		return nil, fmt.Errorf("failed to read table metadata: %w", err)
 	}
@@ -683,18 +697,46 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 	}
 
 	if props, ok := metadata["properties"]; ok {
-		if propsData, err := json.Marshal(props); err == nil {
-			_ = json.Unmarshal(propsData, &node.Properties)
+		propsData, err := json.Marshal(props)
+		if err != nil {
+			return nil, fmt.Errorf("encode table properties: %w", err)
+		}
+		if err := json.Unmarshal(propsData, &node.Properties); err != nil {
+			return nil, fmt.Errorf("decode table properties: %w", err)
 		}
 	}
 
 	if views, ok := metadata["views"]; ok {
-		if viewsData, err := json.Marshal(views); err == nil {
-			_ = json.Unmarshal(viewsData, &node.Views)
+		viewsData, err := json.Marshal(views)
+		if err != nil {
+			return nil, fmt.Errorf("encode table views: %w", err)
 		}
+		if err := json.Unmarshal(viewsData, &node.Views); err != nil {
+			return nil, fmt.Errorf("decode table views: %w", err)
+		}
+	}
+	node.SchemaRevision, err = tableSchemaRevision(node.Properties)
+	if err != nil {
+		return nil, err
 	}
 
 	return node, nil
+}
+
+func tableMetadataRevision(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func tableSchemaRevision(properties []Property) (string, error) {
+	if len(properties) == 0 {
+		properties = nil
+	}
+	data, err := json.Marshal(properties)
+	if err != nil {
+		return "", fmt.Errorf("encode table schema revision: %w", err)
+	}
+	return tableMetadataRevision(data), nil
 }
 
 // WriteTable writes table metadata and commits to git.
@@ -717,6 +759,43 @@ func (ws *WorkspaceFileStore) WriteTable(ctx context.Context, node *Node, isNew 
 		files := []string{ws.gitPath(parentID, node.ID, "metadata.json")}
 		return "update: table " + node.ID.String(), files, nil
 	})
+}
+
+// MutateTable reads and changes table metadata while holding the repository's
+// mutation gate. The returned node describes the committed state.
+func (ws *WorkspaceFileStore) MutateTable(ctx context.Context, id ksid.ID, author git.Author, mutate func(*Node) error) (*Node, error) {
+	var node *Node
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		var err error
+		node, err = ws.ReadTable(id)
+		if err != nil {
+			return "", nil, err
+		}
+		before, err := ws.readNodeSummary(ctx, id)
+		if err != nil {
+			return "", nil, err
+		}
+		if err := mutate(node); err != nil {
+			return "", nil, err
+		}
+		node.Changes = NodeChanges{Title: before.Title != node.Title, Schema: !reflect.DeepEqual(before.Properties, node.Properties) || !reflect.DeepEqual(before.Views, node.Views)}
+		if !node.Changes.Title && !node.Changes.Schema {
+			return "", nil, nil
+		}
+		if err := ws.writeTable(node, false); err != nil {
+			return "", nil, err
+		}
+		saved, err := ws.ReadTable(id)
+		if err != nil {
+			return "", nil, err
+		}
+		node.SchemaRevision = saved.SchemaRevision
+		return "update: table " + id.String(), []string{ws.gitPath(node.ParentID, id, "metadata.json")}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
 }
 
 // writeTable writes table metadata without committing.
@@ -797,7 +876,7 @@ func (ws *WorkspaceFileStore) deleteTable(id ksid.ID) error {
 	metadataFile := ws.tableMetadataFile(id, parentID)
 	if err := os.Remove(metadataFile); err != nil {
 		if os.IsNotExist(err) {
-			return errTableNotFound
+			return ErrTableNotFound
 		}
 		return fmt.Errorf("failed to delete table metadata: %w", err)
 	}
@@ -976,32 +1055,48 @@ func (ws *WorkspaceFileStore) ReadRecordsPage(id ksid.ID, offset, limit int) ([]
 	return records, nil
 }
 
-// UpdateRecord updates a record in a table and commits to git.
-func (ws *WorkspaceFileStore) UpdateRecord(ctx context.Context, tableID ksid.ID, record *DataRecord, author git.Author) error {
-	parentID := ws.getParent(tableID)
-	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
-		if err := ws.updateRecord(tableID, parentID, record); err != nil {
+// ReplaceRecord conditionally replaces one record using its record and schema revisions.
+func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, recordID ksid.ID, data map[string]any, expectedRevision, expectedSchemaRevision string, author git.Author) (*DataRecord, error) {
+	var record *DataRecord
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		node, err := ws.ReadTable(tableID)
+		if err != nil {
+			return "", nil, err
+		}
+		if node.SchemaRevision != expectedSchemaRevision {
+			return "", nil, &SchemaRevisionConflictError{CurrentRevision: node.SchemaRevision}
+		}
+		parentID := node.ParentID
+		table, err := jsonldb.NewTable[*DataRecord](ws.tableRecordsFile(tableID, parentID))
+		if err != nil {
+			return "", nil, fmt.Errorf("open records: %w", err)
+		}
+		current := table.Get(recordID)
+		if current == nil {
+			return "", nil, ErrRecordNotFound
+		}
+		revision, err := RecordRevision(current)
+		if err != nil {
+			return "", nil, err
+		}
+		if revision != expectedRevision {
+			return "", nil, &RevisionConflictError{CurrentRevision: revision}
+		}
+		coerced := CoerceRecordData(data, node.Properties)
+		if coerced == nil {
+			coerced = make(map[string]any)
+		}
+		record = &DataRecord{ID: recordID, Data: coerced, Created: current.Created, Modified: storage.Now()}
+		if _, err := table.Update(record); err != nil {
 			return "", nil, err
 		}
 		files := []string{ws.gitPath(parentID, tableID, "data.jsonl")}
 		return "update: record " + record.ID.String(), files, nil
 	})
-}
-
-// updateRecord updates a record in a table without committing.
-func (ws *WorkspaceFileStore) updateRecord(tableID, tableParentID ksid.ID, record *DataRecord) error {
-	recordsFile := ws.tableRecordsFile(tableID, tableParentID)
-
-	table, err := jsonldb.NewTable[*DataRecord](recordsFile)
 	if err != nil {
-		return fmt.Errorf("failed to open table: %w", err)
+		return nil, err
 	}
-
-	_, err = table.Update(record)
-	if err != nil {
-		return fmt.Errorf("failed to update record: %w", err)
-	}
-	return nil
+	return record, nil
 }
 
 // DeleteRecord deletes a record and commits to git.
@@ -1566,7 +1661,7 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 // The node directory is kept if page content exists.
 func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id ksid.ID, author git.Author) (remaining *Node, deleted NodeDeletion, err error) {
 	if id.IsZero() {
-		return nil, deleted, errTableNotFound // No node with ID 0 exists
+		return nil, deleted, ErrTableNotFound // No node with ID 0 exists
 	}
 
 	err = ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
@@ -2022,6 +2117,10 @@ func (ws *WorkspaceFileStore) readSummary(ctx context.Context, dir string, id, p
 			if e := json.Unmarshal(b, &n.Views); e != nil {
 				return nil, nil, e
 			}
+		}
+		n.SchemaRevision, e = tableSchemaRevision(n.Properties)
+		if e != nil {
+			return nil, nil, e
 		}
 		n.Type = NodeTypeTable
 		if p != nil {

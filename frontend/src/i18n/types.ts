@@ -512,6 +512,7 @@ export interface Dictionary {
     titleRequired: string;
     failedToLoad: string;
     failedToSave: string;
+    recordDraft: string;
     failedToDelete: string;
     failedToCreate: string;
     failedToSwitch: string;

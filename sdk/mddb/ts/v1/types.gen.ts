@@ -931,6 +931,7 @@ export interface BacklinkInfo {
 /** NodeResponse is the API representation of a node. */
 export interface NodeResponse {
   revision?: string;
+  schema_revision?: string;
   id: string;
   parent_id?: string;
   title: string;
@@ -1053,6 +1054,7 @@ export interface CreateTableUnderParentResponse {
 
 /** GetTableSchemaResponse is a response containing table schema. */
 export interface GetTableSchemaResponse {
+  schema_revision: string;
   id: string;
   title: string;
   properties: Property[] | null;
@@ -1068,11 +1070,17 @@ export interface GetTableSchemaResponse {
 export interface UpdateTableRequest {
   title: string;
   properties: Property[] | null;
+  expected_title: string;
+  expected_schema_revision: string;
 }
 
 /** UpdateTableResponse is a response from updating a table. */
 export interface UpdateTableResponse {
   id: string;
+  title: string;
+  properties: Property[] | null;
+  views: View[] | null;
+  schema_revision: string;
 }
 
 /** CreateViewRequest is a request to create a new view for a table. */
@@ -1118,6 +1126,7 @@ export interface ListRecordsRequest {
 
 /** DataRecordResponse is the API representation of a data record. */
 export interface DataRecordResponse {
+  revision: string;
   id: string;
   data: { [key: string]: unknown} | null;
   created: number;
@@ -1131,6 +1140,7 @@ export interface ListRecordsResponse {
 
 /** GetRecordResponse is a response containing a record. */
 export interface GetRecordResponse {
+  revision: string;
   id: string;
   data: { [key: string]: unknown} | null;
   created: number;
@@ -1156,11 +1166,13 @@ export interface CreateRecordResponse {
  */
 export interface UpdateRecordRequest {
   data: { [key: string]: unknown} | null;
+  expected_revision: string;
+  expected_schema_revision: string;
 }
 
 /** UpdateRecordResponse is a response from updating a record. */
 export interface UpdateRecordResponse {
-  id: string;
+  record: DataRecordResponse;
 }
 
 /** ListNodeVersionsRequest is a request to list node version history. */

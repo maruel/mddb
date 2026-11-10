@@ -523,6 +523,7 @@ export const dict: Dictionary = {
     titleRequired: "Le titre est obligatoire",
     failedToLoad: "Échec du chargement",
     failedToSave: "Échec de l'enregistrement",
+    recordDraft: "Cet enregistrement n’a pas pu être enregistré. Copiez vos modifications avant de quitter ce tableau.",
     failedToDelete: "Échec de la suppression",
     failedToCreate: "Échec de la création",
     failedToSwitch: "Échec du changement d'espace",

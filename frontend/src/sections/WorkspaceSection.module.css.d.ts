@@ -43,6 +43,8 @@ declare const classes: {
   readonly "previewInfo": string;
   readonly "previewMeta": string;
   readonly "previewPane": string;
+  readonly "recordDraft": string;
+  readonly "recordDraftContent": string;
   readonly "saveErrorIndicator": string;
   readonly "savedIndicator": string;
   readonly "savingIndicator": string;

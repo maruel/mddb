@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -25,15 +26,6 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
-	// a revision-guarded table transaction. Whole-table replacement after this
-	// read can revert concurrent schema/property edits; page CAS does not protect it.
-
-	node, err := ws.ReadTable(req.NodeID)
-	if err != nil {
-		return nil, dto.NotFound("table")
-	}
-
 	viewID := ksid.NewID()
 	view := content.View{
 		ID:   viewID,
@@ -41,11 +33,15 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 		Type: content.ViewType(req.Type),
 	}
 
-	node.Views = append(node.Views, view)
-	node.Modified = storage.Now()
-
-	author := GitAuthor(user)
-	if err := ws.WriteTable(ctx, node, false, author); err != nil {
+	node, err := ws.MutateTable(ctx, req.NodeID, GitAuthor(user), func(node *content.Node) error {
+		node.Views = append(node.Views, view)
+		node.Modified = storage.Now()
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
+		}
 		return nil, dto.InternalWithError("Failed to save view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
@@ -59,51 +55,43 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
-	// a revision-guarded table transaction. Whole-table replacement after this
-	// read can revert concurrent schema/property edits; page CAS does not protect it.
-
-	node, err := ws.ReadTable(req.NodeID)
+	node, err := ws.MutateTable(ctx, req.NodeID, GitAuthor(user), func(node *content.Node) error {
+		for i := range node.Views {
+			if node.Views[i].ID != req.ViewID {
+				continue
+			}
+			// Update fields if present
+			if req.Name != "" {
+				node.Views[i].Name = req.Name
+			}
+			if req.Type != "" {
+				node.Views[i].Type = content.ViewType(req.Type)
+			}
+			// For slices, we assume the client sends the full new state if they are non-nil
+			if req.Columns != nil {
+				node.Views[i].Columns = viewColumnsToEntity(req.Columns)
+			}
+			if req.Filters != nil {
+				node.Views[i].Filters = filtersToEntity(req.Filters)
+			}
+			if req.Sorts != nil {
+				node.Views[i].Sorts = sortsToEntity(req.Sorts)
+			}
+			if req.Groups != nil {
+				node.Views[i].Groups = groupsToEntity(req.Groups)
+			}
+			node.Modified = storage.Now()
+			return nil
+		}
+		return dto.NotFound("view")
+	})
 	if err != nil {
-		return nil, dto.NotFound("table")
-	}
-
-	found := false
-	for i := range node.Views {
-		if node.Views[i].ID != req.ViewID {
-			continue
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
 		}
-		// Update fields if present
-		if req.Name != "" {
-			node.Views[i].Name = req.Name
+		if apiErr, ok := errors.AsType[*dto.APIError](err); ok {
+			return nil, apiErr
 		}
-		if req.Type != "" {
-			node.Views[i].Type = content.ViewType(req.Type)
-		}
-		// For slices, we assume the client sends the full new state if they are non-nil
-		if req.Columns != nil {
-			node.Views[i].Columns = viewColumnsToEntity(req.Columns)
-		}
-		if req.Filters != nil {
-			node.Views[i].Filters = filtersToEntity(req.Filters)
-		}
-		if req.Sorts != nil {
-			node.Views[i].Sorts = sortsToEntity(req.Sorts)
-		}
-		if req.Groups != nil {
-			node.Views[i].Groups = groupsToEntity(req.Groups)
-		}
-		found = true
-		break
-	}
-
-	if !found {
-		return nil, dto.NotFound("view")
-	}
-
-	node.Modified = storage.Now()
-	author := GitAuthor(user)
-	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to update view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
@@ -117,34 +105,33 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	// TODO(2026-11-08): table-record-concurrency: read and mutate views within
-	// a revision-guarded table transaction. Whole-table replacement after this
-	// read can revert concurrent schema/property edits; page CAS does not protect it.
-
-	node, err := ws.ReadTable(req.NodeID)
-	if err != nil {
-		return nil, dto.NotFound("table")
-	}
-
-	newViews := make([]content.View, 0, len(node.Views))
-	found := false
-	for i := range node.Views {
-		if node.Views[i].ID == req.ViewID {
-			found = true
-			continue
+	node, err := ws.MutateTable(ctx, req.NodeID, GitAuthor(user), func(node *content.Node) error {
+		newViews := make([]content.View, 0, len(node.Views))
+		found := false
+		for i := range node.Views {
+			if node.Views[i].ID == req.ViewID {
+				found = true
+				continue
+			}
+			newViews = append(newViews, node.Views[i])
 		}
-		newViews = append(newViews, node.Views[i])
-	}
 
-	if !found {
-		return nil, dto.NotFound("view")
-	}
+		if !found {
+			return dto.NotFound("view")
+		}
 
-	node.Views = newViews
-	node.Modified = storage.Now()
+		node.Views = newViews
+		node.Modified = storage.Now()
 
-	author := GitAuthor(user)
-	if err := ws.WriteTable(ctx, node, false, author); err != nil {
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
+		}
+		if apiErr, ok := errors.AsType[*dto.APIError](err); ok {
+			return nil, apiErr
+		}
 		return nil, dto.InternalWithError("Failed to delete view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)

@@ -22,8 +22,11 @@ const MAX_STACK = 50;
 export function useUndo() {
   const [undoStack, setUndoStack] = createSignal<UndoAction[]>([]);
   const [redoStack, setRedoStack] = createSignal<UndoAction[]>([]);
+  let generation = 0;
+  let busy = false;
 
   function push(action: UndoAction) {
+    generation++;
     setUndoStack((s) => {
       const trimmed = s.length >= MAX_STACK ? s.slice(s.length - MAX_STACK + 1) : s;
       return [...trimmed, action];
@@ -32,26 +35,55 @@ export function useUndo() {
   }
 
   async function undo() {
+    if (busy) return;
     const s = undoStack();
     if (s.length === 0) return;
     const action = s[s.length - 1] as UndoAction;
+    const previousRedo = redoStack();
+    const attempt = ++generation;
+    busy = true;
     setUndoStack(s.slice(0, -1));
     if (action.redo !== undefined) {
       setRedoStack((r) => [...r, action]);
     }
-    await action.undo();
+    try {
+      await action.undo();
+    } catch (error) {
+      if (generation === attempt) {
+        setUndoStack(s);
+        setRedoStack(previousRedo);
+      }
+      throw error;
+    } finally {
+      busy = false;
+    }
   }
 
   async function redo() {
+    if (busy) return;
     const r = redoStack();
     if (r.length === 0) return;
     const action = r[r.length - 1] as UndoAction;
+    const previousUndo = undoStack();
+    const attempt = ++generation;
+    busy = true;
     setRedoStack(r.slice(0, -1));
     setUndoStack((s) => [...s, action]);
-    if (action.redo) await action.redo();
+    try {
+      if (action.redo) await action.redo();
+    } catch (error) {
+      if (generation === attempt) {
+        setUndoStack(previousUndo);
+        setRedoStack(r);
+      }
+      throw error;
+    } finally {
+      busy = false;
+    }
   }
 
   function clear() {
+    generation++;
     setUndoStack([]);
     setRedoStack([]);
   }

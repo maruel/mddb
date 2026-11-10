@@ -1264,6 +1264,7 @@ NodeResponse is the API representation of a node.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `revision` | `string` |  |  |
+| `schema_revision` | `string` |  |  |
 | `id` | `string` |  | yes |
 | `parent_id` | `string` |  |  |
 | `title` | `string` |  | yes |
@@ -1422,6 +1423,7 @@ GetTableSchemaResponse is a response containing table schema.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `schema_revision` | `string` |  | yes |
 | `id` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `properties` | `Property[] \| null` |  | yes |
@@ -1438,6 +1440,8 @@ Now used for /nodes/{id}/table endpoint.
 |-------|------|-------------|----------|
 | `title` | `string` |  | yes |
 | `properties` | `Property[] \| null` |  | yes |
+| `expected_title` | `string` |  | yes |
+| `expected_schema_revision` | `string` |  | yes |
 
 ### UpdateTableResponse
 
@@ -1446,6 +1450,10 @@ UpdateTableResponse is a response from updating a table.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `string` |  | yes |
+| `title` | `string` |  | yes |
+| `properties` | `Property[] \| null` |  | yes |
+| `views` | `View[] \| null` |  | yes |
+| `schema_revision` | `string` |  | yes |
 
 ### CreateViewRequest
 
@@ -1504,6 +1512,7 @@ DataRecordResponse is the API representation of a data record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `revision` | `string` |  | yes |
 | `id` | `string` |  | yes |
 | `data` | `Record<string, JSONValue> \| null` |  | yes |
 | `created` | `number` |  | yes |
@@ -1523,6 +1532,7 @@ GetRecordResponse is a response containing a record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `revision` | `string` |  | yes |
 | `id` | `string` |  | yes |
 | `data` | `Record<string, JSONValue> \| null` |  | yes |
 | `created` | `number` |  | yes |
@@ -1553,6 +1563,8 @@ Now used for /nodes/{id}/table/records/{rid} endpoint.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `data` | `Record<string, JSONValue> \| null` |  | yes |
+| `expected_revision` | `string` |  | yes |
+| `expected_schema_revision` | `string` |  | yes |
 
 ### UpdateRecordResponse
 
@@ -1560,7 +1572,7 @@ UpdateRecordResponse is a response from updating a record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `string` |  | yes |
+| `record` | `DataRecordResponse` |  | yes |
 
 ### ListNodeVersionsRequest
 

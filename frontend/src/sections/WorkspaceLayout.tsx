@@ -62,7 +62,12 @@ const WorkspaceLayout: ParentComponent = (props) => {
   } = useWorkspace();
   const { connected, lastEvent } = useEventSource();
   const { beginIntent, prepareDeparture, editingLocked, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
-  const { undo: recordsUndo, redo: recordsRedo } = useRecords();
+  const {
+    undo: recordsUndo,
+    redo: recordsRedo,
+    saveError: recordSaveError,
+    setSaveError: setRecordSaveError,
+  } = useRecords();
 
   // The voice agent watches the open document so it can be told when the page
   // changes underneath it.
@@ -649,8 +654,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
               <Show
                 when={loadError()}
                 fallback={
-                  <Show when={saveError()}>
-                    {(error) => <TransientFeedback message={error()} onDismiss={() => setSaveError(null)} />}
+                  <Show when={saveError() || recordSaveError()}>
+                    {(error) => (
+                      <TransientFeedback
+                        message={error()}
+                        onDismiss={() => {
+                          if (saveError()) setSaveError(null);
+                          else setRecordSaveError(null);
+                        }}
+                      />
+                    )}
                   </Show>
                 }
               >

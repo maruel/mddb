@@ -279,7 +279,7 @@ func (r *UpdatePageRequest) Validate() error {
 	if r.Title == "" {
 		return MissingField("title")
 	}
-	return validatePageRevision(r.ExpectedRevision)
+	return validateRevision(r.ExpectedRevision)
 }
 
 // AppendPageRequest appends markdown against a previously read content revision.
@@ -298,18 +298,22 @@ func (r *AppendPageRequest) Validate() error {
 	if strings.TrimSpace(r.Content) == "" {
 		return MissingField("content")
 	}
-	return validatePageRevision(r.ExpectedRevision)
+	return validateRevision(r.ExpectedRevision)
 }
 
-func validatePageRevision(revision string) error {
+func validateRevision(revision string) error {
+	return validateNamedRevision("expected_revision", revision)
+}
+
+func validateNamedRevision(name, revision string) error {
 	if revision == "" {
-		return MissingField("expected_revision")
+		return MissingField(name)
 	}
 	if len(revision) != 64 {
-		return InvalidField("expected_revision", "must be a SHA256 revision")
+		return InvalidField(name, "must be a SHA256 revision")
 	}
 	if _, err := hex.DecodeString(revision); err != nil {
-		return InvalidField("expected_revision", "must be a SHA256 revision")
+		return InvalidField(name, "must be a SHA256 revision")
 	}
 	return nil
 }
@@ -449,10 +453,12 @@ func (r *CreateTableRequest) Validate() error {
 // UpdateTableRequest is a request to update a table.
 // Now used for /nodes/{id}/table endpoint.
 type UpdateTableRequest struct {
-	WsID       ksid.ID    `path:"wsID" json:"-"`
-	ID         ksid.ID    `path:"id" json:"-"`
-	Title      string     `json:"title"`
-	Properties []Property `json:"properties"`
+	WsID                   ksid.ID    `path:"wsID" json:"-"`
+	ID                     ksid.ID    `path:"id" json:"-"`
+	Title                  string     `json:"title"`
+	Properties             []Property `json:"properties"`
+	ExpectedTitle          string     `json:"expected_title"`
+	ExpectedSchemaRevision string     `json:"expected_schema_revision"`
 }
 
 // Validate validates the update table request fields.
@@ -464,7 +470,7 @@ func (r *UpdateTableRequest) Validate() error {
 	if r.Title == "" {
 		return MissingField("title")
 	}
-	return nil
+	return validateNamedRevision("expected_schema_revision", r.ExpectedSchemaRevision)
 }
 
 // DeleteTableRequest is a request to delete a table from a node.
@@ -616,10 +622,12 @@ func (r *CreateRecordRequest) Validate() error {
 // UpdateRecordRequest is a request to update a record.
 // Now used for /nodes/{id}/table/records/{rid} endpoint.
 type UpdateRecordRequest struct {
-	WsID ksid.ID        `path:"wsID" json:"-"`
-	ID   ksid.ID        `path:"id" json:"-"` // Node ID; 0 = root
-	RID  ksid.ID        `path:"rid" json:"-"`
-	Data map[string]any `json:"data"`
+	WsID                   ksid.ID        `path:"wsID" json:"-"`
+	ID                     ksid.ID        `path:"id" json:"-"` // Node ID; 0 = root
+	RID                    ksid.ID        `path:"rid" json:"-"`
+	Data                   map[string]any `json:"data"`
+	ExpectedRevision       string         `json:"expected_revision"`
+	ExpectedSchemaRevision string         `json:"expected_schema_revision"`
 }
 
 // Validate validates the update record request fields.
@@ -631,7 +639,10 @@ func (r *UpdateRecordRequest) Validate() error {
 	if r.RID.IsZero() {
 		return MissingField("rid")
 	}
-	return nil
+	if err := validateRevision(r.ExpectedRevision); err != nil {
+		return err
+	}
+	return validateNamedRevision("expected_schema_revision", r.ExpectedSchemaRevision)
 }
 
 // GetRecordRequest is a request to get a record.
