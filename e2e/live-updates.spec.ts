@@ -182,3 +182,42 @@ test("hybrid page removal refreshes another client's tree without discarding its
   ).toBeVisible();
   await observer.close();
 });
+
+test("network recovery refreshes remote changes and retains an unsaved draft", async ({ page, request }) => {
+  const { token } = await registerUser(request, "network-recovery");
+  const client = createClient(request, token);
+  await gotoWithSession(page, token);
+  await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+  const ws = client.ws(await getWorkspaceId(page));
+  const node = await ws.createPage("0", { title: "Network page", content: "Original" });
+  await page.reload();
+  await page.getByTestId(`sidebar-node-${node.id}`).click();
+  const title = page.locator('input[placeholder*="Title"]');
+  await expect(title).toHaveValue("Network page");
+  const origin = await page.evaluate(() => performance.timeOrigin);
+  await page.context().setOffline(true);
+  await expect(page.getByTestId("connection-status")).toHaveText("Reconnecting");
+  await ws.updatePage(node.id, {
+    expected_revision: (await ws.getNode(node.id)).revision ?? "",
+    title: "Changed while offline",
+    content: "Fresh remote content",
+  });
+  await page.context().setOffline(false);
+  await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+  await expect(title).toHaveValue("Changed while offline");
+  await title.fill("Keep this unsaved draft");
+  await page.context().setOffline(true);
+  await expect(page.getByTestId("connection-status")).toHaveText("Reconnecting");
+  await ws.updatePage(node.id, {
+    expected_revision: (await ws.getNode(node.id)).revision ?? "",
+    title: "Another remote edit",
+    content: "Latest remote content",
+  });
+  await page.context().setOffline(false);
+  await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+  await expect(title).toHaveValue("Keep this unsaved draft");
+  await expect(
+    page.getByText("This page changed elsewhere. Refresh to load it and discard your unsaved edits."),
+  ).toBeVisible();
+  expect(await page.evaluate(() => performance.timeOrigin)).toBe(origin);
+});

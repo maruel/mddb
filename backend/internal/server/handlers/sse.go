@@ -1,4 +1,4 @@
-// SSE handler for streaming workspace events to connected clients.
+// Streams workspace events and observable heartbeat frames to connected clients.
 
 package handlers
 
@@ -76,7 +76,10 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-ticker.C:
-			if err := stream.KeepAlive(); err != nil {
+			if err := stream.Writef("event: heartbeat\ndata: {}\n\n"); err != nil {
+				return
+			}
+			if err := stream.Flush(); err != nil {
 				return
 			}
 		}

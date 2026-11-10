@@ -94,12 +94,128 @@ function LatestEventType() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   MockEventSource.instances = [];
   vi.unstubAllGlobals();
 });
 
 describe("EventSourceProvider", () => {
+  it("waits offline, replaces routes immediately, and ignores retired callbacks", async (t) => {
+    vi.useFakeTimers();
+    let online = false;
+    t.mock.getter(navigator, "onLine", () => online);
+    const network = Object.assign(new EventTarget(), { type: "wifi" });
+    Object.defineProperty(navigator, "connection", { configurable: true, value: network });
+    t.after(() => Reflect.deleteProperty(navigator, "connection"));
+    vi.stubGlobal("EventSource", MockEventSource);
+    const view = render(() => (
+      <AuthContext.Provider value={authValue}>
+        <EventSourceProvider>
+          <ConnectionStatus />
+          <LatestEvent />
+          <LatestEventType />
+        </EventSourceProvider>
+      </AuthContext.Provider>
+    ));
+    expect(MockEventSource.instances).toHaveLength(0);
+    online = true;
+    window.dispatchEvent(new Event("online"));
+    const first = MockEventSource.instances[0]!;
+    first.open();
+    network.type = "cellular";
+    network.dispatchEvent(new Event("change"));
+    expect(first.close).toHaveBeenCalledOnce();
+    const next = MockEventSource.instances[1]!;
+    next.open();
+    expect(screen.getByTestId("latest-type")).toHaveTextContent("resync");
+    first.fail();
+    first.workspace("retired", null);
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
+    expect(screen.getByTestId("latest-event")).toHaveTextContent("0");
+    network.dispatchEvent(new Event("change"));
+    expect(MockEventSource.instances).toHaveLength(2);
+    online = false;
+    window.dispatchEvent(new Event("offline"));
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(next.close).toHaveBeenCalledOnce();
+    expect(MockEventSource.instances).toHaveLength(2);
+    view.unmount();
+    online = true;
+    window.dispatchEvent(new Event("online"));
+    expect(MockEventSource.instances).toHaveLength(2);
+  });
+
+  it("replaces a silent stream but keeps heartbeat traffic alive", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", MockEventSource);
+    render(() => (
+      <AuthContext.Provider value={authValue}>
+        <EventSourceProvider>
+          <ConnectionStatus />
+          <LatestEventType />
+        </EventSourceProvider>
+      </AuthContext.Provider>
+    ));
+    const first = MockEventSource.instances[0]!;
+    first.open();
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(30_000);
+      first.listeners.get("heartbeat")?.(new MessageEvent("heartbeat", { data: "{}" }));
+    }
+    expect(MockEventSource.instances).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(first.close).toHaveBeenCalledOnce();
+    expect(MockEventSource.instances).toHaveLength(2);
+    MockEventSource.instances[1]!.open();
+    expect(screen.getByTestId("latest-type")).toHaveTextContent("resync");
+  });
+
+  it("leaves reported connection errors to native retry and terminal HTTP handling", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", MockEventSource);
+    render(() => (
+      <AuthContext.Provider value={authValue}>
+        <EventSourceProvider>
+          <ConnectionStatus />
+        </EventSourceProvider>
+      </AuthContext.Provider>
+    ));
+    const first = MockEventSource.instances[0]!;
+    first.open();
+    first.fail();
+    await vi.advanceTimersByTimeAsync(180_000);
+    expect(MockEventSource.instances).toHaveLength(1);
+    expect(first.close).not.toHaveBeenCalled();
+    first.open();
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
+  });
+
+  for (const recovery of ["stall", "offline", "native"] as const) {
+    it(`resynchronizes after ${recovery} before the initial stream opens`, async (t) => {
+      vi.useFakeTimers();
+      let online = true;
+      t.mock.getter(navigator, "onLine", () => online);
+      vi.stubGlobal("EventSource", MockEventSource);
+      render(() => (
+        <AuthContext.Provider value={authValue}>
+          <EventSourceProvider>
+            <LatestEventType />
+          </EventSourceProvider>
+        </AuthContext.Provider>
+      ));
+      if (recovery === "stall") await vi.advanceTimersByTimeAsync(90_000);
+      else if (recovery === "offline") {
+        online = false;
+        window.dispatchEvent(new Event("offline"));
+        online = true;
+        window.dispatchEvent(new Event("online"));
+      } else MockEventSource.instances[0]!.fail();
+      MockEventSource.instances.at(-1)!.open();
+      expect(screen.getByTestId("latest-type")).toHaveTextContent("resync");
+    });
+  }
+
   it("delivers edits from the same account as well as other users", () => {
     vi.stubGlobal("EventSource", MockEventSource);
     render(() => (

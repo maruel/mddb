@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/maruel/ksid"
@@ -122,6 +123,34 @@ func TestSSEHandler(t *testing.T) {
 			if ct != "text/event-stream" {
 				t.Fatalf("want Content-Type text/event-stream, got %s", ct)
 			}
+		})
+
+		t.Run("observable heartbeat", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				broker := sse.NewBroker()
+				h := &SSEHandler{Svc: &Services{Broker: broker}, Cfg: &Config{Revision: "heartbeat-test"}}
+				wsID := ksid.NewID()
+				user := &identity.User{ID: ksid.NewID()}
+				ctx, cancel := context.WithCancel(t.Context())
+				r := httptest.NewRequest(http.MethodGet, "/events", http.NoBody)
+				r.SetPathValue("wsID", wsID.String())
+				r = r.WithContext(reqctx.WithUser(ctx, user))
+				w := newFlushRecorder()
+				var wg sync.WaitGroup
+				wg.Go(func() { h.ServeHTTP(w, r) })
+				synctest.Wait()
+				time.Sleep(30 * time.Second)
+				synctest.Wait()
+				cancel()
+				wg.Wait()
+				want := "event: server\ndata: {\"revision\":\"heartbeat-test\"}\n\nevent: heartbeat\ndata: {}\n\n"
+				if got := w.Body(); got != want {
+					t.Fatalf("frames = %q, want %q", got, want)
+				}
+				if broker.SubscriberCount(wsID) != 0 {
+					t.Fatal("heartbeat connection retained its subscription")
+				}
+			})
 		})
 
 		t.Run("bounds writes", func(t *testing.T) {

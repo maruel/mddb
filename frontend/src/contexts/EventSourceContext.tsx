@@ -1,4 +1,4 @@
-// SSE client context for receiving real-time workspace events.
+// Owns workspace event streams, route recovery, heartbeat liveness, and retired callback isolation.
 
 import {
   createContext,
@@ -9,6 +9,7 @@ import {
   type ParentComponent,
   type Accessor,
 } from "solid-js";
+import { observeNetworkChanges } from "../networkChanges";
 import { useAuth } from "./AuthContext";
 import { EventResync, type WorkspaceEvent } from "@sdk/types.gen";
 import { isLocalWriteRequest } from "../useApi";
@@ -40,45 +41,82 @@ export const EventSourceProvider: ParentComponent = (props) => {
 
     const sid = user()?.session_id;
     const url = `/api/v1/workspaces/${wsId}/events${sid ? `?session_id=${encodeURIComponent(sid)}` : ""}`;
-    const es = new EventSource(url);
-
-    let opened = false;
-    es.onopen = () => {
-      setConnected(true);
-      // EventSource reconnects without replay. Refresh current authorized state;
-      // editors retain their existing dirty/pending draft conflict protection.
-      if (opened) setLastEvent({ type: EventResync, node_id: "0", actor_id: "0", modified: 0 });
-      opened = true;
+    let source: EventSource | null = null;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    let active = true;
+    let resyncOnOpen = false;
+    const close = () => {
+      if (watchdog !== null) clearTimeout(watchdog);
+      watchdog = null;
+      const retired = source;
+      source = null;
+      retired?.close();
     };
-    es.onerror = () => setConnected(false);
-
-    es.addEventListener("workspace", (e: MessageEvent<string>) => {
-      try {
-        const evt = JSON.parse(e.data) as WorkspaceEvent;
-        // Suppress only writes the UI explicitly owns, including uploads and
-        // frontmatter. MCP tool calls remain visible even from the same tab.
-        if (evt.actor_id === userId && isLocalWriteRequest(evt.request_id)) return;
-        setLastEvent(evt);
-      } catch (err) {
-        console.error("Invalid workspace event", err);
-      }
-    });
-
-    es.addEventListener("server", (e: MessageEvent<string>) => {
-      try {
-        const { revision } = JSON.parse(e.data) as { revision: string };
-        if (knownRevision === null) {
-          knownRevision = revision;
-        } else if (revision !== knownRevision) {
-          window.location.reload();
+    const connect = () => {
+      if (source !== null || !navigator.onLine) resyncOnOpen = true;
+      close();
+      setConnected(false);
+      if (!active || !navigator.onLine) return;
+      const es = new EventSource(url);
+      source = es;
+      const current = () => active && source === es;
+      const alive = () => {
+        if (!current()) return;
+        if (watchdog !== null) clearTimeout(watchdog);
+        // The server sends observable heartbeats every 30 seconds. Three missed
+        // heartbeats replace a socket that never reports its broken route.
+        watchdog = setTimeout(connect, 90_000);
+      };
+      es.onopen = () => {
+        if (!current()) return;
+        alive();
+        setConnected(true);
+        // Streams do not replay events. Refresh authorized state after recovery;
+        // editors retain dirty/pending draft conflict protection.
+        if (resyncOnOpen) setLastEvent({ type: EventResync, node_id: "0", actor_id: "0", modified: 0 });
+        resyncOnOpen = true;
+      };
+      es.onerror = () => {
+        if (!current()) return;
+        resyncOnOpen = true;
+        setConnected(false);
+        // Native EventSource owns reported transport retries and terminal HTTP
+        // failures. The watchdog only detects sockets that stop reporting activity.
+        if (watchdog !== null) clearTimeout(watchdog);
+        watchdog = null;
+      };
+      es.addEventListener("heartbeat", alive);
+      es.addEventListener("workspace", (e: MessageEvent<string>) => {
+        if (!current()) return;
+        alive();
+        try {
+          const evt = JSON.parse(e.data) as WorkspaceEvent;
+          // Suppress only writes the UI explicitly owns. MCP calls remain visible.
+          if (evt.actor_id === userId && isLocalWriteRequest(evt.request_id)) return;
+          setLastEvent(evt);
+        } catch (err) {
+          console.error("Invalid workspace event", err);
         }
-      } catch (err) {
-        console.error("Invalid server event", err);
-      }
-    });
-
+      });
+      es.addEventListener("server", (e: MessageEvent<string>) => {
+        if (!current()) return;
+        alive();
+        try {
+          const { revision } = JSON.parse(e.data) as { revision: string };
+          if (knownRevision === null) knownRevision = revision;
+          else if (revision !== knownRevision) window.location.reload();
+        } catch (err) {
+          console.error("Invalid server event", err);
+        }
+      });
+      alive();
+    };
+    const stopObserving = observeNetworkChanges(connect);
+    connect();
     onCleanup(() => {
-      es.close();
+      active = false;
+      stopObserving();
+      close();
       setConnected(false);
     });
   });
