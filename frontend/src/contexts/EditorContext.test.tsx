@@ -8,7 +8,7 @@ import { HostModeProvider } from "@maruel/gomode/web/HostMode";
 import type { NodeResponse, UpdatePageRequest, UserResponse } from "@sdk/types.gen";
 import { expect, vi } from "@tests/expect";
 import { AuthProvider, useAuth } from "./AuthContext";
-import { WorkspaceDataProvider } from "./WorkspaceDataContext";
+import { WorkspaceDataProvider, useWorkspaceData } from "./WorkspaceDataContext";
 import { WorkspaceNavigationProvider, useWorkspaceNavigation } from "./WorkspaceNavigationContext";
 import { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
 import { EventSourceProvider } from "./EventSourceContext";
@@ -55,6 +55,7 @@ const node = (id: string, title: string, revision: string): NodeResponse => ({
 });
 let editor!: ReturnType<typeof useEditor>;
 let workspace!: ReturnType<typeof useWorkspace>;
+let workspaceData!: ReturnType<typeof useWorkspaceData>;
 let navigation!: ReturnType<typeof useWorkspaceNavigation>;
 let auth!: ReturnType<typeof useAuth>;
 let navigate!: ReturnType<typeof useNavigate>;
@@ -108,6 +109,7 @@ class FakeEventSource extends EventTarget {
 function Probe() {
   editor = useEditor();
   workspace = useWorkspace();
+  workspaceData = useWorkspaceData();
   navigation = useWorkspaceNavigation();
   auth = useAuth();
   navigate = useNavigate();
@@ -612,10 +614,91 @@ it("resumes the active document's deferred refresh when a workspace switch fails
   firstTitle = "Fresh after failed switch";
   FakeEventSource.current.onopen?.(new Event("open"));
   switching.reject(new TypeError("Switch connection lost"));
-  await switched;
+  await expect(switched).rejects.toThrow("Switch connection lost");
   await waitFor(() => expect(editor.title()).toBe("Fresh after failed switch"));
   expect(workspace.selectedNodeId()).toBe("one");
 });
+
+for (const rootOperation of ["refresh", "retry"] as const) {
+  it(`preserves a dirty admitted document when canonical root ${rootOperation} interrupts refresh ancestry`, async () => {
+    vi.stubGlobal("EventSource", FakeEventSource);
+    const ancestor = Promise.withResolvers<Response>();
+    const root = Promise.withResolvers<Response>();
+    const rootResponses: Array<Response | Promise<Response>> = [];
+    const signals: AbortSignal[] = [];
+    let holdAncestor = false;
+    let stopped = false;
+    let moved = false;
+    const fetcher = vi.mocked(globalThis.fetch).getMockImplementation();
+    if (!fetcher) throw new Error("Missing base fetch fixture");
+    vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.endsWith("/nodes/0/children")) {
+        const response = rootResponses.shift();
+        if (response) return Promise.resolve(response);
+      }
+      if (url.endsWith("/nodes/one"))
+        return Promise.resolve(
+          Response.json({
+            ...node("one", "Original", firstRevision),
+            parent_id: moved ? "two" : "parent",
+          }),
+        );
+      if (url.endsWith("/nodes/parent")) {
+        if (!holdAncestor) return Promise.resolve(Response.json(node("parent", "Old parent", firstRevision)));
+        const signal = init?.signal;
+        if (!signal) throw new Error("Missing selected ancestry signal");
+        signals.push(signal);
+        return new Promise<Response>((resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              stopped = true;
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+          ancestor.promise.then(resolve, reject);
+        });
+      }
+      if (url.endsWith("/nodes/two")) return Promise.resolve(Response.json(node("two", "New parent", firstRevision)));
+      return fetcher(input, init);
+    });
+    const previousSource = FakeEventSource.current;
+    mount();
+    await waitFor(() => expect(FakeEventSource.current).not.toBe(previousSource));
+    await waitFor(() => expect(workspace.breadcrumbPath().map((entry) => entry.id)).toEqual(["parent", "one"]));
+    await waitFor(() => expect(workspaceData.ready()).toBe(true));
+    await waitFor(() => expect(workspaceData.loadingNodes()).toBe(false));
+    if (rootOperation === "retry") {
+      rootResponses.push(Response.json({ error: { message: "Roots unavailable" } }, { status: 403 }));
+      await expect(workspaceData.refreshRoots()).rejects.toMatchObject({ status: 403 });
+    }
+    holdAncestor = true;
+    editor.refreshFromServer();
+    await waitFor(() => expect(signals).toHaveLength(1));
+    const document = workspace.selectedDocument();
+    editor.handleContentChange("Private body survives root replacement");
+    editor.handleTitleChange("Private title survives root replacement");
+    moved = true;
+    rootResponses.push(root.promise);
+    const preparing = rootOperation === "retry" ? workspaceData.retryPreparation() : workspaceData.refreshRoots();
+    expect(signals[0]?.aborted).toBe(true);
+    expect(stopped).toBe(true);
+    root.resolve(Response.json({ nodes: [node("two", "New parent", firstRevision)] }));
+    await preparing;
+    await waitFor(() => expect(workspace.loadingNodeId()).toBeNull());
+    expect(workspace.breadcrumbPath().map((entry) => entry.id)).toEqual(["two", "one"]);
+    expect(workspace.selectedNodeData()?.parent_id).toBe("two");
+    expect(workspace.selectedDocument()).toBe(document);
+    expect(editor.content()).toBe("Private body survives root replacement");
+    expect(editor.title()).toBe("Private title survives root replacement");
+    expect(editor.hasUnsavedChanges()).toBe(true);
+    expect(workspaceData.preparationError()).toBeNull();
+    ancestor.resolve(Response.json(node("parent", "Obsolete parent", firstRevision)));
+    expect(workspace.breadcrumbPath().map((entry) => entry.id)).toEqual(["two", "one"]);
+  });
+}
 
 it("retains complete dirty breadcrumbs when ancestor refresh fails and retries successfully", async () => {
   vi.stubGlobal("EventSource", FakeEventSource);
@@ -636,7 +719,11 @@ it("retains complete dirty breadcrumbs when ancestor refresh fails and retries s
     }
     return fetch(input, init);
   });
+  const previousSource = FakeEventSource.current;
   mount();
+  // A prior fixture also has two breadcrumbs; await this mount's subscription
+  // before invoking its first-open callback.
+  await waitFor(() => expect(FakeEventSource.current).not.toBe(previousSource));
   await waitFor(() => expect(workspace.breadcrumbPath()).toHaveLength(2));
   editor.handleContentChange("Private body");
   refreshing = true;
@@ -756,7 +843,7 @@ for (const target of ["node", "workspace"] as const) {
     const delayed = new Promise<Response>((resolve) => {
       release = resolve;
     });
-    let departing: Promise<void> | undefined;
+    let departing: Promise<unknown> | undefined;
     if (target === "node") {
       nodeResponse = delayed;
       navigate("/w/workspace/two");
@@ -952,7 +1039,8 @@ it("retires an in-flight save when the same node is authoritatively reloaded", a
   editor.handleTitleChange("Older pending draft");
   const saving = editor.beginIntent().drain();
   await waitFor(() => expect(calls).toHaveLength(1));
-  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  latest = node("one", "Reloaded title", "c".repeat(64));
+  await workspace.loadNode("one", { refresh: true });
   await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
   calls[0]!.resolve(saved("Older pending draft", "b".repeat(64)));
   expect(await saving).toBe(false);
@@ -967,6 +1055,19 @@ it("retires an in-flight save when the same node is authoritatively reloaded", a
   expect(await current).toBe(true);
 });
 
+it("preserves a private draft and title undo through a structural-only selected patch", async () => {
+  mount();
+  await waitFor(() => expect(editor.title()).toBe("Original"));
+  editor.handleTitleChange("Private draft");
+  const document = workspace.selectedDocument();
+  workspace.updateSelectedNode({ ...node("one", "Original", firstRevision), parent_id: "two" });
+  await waitFor(() => expect(workspace.selectedNodeData()?.parent_id).toBe("two"));
+  expect(workspace.selectedDocument()).toBe(document);
+  expect(editor.title()).toBe("Private draft");
+  expect(editor.hasUnsavedChanges()).toBe(true);
+  expect(editor.canUndo()).toBe(true);
+});
+
 it("retires asynchronous edit admission with its loaded document", async () => {
   mount();
   await waitFor(() => expect(editor.title()).toBe("Original"));
@@ -974,7 +1075,8 @@ it("retires asynchronous edit admission with its loaded document", async () => {
   const afterSave = vi.fn();
   const pending = editor.runAsyncEdit(() => new Promise<boolean>((resolve) => (finish = resolve)), afterSave);
   await waitFor(() => expect(editor.asyncEditPending()).toBe(true));
-  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  latest = node("one", "Reloaded title", "c".repeat(64));
+  await workspace.loadNode("one", { refresh: true });
   await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
   expect(editor.asyncEditPending()).toBe(false);
   finish(true);
@@ -991,7 +1093,8 @@ it("keeps admitted history across an authoritative refresh of its target documen
   historyReply = new Promise<Response>((resolve) => (reply = resolve));
   const intent = editor.beginIntent();
   const loading = editor.loadHistory("one", intent);
-  workspace.setSelectedNodeData(node("one", "Reloaded title", "c".repeat(64)));
+  latest = node("one", "Reloaded title", "c".repeat(64));
+  await workspace.loadNode("one", { refresh: true });
   await waitFor(() => expect(editor.title()).toBe("Reloaded title"));
   const commits = [
     { hash: "commit", message: "Saved", author_name: "User", author_email: "user@example.com", timestamp: 1 },

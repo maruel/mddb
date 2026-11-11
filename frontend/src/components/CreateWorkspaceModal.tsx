@@ -1,6 +1,6 @@
-// Modal component for creating a new workspace.
+// Creates a workspace and retries activation without repeating acknowledged creation.
 
-import { createSignal, createUniqueId, Show } from "solid-js";
+import { createSignal, createUniqueId, onCleanup, Show } from "solid-js";
 import { useI18n } from "../i18n";
 import { Button, Dialog } from "./shared";
 import styles from "./CreateWorkspaceModal.module.css";
@@ -11,15 +11,21 @@ interface CreateWorkspaceData {
 
 interface CreateWorkspaceModalProps {
   onClose: () => void;
-  onCreate: (data: CreateWorkspaceData) => Promise<void>;
+  onCreate: (data: CreateWorkspaceData) => Promise<string | null>;
+  onOpen: (id: string) => Promise<boolean>;
   isFirstWorkspace?: boolean;
 }
 
 export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
   const { t } = useI18n();
+  let disposed = false;
+  onCleanup(() => {
+    disposed = true;
+  });
   const [name, setName] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [createdId, setCreatedId] = createSignal<string | null>(null);
   const nameInputId = createUniqueId();
 
   const handleSubmit = async (e: Event) => {
@@ -29,14 +35,17 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
     try {
       setLoading(true);
       setError(null);
-      await props.onCreate({
-        name: name().trim(),
-      });
-      props.onClose();
+      let id = createdId();
+      if (id === null) {
+        id = await props.onCreate({ name: name().trim() });
+        if (disposed || id === null) return;
+        setCreatedId(id);
+      }
+      if ((await props.onOpen(id)) && !disposed) props.onClose();
     } catch (err) {
-      setError(String(err));
+      if (!disposed) setError(String(err));
     } finally {
-      setLoading(false);
+      if (!disposed) setLoading(false);
     }
   };
 
@@ -55,6 +64,9 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
       </header>
 
       <Show when={error()}>{(message) => <div class={styles.error}>{message()}</div>}</Show>
+      <Show when={createdId()}>
+        <p role="status">{t("createWorkspace.created")}</p>
+      </Show>
 
       <form onSubmit={handleSubmit}>
         <div class={styles.formGroup}>
@@ -66,6 +78,7 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
             onInput={(e) => setName(e.target.value)}
             placeholder={t("createWorkspace.namePlaceholder") || ""}
             autofocus
+            disabled={createdId() !== null}
           />
         </div>
 
@@ -81,7 +94,7 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
             class={`${styles.primaryButton} ${props.isFirstWorkspace ? styles.fullWidth : ""}`}
             disabled={!name().trim() || loading()}
           >
-            {loading() ? t("common.creating") : t("createWorkspace.create")}
+            {loading() ? t("common.loading") : createdId() ? t("recovery.retry") : t("createWorkspace.create")}
           </Button>
         </div>
       </form>

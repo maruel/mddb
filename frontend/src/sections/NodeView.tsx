@@ -35,7 +35,8 @@ export default function NodeView() {
   const {
     selectedNodeId,
     selectedNodeData,
-    setSelectedNodeData,
+    selectedDocument,
+    updateSelectedNode,
     savingNodeId,
     setSavingNodeId,
     setLoadError,
@@ -171,11 +172,9 @@ export default function NodeView() {
       () => stripSlug(params.nodeId),
       (nodeId) => {
         if (nodeId) {
-          void loadNode(nodeId, {
-            refresh: false,
-            navigation: true,
-            canApply: () => stripSlug(params.nodeId) === nodeId,
-          });
+          void loadNode(nodeId, { refresh: false, navigation: true }).catch((error: unknown) =>
+            console.warn("Node loading failed", error),
+          );
         }
       },
     ),
@@ -194,13 +193,18 @@ export default function NodeView() {
   async function updateTableProperties(nodeId: string, updatedProperties: Property[]) {
     const isCurrent = captureScope();
     const nodeData = selectedNodeData();
+    const document = selectedDocument();
     const ws = wsApi();
     if (!nodeData || nodeData.id !== nodeId || selectedNodeId() !== nodeId || !ws) return;
     if (!nodeData.schema_revision) {
       setSaveError(t("errors.failedToSave"));
       return;
     }
-    const ownsNode = () => isCurrent() && selectedNodeId() === nodeId && selectedNodeData() === nodeData;
+    const ownsNode = () =>
+      isCurrent() &&
+      selectedNodeId() === nodeId &&
+      selectedDocument() === document &&
+      selectedNodeData()?.schema_revision === nodeData.schema_revision;
     try {
       setSavingNodeId(nodeId);
       const saved = await ws.updateTable(nodeId, {
@@ -209,10 +213,13 @@ export default function NodeView() {
         expected_title: nodeData.title,
         expected_schema_revision: nodeData.schema_revision,
       });
-      if (!ownsNode()) return;
-      setSelectedNodeData({
-        ...nodeData,
-        title: saved.title,
+      const current = selectedNodeData();
+      if (!current || !ownsNode()) return;
+      // Schema ownership survives title/icon patches. Merge canonical schema
+      // fields into live metadata without replacing newer edits or the document.
+      updateSelectedNode({
+        ...current,
+        title: current.title === nodeData.title ? saved.title : current.title,
         properties: saved.properties ?? undefined,
         views: saved.views ?? undefined,
         schema_revision: saved.schema_revision,
@@ -286,7 +293,7 @@ export default function NodeView() {
       if (!isCurrent() || selectedNodeId() !== nodeId) return false;
       // Reload the originating node to get updated asset URLs
       if (nodeId)
-        void loadNode(nodeId, { refresh: false }).catch((backgroundError: unknown) => reportError(backgroundError));
+        void loadNode(nodeId, { refresh: false }).catch((error: unknown) => console.warn("Node loading failed", error));
       return true;
     });
 
@@ -478,7 +485,7 @@ export default function NodeView() {
                       const nodeId = selectedNodeId();
                       if (nodeId)
                         void loadNode(nodeId, { refresh: false }).catch((backgroundError: unknown) =>
-                          reportError(backgroundError),
+                          console.warn("Node loading failed", backgroundError),
                         );
                     }}
                     runAsyncEdit={runAsyncEdit}

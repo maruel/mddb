@@ -23,7 +23,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const { t } = useI18n();
   const { user, wsApi } = useAuth();
   const captureScope = useAuthScope();
-  const { fetchNodeChildren } = useWorkspace();
+  const { fetchNodeChildren, setLoadError } = useWorkspace();
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [adjustedPosition, setAdjustedPosition] = createSignal<{ top: number; left: number } | null>(null);
   let menuRef: HTMLDivElement | undefined;
@@ -198,7 +198,15 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
           }),
         (intent) =>
           untrack(async () => {
-            await fetchNodeChildren(parentId);
+            // The new child and its parent link are already saved. A failed
+            // navigation refresh is a read failure, not an unsaved edit.
+            try {
+              if (!(await fetchNodeChildren(parentId))) return;
+            } catch (error) {
+              if (isCurrent() && props.nodeId === parentId)
+                setLoadError(`${t("errors.failedToLoad")}: ${String(error)}`);
+              return;
+            }
             if (intent.current() && isCurrent() && props.nodeId === parentId) intent.navigate(url);
           }),
       );

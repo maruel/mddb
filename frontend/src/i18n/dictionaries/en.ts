@@ -270,6 +270,7 @@ export const dict: Dictionary = {
   },
 
   createWorkspace: {
+    created: "Workspace created. Retry opening it.",
     title: "Create Workspace",
     description: "Create a new workspace to organize your content.",
     firstWorkspaceTitle: "Create Your First Workspace",
@@ -560,6 +561,7 @@ export const dict: Dictionary = {
   },
 
   notionImport: {
+    started: "Import started. Retry opening its workspace.",
     title: "Import from Notion",
     description: "Create a new workspace from your Notion data.",
     notionToken: "Internal Integration Secret",
@@ -701,7 +703,7 @@ export const dict: Dictionary = {
   voice: {
     ...voiceMessages,
     authorizationFailed: "Unable to authorize voice. Try again.",
-    setupFailed: "Voice assistant unavailable. Reload to retry.",
+    setupFailed: "Voice assistant unavailable.",
     transcriptPlaceholder: "Conversation will appear here",
   },
 };

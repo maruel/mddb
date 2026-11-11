@@ -137,6 +137,7 @@ export const EditorProvider: ParentComponent = (props) => {
   const {
     selectedNodeId,
     selectedNodeData,
+    selectedDocument,
     loadingNodeId,
     switchingWorkspace,
     deletingNodeId,
@@ -290,7 +291,7 @@ export const EditorProvider: ParentComponent = (props) => {
     if (asyncEditPending()) return;
     const nodeId = selectedNodeId();
     if (nodeId) {
-      const node = selectedNodeData();
+      const node = selectedDocument();
       const captured = {
         draft: draft(),
         icon: icon(),
@@ -302,7 +303,7 @@ export const EditorProvider: ParentComponent = (props) => {
       void loadNode(nodeId, {
         refresh: true,
         canApply: () => {
-          if (selectedNodeData() !== node) return false;
+          if (selectedDocument() !== node) return false;
           if (
             asyncEditPending() ||
             savePending() ||
@@ -319,7 +320,7 @@ export const EditorProvider: ParentComponent = (props) => {
           setExternalChange(false);
           return true;
         },
-      }).catch((backgroundError: unknown) => reportError(backgroundError));
+      }).catch((error: unknown) => console.warn("Node loading failed", error));
     }
   };
 
@@ -667,7 +668,7 @@ export const EditorProvider: ParentComponent = (props) => {
 
   // Only an authoritative document load replaces its save owner and draft.
   createEffect(
-    on(selectedNodeData, (node) => {
+    on(selectedDocument, (node) => {
       // Clear undo stack on every node navigation
       undoActions.clear();
       titleBeforeEdit = null;

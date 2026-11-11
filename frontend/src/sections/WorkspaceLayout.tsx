@@ -324,7 +324,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           importPollInterval = undefined;
           // Reload nodes if import completed
           if (status.status === "completed") {
-            void refreshRoots().catch((backgroundError: unknown) => reportError(backgroundError));
+            void refreshRoots().catch((error: unknown) => console.warn("Workspace refresh failed", error));
           }
         }
       } catch {
@@ -337,21 +337,27 @@ const WorkspaceLayout: ParentComponent = (props) => {
     }, 2000);
   };
 
-  const handleNotionImport = async (data: NotionImportData) => {
+  const handleNotionImport = async (data: NotionImportData): Promise<string | null> => {
     const org = orgApi();
-    if (!org) return;
+    if (!org) return null;
     const identity = authIdentity();
-    const result = await org.startImport({
-      notion_token: data.notionToken,
-    });
-    if (disposed || authIdentity() !== identity) return;
-    // Switch to the new workspace (switchWorkspace navigates automatically)
-    await switchWorkspace(result.workspace_id);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Callbacks and asynchronous work can change this state after narrowing.
-    if (disposed || authIdentity() !== identity) return;
-    // Start polling for import status
-    startNotionImportPolling(result.workspace_id, org, identity);
+    try {
+      const result = await org.startImport({ notion_token: data.notionToken });
+      return !disposed && authIdentity() === identity ? result.workspace_id : null;
+    } catch (error) {
+      if (disposed || authIdentity() !== identity) return null;
+      throw error;
+    }
+  };
+
+  const handleOpenImportedWorkspace = async (wsId: string): Promise<boolean> => {
+    const org = orgApi();
+    if (!org) return false;
+    const identity = authIdentity();
+    if (!(await switchWorkspace(wsId)) || disposed || authIdentity() !== identity) return false;
+    startNotionImportPolling(wsId, org, identity);
     setNotionImportStatus({ status: "running", progress: 0, total: 0 });
+    return true;
   };
 
   const handleCancelNotionImport = async () => {
@@ -385,8 +391,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
   // Find a node's parent and siblings in the tree
   function findNodeContext(
     nodeId: string,
-    nodeList: NodeResponse[] = nodes,
-    parent: NodeResponse | null = null,
+    nodeList: NodeResponse[],
+    parent: NodeResponse | null,
   ): { parent: NodeResponse | null; siblings: NodeResponse[]; index: number } | null {
     const index = nodeList.findIndex((n) => n.id === nodeId);
     if (index !== -1) {
@@ -402,7 +408,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   // Create node helper
-  async function createNode(type: "document" | "table" = "document", parentId?: string) {
+  async function createNode(type: "document" | "table", parentId: string | null) {
     const intent = await prepareDeparture();
     if (!intent) return;
     const identity = authIdentity();
@@ -431,7 +437,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
         if (!isCurrent()) return;
         newNodeId = result.id;
       }
-      await refreshRoots();
+      // The mutation is acknowledged. Canonical refresh has its own error and
+      // retry; a failed refresh must not invite another creation.
+      await refreshRoots().catch((error: unknown) => console.warn("Workspace refresh failed", error));
       if (!isCurrent()) return;
       const u = user();
       const wsId = u?.workspace_id;
@@ -442,9 +450,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
       setSaveError(null);
       setNodeCreationParentId(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
+      if (isCurrent()) setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
-      setCreatingNode(false);
+      if (isCurrent()) setCreatingNode(false);
     }
   }
 
@@ -476,7 +484,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     // Find navigation target BEFORE deleting (if this is the selected node)
     let nextNode: NodeResponse | null = null;
     if (nodeId === selectedNodeId()) {
-      const ctx = findNodeContext(nodeId);
+      const ctx = findNodeContext(nodeId, nodes, null);
       if (ctx) {
         const { parent, siblings, index } = ctx;
         if (parent && parent.id !== "0") {
@@ -504,7 +512,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
         if (nextNode && wsId) {
           intent.navigate(nodeUrl(wsId, wsName, nextNode.id, nextNode.title));
         } else if (wsId) {
-          await refreshRoots();
+          // Deletion is already acknowledged; canonical retry owns refresh.
+          await refreshRoots().catch((error: unknown) => console.warn("Workspace refresh failed", error));
           if (!isCurrent()) return;
           // Navigate to workspace root, let WorkspaceRoot handle redirect
           intent.navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
@@ -512,14 +521,29 @@ const WorkspaceLayout: ParentComponent = (props) => {
       }
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
+      if (isCurrent()) setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
     } finally {
-      setDeletingNodeId(null);
+      if (isCurrent()) setDeletingNodeId(null);
     }
   }
 
-  async function handleMoveNode(nodeId: string, newParentId: string) {
-    await moveNode(nodeId, newParentId);
+  async function handleMoveNode(nodeId: string, newParentId: string): Promise<boolean> {
+    try {
+      if (!(await moveNode(nodeId, newParentId))) return false;
+      setSaveError(null);
+      return true;
+    } catch (error) {
+      setSaveError(`${t("errors.failedToMove")}: ${String(error)}`);
+      return false;
+    }
+  }
+
+  async function handleFetchChildren(nodeId: string): Promise<void> {
+    try {
+      await fetchNodeChildren(nodeId);
+    } catch (error) {
+      setLoadError(`${t("errors.failedToLoad")}: ${String(error)}`);
+    }
   }
 
   return (
@@ -610,12 +634,12 @@ const WorkspaceLayout: ParentComponent = (props) => {
           ancestorIds={breadcrumbPath().map((n) => n.id)}
           onCreatePage={() => {
             setNodeCreationParentId(null);
-            void createNode("document").catch((backgroundError: unknown) => reportError(backgroundError));
+            void createNode("document", null).catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onCreateTable={() => {
             setNodeCreationParentId(null);
-            void createNode("table").catch((backgroundError: unknown) => reportError(backgroundError));
+            void createNode("table", null).catch((backgroundError: unknown) => reportError(backgroundError));
             closeSidebar();
           }}
           onCreateChildPage={(parentId: string) => {
@@ -630,7 +654,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           }}
           onSelectNode={handleNodeClick}
           onCloseMobileSidebar={closeSidebar}
-          onFetchChildren={fetchNodeChildren}
+          onFetchChildren={handleFetchChildren}
           onDeleteNode={handleDeleteNode}
           onShowHistory={handleShowHistory}
           onOpenSettings={() => {
@@ -696,11 +720,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
         <CreateWorkspaceModal
           onClose={() => setShowCreateWorkspace(false)}
           onCreate={createWorkspace}
+          onOpen={switchWorkspace}
           isFirstWorkspace={isFirstWorkspace()}
         />
       </Show>
       <Show when={showNotionImport()}>
-        <NotionImportModal onClose={() => setShowNotionImport(false)} onImport={handleNotionImport} />
+        <NotionImportModal
+          onClose={() => setShowNotionImport(false)}
+          onImport={handleNotionImport}
+          onOpen={handleOpenImportedWorkspace}
+        />
       </Show>
       <Show when={showKeyboardShortcuts()}>
         <KeyboardShortcutsDialog onClose={() => setShowKeyboardShortcuts(false)} />

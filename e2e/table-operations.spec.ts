@@ -3,6 +3,7 @@
 import type { Page, APIRequestContext } from "@playwright/test";
 import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse, Property } from "../sdk/mddb/ts/v1/types.gen";
+import { gate } from "./gomode-fixtures";
 
 // Helper: create a table with records and navigate to it.
 async function setupTable(
@@ -42,6 +43,81 @@ async function getRowOrder(page: Page, names: string[]): Promise<string[]> {
 }
 
 test.describe("Table Creation and Basic Operations", () => {
+  for (const outcome of ["success", "failure", "departure"] as const) {
+    test(`schema acknowledgement preserves ownership after ${outcome}`, async ({ page, request }) => {
+      const { client, wsID, tableId } = await setupTable(
+        page,
+        request,
+        "schema-owner",
+        [{ name: "Name", type: "text" }],
+        [],
+      );
+      const ws = client.ws(wsID);
+      const other = await ws.createPage("0", { title: "Other document", content: "Other body" });
+      const requested = gate();
+      const release = gate();
+      const completed = gate();
+      let held = false;
+      await page.route(`**/nodes/${tableId}/table`, async (route) => {
+        if (route.request().method() !== "POST" || held) return route.continue();
+        held = true;
+        const response = outcome === "failure" ? null : await route.fetch();
+        requested.resolve();
+        await release.promise;
+        if (response) await route.fulfill({ response });
+        else
+          await route.fulfill({
+            status: 409,
+            json: { error: { code: "CONFLICT", message: "Schema acknowledgement refused" } },
+          });
+        completed.resolve();
+      });
+      await page.getByTitle("Add Column", { exact: true }).click();
+      await page.getByPlaceholder("Column Name", { exact: true }).fill("Acknowledged");
+      await page.getByRole("button", { name: "Confirm", exact: true }).click();
+      await requested.promise;
+      const title = page.getByRole("textbox", { name: "Title", exact: true });
+      if (outcome === "departure") {
+        await page.getByRole("treeitem", { name: "Other document", exact: true }).click();
+        await expect(title).toHaveValue("Other document");
+      } else {
+        await page.clock.install();
+        await page.clock.pauseAt(new Date());
+        await title.fill("Private title during schema write");
+      }
+      release.resolve();
+      await completed.promise;
+      if (outcome === "success") {
+        await expect(page.locator("th").getByText("Acknowledged", { exact: true })).toBeVisible();
+        await expect(title).toHaveValue("Private title during schema write");
+        // Return the title draft to its server value before another schema write.
+        await title.fill("schema-owner Table");
+        const acknowledged = await ws.getTable(tableId);
+        const next = page.waitForRequest(
+          (outgoing) => outgoing.method() === "POST" && outgoing.url().endsWith(`/nodes/${tableId}/table`),
+        );
+        await page.getByTitle("Add Column", { exact: true }).click();
+        await page.getByPlaceholder("Column Name", { exact: true }).fill("Next column");
+        await page.getByRole("button", { name: "Confirm", exact: true }).click();
+        expect((await next).postDataJSON()).toMatchObject({ expected_schema_revision: acknowledged.schema_revision });
+        await expect(page.locator("th").getByText("Next column", { exact: true })).toBeVisible();
+      } else if (outcome === "failure") {
+        await expect(page.getByRole("alert")).toContainText("Schema acknowledgement refused");
+        await expect(title).toHaveValue("Private title during schema write");
+        await expect(page.locator("th").getByText("Acknowledged", { exact: true })).toHaveCount(0);
+      } else {
+        await expect(title).toHaveValue("Other document");
+        await expect(page.getByRole("alert")).toHaveCount(0);
+        await expect(page.locator("th").getByText("Acknowledged", { exact: true })).toHaveCount(0);
+        expect((await ws.getTable(tableId)).properties?.some((property) => property.name === "Acknowledged")).toBe(
+          true,
+        );
+        expect((await ws.getNode(other.id)).title).toBe("Other document");
+      }
+      if (outcome !== "departure") await page.clock.resume();
+    });
+  }
+
   test.screenshot("create a table with properties and view it", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "table-create");
     await gotoWithSession(page, token);

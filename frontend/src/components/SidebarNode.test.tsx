@@ -28,6 +28,7 @@ function createNode(partial: Partial<NodeResponse> & { id: string; title: string
 
 interface TreeHarnessProps {
   node: NodeResponse;
+  ancestorIds?: string[];
   onDeleteNode?: (nodeId: string) => void;
   onMoveNode?: (nodeId: string, newParentId: string) => Promise<void>;
   onSelect?: (node: NodeResponse) => void;
@@ -43,7 +44,7 @@ function TreeHarness(props: TreeHarnessProps): JSX.Element {
         <SidebarNode
           node={props.node}
           selectedId={null}
-          ancestorIds={[]}
+          ancestorIds={props.ancestorIds ?? []}
           focusedNodeId={focusedNodeId()}
           movingNodeId={movingNodeId()}
           onSelect={props.onSelect ?? vi.fn()}
@@ -81,6 +82,22 @@ describe("SidebarNode data flow", () => {
           createNode({ id: "target", title: "Target", parent_id: "parent" }),
         ],
       });
+
+    it("expands each newly revealed ancestor and keeps manual collapse until membership changes", () => {
+      const [ancestorIds, setAncestorIds] = createSignal(["selected"]);
+      render(() => <TreeHarness node={parentNode()} ancestorIds={ancestorIds()} />);
+      const parent = screen.getByRole("treeitem", { name: "Parent" });
+      fireEvent.click(screen.getByTestId("expand-icon-parent"));
+      expect(parent).toHaveAttribute("aria-expanded", "false");
+      setAncestorIds(["parent", "selected"]);
+      expect(parent).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(screen.getByTestId("expand-icon-parent"));
+      setAncestorIds(["parent", "selected", "another ancestor"]);
+      expect(parent).toHaveAttribute("aria-expanded", "false");
+      setAncestorIds(["other", "selected"]);
+      setAncestorIds(["parent", "selected"]);
+      expect(parent).toHaveAttribute("aria-expanded", "true");
+    });
 
     it("exposes tree state and moves focus with arrow keys", () => {
       render(() => <TreeHarness node={parentNode()} />);

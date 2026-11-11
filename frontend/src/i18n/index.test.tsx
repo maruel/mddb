@@ -99,7 +99,7 @@ describe("I18nProvider", () => {
       expect(screen.getByTestId("translated").textContent).toBe("Loading...");
       expect(screen.getByTestId("voice").textContent).toBe("Enable microphone");
       expect(screen.getByTestId("voice-placeholder").textContent).toBe("Conversation will appear here");
-      expect(screen.getByTestId("voice-setup-error").textContent).toBe("Voice assistant unavailable. Reload to retry.");
+      expect(screen.getByTestId("voice-setup-error").textContent).toBe("Voice assistant unavailable.");
     });
 
     // Click button to change to French
@@ -112,9 +112,7 @@ describe("I18nProvider", () => {
       expect(screen.getByTestId("translated").textContent).toBe("Chargement...");
       expect(screen.getByTestId("voice").textContent).toBe("Activer le microphone");
       expect(screen.getByTestId("voice-placeholder").textContent).toBe("La conversation apparaîtra ici");
-      expect(screen.getByTestId("voice-setup-error").textContent).toBe(
-        "Assistant vocal indisponible. Rechargez la page pour réessayer.",
-      );
+      expect(screen.getByTestId("voice-setup-error").textContent).toBe("Assistant vocal indisponible.");
     });
     unmount();
   });

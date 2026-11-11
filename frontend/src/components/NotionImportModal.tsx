@@ -1,4 +1,4 @@
-// Modal for importing a workspace from Notion.
+// Starts a Notion import and retries workspace activation without repeating the import.
 
 import { createSignal, createUniqueId, Show, onCleanup } from "solid-js";
 import { useI18n } from "../i18n";
@@ -11,7 +11,8 @@ export interface NotionImportData {
 
 interface NotionImportModalProps {
   onClose: () => void;
-  onImport: (data: NotionImportData) => Promise<void>;
+  onImport: (data: NotionImportData) => Promise<string | null>;
+  onOpen: (id: string) => Promise<boolean>;
 }
 
 const NOTION_INTEGRATION_URL = "https://www.notion.so/profile/integrations/form/new-integration";
@@ -25,6 +26,7 @@ export default function NotionImportModal(props: NotionImportModalProps) {
   const [notionToken, setNotionToken] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [startedId, setStartedId] = createSignal<string | null>(null);
   const notionTokenInputId = createUniqueId();
 
   const handleSubmit = async (e: Event) => {
@@ -34,10 +36,13 @@ export default function NotionImportModal(props: NotionImportModalProps) {
     try {
       setLoading(true);
       setError(null);
-      await props.onImport({
-        notionToken: notionToken().trim(),
-      });
-      if (!disposed) props.onClose();
+      let id = startedId();
+      if (id === null) {
+        id = await props.onImport({ notionToken: notionToken().trim() });
+        if (disposed || id === null) return;
+        setStartedId(id);
+      }
+      if ((await props.onOpen(id)) && !disposed) props.onClose();
     } catch (err) {
       if (!disposed) setError(String(err));
     } finally {
@@ -59,6 +64,9 @@ export default function NotionImportModal(props: NotionImportModalProps) {
       </header>
 
       <Show when={error()}>{(message) => <div class={styles.error}>{message()}</div>}</Show>
+      <Show when={startedId()}>
+        <p role="status">{t("notionImport.started")}</p>
+      </Show>
 
       <div class={styles.setupBox}>
         <div class={styles.setupHeader}>
@@ -104,6 +112,7 @@ export default function NotionImportModal(props: NotionImportModalProps) {
             onInput={(e) => setNotionToken(e.target.value)}
             placeholder={t("notionImport.notionTokenPlaceholder") || ""}
             autofocus
+            disabled={startedId() !== null}
           />
         </div>
 
@@ -117,7 +126,7 @@ export default function NotionImportModal(props: NotionImportModalProps) {
             class={styles.primaryButton}
             disabled={!notionToken().trim() || loading()}
           >
-            {loading() ? t("notionImport.importing") : t("notionImport.startImport")}
+            {loading() ? t("common.loading") : startedId() ? t("recovery.retry") : t("notionImport.startImport")}
           </Button>
         </div>
       </form>

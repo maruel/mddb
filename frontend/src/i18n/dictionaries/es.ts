@@ -270,6 +270,7 @@ export const dict: Dictionary = {
   },
 
   createWorkspace: {
+    created: "Espacio creado. Vuelve a intentar abrirlo.",
     title: "Crear espacio de trabajo",
     description: "Crea un nuevo espacio de trabajo para organizar tu contenido.",
     firstWorkspaceTitle: "Crea tu primer espacio de trabajo",
@@ -561,6 +562,7 @@ export const dict: Dictionary = {
   },
 
   notionImport: {
+    started: "Importación iniciada. Vuelve a intentar abrir su espacio.",
     title: "Importar desde Notion",
     description: "Crea un nuevo espacio con tus datos de Notion.",
     notionToken: "Secreto de integración interna",
@@ -703,6 +705,6 @@ export const dict: Dictionary = {
     ...voiceMessages,
     transcriptPlaceholder: "La conversación aparecerá aquí",
     authorizationFailed: "No se pudo autorizar la voz. Inténtalo de nuevo.",
-    setupFailed: "Asistente de voz no disponible. Recarga la página para reintentar.",
+    setupFailed: "Asistente de voz no disponible.",
   },
 };

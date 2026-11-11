@@ -40,14 +40,14 @@ interface SidebarProps {
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
   onShowKeyboardShortcuts: () => void;
-  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void>;
+  onMoveNode?: (nodeId: string, newParentId: string) => Promise<boolean>;
 }
 
 export default function Sidebar(props: SidebarProps) {
   const { t } = useI18n();
   const { user, wsApi, refreshUser } = useAuth();
   const captureScope = useAuthScope();
-  const { switchWorkspace } = useWorkspace();
+  const { switchWorkspace, setLoadError } = useWorkspace();
   const [showOtherWorkspaces, setShowOtherWorkspaces] = createSignal(false);
   const [isEditingName, setIsEditingName] = createSignal(false);
   const [editNameValue, setEditNameValue] = createSignal("");
@@ -90,8 +90,7 @@ export default function Sidebar(props: SidebarProps) {
 
   const moveNode = async (nodeId: string, newParentId: string) => {
     setMovingNodeId(null);
-    await props.onMoveNode?.(nodeId, newParentId);
-    await focusMovedNode(nodeId, newParentId);
+    if (await props.onMoveNode?.(nodeId, newParentId)) await focusMovedNode(nodeId, newParentId);
   };
 
   const currentWsId = () => user()?.workspace_id || "";
@@ -185,7 +184,9 @@ export default function Sidebar(props: SidebarProps) {
 
   const handleSwitchWorkspace = (wsId: string) => {
     if (wsId !== currentWsId()) {
-      void switchWorkspace(wsId).catch((backgroundError: unknown) => reportError(backgroundError));
+      void switchWorkspace(wsId).catch((error: unknown) =>
+        setLoadError(`${t("errors.failedToSwitch")}: ${String(error)}`),
+      );
     }
   };
 
@@ -211,7 +212,7 @@ export default function Sidebar(props: SidebarProps) {
     setIsRootDropTarget(false);
     const nodeId = e.dataTransfer?.getData("text/plain");
     if (nodeId && props.onMoveNode) {
-      void props.onMoveNode(nodeId, "0").catch((backgroundError: unknown) => reportError(backgroundError));
+      void props.onMoveNode(nodeId, "0");
     }
   };
 

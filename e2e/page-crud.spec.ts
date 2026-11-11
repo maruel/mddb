@@ -415,8 +415,10 @@ test.describe("Page Navigation", () => {
     await page.reload();
     await waitForWorkspace(page);
 
-    // Expand hierarchy and navigate to grandchild
-    await page.locator(`[data-testid="sidebar-node-${parentData.id}"]`).click();
+    // Select the parent row rather than the subtree wrapper, whose center can
+    // land on an already expanded descendant.
+    await page.getByRole("treeitem", { name: "Alpha", exact: true }).click();
+    await expect(page.getByText("Parent content", { exact: true })).toBeVisible();
     await expect(page.locator(`[data-testid="sidebar-node-${childData.id}"]`)).toBeVisible({ timeout: 5000 });
     // Click the expand icon (verify it's visible and has adequate clickable size)
     const expandIcon = page.locator(`[data-testid="expand-icon-${childData.id}"]`);

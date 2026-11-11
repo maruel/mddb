@@ -271,6 +271,7 @@ export const dict: Dictionary = {
   },
 
   createWorkspace: {
+    created: "Arbeitsbereich erstellt. Öffnen erneut versuchen.",
     title: "Arbeitsbereich erstellen",
     description: "Erstellen Sie einen neuen Arbeitsbereich für Ihre Inhalte.",
     firstWorkspaceTitle: "Erstellen Sie Ihren ersten Arbeitsbereich",
@@ -563,6 +564,7 @@ export const dict: Dictionary = {
   },
 
   notionImport: {
+    started: "Import gestartet. Arbeitsbereich erneut öffnen.",
     title: "Aus Notion importieren",
     description: "Erstellen Sie einen neuen Arbeitsbereich aus Ihren Notion-Daten.",
     notionToken: "Internes Integrationsgeheimnis",
@@ -706,6 +708,6 @@ export const dict: Dictionary = {
     ...voiceMessages,
     transcriptPlaceholder: "Das Gespräch erscheint hier",
     authorizationFailed: "Sprachzugriff nicht autorisiert. Erneut versuchen.",
-    setupFailed: "Sprachassistent nicht verfügbar. Laden Sie die Seite erneut.",
+    setupFailed: "Sprachassistent nicht verfügbar.",
   },
 };

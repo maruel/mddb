@@ -261,6 +261,7 @@ export interface Dictionary {
   };
 
   createWorkspace: {
+    created: string;
     title: string;
     description: string;
     firstWorkspaceTitle: string;
@@ -551,6 +552,7 @@ export interface Dictionary {
   };
 
   notionImport: {
+    started: string;
     title: string;
     description: string;
     notionToken: string;

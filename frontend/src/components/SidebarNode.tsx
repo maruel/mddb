@@ -61,18 +61,13 @@ export default function SidebarNode(props: SidebarNodeProps) {
     }
   });
 
-  // Auto-expand for direct URL navigation when ancestorIds becomes available
-  // Track whether we've auto-expanded to prevent re-expanding after user collapses
-  const [hasAutoExpanded, setHasAutoExpanded] = createSignal(false);
+  // A newly revealed ancestor opens once; manual collapse survives unrelated
+  // path updates until this node leaves and later reenters the selected path.
   createEffect(
     on(
-      () => props.ancestorIds.length,
-      (length, prevLength) => {
-        const wasEmpty = prevLength === undefined || prevLength === 0;
-        if (wasEmpty && length > 0 && !hasAutoExpanded() && props.ancestorIds.includes(props.node.id)) {
-          setHasAutoExpanded(true);
-          setIsExpanded(true);
-        }
+      () => props.ancestorIds.includes(props.node.id),
+      (ancestor, previous) => {
+        if (ancestor && !previous) setIsExpanded(true);
       },
     ),
   );
@@ -84,7 +79,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
       void props
         .onFetchChildren(props.node.id)
         .finally(() => setIsLoadingChildren(false))
-        .catch((backgroundError: unknown) => reportError(backgroundError));
+        .catch((error: unknown) => console.warn("Sidebar command failed", error));
     }
   });
 
@@ -147,7 +142,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           void props
             .onFetchChildren(props.node.id)
             .finally(() => setIsLoadingChildren(false))
-            .catch((backgroundError: unknown) => reportError(backgroundError));
+            .catch((error: unknown) => console.warn("Sidebar command failed", error));
         }
       }, 600);
     }

@@ -32,7 +32,7 @@ interface OrgWithWorkspaces {
 export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const { t } = useI18n();
   const { user } = useAuth();
-  const { switchWorkspace } = useWorkspace();
+  const { switchWorkspace, setLoadError } = useWorkspace();
   const [isOpen, setIsOpen] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
   let triggerRef: HTMLButtonElement | undefined;
@@ -85,7 +85,11 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     setIsOpen(false);
     props.onSwitchWorkspace?.();
     if (wsId !== currentWsId()) {
-      await switchWorkspace(wsId);
+      try {
+        await switchWorkspace(wsId);
+      } catch (error) {
+        setLoadError(`${t("errors.failedToSwitch")}: ${String(error)}`);
+      }
     }
   };
 
