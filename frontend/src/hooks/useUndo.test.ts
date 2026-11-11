@@ -31,6 +31,92 @@ describe("useUndo", () => {
     });
   });
 
+  it("retains both actions when an undo fails after a newer action is pushed", async () => {
+    await createRoot(async (dispose) => {
+      const { push, undo } = useUndo();
+      let reject!: (error: Error) => void;
+      const gate = new Promise<void>((_resolve, fail) => {
+        reject = fail;
+      });
+      const applied: string[] = [];
+      let first = true;
+      push({
+        description: "older",
+        undo: async () => {
+          if (first) {
+            first = false;
+            await gate;
+          }
+          applied.push("older");
+        },
+      });
+      const pending = undo();
+      push({
+        description: "newer",
+        undo: async () => {
+          applied.push("newer");
+        },
+      });
+      reject(new Error("conflict"));
+      await expect(pending).rejects.toThrow("conflict");
+      await undo();
+      await undo();
+      expect(applied).toEqual(["newer", "older"]);
+      dispose();
+    });
+  });
+
+  it("does not restore history after a clear during a successful undo", async () => {
+    await createRoot(async (dispose) => {
+      const { push, undo, clear, canUndo, canRedo } = useUndo();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      push({ description: "record", undo: async () => gate, redo: async () => undefined });
+      const pending = undo();
+      clear();
+      release();
+      await pending;
+      expect(canUndo()).toBe(false);
+      expect(canRedo()).toBe(false);
+      dispose();
+    });
+  });
+
+  it("keeps a redo completed after a newer action as the next undo", async () => {
+    await createRoot(async (dispose) => {
+      const { push, undo, redo } = useUndo();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const applied: string[] = [];
+      push({
+        description: "older",
+        undo: async () => {
+          applied.push("older");
+        },
+        redo: async () => gate,
+      });
+      await undo();
+      applied.length = 0;
+      const pending = redo();
+      push({
+        description: "newer",
+        undo: async () => {
+          applied.push("newer");
+        },
+      });
+      release();
+      await pending;
+      await undo();
+      await undo();
+      expect(applied).toEqual(["older", "newer"]);
+      dispose();
+    });
+  });
+
   it("starts with empty stacks", () => {
     createRoot((dispose) => {
       const { canUndo, canRedo } = useUndo();
@@ -149,6 +235,31 @@ describe("useUndo", () => {
       });
       push({ description: "b", undo: vi.fn().mockResolvedValue(undefined) });
       await undo();
+      clear();
+      expect(canUndo()).toBe(false);
+      expect(canRedo()).toBe(false);
+      dispose();
+    });
+  });
+
+  it("releases trimmed actions and clears retained history after more than 50 edits", async () => {
+    await createRoot(async (dispose) => {
+      const { push, undo, clear, canUndo, canRedo } = useUndo();
+      const undone: number[] = [];
+      for (let i = 0; i < 60; i++) {
+        const snapshot = { index: i, payload: "x".repeat(4096) };
+        push({
+          description: `edit ${i}`,
+          undo: async () => {
+            undone.push(snapshot.index);
+          },
+          redo: async () => undefined,
+        });
+      }
+      for (let i = 0; i < 60; i++) await undo();
+      expect(undone).toEqual(Array.from({ length: 50 }, (_, i) => 59 - i));
+      expect(canUndo()).toBe(false);
+      expect(canRedo()).toBe(true);
       clear();
       expect(canUndo()).toBe(false);
       expect(canRedo()).toBe(false);

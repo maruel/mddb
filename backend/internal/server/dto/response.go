@@ -94,12 +94,12 @@ type DeleteTableResponse = OkResponse
 
 // CreateViewResponse is a response from creating a view.
 type CreateViewResponse struct {
-	ID ksid.ID `json:"id" jsonschema:"description=New view identifier"`
+	View View `json:"view"`
 }
 
 // UpdateViewResponse is a response from updating a view.
 type UpdateViewResponse struct {
-	ID ksid.ID `json:"id" jsonschema:"description=View identifier"`
+	View View `json:"view"`
 }
 
 // DeleteViewResponse is a response from deleting a view.
@@ -112,7 +112,8 @@ type ListRecordsResponse struct {
 
 // CreateRecordResponse is a response from creating a record.
 type CreateRecordResponse struct {
-	ID ksid.ID `json:"id"`
+	ID       ksid.ID `json:"id"`
+	Revision string  `json:"revision"`
 }
 
 // UpdateRecordResponse is a response from updating a record.

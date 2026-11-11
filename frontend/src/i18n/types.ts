@@ -514,6 +514,14 @@ export interface Dictionary {
     failedToLoad: string;
     failedToSave: string;
     recordDraft: string;
+    recordHistoryConflict: string;
+    recordYourChanges: string;
+    recordCurrent: string;
+    recordReview: string;
+    recordReplace: string;
+    recordDiscard: string;
+    viewRecovery: string;
+    discardViewChanges: string;
     failedToDelete: string;
     failedToCreate: string;
     failedToSwitch: string;

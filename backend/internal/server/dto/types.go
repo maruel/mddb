@@ -220,14 +220,15 @@ type SearchResult struct {
 
 // View represents a saved table view configuration.
 type View struct {
-	ID      ksid.ID      `json:"id" jsonschema:"description=Unique view identifier"`
-	Name    string       `json:"name" jsonschema:"description=View display name"`
-	Type    ViewType     `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
-	Default bool         `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
-	Columns []ViewColumn `json:"columns,omitempty" jsonschema:"description=Column visibility and ordering"`
-	Filters []Filter     `json:"filters,omitempty" jsonschema:"description=Filter conditions"`
-	Sorts   []Sort       `json:"sorts,omitempty" jsonschema:"description=Sort order"`
-	Groups  []Group      `json:"groups,omitempty" jsonschema:"description=Grouping configuration"`
+	Revision string       `json:"revision" jsonschema:"description=Canonical view revision"`
+	ID       ksid.ID      `json:"id" jsonschema:"description=Unique view identifier"`
+	Name     string       `json:"name" jsonschema:"description=View display name"`
+	Type     ViewType     `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
+	Default  bool         `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
+	Columns  []ViewColumn `json:"columns,omitempty" jsonschema:"description=Column visibility and ordering"`
+	Filters  []Filter     `json:"filters,omitempty" jsonschema:"description=Filter conditions"`
+	Sorts    []Sort       `json:"sorts,omitempty" jsonschema:"description=Sort order"`
+	Groups   []Group      `json:"groups,omitempty" jsonschema:"description=Grouping configuration"`
 }
 
 // ViewType defines the layout type for a view.

@@ -33,7 +33,7 @@ func TestRecordResources(t *testing.T) {
 	if status := env.doJSON(t, http.MethodPost, base+table.ID.String()+"/views/create", dto.CreateViewRequest{Name: "Ranked", Type: dto.ViewTypeTable}, &view, token); status != http.StatusOK {
 		t.Fatalf("create view: %d", status)
 	}
-	if status := env.doJSON(t, http.MethodPost, base+table.ID.String()+"/views/"+view.ID.String(), dto.UpdateViewRequest{Filters: []dto.Filter{{Property: "Keep", Operator: dto.FilterOpEquals, Value: true}}, Sorts: []dto.Sort{{Property: "Score", Direction: dto.SortAsc}}}, nil, token); status != http.StatusOK {
+	if status := env.doJSON(t, http.MethodPost, base+table.ID.String()+"/views/"+view.View.ID.String(), dto.UpdateViewRequest{ExpectedRevision: view.View.Revision, Filters: []dto.Filter{{Property: "Keep", Operator: dto.FilterOpEquals, Value: true}}, Sorts: []dto.Sort{{Property: "Score", Direction: dto.SortAsc}}}, nil, token); status != http.StatusOK {
 		t.Fatalf("configure view: %d", status)
 	}
 	var node dto.NodeResponse
@@ -80,7 +80,7 @@ func TestRecordResources(t *testing.T) {
 	// or the directly watched record.
 	callMCPNamedAt(t, env, token, endpoint, "tools/call", map[string]any{"name": "node_read", "arguments": map[string]any{"nodeId": table.ID.String()}, "_meta": meta}, "node_read")
 	record := call("record_read", map[string]any{"nodeId": table.ID.String(), "recordId": first.ID.String()})
-	query := call("records_query", map[string]any{"nodeId": table.ID.String(), "viewId": view.ID.String(), "limit": 1})
+	query := call("records_query", map[string]any{"nodeId": table.ID.String(), "viewId": view.View.ID.String(), "limit": 1})
 	if len(query.Records) != 1 || query.Records[0].ID != first.ID || query.NextURI == "" || query.Revision == "" {
 		t.Fatalf("saved-view range: %+v", query)
 	}
@@ -112,7 +112,7 @@ func TestRecordResources(t *testing.T) {
 			t.Fatalf("unrelated schema/record invalidated: %+v", watched)
 		}
 	}
-	current := call("records_query", map[string]any{"nodeId": table.ID.String(), "viewId": view.ID.String(), "limit": 1})
+	current := call("records_query", map[string]any{"nodeId": table.ID.String(), "viewId": view.View.ID.String(), "limit": 1})
 	if current.Records[0].ID != second.ID || current.Revision == query.Revision {
 		t.Fatalf("query order did not change: %+v", current)
 	}

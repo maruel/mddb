@@ -1054,11 +1054,25 @@ func TestWorkspaceFileStore(t *testing.T) {
 			})
 
 			t.Run("DeleteRecord", func(t *testing.T) {
-				if err := ws.DeleteRecord(ctx, tableID, record.ID, author); err != nil {
+				it, err := ws.IterRecords(tableID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var revision string
+				for current := range it {
+					if current.ID == record.ID {
+						revision, err = RecordRevision(current)
+						if err != nil {
+							t.Fatal(err)
+						}
+						break
+					}
+				}
+				if err := ws.DeleteRecord(ctx, tableID, record.ID, revision, author); err != nil {
 					t.Fatalf("failed to delete record: %v", err)
 				}
 
-				it, err := ws.IterRecords(tableID)
+				it, err = ws.IterRecords(tableID)
 				if err != nil {
 					t.Fatalf("failed to iter records: %v", err)
 				}
@@ -2492,6 +2506,49 @@ func pageRevision(t *testing.T, ctx context.Context, ws *WorkspaceFileStore, id 
 }
 
 func BenchmarkWorkspaceFileStore(b *testing.B) {
+	b.Run("ReplaceRecord256KiB", func(b *testing.B) {
+		dir := b.TempDir()
+		repo, err := git.NewManagerWithBackend(dir, "Bench", "bench@example.com", git.BackendGoGit).Repo(b.Context(), "")
+		if err != nil {
+			b.Fatal(err)
+		}
+		quotas := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(dir, repo, &quotas)
+		author := git.Author{Name: "Bench", Email: "bench@example.com"}
+		table, err := ws.CreateTableUnderParent(b.Context(), 0, "Table", []Property{{Name: "body", Type: PropertyTypeText}}, author)
+		if err != nil {
+			b.Fatal(err)
+		}
+		schema, err := ws.ReadTable(table.ID)
+		if err != nil {
+			b.Fatal(err)
+		}
+		body := strings.Repeat("x", 256<<10)
+		now := storage.Now()
+		record := &DataRecord{ID: ksid.NewID(), Data: map[string]any{"body": body}, Created: now, Modified: now}
+		if err := ws.AppendRecord(b.Context(), table.ID, record, author); err != nil {
+			b.Fatal(err)
+		}
+		revision, err := RecordRevision(record)
+		if err != nil {
+			b.Fatal(err)
+		}
+		b.ReportAllocs()
+		b.SetBytes(int64(len(body)))
+		i := 0
+		for b.Loop() {
+			saved, err := ws.ReplaceRecord(b.Context(), table.ID, record.ID, map[string]any{"body": body, "step": strconv.Itoa(i)}, revision, schema.SchemaRevision, author)
+			if err != nil {
+				b.Fatal(err)
+			}
+			revision, err = RecordRevision(saved)
+			if err != nil {
+				b.Fatal(err)
+			}
+			i++
+		}
+	})
+
 	b.Run("Replace4MiB", func(b *testing.B) {
 		dir := b.TempDir()
 		repo, err := git.NewManagerWithBackend(dir, "Bench", "bench@example.com", git.BackendGoGit).Repo(b.Context(), "")

@@ -14,8 +14,8 @@ const MAX_STACK = 50;
  * useUndo provides a bounded undo/redo stack.
  *
  * - push(action): add an action and clear the redo stack.
- * - undo(): pop the latest action, run action.undo(), push to redo if action.redo exists.
- * - redo(): pop the latest redo action, run action.redo(), push back to undo stack.
+ * - undo(): run the latest action and move it to redo after success.
+ * - redo(): run the latest redo action and move it back after success.
  * - clear(): empty both stacks (e.g. on node navigation).
  * - canUndo() / canRedo(): reactive accessors for UI state.
  */
@@ -23,6 +23,7 @@ export function useUndo() {
   const [undoStack, setUndoStack] = createSignal<UndoAction[]>([]);
   const [redoStack, setRedoStack] = createSignal<UndoAction[]>([]);
   let generation = 0;
+  let epoch = 0;
   let busy = false;
 
   function push(action: UndoAction) {
@@ -36,24 +37,19 @@ export function useUndo() {
 
   async function undo() {
     if (busy) return;
-    const s = undoStack();
-    if (s.length === 0) return;
-    const action = s[s.length - 1] as UndoAction;
-    const previousRedo = redoStack();
-    const attempt = ++generation;
+    const action = undoStack().at(-1);
+    if (!action) return;
+    const attempt = generation;
+    const owner = epoch;
     busy = true;
-    setUndoStack(s.slice(0, -1));
-    if (action.redo !== undefined) {
-      setRedoStack((r) => [...r, action]);
-    }
     try {
       await action.undo();
-    } catch (error) {
-      if (generation === attempt) {
-        setUndoStack(s);
-        setRedoStack(previousRedo);
-      }
-      throw error;
+      if (owner !== epoch) return;
+      setUndoStack((stack) => {
+        const index = stack.lastIndexOf(action);
+        return index < 0 ? stack : [...stack.slice(0, index), ...stack.slice(index + 1)];
+      });
+      if (generation === attempt && action.redo) setRedoStack((stack) => [...stack, action]);
     } finally {
       busy = false;
     }
@@ -61,22 +57,18 @@ export function useUndo() {
 
   async function redo() {
     if (busy) return;
-    const r = redoStack();
-    if (r.length === 0) return;
-    const action = r[r.length - 1] as UndoAction;
-    const previousUndo = undoStack();
-    const attempt = ++generation;
+    const action = redoStack().at(-1);
+    if (!action?.redo) return;
+    const owner = epoch;
     busy = true;
-    setRedoStack(r.slice(0, -1));
-    setUndoStack((s) => [...s, action]);
     try {
-      if (action.redo) await action.redo();
-    } catch (error) {
-      if (generation === attempt) {
-        setUndoStack(previousUndo);
-        setRedoStack(r);
-      }
-      throw error;
+      await action.redo();
+      if (owner !== epoch) return;
+      setRedoStack((stack) => {
+        const index = stack.lastIndexOf(action);
+        return index < 0 ? stack : [...stack.slice(0, index), ...stack.slice(index + 1)];
+      });
+      setUndoStack((stack) => [...stack.slice(-(MAX_STACK - 1)), action]);
     } finally {
       busy = false;
     }
@@ -84,6 +76,7 @@ export function useUndo() {
 
   function clear() {
     generation++;
+    epoch++;
     setUndoStack([]);
     setRedoStack([]);
   }

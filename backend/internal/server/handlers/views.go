@@ -4,6 +4,9 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 
 	"github.com/maruel/ksid"
@@ -45,7 +48,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to save view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
-	return &dto.CreateViewResponse{ID: viewID}, nil
+	return &dto.CreateViewResponse{View: viewToDTO(&node.Views[len(node.Views)-1])}, nil
 }
 
 // UpdateView updates an existing view.
@@ -59,6 +62,9 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 		for i := range node.Views {
 			if node.Views[i].ID != req.ViewID {
 				continue
+			}
+			if err := checkViewRevision(&node.Views[i], req.ExpectedRevision); err != nil {
+				return err
 			}
 			// Update fields if present
 			if req.Name != "" {
@@ -95,7 +101,12 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to update view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
-	return &dto.UpdateViewResponse{ID: req.ViewID}, nil
+	for i := range node.Views {
+		if node.Views[i].ID == req.ViewID {
+			return &dto.UpdateViewResponse{View: viewToDTO(&node.Views[i])}, nil
+		}
+	}
+	return nil, dto.NotFound("view")
 }
 
 // DeleteView deletes a view.
@@ -110,6 +121,9 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 		found := false
 		for i := range node.Views {
 			if node.Views[i].ID == req.ViewID {
+				if err := checkViewRevision(&node.Views[i], req.ExpectedRevision); err != nil {
+					return err
+				}
 				found = true
 				continue
 			}
@@ -153,15 +167,34 @@ func viewsToDTO(views []content.View) []dto.View {
 
 func viewToDTO(v *content.View) dto.View {
 	return dto.View{
-		ID:      v.ID,
-		Name:    v.Name,
-		Type:    dto.ViewType(v.Type),
-		Default: v.Default,
-		Columns: viewColumnsToDTO(v.Columns),
-		Filters: filtersToDTO(v.Filters),
-		Sorts:   sortsToDTO(v.Sorts),
-		Groups:  groupsToDTO(v.Groups),
+		Revision: viewRevision(v),
+		ID:       v.ID,
+		Name:     v.Name,
+		Type:     dto.ViewType(v.Type),
+		Default:  v.Default,
+		Columns:  viewColumnsToDTO(v.Columns),
+		Filters:  filtersToDTO(v.Filters),
+		Sorts:    sortsToDTO(v.Sorts),
+		Groups:   groupsToDTO(v.Groups),
 	}
+}
+
+// viewRevision hashes the JSON representation read from table metadata.
+func viewRevision(v *content.View) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	} // Views read from JSON contain only JSON values.
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func checkViewRevision(v *content.View, expected string) error {
+	current := viewRevision(v)
+	if expected == "" || expected != current {
+		return dto.NewAPIError(409, dto.ErrorCodeConflict, "View changed; read the current view before writing again").WithDetail("recovery", "read_current").WithDetail("current_revision", current)
+	}
+	return nil
 }
 
 func viewColumnsToDTO(cols []content.ViewColumn) []dto.ViewColumn {

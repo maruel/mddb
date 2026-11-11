@@ -19,7 +19,7 @@ test("navigating with ?view= param activates the correct non-default view", asyn
 
   await client.ws(wsID).createView(tableID, { name: "View B", type: "table" });
   const viewC = await client.ws(wsID).createView(tableID, { name: "View C", type: "table" });
-  const viewCId = viewC.id;
+  const viewCId = viewC.view.id;
 
   // Navigate directly to the table requesting the LAST view (not the default first view).
   const url = nodeUrl(wsID, undefined, tableID) + `?view=${viewCId}`;

@@ -521,15 +521,16 @@ func (r *CreateViewRequest) Validate() error {
 
 // UpdateViewRequest is a request to update an existing view.
 type UpdateViewRequest struct {
-	WsID    ksid.ID      `path:"wsID" json:"-"`
-	NodeID  ksid.ID      `path:"id" json:"-"`
-	ViewID  ksid.ID      `path:"viewID" json:"-"`
-	Name    string       `json:"name,omitempty"`
-	Type    ViewType     `json:"type,omitempty"`
-	Columns []ViewColumn `json:"columns,omitempty"`
-	Filters []Filter     `json:"filters,omitempty"`
-	Sorts   []Sort       `json:"sorts,omitempty"`
-	Groups  []Group      `json:"groups,omitempty"`
+	ExpectedRevision string       `json:"expected_revision"`
+	WsID             ksid.ID      `path:"wsID" json:"-"`
+	NodeID           ksid.ID      `path:"id" json:"-"`
+	ViewID           ksid.ID      `path:"viewID" json:"-"`
+	Name             string       `json:"name,omitempty"`
+	Type             ViewType     `json:"type,omitempty"`
+	Columns          []ViewColumn `json:"columns,omitempty"`
+	Filters          []Filter     `json:"filters,omitempty"`
+	Sorts            []Sort       `json:"sorts,omitempty"`
+	Groups           []Group      `json:"groups,omitempty"`
 }
 
 // Validate validates the update view request fields.
@@ -559,9 +560,10 @@ func (r *UpdateViewRequest) Validate() error {
 
 // DeleteViewRequest is a request to delete a view.
 type DeleteViewRequest struct {
-	WsID   ksid.ID `path:"wsID" json:"-"`
-	NodeID ksid.ID `path:"id" json:"-"`
-	ViewID ksid.ID `path:"viewID" json:"-"`
+	ExpectedRevision string  `json:"expected_revision"`
+	WsID             ksid.ID `path:"wsID" json:"-"`
+	NodeID           ksid.ID `path:"id" json:"-"`
+	ViewID           ksid.ID `path:"viewID" json:"-"`
 }
 
 // Validate validates the delete view request fields.
@@ -668,9 +670,10 @@ func (r *GetRecordRequest) Validate() error {
 // DeleteRecordRequest is a request to delete a record.
 // Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
 type DeleteRecordRequest struct {
-	WsID ksid.ID `path:"wsID" json:"-"`
-	ID   ksid.ID `path:"id" json:"-"` // Node ID; 0 = root
-	RID  ksid.ID `path:"rid" json:"-"`
+	ExpectedRevision string  `json:"expected_revision"`
+	WsID             ksid.ID `path:"wsID" json:"-"`
+	ID               ksid.ID `path:"id" json:"-"` // Node ID; 0 = root
+	RID              ksid.ID `path:"rid" json:"-"`
 }
 
 // Validate validates the delete record request fields.
@@ -682,7 +685,7 @@ func (r *DeleteRecordRequest) Validate() error {
 	if r.RID.IsZero() {
 		return MissingField("rid")
 	}
-	return nil
+	return validateRevision(r.ExpectedRevision)
 }
 
 // --- Nodes ---

@@ -83,12 +83,12 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/create` |  | `CreateViewRequest` | `CreateViewResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}` |  | `UpdateViewRequest` | `UpdateViewResponse` |
-| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` |  |  | `OkResponse` |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` |  | `DeleteViewRequest` | `OkResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` |  | Query: `ListRecordsRequestQuery` | `ListRecordsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  |  | `GetRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/create` |  | `CreateRecordRequest` | `CreateRecordResponse` |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` |  | `UpdateRecordRequest` | `UpdateRecordResponse` |
-| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` |  |  | `OkResponse` |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` |  | `DeleteRecordRequest` | `OkResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` |  | Query: `ListNodeVersionsRequestQuery` | `ListNodeVersionsResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}` |  |  | `GetNodeVersionResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/assets` |  |  | `ListNodeAssetsResponse` |
@@ -1239,6 +1239,7 @@ View represents a saved table view configuration.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `revision` | `string` |  | yes |
 | `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `type` | `ViewType` |  | yes |
@@ -1470,7 +1471,7 @@ CreateViewResponse is a response from creating a view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `string` |  | yes |
+| `view` | `View` |  | yes |
 
 ### UpdateViewRequest
 
@@ -1478,6 +1479,7 @@ UpdateViewRequest is a request to update an existing view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `expected_revision` | `string` |  | yes |
 | `name` | `string` |  |  |
 | `type` | `ViewType` |  |  |
 | `columns` | `ViewColumn[]` |  |  |
@@ -1491,7 +1493,15 @@ UpdateViewResponse is a response from updating a view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `string` |  | yes |
+| `view` | `View` |  | yes |
+
+### DeleteViewRequest
+
+DeleteViewRequest is a request to delete a view.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `expected_revision` | `string` |  | yes |
 
 ### ListRecordsRequest
 
@@ -1554,6 +1564,7 @@ CreateRecordResponse is a response from creating a record.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `string` |  | yes |
+| `revision` | `string` |  | yes |
 
 ### UpdateRecordRequest
 
@@ -1573,6 +1584,15 @@ UpdateRecordResponse is a response from updating a record.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `record` | `DataRecordResponse` |  | yes |
+
+### DeleteRecordRequest
+
+DeleteRecordRequest is a request to delete a record.
+Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `expected_revision` | `string` |  | yes |
 
 ### ListNodeVersionsRequest
 

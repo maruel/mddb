@@ -116,7 +116,7 @@ func TestViewHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("CreateView failed: %v", err)
 			}
-			if respCreate.ID.IsZero() {
+			if respCreate.View.ID.IsZero() {
 				t.Fatal("CreateView returned zero ID")
 			}
 
@@ -131,8 +131,8 @@ func TestViewHandler(t *testing.T) {
 			if len(node.Views) != 1 {
 				t.Errorf("Expected 1 view, got %d", len(node.Views))
 			}
-			if node.Views[0].ID != respCreate.ID {
-				t.Errorf("Expected view ID %v, got %v", respCreate.ID, node.Views[0].ID)
+			if node.Views[0].ID != respCreate.View.ID {
+				t.Errorf("Expected view ID %v, got %v", respCreate.View.ID, node.Views[0].ID)
 			}
 		})
 	})
@@ -155,10 +155,11 @@ func TestViewHandler(t *testing.T) {
 		}
 
 		reqUpdate := &dto.UpdateViewRequest{
-			WsID:   wsID,
-			NodeID: nodeID,
-			ViewID: respCreate.ID,
-			Name:   "Updated View",
+			WsID:             wsID,
+			NodeID:           nodeID,
+			ViewID:           respCreate.View.ID,
+			ExpectedRevision: respCreate.View.Revision,
+			Name:             "Updated View",
 			Filters: []dto.Filter{
 				{Property: "Age", Operator: dto.FilterOpGreaterThan, Value: float64(18)},
 			},
@@ -201,9 +202,10 @@ func TestViewHandler(t *testing.T) {
 		}
 
 		reqDelete := &dto.DeleteViewRequest{
-			WsID:   wsID,
-			NodeID: nodeID,
-			ViewID: respCreate.ID,
+			WsID:             wsID,
+			NodeID:           nodeID,
+			ViewID:           respCreate.View.ID,
+			ExpectedRevision: respCreate.View.Revision,
 		}
 		if _, err := vh.DeleteView(ctx, wsID, user, reqDelete); err != nil {
 			t.Fatalf("DeleteView failed: %v", err)
@@ -219,6 +221,41 @@ func TestViewHandler(t *testing.T) {
 		}
 		if len(node.Views) != 0 {
 			t.Errorf("Expected 0 views, got %d", len(node.Views))
+		}
+	})
+	t.Run("RevisionConflict", func(t *testing.T) {
+		svc, wsID := setupTestServices(t)
+		ctx := t.Context()
+		user := &identity.User{Name: "Test User", Email: "test@example.com"}
+		nodeID := createTestTable(t, svc, wsID)
+		h := &ViewHandler{Svc: svc}
+		first, err := h.CreateView(ctx, wsID, user, &dto.CreateViewRequest{WsID: wsID, NodeID: nodeID, Name: "First", Type: dto.ViewTypeTable})
+		if err != nil {
+			t.Fatal(err)
+		}
+		second, err := h.CreateView(ctx, wsID, user, &dto.CreateViewRequest{WsID: wsID, NodeID: nodeID, Name: "Second", Type: dto.ViewTypeTable})
+		if err != nil {
+			t.Fatal(err)
+		}
+		updated, err := h.UpdateView(ctx, wsID, user, &dto.UpdateViewRequest{WsID: wsID, NodeID: nodeID, ViewID: first.View.ID, ExpectedRevision: first.View.Revision, Name: "Changed", Filters: []dto.Filter{{Property: "Age", Operator: dto.FilterOpGreaterThan, Value: 18}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if updated.View.Revision == first.View.Revision {
+			t.Fatal("revision did not change")
+		}
+		if _, err := h.UpdateView(ctx, wsID, user, &dto.UpdateViewRequest{WsID: wsID, NodeID: nodeID, ViewID: first.View.ID, ExpectedRevision: first.View.Revision, Name: "Stale"}); err == nil {
+			t.Fatal("stale update succeeded")
+		}
+		if _, err := h.DeleteView(ctx, wsID, user, &dto.DeleteViewRequest{WsID: wsID, NodeID: nodeID, ViewID: first.View.ID, ExpectedRevision: first.View.Revision}); err == nil {
+			t.Fatal("stale delete succeeded")
+		}
+		if _, err := h.UpdateView(ctx, wsID, user, &dto.UpdateViewRequest{WsID: wsID, NodeID: nodeID, ViewID: second.View.ID, ExpectedRevision: second.View.Revision, Name: "Independent"}); err != nil {
+			t.Fatal(err)
+		}
+		// The returned revision must match a fresh read after JSON normalization.
+		if _, err := h.UpdateView(ctx, wsID, user, &dto.UpdateViewRequest{WsID: wsID, NodeID: nodeID, ViewID: first.View.ID, ExpectedRevision: updated.View.Revision, Name: "Again"}); err != nil {
+			t.Fatal(err)
 		}
 	})
 }

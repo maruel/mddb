@@ -44,6 +44,8 @@ declare const classes: {
   readonly "previewMeta": string;
   readonly "previewPane": string;
   readonly "recordDraft": string;
+  readonly "recordDraftActions": string;
+  readonly "recordDraftButton": string;
   readonly "recordDraftContent": string;
   readonly "saveErrorIndicator": string;
   readonly "savedIndicator": string;
@@ -56,5 +58,6 @@ declare const classes: {
   readonly "userInfo": string;
   readonly "viewBar": string;
   readonly "viewBarAddField": string;
+  readonly "viewError": string;
 };
 export default classes;

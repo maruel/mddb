@@ -207,6 +207,7 @@
   overflow-y: auto;
 }
 
+.viewError,
 .recordDraft {
   max-width: 100%;
   padding: var(--s-3);
@@ -214,6 +215,32 @@
   background: var(--c-surface-danger-subtle);
   border: 1px solid var(--c-border-danger-strong);
   border-radius: var(--radius-md);
+}
+
+.viewError {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recordDraft {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recordDraftActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.recordDraftButton {
+  max-width: 100%;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.recordDraftButton[aria-disabled="true"] {
+  opacity: 0.6;
 }
 
 .recordDraftContent {

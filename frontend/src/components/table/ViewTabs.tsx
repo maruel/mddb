@@ -1,5 +1,6 @@
 // Horizontal tabs for switching between saved table views.
-import { createSignal, For, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { useRecords } from "../../contexts";
 import { useClickOutside } from "../../composables/useClickOutside";
 import { useI18n } from "../../i18n";
@@ -98,32 +99,35 @@ export default function ViewTabs() {
     const viewId = renamingViewId();
     if (!viewId) return;
     const newName = renameValue().trim();
+    setRenamingViewId(null);
     if (newName) {
       void updateView(viewId, { name: newName }).catch((backgroundError: unknown) => reportError(backgroundError));
     }
-    setRenamingViewId(null);
   };
 
   return (
     <div class={styles.container}>
       <div class={styles.tabs}>
-        <For each={views()}>
-          {(view) => {
+        <For each={views().map((view) => view.id)}>
+          {(id) => {
+            const initial = views().find((entry) => entry.id === id);
+            if (!initial) throw new Error("View is missing");
+            const view = createMemo(() => views().find((entry) => entry.id === id) ?? initial);
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
-            const Icon = VIEW_ICONS[view.type] || TableRowsIcon;
+            const Icon = () => VIEW_ICONS[view().type] || TableRowsIcon;
             return (
               <div class={styles.tabWrapper}>
                 <button
                   class={styles.tab}
-                  classList={{ [`${styles.active}`]: view.id === activeViewId() }}
-                  onClick={() => handleTabClick(view.id)}
-                  onContextMenu={(e) => handleTabContextMenu(e, view)}
-                  title={view.name}
+                  classList={{ [`${styles.active}`]: view().id === activeViewId() }}
+                  onClick={() => handleTabClick(view().id)}
+                  onContextMenu={(e) => handleTabContextMenu(e, view())}
+                  title={view().name}
                 >
                   <span class={styles.icon}>
-                    <Icon />
+                    <Dynamic component={Icon()} />
                   </span>
-                  <Show when={renamingViewId() === view.id} fallback={<span class={styles.name}>{view.name}</span>}>
+                  <Show when={renamingViewId() === view().id} fallback={<span class={styles.name}>{view().name}</span>}>
                     <input
                       class={styles.renameInput}
                       value={renameValue()}
@@ -139,10 +143,10 @@ export default function ViewTabs() {
                     />
                   </Show>
                 </button>
-                <Show when={!view.default}>
+                <Show when={!view().default}>
                   <button
                     class={styles.deleteBtn}
-                    onClick={() => deleteView(view.id)}
+                    onClick={() => deleteView(view().id)}
                     title={t("common.delete") || "Delete"}
                     tabIndex={-1}
                   >

@@ -912,6 +912,7 @@ export interface Group {
 
 /** View represents a saved table view configuration. */
 export interface View {
+  revision: string;
   id: string;
   name: string;
   type: ViewType;
@@ -1091,11 +1092,12 @@ export interface CreateViewRequest {
 
 /** CreateViewResponse is a response from creating a view. */
 export interface CreateViewResponse {
-  id: string;
+  view: View;
 }
 
 /** UpdateViewRequest is a request to update an existing view. */
 export interface UpdateViewRequest {
+  expected_revision: string;
   name?: string;
   type?: ViewType;
   columns?: ViewColumn[];
@@ -1106,7 +1108,12 @@ export interface UpdateViewRequest {
 
 /** UpdateViewResponse is a response from updating a view. */
 export interface UpdateViewResponse {
-  id: string;
+  view: View;
+}
+
+/** DeleteViewRequest is a request to delete a view. */
+export interface DeleteViewRequest {
+  expected_revision: string;
 }
 
 /**
@@ -1158,6 +1165,7 @@ export interface CreateRecordRequest {
 /** CreateRecordResponse is a response from creating a record. */
 export interface CreateRecordResponse {
   id: string;
+  revision: string;
 }
 
 /**
@@ -1173,6 +1181,14 @@ export interface UpdateRecordRequest {
 /** UpdateRecordResponse is a response from updating a record. */
 export interface UpdateRecordResponse {
   record: DataRecordResponse;
+}
+
+/**
+ * DeleteRecordRequest is a request to delete a record.
+ * Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
+ */
+export interface DeleteRecordRequest {
+  expected_revision: string;
 }
 
 /** ListNodeVersionsRequest is a request to list node version history. */

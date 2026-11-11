@@ -523,9 +523,19 @@ export const dict: Dictionary = {
     sessionExpired: "Sitzung abgelaufen",
     titleRequired: "Titel ist erforderlich",
     failedToLoad: "Laden fehlgeschlagen",
+    viewRecovery:
+      "Diese Ansicht konnte nicht gespeichert werden. Laden Sie die aktuelle Ansicht, um Ihre Änderungen zu verwerfen.",
+    discardViewChanges: "Änderungen verwerfen und neu laden",
     failedToSave: "Speichern fehlgeschlagen",
+    recordHistoryConflict:
+      "Der Datensatz wurde geändert. Verlassen Sie die Tabelle und kehren Sie zurück; der Rückgängig-Verlauf wird gelöscht.",
     recordDraft:
-      "Dieser Datensatz konnte nicht gespeichert werden. Kopiere deine Änderungen, bevor du die Tabelle verlässt.",
+      "Dieser Datensatz konnte nicht gespeichert werden. Prüfen Sie den aktuellen Datensatz vor dem Ersetzen.",
+    recordYourChanges: "Ihre Änderungen",
+    recordCurrent: "Aktueller Datensatz",
+    recordReview: "Aktuellen Datensatz prüfen",
+    recordReplace: "Durch meine Änderungen ersetzen",
+    recordDiscard: "Entwurf verwerfen",
     failedToDelete: "Löschen fehlgeschlagen",
     failedToCreate: "Erstellen fehlgeschlagen",
     failedToSwitch: "Arbeitsbereichswechsel fehlgeschlagen",

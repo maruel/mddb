@@ -45,11 +45,11 @@ func TestTableRevisionPreventsStaleSchemaReplacement(t *testing.T) {
 	}
 	change := dto.UpdateTableRequest{Title: "Changed", Properties: []dto.Property{{Name: "key", Type: "text"}}, ExpectedTitle: original.Title, ExpectedSchemaRevision: original.SchemaRevision}
 	var updated dto.UpdateTableResponse
-	if status := env.doJSON(t, http.MethodPost, path+"/table", change, &updated, token); status != http.StatusOK || updated.Title != "Changed" || updated.SchemaRevision == original.SchemaRevision || len(updated.Views) != 1 || updated.Views[0].ID != view.ID {
+	if status := env.doJSON(t, http.MethodPost, path+"/table", change, &updated, token); status != http.StatusOK || updated.Title != "Changed" || updated.SchemaRevision == original.SchemaRevision || len(updated.Views) != 1 || updated.Views[0].ID != view.View.ID {
 		t.Fatalf("updated table: status %d, result %+v", status, updated)
 	}
 	var schema dto.GetTableSchemaResponse
-	if status := env.doJSON(t, http.MethodGet, path+"/table", nil, &schema, token); status != http.StatusOK || schema.SchemaRevision != updated.SchemaRevision || len(schema.Views) != 1 || schema.Views[0].ID != view.ID {
+	if status := env.doJSON(t, http.MethodGet, path+"/table", nil, &schema, token); status != http.StatusOK || schema.SchemaRevision != updated.SchemaRevision || len(schema.Views) != 1 || schema.Views[0].ID != view.View.ID {
 		t.Fatalf("table schema: status %d, result %+v", status, schema)
 	}
 	change.ExpectedTitle = updated.Title
@@ -83,8 +83,8 @@ func TestRecordRevisionPreventsStaleReplacement(t *testing.T) {
 	}
 	recordPath := path + "/table/records/" + created.ID.String()
 	var original dto.GetRecordResponse
-	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); status != http.StatusOK || original.Revision == "" {
-		t.Fatalf("get record: status %d, record %+v", status, original)
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); status != http.StatusOK || original.Revision == "" || created.Revision != original.Revision {
+		t.Fatalf("get record: status %d, record %+v, created %+v", status, original, created)
 	}
 	if status := env.doJSON(t, http.MethodPost, path+"/views/create", dto.CreateViewRequest{Name: "Unrelated", Type: "table"}, nil, token); status != http.StatusOK {
 		t.Fatal(status)
@@ -110,6 +110,81 @@ func TestRecordRevisionPreventsStaleReplacement(t *testing.T) {
 	change.ExpectedRevision = current.Revision
 	if status := env.doJSON(t, http.MethodPost, recordPath, change, nil, token); status != http.StatusConflict {
 		t.Fatalf("stale schema write: status %d", status)
+	}
+}
+
+func TestRecordRevisionPreventsStaleDeletion(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, wsID := setupGoModeWorkspace(t, env, "record-delete-revision@example.com")
+	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+	var table dto.CreateTableUnderParentResponse
+	if status := env.doJSON(t, http.MethodPost, base+"0/table/create", dto.CreateTableRequest{Title: "Table"}, &table, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	path := base + table.ID.String()
+	var node dto.NodeResponse
+	if status := env.doJSON(t, http.MethodGet, path, nil, &node, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	var created dto.CreateRecordResponse
+	if status := env.doJSON(t, http.MethodPost, path+"/table/records/create", dto.CreateRecordRequest{Data: map[string]any{"key": "original"}}, &created, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	recordPath := path + "/table/records/" + created.ID.String()
+	var original dto.GetRecordResponse
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); status != http.StatusOK || created.Revision != original.Revision {
+		t.Fatalf("creation revision: %d, %+v, %+v", status, created, original)
+	}
+	var updated dto.UpdateRecordResponse
+	change := dto.UpdateRecordRequest{Data: map[string]any{"key": "new"}, ExpectedRevision: original.Revision, ExpectedSchemaRevision: node.SchemaRevision}
+	if status := env.doJSON(t, http.MethodPost, recordPath, change, &updated, token); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	if status := env.doJSON(t, http.MethodPost, recordPath+"/delete", dto.DeleteRecordRequest{ExpectedRevision: original.Revision}, nil, token); status != http.StatusConflict {
+		t.Fatalf("stale delete: status %d", status)
+	}
+	var retained dto.GetRecordResponse
+	if status := env.doJSON(t, http.MethodGet, recordPath, nil, &retained, token); status != http.StatusOK || retained.Revision != updated.Record.Revision {
+		t.Fatalf("stale delete changed record: status %d, record %+v", status, retained)
+	}
+	if status := env.doJSON(t, http.MethodPost, recordPath+"/delete", dto.DeleteRecordRequest{ExpectedRevision: updated.Record.Revision}, nil, token); status != http.StatusOK {
+		t.Fatalf("delete current record: status %d", status)
+	}
+}
+
+func TestRecordRevisionAfterCoercion(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, wsID := setupGoModeWorkspace(t, env, "record-normalization@example.com")
+	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+	var table dto.CreateTableUnderParentResponse
+	request := dto.CreateTableRequest{Title: "Table", Properties: []dto.Property{{Name: "amount", Type: "number"}}}
+	if code := env.doJSON(t, http.MethodPost, base+"0/table/create", request, &table, token); code != http.StatusOK {
+		t.Fatal(code)
+	}
+	path := base + table.ID.String()
+	var node dto.NodeResponse
+	if code := env.doJSON(t, http.MethodGet, path, nil, &node, token); code != http.StatusOK {
+		t.Fatal(code)
+	}
+	var created dto.CreateRecordResponse
+	if code := env.doJSON(t, http.MethodPost, path+"/table/records/create", dto.CreateRecordRequest{Data: map[string]any{"amount": "9007199254740993"}}, &created, token); code != http.StatusOK {
+		t.Fatal(code)
+	}
+	recordPath := path + "/table/records/" + created.ID.String()
+	var original dto.GetRecordResponse
+	if code := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); code != http.StatusOK || created.Revision != original.Revision {
+		t.Fatalf("created revision: %d, %+v, %+v", code, created, original)
+	}
+	var updated dto.UpdateRecordResponse
+	change := dto.UpdateRecordRequest{Data: map[string]any{"amount": "9007199254740995"}, ExpectedRevision: original.Revision, ExpectedSchemaRevision: node.SchemaRevision}
+	if code := env.doJSON(t, http.MethodPost, recordPath, change, &updated, token); code != http.StatusOK {
+		t.Fatal(code)
+	}
+	var current dto.GetRecordResponse
+	if code := env.doJSON(t, http.MethodGet, recordPath, nil, &current, token); code != http.StatusOK || updated.Record.Revision != current.Revision {
+		t.Fatalf("updated revision: %d, %+v, %+v", code, updated.Record, current)
 	}
 }
 

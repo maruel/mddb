@@ -82,6 +82,34 @@ type DataRecord struct {
 	Modified storage.Time   `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
+// CanonicalRecord returns the representation read back from JSONL storage.
+func CanonicalRecord(record *DataRecord) (*DataRecord, error) {
+	canonical := *record
+	if record.Data == nil {
+		return &canonical, nil
+	}
+	canonical.Data = make(map[string]any, len(record.Data))
+	for key, value := range record.Data {
+		switch v := value.(type) {
+		case nil, string, bool, float64:
+			canonical.Data[key] = v
+		case int64:
+			canonical.Data[key] = float64(v)
+		default:
+			// Preserve JSON semantics for nested values and less common Go types.
+			encoded, err := json.Marshal(record)
+			if err != nil {
+				return nil, fmt.Errorf("encode record: %w", err)
+			}
+			if err := json.Unmarshal(encoded, &canonical); err != nil {
+				return nil, fmt.Errorf("normalize record: %w", err)
+			}
+			return &canonical, nil
+		}
+	}
+	return &canonical, nil
+}
+
 // Clone returns a deep copy of the DataRecord.
 func (r *DataRecord) Clone() *DataRecord {
 	c := *r

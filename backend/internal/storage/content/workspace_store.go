@@ -1,4 +1,4 @@
-// Owns atomic conditional page mutations, serialized imports, indexed discovery, and canonical snapshots.
+// Owns atomic conditional page and record mutations, serialized imports, discovery, and canonical snapshots.
 
 // Package content provides versioned file storage for the mddb system.
 package content
@@ -789,7 +789,8 @@ func (ws *WorkspaceFileStore) MutateTable(ctx context.Context, id ksid.ID, autho
 		if err != nil {
 			return "", nil, err
 		}
-		node.SchemaRevision = saved.SchemaRevision
+		saved.Changes = node.Changes
+		node = saved
 		return "update: table " + id.String(), []string{ws.gitPath(node.ParentID, id, "metadata.json")}, nil
 	})
 	if err != nil {
@@ -1087,9 +1088,14 @@ func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, record
 			coerced = make(map[string]any)
 		}
 		record = &DataRecord{ID: recordID, Data: coerced, Created: current.Created, Modified: storage.Now()}
+		canonical, err := CanonicalRecord(record)
+		if err != nil {
+			return "", nil, err
+		}
 		if _, err := table.Update(record); err != nil {
 			return "", nil, err
 		}
+		record = canonical
 		files := []string{ws.gitPath(parentID, tableID, "data.jsonl")}
 		return "update: record " + record.ID.String(), files, nil
 	})
@@ -1099,32 +1105,33 @@ func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, record
 	return record, nil
 }
 
-// DeleteRecord deletes a record and commits to git.
-func (ws *WorkspaceFileStore) DeleteRecord(ctx context.Context, tableID, recordID ksid.ID, author git.Author) error {
-	parentID := ws.getParent(tableID)
+// DeleteRecord deletes a record only if its current revision matches the caller's snapshot.
+func (ws *WorkspaceFileStore) DeleteRecord(ctx context.Context, tableID, recordID ksid.ID, expectedRevision string, author git.Author) error {
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
-		if err := ws.deleteRecord(tableID, parentID, recordID); err != nil {
+		node, err := ws.ReadTable(tableID)
+		if err != nil {
 			return "", nil, err
 		}
-		files := []string{ws.gitPath(parentID, tableID, "data.jsonl")}
-		return "delete: record " + recordID.String(), files, nil
+		table, err := jsonldb.NewTable[*DataRecord](ws.tableRecordsFile(tableID, node.ParentID))
+		if err != nil {
+			return "", nil, fmt.Errorf("open records: %w", err)
+		}
+		current := table.Get(recordID)
+		if current == nil {
+			return "", nil, ErrRecordNotFound
+		}
+		revision, err := RecordRevision(current)
+		if err != nil {
+			return "", nil, err
+		}
+		if expectedRevision != revision {
+			return "", nil, &RevisionConflictError{CurrentRevision: revision}
+		}
+		if _, err := table.Delete(recordID); err != nil {
+			return "", nil, fmt.Errorf("delete record: %w", err)
+		}
+		return "delete: record " + recordID.String(), []string{ws.gitPath(node.ParentID, tableID, "data.jsonl")}, nil
 	})
-}
-
-// deleteRecord deletes a record without committing.
-func (ws *WorkspaceFileStore) deleteRecord(tableID, tableParentID, recordID ksid.ID) error {
-	recordsFile := ws.tableRecordsFile(tableID, tableParentID)
-
-	table, err := jsonldb.NewTable[*DataRecord](recordsFile)
-	if err != nil {
-		return fmt.Errorf("failed to open table: %w", err)
-	}
-
-	_, err = table.Delete(recordID)
-	if err != nil {
-		return fmt.Errorf("failed to delete record: %w", err)
-	}
-	return nil
 }
 
 // SaveAsset saves an asset and commits to git.

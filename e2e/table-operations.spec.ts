@@ -3,7 +3,7 @@
 import type { Page, APIRequestContext } from "@playwright/test";
 import { test, expect, registerUser, waitForWorkspace, createClient, gotoWithSession } from "./helpers";
 import type { DataRecordResponse, Property } from "../sdk/mddb/ts/v1/types.gen";
-import { gate } from "./gomode-fixtures";
+import { gate as requestGate } from "./gomode-fixtures";
 
 // Helper: create a table with records and navigate to it.
 async function setupTable(
@@ -54,9 +54,9 @@ test.describe("Table Creation and Basic Operations", () => {
       );
       const ws = client.ws(wsID);
       const other = await ws.createPage("0", { title: "Other document", content: "Other body" });
-      const requested = gate();
-      const release = gate();
-      const completed = gate();
+      const requested = requestGate();
+      const release = requestGate();
+      const completed = requestGate();
       let held = false;
       await page.route(`**/nodes/${tableId}/table`, async (route) => {
         if (route.request().method() !== "POST" || held) return route.continue();
@@ -230,10 +230,837 @@ test.describe("Table Creation and Basic Operations", () => {
     });
     release();
     await expect(
-      page.getByText("This record could not be saved. Copy your changes before leaving this table."),
+      page.getByText(
+        "This record could not be saved. Review the current record before choosing whether to replace it.",
+      ),
     ).toBeVisible();
     await expect(page.locator("pre").filter({ hasText: "My edit" })).toBeVisible();
     expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "Other edit" });
+  });
+
+  test("keeps concurrent rejected drafts through navigation and recovers only against reviewed revisions", async ({
+    page,
+    request,
+  }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "draft-navigation",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "First" }, { Name: "Second" }],
+    );
+    const ws = client.ws(wsID);
+    const other = await ws.createPage("0", { title: "Other page", content: "" });
+    await page.reload();
+    await waitForWorkspace(page);
+    await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+    const records =
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    const first = records.find((record) => record.data?.Name === "First");
+    const second = records.find((record) => record.data?.Name === "Second");
+    if (!first || !second) throw new Error("Missing test records");
+    const schema = await ws.getNode(tableId);
+    if (!schema.schema_revision) throw new Error("Missing schema revision");
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/*`, async (route) => {
+      if (route.request().method() === "POST") await gate;
+      await route.continue();
+    });
+    async function edit(name: string, value: string, id: string) {
+      await page.locator("td").getByText(name, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(value);
+      const sent = page.waitForRequest((req) => req.method() === "POST" && req.url().endsWith(`/records/${id}`));
+      await input.press("Enter");
+      await sent;
+    }
+    const draftText = `Draft one ${"long text ".repeat(180)}`;
+    await edit("First", draftText, first.id);
+    await page.locator("td").getByText("Second", { exact: true }).click();
+    const queuedInput = page.locator('table td input[type="text"]').first();
+    await queuedInput.fill("Draft two");
+    await queuedInput.press("Enter");
+    await ws.updateRecord(tableId, first.id, {
+      data: { Name: "Remote one" },
+      expected_revision: first.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    await ws.updateRecord(tableId, second.id, {
+      data: { Name: "Remote two" },
+      expected_revision: second.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    await page.locator(`[data-testid="sidebar-node-${other.id}"]`).click();
+    await expect(page).toHaveURL(new RegExp(other.id));
+    await page.locator('aside [class*="workspaceHeader"]').hover();
+    await page.getByTestId("workspace-settings-button").click();
+    await expect(page).toHaveURL(/\/settings\/workspace\//);
+    const response = page.waitForResponse(
+      (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${first.id}`),
+    );
+    release();
+    await response;
+    await page.unroute(`**/nodes/${tableId}/table/records/*`);
+    await page.getByRole("button", { name: /Back/ }).click();
+    await waitForWorkspace(page);
+    await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+    const drafts = page.getByRole("alert").filter({ hasText: "This record could not be saved" });
+    await expect(drafts).toHaveCount(2);
+    const draft = drafts.filter({ hasText: "Draft one" });
+    await expect(drafts.filter({ hasText: "Draft two" })).toBeVisible();
+    const originalText = draft.locator("pre").filter({ hasText: "Draft one" });
+    await originalText.evaluate((el) => {
+      el.scrollTop = 50;
+    });
+    expect(await originalText.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    let releaseReview!: () => void;
+    let reviewEntered!: () => void;
+    const reviewGate = new Promise<void>((resolve) => {
+      releaseReview = resolve;
+    });
+    const reviewStarted = new Promise<void>((resolve) => {
+      reviewEntered = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/${first.id}`, async (route) => {
+      if (route.request().method() === "GET") {
+        reviewEntered();
+        await reviewGate;
+      }
+      await route.continue();
+    });
+    const review = draft.getByRole("button", { name: "Review current record" });
+    await review.focus();
+    await page.keyboard.press("Enter");
+    await reviewStarted;
+    await expect(review).toBeFocused();
+    await expect(review).toHaveAttribute("aria-disabled", "true");
+    releaseReview();
+    await expect(draft.locator("pre").filter({ hasText: "Remote one" })).toBeVisible();
+    await expect(review).toBeFocused();
+    expect(await originalText.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await page.unroute(`**/nodes/${tableId}/table/records/${first.id}`);
+    const remote = await ws.getRecord(tableId, first.id);
+    await ws.updateRecord(tableId, first.id, {
+      data: { Name: "Newer remote" },
+      expected_revision: remote.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    const replace = draft.getByRole("button", { name: "Replace with my changes" });
+    await replace.focus();
+    await page.keyboard.press("Enter");
+    await expect(draft.getByText("A conflict occurred with the current state")).toBeVisible();
+    await expect(review).toBeFocused();
+    expect((await ws.getRecord(tableId, first.id)).data).toEqual({ Name: "Newer remote" });
+    await draft.getByRole("button", { name: "Review current record" }).click();
+    await expect(draft.locator("pre").filter({ hasText: "Newer remote" })).toBeVisible();
+    let releaseSave!: () => void;
+    let saveEntered!: () => void;
+    const saveGate = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    const saveStarted = new Promise<void>((resolve) => {
+      saveEntered = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/${first.id}`, async (route) => {
+      if (route.request().method() === "POST") {
+        saveEntered();
+        await saveGate;
+      }
+      await route.continue();
+    });
+    const recovered = draft.getByRole("button", { name: "Replace with my changes" });
+    await recovered.focus();
+    await page.keyboard.press("Enter");
+    await saveStarted;
+    await expect(recovered).toBeFocused();
+    await expect(recovered).toHaveAttribute("aria-disabled", "true");
+    expect(await originalText.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    releaseSave();
+    await expect(drafts).toHaveCount(1);
+    expect((await ws.getRecord(tableId, first.id)).data).toEqual({ Name: draftText });
+    const remaining = drafts.filter({ hasText: "Draft two" });
+    await expect(remaining).toBeVisible();
+    await expect(remaining.getByRole("button", { name: "Review current record" })).toBeFocused();
+    const discard = remaining.getByRole("button", { name: "Discard draft" });
+    await discard.focus();
+    await page.keyboard.press("Enter");
+    await expect(drafts).toHaveCount(0);
+    await expect(page.locator("[data-view-focus-target] button").first()).toBeFocused();
+  });
+
+  test("record edits undo and redo in order and reject intervening remote changes", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "record-history",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }],
+    );
+    const ws = client.ws(wsID);
+    const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+      .records?.[0];
+    const schema = await ws.getNode(tableId);
+    if (!record || !schema.schema_revision) throw new Error("Missing record or schema");
+    async function edit(from: string, to: string) {
+      await page.locator("td").getByText(from, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(to);
+      const response = page.waitForResponse(
+        (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${record!.id}`),
+      );
+      await input.press("Enter");
+      expect((await response).status()).toBe(200);
+      await expect(page.locator("td").getByText(to, { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "All", exact: true }).click();
+    }
+    async function history(redo: boolean, status: number) {
+      const response = page.waitForResponse(
+        (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${record!.id}`),
+      );
+      await page.keyboard.press(redo ? "Control+Shift+z" : "Control+z");
+      expect((await response).status()).toBe(status);
+    }
+    async function name(value: string) {
+      await expect.poll(async () => (await ws.getRecord(tableId, record!.id)).data?.Name).toBe(value);
+      await expect(page.locator("td").getByText(value, { exact: true })).toBeVisible();
+    }
+    await edit("Original", "First");
+    await edit("First", "Second");
+    await history(false, 200);
+    await name("First");
+    await history(false, 200);
+    await name("Original");
+    await history(true, 200);
+    await name("First");
+    await history(true, 200);
+    await name("Second");
+    await history(false, 200);
+    await name("First");
+    const current = await ws.getRecord(tableId, record.id);
+    await ws.updateRecord(tableId, record.id, {
+      data: { Name: "External" },
+      expected_revision: current.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    await history(true, 409);
+    expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "External" });
+    await expect(page.getByTestId("workspace-feedback")).toBeVisible();
+    await history(false, 409);
+    expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "External" });
+  });
+
+  test("an edit admitted during a pending undo remains the newest undo step", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "history-overlap",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }],
+    );
+    const ws = client.ws(wsID);
+    const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+      .records?.[0];
+    if (!record) throw new Error("Missing record");
+    async function edit(from: string, to: string) {
+      await page.locator("td").getByText(from, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(to);
+      const done = page.waitForResponse(
+        (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${record!.id}`),
+      );
+      await input.press("Enter");
+      expect((await done).status()).toBe(200);
+      await expect(page.locator("td").getByText(to, { exact: true })).toBeVisible();
+    }
+    await edit("Original", "First");
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/${record.id}`, async (route) => {
+      if (route.request().method() === "POST" && route.request().postDataJSON()?.data?.Name === "Original") {
+        entered();
+        await gate;
+      }
+      await route.continue();
+    });
+    await page.keyboard.press("Control+z");
+    await pending;
+    await page.locator("td").getByText("First", { exact: true }).click();
+    const pendingInput = page.locator('table td input[type="text"]').first();
+    await pendingInput.fill("Second");
+    await pendingInput.press("Enter");
+    const undoResponse = page.waitForResponse(
+      (res) =>
+        res.request().method() === "POST" &&
+        res.url().endsWith(`/records/${record.id}`) &&
+        res.request().postDataJSON()?.data?.Name === "Original",
+    );
+    release();
+    expect((await undoResponse).status()).toBe(200);
+    await expect.poll(async () => (await ws.getRecord(tableId, record.id)).data?.Name).toBe("Second");
+    await page.unroute(`**/nodes/${tableId}/table/records/${record.id}`);
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    const latestUndo = page.waitForResponse(
+      (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${record.id}`),
+    );
+    await page.keyboard.press("Control+z");
+    expect((await latestUndo).status()).toBe(200);
+    expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "Original" });
+  });
+
+  for (const scenario of ["remote edit", "schema change", "navigation"] as const) {
+    test(`queued history edit retains its provenance through ${scenario}`, async ({ page, request }) => {
+      const { client, wsID, tableId } = await setupTable(
+        page,
+        request,
+        `queued-${scenario.replace(" ", "-")}`,
+        [{ name: "Name", type: "text" }],
+        [{ Name: "Original" }],
+      );
+      const ws = client.ws(wsID);
+      const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+        .records?.[0];
+      const schema = await ws.getNode(tableId);
+      if (!record || !schema.schema_revision) throw new Error("Missing record or schema");
+      const other = await ws.createPage("0", { title: "Queued destination", content: "" });
+      await page.reload();
+      await waitForWorkspace(page);
+      await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+      await page.locator("td").getByText("Original", { exact: true }).click();
+      let input = page.locator('table td input[type="text"]').first();
+      await input.fill("First");
+      await input.press("Enter");
+      await expect(page.locator("td").getByText("First", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "All", exact: true }).click();
+      let release!: () => void;
+      let entered!: () => void;
+      let finished!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const pending = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const completed = new Promise<void>((resolve) => {
+        finished = resolve;
+      });
+      await page.route(`**/nodes/${tableId}/table/records/${record.id}`, async (route) => {
+        if (route.request().method() !== "POST" || route.request().postDataJSON()?.data?.Name !== "Original")
+          return route.continue();
+        const response = await route.fetch();
+        entered();
+        await gate;
+        await route.fulfill({ response });
+        finished();
+      });
+      await page.keyboard.press("Control+z");
+      await pending;
+      await page.locator("td").getByText("First", { exact: true }).click();
+      input = page.locator('table td input[type="text"]').first();
+      await input.fill("Queued draft");
+      await input.press("Enter");
+      if (scenario === "remote edit") {
+        const current = await ws.getRecord(tableId, record.id);
+        await ws.updateRecord(tableId, record.id, {
+          data: { Name: "Remote" },
+          expected_revision: current.revision,
+          expected_schema_revision: schema.schema_revision,
+        });
+        await expect(page.locator("td").getByText("Remote", { exact: true })).toBeVisible();
+      } else if (scenario === "schema change") {
+        await ws.updateTable(tableId, {
+          title: schema.title,
+          expected_title: schema.title,
+          properties: [
+            { name: "Name", type: "text" },
+            { name: "New column", type: "text" },
+          ],
+          expected_schema_revision: schema.schema_revision,
+        });
+      } else {
+        await page.locator(`[data-testid="sidebar-node-${other.id}"]`).click();
+      }
+      release();
+      await completed;
+      await page.unroute(`**/nodes/${tableId}/table/records/${record.id}`);
+      if (scenario === "navigation") await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+      await expect(page.locator("pre").filter({ hasText: "Queued draft" })).toBeVisible();
+      expect((await ws.getRecord(tableId, record.id)).data?.Name).toBe(
+        scenario === "remote edit" ? "Remote" : "Original",
+      );
+    });
+  }
+
+  test("undo publishes its acknowledged record while its refresh is held", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "undo-visible-state",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }],
+    );
+    const ws = client.ws(wsID);
+    const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+      .records?.[0];
+    if (!record) throw new Error("Missing record");
+    async function edit(from: string, to: string) {
+      await page.locator("td").getByText(from, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(to);
+      await input.press("Enter");
+      await expect(page.locator("td").getByText(to, { exact: true })).toBeVisible();
+    }
+    await edit("Original", "First");
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    let release!: () => void;
+    let entered!: () => void;
+    let finished!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const completed = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    await page.route(
+      `**/nodes/${tableId}/table/records?**`,
+      async (route) => {
+        const response = await route.fetch();
+        entered();
+        await gate;
+        await route.fulfill({ response });
+        finished();
+      },
+      { times: 1 },
+    );
+    await page.keyboard.press("Control+z");
+    await pending;
+    await expect(page.locator("td").getByText("Original", { exact: true })).toBeVisible();
+    await edit("Original", "Second");
+    await expect.poll(async () => (await ws.getRecord(tableId, record.id)).data?.Name).toBe("Second");
+    release();
+    await completed;
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await ws.getRecord(tableId, record.id)).data?.Name).toBe("Original");
+    await expect(page.locator("td").getByText("Original", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+Shift+z");
+    await expect.poll(async () => (await ws.getRecord(tableId, record.id)).data?.Name).toBe("Second");
+  });
+
+  test("a newer edit remains above a recreated record while redo refresh is pending", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "redo-refresh-order",
+      [{ name: "Name", type: "text" }],
+      [],
+    );
+    const ws = client.ws(wsID);
+    const list = async () =>
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    await page.getByText(/add record/i).click();
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await list()).length).toBe(0);
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveCount(0);
+    let release!: () => void;
+    let entered!: () => void;
+    let finished!: () => void;
+    const completed = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let held = false;
+    await page.route(`**/nodes/${tableId}/table/records?**`, async (route) => {
+      if (!held && route.request().method() === "GET") {
+        held = true;
+        const response = await route.fetch();
+        entered();
+        await gate;
+        await route.fulfill({ response });
+        finished();
+      } else await route.continue();
+    });
+    await page.keyboard.press("Control+Shift+z");
+    await pending;
+    const recreated = (await list())[0];
+    if (!recreated) throw new Error("Missing recreated record");
+    // Another creation refreshes the list while the redo's older refresh is held.
+    await page.getByText(/add record/i).click();
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveCount(2);
+    const row = page.getByRole("button", { name: "Open", exact: true }).first().locator("xpath=ancestor::tr");
+    await row.locator("td").nth(3).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("Newer");
+    await input.press("Enter");
+    await expect.poll(async () => (await list())[0]?.data?.Name).toBe("Newer");
+    await expect(page.locator("td").getByText("Newer", { exact: true })).toBeVisible();
+    release();
+    await completed;
+    await page.unroute(`**/nodes/${tableId}/table/records?**`);
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await list())[0]?.data?.Name ?? "").toBe("");
+    expect((await list()).some((record) => record.id === recreated.id)).toBe(true);
+  });
+
+  test("queued field edits preserve acknowledged changes and undo effects", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "field-intent",
+      [
+        { name: "Name", type: "text" },
+        { name: "Status", type: "text" },
+      ],
+      [{ Name: "Original", Status: "Open" }],
+    );
+    const ws = client.ws(wsID);
+    const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+      .records?.[0];
+    if (!record) throw new Error("Missing record");
+    async function edit(from: string, to: string) {
+      await page.locator("td").getByText(from, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(to);
+      await input.press("Enter");
+    }
+    async function hold(name: string) {
+      let release!: () => void;
+      let entered!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const pending = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      await page.route(`**/nodes/${tableId}/table/records/${record!.id}`, async (route) => {
+        if (route.request().method() === "POST" && route.request().postDataJSON()?.data?.Name === name) {
+          entered();
+          await gate;
+        }
+        await route.continue();
+      });
+      return { release, pending };
+    }
+    const first = await hold("First");
+    await edit("Original", "First");
+    await first.pending;
+    await edit("Open", "Done");
+    first.release();
+    await expect
+      .poll(async () => (await ws.getRecord(tableId, record.id)).data)
+      .toEqual({ Name: "First", Status: "Done" });
+    await expect(page.locator("td").getByText("Done", { exact: true })).toBeVisible();
+    await page.unroute(`**/nodes/${tableId}/table/records/${record.id}`);
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect(page.locator("td").getByText("Open", { exact: true })).toBeVisible();
+    const undo = await hold("Original");
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await undo.pending;
+    await edit("Open", "");
+    undo.release();
+    await expect
+      .poll(async () => (await ws.getRecord(tableId, record.id)).data)
+      .toEqual({ Name: "Original", Status: "" });
+    await page.unroute(`**/nodes/${tableId}/table/records/${record.id}`);
+  });
+
+  test("ordinary update acknowledgement orders a pending undo and later edit", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "update-ack-order",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }, { Name: "Other" }],
+    );
+    const ws = client.ws(wsID);
+    const list = async () =>
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    const original = (await list()).find((r) => r.data?.Name === "Original");
+    const other = (await list()).find((r) => r.data?.Name === "Other");
+    if (!original || !other) throw new Error("Missing records");
+    async function edit(from: string, to: string) {
+      await page.locator("td").getByText(from, { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill(to);
+      await input.press("Enter");
+    }
+    await edit("Other", "Other edited");
+    await expect(page.locator("td").getByText("Other edited", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    let release!: () => void;
+    let entered!: () => void;
+    let finished!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const completed = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/${original.id}`, async (route) => {
+      if (route.request().method() !== "POST" || route.request().postDataJSON()?.data?.Name !== "First")
+        return route.continue();
+      const response = await route.fetch();
+      entered();
+      await gate;
+      await route.fulfill({ response });
+      finished();
+    });
+    await edit("Original", "First");
+    await pending;
+    await ws.createRecord(tableId, { data: { Name: "Refresh" } });
+    await expect(page.locator("td").getByText("First", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await edit("First", "Second");
+    release();
+    await completed;
+    await page.unroute(`**/nodes/${tableId}/table/records/${original.id}`);
+    await expect.poll(async () => (await ws.getRecord(tableId, original.id)).data?.Name).toBe("Second");
+    await expect.poll(async () => (await ws.getRecord(tableId, other.id)).data?.Name).toBe("Other edited");
+    await expect(page.locator("td").getByText("Second", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await ws.getRecord(tableId, original.id)).data?.Name).toBe("Original");
+  });
+
+  test("an initial creation acknowledgement orders later edits", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "create-ack-order",
+      [{ name: "Name", type: "text" }],
+      [],
+    );
+    const ws = client.ws(wsID);
+    const list = async () =>
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    let release!: () => void;
+    let entered!: () => void;
+    let finished!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const completed = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    await page.route(
+      `**/nodes/${tableId}/table/records/create`,
+      async (route) => {
+        const response = await route.fetch();
+        entered();
+        await gate;
+        await route.fulfill({ response });
+        finished();
+      },
+      { times: 1 },
+    );
+    await page.getByText(/add record/i).click();
+    await pending;
+    const created = (await list())[0];
+    if (!created) throw new Error("Missing created record");
+    await ws.createRecord(tableId, { data: { Name: "Other" } });
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveCount(2);
+    const row = page.getByRole("button", { name: "Open", exact: true }).first().locator("xpath=ancestor::tr");
+    await row.locator("td").nth(3).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("Newer");
+    await input.press("Enter");
+    release();
+    await completed;
+    await expect.poll(async () => (await ws.getRecord(tableId, created.id)).data?.Name).toBe("Newer");
+    await expect(page.locator("td").getByText("Newer", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await ws.getRecord(tableId, created.id)).data?.Name ?? "").toBe("");
+    expect((await list()).some((record) => record.id === created.id)).toBe(true);
+  });
+
+  test("a recreation acknowledgement owns edits to its visible record", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "redo-response-order",
+      [{ name: "Name", type: "text" }],
+      [],
+    );
+    const ws = client.ws(wsID);
+    const list = async () =>
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    await page.getByText(/add record/i).click();
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveCount(0);
+    let release!: () => void;
+    let entered!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let finished!: () => void;
+    const completed = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    await page.route(`**/nodes/${tableId}/table/records/create`, async (route) => {
+      const response = await route.fetch();
+      entered();
+      await gate;
+      await route.fulfill({ response });
+      finished();
+    });
+    await page.keyboard.press("Control+Shift+z");
+    await pending;
+    const recreated = (await list())[0];
+    if (!recreated) throw new Error("Missing recreated record");
+    // An external change prompts the normal subscription refresh while the create response is held.
+    await ws.createRecord(tableId, { data: { Name: "Other" } });
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveCount(2);
+    const row = page.getByRole("button", { name: "Open", exact: true }).first().locator("xpath=ancestor::tr");
+    await row.locator("td").nth(3).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("Newer");
+    await input.press("Enter");
+    release();
+    await completed;
+    await page.unroute(`**/nodes/${tableId}/table/records/create`);
+    await expect.poll(async () => (await ws.getRecord(tableId, recreated.id)).data?.Name).toBe("Newer");
+    await expect(page.locator("td").getByText("Newer", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await page.keyboard.press("Control+z");
+    await expect.poll(async () => (await ws.getRecord(tableId, recreated.id)).data?.Name ?? "").toBe("");
+    expect((await list()).some((record) => record.id === recreated.id)).toBe(true);
+  });
+
+  test("record history follows recreated identities and rejects stale deletion redo", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "record-identity",
+      [{ name: "Name", type: "text" }],
+      [],
+    );
+    const ws = client.ws(wsID);
+    const list = async () =>
+      (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 })).records ?? [];
+    await page.getByText(/add record/i).click();
+    await expect.poll(async () => (await list()).length).toBe(1);
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
+    const original = (await list())[0];
+    if (!original) throw new Error("Missing created record");
+    const row = page.getByRole("button", { name: "Open", exact: true }).locator("xpath=ancestor::tr");
+    await row.locator("td").nth(3).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("First");
+    const editResponse = page.waitForResponse(
+      (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${original.id}`),
+    );
+    await input.press("Enter");
+    expect((await editResponse).status()).toBe(200);
+    await expect(page.locator("td").getByText("First", { exact: true })).toBeVisible();
+    async function history(redo: boolean, suffix: string, status: number) {
+      await page.getByRole("button", { name: "All", exact: true }).click();
+      const response = page.waitForResponse((res) => res.request().method() === "POST" && res.url().includes(suffix));
+      await page.keyboard.press(redo ? "Control+Shift+z" : "Control+z");
+      expect((await response).status()).toBe(status);
+    }
+    await history(false, `/records/${original.id}`, 200);
+    await expect.poll(async () => (await list())[0]?.data?.Name ?? "").toBe("");
+    await history(false, `/records/${original.id}/delete`, 200);
+    await expect.poll(async () => (await list()).length).toBe(0);
+    await history(true, "/records/create", 200);
+    await expect.poll(async () => (await list()).length).toBe(1);
+    const recreated = (await list())[0];
+    if (!recreated || recreated.id === original.id) throw new Error("Record was not recreated");
+    await history(true, `/records/${recreated.id}`, 200);
+    await expect.poll(async () => (await list())[0]?.data?.Name).toBe("First");
+    await expect(page.locator("td").getByText("First", { exact: true })).toBeVisible();
+    page.once("dialog", (dialog) => void dialog.accept());
+    const deleteResponse = page.waitForResponse(
+      (res) => res.request().method() === "POST" && res.url().endsWith(`/records/${recreated.id}/delete`),
+    );
+    await page.locator("tr").filter({ hasText: "First" }).locator("button", { hasText: "✕" }).click();
+    expect((await deleteResponse).status()).toBe(200);
+    await expect.poll(async () => (await list()).length).toBe(0);
+    await history(false, "/records/create", 200);
+    await expect.poll(async () => (await list()).length).toBe(1);
+    const restored = (await list())[0];
+    if (!restored || restored.id === recreated.id) throw new Error("Deleted record was not recreated");
+    await history(false, `/records/${restored.id}`, 200);
+    await expect.poll(async () => (await list())[0]?.data?.Name ?? "").toBe("");
+    await history(true, `/records/${restored.id}`, 200);
+    await expect.poll(async () => (await list())[0]?.data?.Name).toBe("First");
+    const latest = await ws.getRecord(tableId, restored.id);
+    const schema = await ws.getNode(tableId);
+    if (!schema.schema_revision) throw new Error("Missing schema revision");
+    await ws.updateRecord(tableId, restored.id, {
+      data: { Name: "Remote" },
+      expected_revision: latest.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    await history(true, `/records/${restored.id}/delete`, 409);
+    expect((await ws.getRecord(tableId, restored.id)).data).toEqual({ Name: "Remote" });
+    await expect(page.getByTestId("workspace-feedback")).toBeVisible();
+  });
+
+  test("undoing record creation preserves a later remote edit", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "record-create-undo",
+      [{ name: "Name", type: "text" }],
+      [],
+    );
+    const ws = client.ws(wsID);
+    const list = () => ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 });
+    await page.getByText(/add record/i).click();
+    await expect.poll(async () => (await list()).records?.length).toBe(1);
+    const record = (await list()).records?.[0];
+    const schema = await ws.getNode(tableId);
+    if (!record || !schema.schema_revision) throw new Error("Missing record or schema");
+    await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
+    await ws.updateRecord(tableId, record.id, {
+      data: { Name: "Remote edit" },
+      expected_revision: record.revision,
+      expected_schema_revision: schema.schema_revision,
+    });
+    const result = page.waitForResponse(
+      (response) => response.request().method() === "POST" && response.url().endsWith(`/records/${record.id}/delete`),
+    );
+    await page.keyboard.press("Control+z");
+    expect((await result).status()).toBe(409);
+    expect((await ws.getRecord(tableId, record.id)).data).toEqual({ Name: "Remote edit" });
+    await expect(page.getByTestId("workspace-feedback")).toBeVisible();
   });
 
   test("delete a record from table", async ({ page, request }) => {
@@ -482,7 +1309,7 @@ test.describe("Table Sort UI", () => {
     // Verify sort was persisted via API
     await expect(async () => {
       const listParams = {
-        ViewID: viewData.id,
+        ViewID: viewData.view.id,
         Filters: "",
         Sorts: "",
         Offset: 0,
@@ -701,3 +1528,118 @@ test.describe("Table and Page Hybrid", () => {
     await expect(page.locator('textarea[placeholder*="markdown"]')).not.toBeVisible();
   });
 });
+
+for (const preference of ["default font", "zoom"] as const) {
+  test(`German record draft review remains usable with ${preference} on a narrow screen`, async ({
+    browser,
+    request,
+    baseURL,
+  }, testInfo) => {
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const extension = testInfo.outputPath("record-font-extension");
+    await mkdir(extension, { recursive: true });
+    await writeFile(
+      path.join(extension, "manifest.json"),
+      JSON.stringify({
+        manifest_version: 3,
+        name: "Record font",
+        version: "1.0",
+        permissions: ["fontSettings"],
+        background: { service_worker: "background.js" },
+      }),
+    );
+    await writeFile(path.join(extension, "background.js"), "chrome.runtime.onInstalled.addListener(() => {});");
+    const context = await browser.browserType().launchPersistentContext(testInfo.outputPath("record-font-profile"), {
+      channel: "chromium",
+      headless: true,
+      baseURL,
+      viewport: { width: 1280, height: 900 },
+      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
+    });
+    try {
+      const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+      const page = context.pages()[0];
+      if (!page) throw new Error("Missing browser page");
+      await page.goto("/privacy");
+      if (preference === "default font") {
+        await worker.evaluate("chrome.fontSettings.setDefaultFontSize({ pixelSize: 24 })");
+        await page.reload();
+        await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe("24px");
+      }
+      const { client, wsID, tableId } = await setupTable(
+        page,
+        request,
+        "draft-font",
+        [{ name: "Name", type: "text" }],
+        [{ Name: "Original" }],
+      );
+      const me = await client.getMe();
+      await client.updateUserSettings({ settings: { ...me.settings, language: "de" } });
+      await page.reload();
+      await waitForWorkspace(page);
+      await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+      if (preference === "zoom") {
+        await worker.evaluate("chrome.tabs.setZoom(2)");
+        await expect.poll(() => page.evaluate(() => innerWidth)).toBe(640);
+        await page.setViewportSize({ width: 780, height: 900 });
+        await expect.poll(() => page.evaluate(() => innerWidth)).toBe(390);
+      } else {
+        await page.setViewportSize({ width: 390, height: 900 });
+      }
+      const notNow = page.getByRole("button", { name: "Nicht jetzt" });
+      if (await notNow.isVisible()) await notNow.click();
+      const ws = client.ws(wsID);
+      const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+        .records?.[0];
+      const schema = await ws.getNode(tableId);
+      if (!record || !schema.schema_revision) throw new Error("Missing record or schema");
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route(`**/nodes/${tableId}/table/records/${record.id}`, async (route) => {
+        if (route.request().method() === "POST") await gate;
+        await route.continue();
+      });
+      await page.locator("td").getByText("Original", { exact: true }).click();
+      const input = page.locator('table td input[type="text"]').first();
+      await input.fill("My draft");
+      const sent = page.waitForRequest((req) => req.method() === "POST" && req.url().endsWith(`/records/${record.id}`));
+      await input.press("Enter");
+      await sent;
+      await ws.updateRecord(tableId, record.id, {
+        data: { Name: "Remote" },
+        expected_revision: record.revision,
+        expected_schema_revision: schema.schema_revision,
+      });
+      release();
+      const draft = page.getByRole("alert").filter({ hasText: "Dieser Datensatz konnte nicht gespeichert werden" });
+      await expect(draft).toBeVisible();
+      await draft.getByRole("button", { name: "Aktuellen Datensatz prüfen" }).click();
+      await expect(draft.locator("pre").filter({ hasText: "Remote" })).toBeVisible();
+      const geometry = await draft.evaluate((el) => ({
+        right: el.getBoundingClientRect().right,
+        scroll: el.scrollWidth,
+        width: el.clientWidth,
+      }));
+      expect(geometry.right).toBeLessThanOrEqual(390);
+      expect(geometry.scroll).toBeLessThanOrEqual(geometry.width);
+      await expect(draft.getByRole("button", { name: "Durch meine Änderungen ersetzen" })).toBeVisible();
+      await expect(draft.getByRole("button", { name: "Entwurf verwerfen" })).toBeVisible();
+      for (const button of await draft.getByRole("button").all()) {
+        const metrics = await button.evaluate((element) => ({
+          font: getComputedStyle(element).fontSize,
+          parent: getComputedStyle(element.parentElement!).fontSize,
+          right: element.getBoundingClientRect().right,
+        }));
+        expect(metrics.font).toBe(metrics.parent);
+        expect(metrics.right).toBeLessThanOrEqual(390);
+        await button.click({ trial: true });
+      }
+      await page.screenshot({ path: testInfo.outputPath(`record-draft-${preference.replaceAll(" ", "-")}.png`) });
+    } finally {
+      await context.close();
+    }
+  });
+}

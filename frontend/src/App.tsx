@@ -4,6 +4,7 @@ import { Show, Switch, Match, Suspense, type ParentComponent } from "solid-js";
 import { Router, Route, Navigate, A, useParams } from "@solidjs/router";
 import styles from "./App.module.css";
 import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
+import { RecordDraftProvider } from "./contexts/RecordDraftContext";
 import AppErrorBoundary from "./components/ErrorBoundary";
 import { HostModeProvider } from "@maruel/gomode/web/HostMode";
 import { WorkspaceDataProvider } from "./contexts/WorkspaceDataContext";
@@ -225,7 +226,9 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <AuthProvider>
-        <AppRoutes />
+        <RecordDraftProvider>
+          <AppRoutes />
+        </RecordDraftProvider>
       </AuthProvider>
     </AppErrorBoundary>
   );

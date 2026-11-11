@@ -1,4 +1,5 @@
 // Records context providing table records CRUD and pagination.
+import { rebaseRecordEdit } from "./recordEdit";
 import {
   createContext,
   useContext,
@@ -9,8 +10,11 @@ import {
   type Accessor,
   batch,
   onCleanup,
+  untrack,
 } from "solid-js";
+import { APIError } from "../useApi";
 import { useAuth } from "./AuthContext";
+import { useRecordDrafts } from "./RecordDraftContext";
 import { useEventSource } from "./EventSourceContext";
 import { useWorkspace } from "./WorkspaceContext";
 import { useI18n } from "../i18n";
@@ -38,8 +42,6 @@ export const DEFAULT_VIEW_ID = "__default__";
 
 export interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
-  failedRecordDrafts: Accessor<Array<{ id: number; data: string }>>;
-  dismissRecordDraft: (id: number) => void;
   workspaceMembers: Accessor<WorkspaceMemberResponse[]>;
   // Map from user ID string to resolved user info (includes ghosts).
   resolvedUsers: Accessor<Map<string, ResolvedUser>>;
@@ -72,6 +74,9 @@ export interface RecordsContextValue {
   duplicateRecord: (recordId: string) => Promise<void>;
   clearRecords: () => void;
 
+  viewErrors: Accessor<Array<{ id: string; name: string; code: string }>>;
+  discardViewError: (id: string) => Promise<void>;
+
   // View management
   setActiveViewId: (id: string | undefined) => void;
   setFilters: (filters: Filter[]) => void;
@@ -94,21 +99,25 @@ export interface RecordsContextValue {
 export const RecordsContext = createContext<RecordsContextValue>();
 
 export const RecordsProvider: ParentComponent = (props) => {
-  const { t } = useI18n();
+  const { t, translateError } = useI18n();
   const { user, identity: authIdentity, wsApi } = useAuth();
   const { selectedNodeId, selectedNodeData } = useWorkspace();
 
   // Application-level undo stack for record CRUD operations.
   const undoActions = useUndo();
+  let historyAcknowledgement: { done: Promise<void>; record?: DataRecordResponse; beforeRevision?: string } | undefined;
   // Successful local edits share a revision so successive undo actions can
   // follow one another without accepting changes made by another client.
-  const undoRevisions = new Map<string, string>();
-  // Prevents re-entering undo tracking when undo/redo calls CRUD functions.
-  let isUndoing = false;
+  const historyRecords = new Map<string, { id: string; revision: string }>();
+  function remapHistoryRecord(record: { id: string; revision: string }, id: string, revision: string) {
+    historyRecords.delete(record.id);
+    record.id = id;
+    record.revision = revision;
+    historyRecords.set(id, record);
+  }
 
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
-  const [failedRecordDrafts, setFailedRecordDrafts] = createSignal<Array<{ id: number; data: string }>>([]);
-  let nextDraftId = 0;
+  const recordDrafts = useRecordDrafts();
   const [hasMore, setHasMore] = createSignal(false);
 
   // Workspace members for user-type column picker and ghost resolution.
@@ -126,6 +135,60 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   // View state
   const [views, setViews] = createSignal<View[]>([]);
+  const [viewFailures, setViewFailures] = createSignal(new Map<string, { id: string; name: string; code: string }>());
+  const viewErrorKey = (identity: string, id: string) => `${identity}:${id}`;
+  const viewErrors = createMemo(() => {
+    const identity = recordIdentity(selectedNodeId() ?? "");
+    return [...viewFailures()].filter(([key]) => key.startsWith(`${identity}:`)).map(([, error]) => error);
+  });
+  function setViewFailure(identity: string, id: string, error: unknown) {
+    const view = untrack(views).find((item) => item.id === id);
+    setViewFailures((previous) =>
+      new Map(previous).set(viewErrorKey(identity, id), {
+        id,
+        name: view?.name ?? id,
+        code: error instanceof APIError ? error.code : "unknown",
+      }),
+    );
+  }
+  // A recovery owns its view until its read completes; overlapping reads could
+  // otherwise restore an older snapshot after a subsequent edit.
+  const recoveringViews = new Set<string>();
+  async function discardViewError(id: string) {
+    const nodeId = selectedNodeId();
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const key = viewErrorKey(identity, id);
+    if (recoveringViews.has(key) || !viewFailures().has(key)) return;
+    recoveringViews.add(key);
+    try {
+      const node = await ws.getNode(nodeId);
+      if (disposed || identity !== recordIdentity(selectedNodeId() ?? "")) return;
+      const current = node.views?.find((view) => view.id === id);
+      setViews((previous) =>
+        current ? previous.map((view) => (view.id === id ? current : view)) : previous.filter((view) => view.id !== id),
+      );
+      if (activeViewId() === id) {
+        if (current) {
+          setActiveFilters(current.filters ?? []);
+          setActiveSorts(current.sorts ?? []);
+          applyFiltersAndSorts();
+        } else {
+          setActiveViewId(views()[0]?.id);
+        }
+      }
+      setViewFailures((previous) => {
+        const next = new Map(previous);
+        next.delete(viewErrorKey(identity, id));
+        return next;
+      });
+    } catch (error) {
+      if (!disposed && identity === recordIdentity(selectedNodeId() ?? "")) setViewFailure(identity, id, error);
+    } finally {
+      recoveringViews.delete(key);
+    }
+  }
   const [activeViewId, setActiveViewIdSignal] = createSignal<string | undefined>();
   const [activeFilters, setActiveFilters] = createSignal<Filter[]>([]);
   const [activeSorts, setActiveSorts] = createSignal<Sort[]>([]);
@@ -361,6 +424,7 @@ export const RecordsProvider: ParentComponent = (props) => {
           // Create a virtual default view when no views exist
           const virtualDefault: View = {
             id: DEFAULT_VIEW_ID,
+            revision: "",
             name: t("table.all") || "All",
             type: "table",
             default: true,
@@ -392,8 +456,7 @@ export const RecordsProvider: ParentComponent = (props) => {
   });
 
   function clearRecords() {
-    undoRevisions.clear();
-    setFailedRecordDrafts([]);
+    historyRecords.clear();
     debouncedServerReload.cancel();
     recordsRequest++;
     setLoadingRecords(false);
@@ -556,58 +619,79 @@ export const RecordsProvider: ParentComponent = (props) => {
     }
   }
 
+  function beginRecordMutation() {
+    let release!: () => void;
+    const pending = {
+      done: new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+      record: undefined as DataRecordResponse | undefined,
+      beforeRevision: undefined as string | undefined,
+    };
+    historyAcknowledgement = pending;
+    return () => {
+      if (historyAcknowledgement === pending) historyAcknowledgement = undefined;
+      release();
+    };
+  }
+
+  function applyCommittedRecord(record: DataRecordResponse, beforeRevision: string) {
+    // Retire reads started before this acknowledgement; they cannot replace it.
+    recordsRequest++;
+    if (historyAcknowledgement) {
+      historyAcknowledgement.record = record;
+      historyAcknowledgement.beforeRevision = beforeRevision;
+    }
+    setRecords((current) => current.map((item) => (item.id === record.id ? record : item)));
+    setAllRecords(null);
+  }
+
   async function addRecord(data: Record<string, unknown>) {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
     const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
+    while (historyAcknowledgement) await historyAcknowledgement.done;
+    if (!operationCurrent()) return;
 
+    const finish = beginRecordMutation();
     try {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
       const result = await ws.createRecord(nodeId, { data });
       if (!operationCurrent()) return;
-      await loadRecords(nodeId);
-      if (!operationCurrent()) return;
       setSaveError(null);
 
-      if (!isUndoing) {
-        const createdId = result.id;
-        const capturedNodeId = nodeId;
-        const capturedData = { ...data };
-        undoActions.push({
-          description: t("common.undo"),
-          undo: async () => {
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              await ws2.deleteRecord(capturedNodeId, createdId);
-              if (!operationCurrent()) return;
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-          redo: async () => {
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              await ws2.createRecord(capturedNodeId, { data: capturedData });
-              if (!operationCurrent()) return;
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-        });
-      }
+      const historyRecord = { id: result.id, revision: result.revision };
+      historyRecords.set(historyRecord.id, historyRecord);
+      const capturedNodeId = nodeId;
+      const capturedData = { ...data };
+      undoActions.push({
+        description: t("common.undo"),
+        undo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          await ws2.deleteRecord(capturedNodeId, historyRecord.id, { expected_revision: historyRecord.revision });
+          if (!operationCurrent()) return;
+          void loadRecords(capturedNodeId);
+        },
+        redo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          const created = await ws2.createRecord(capturedNodeId, { data: capturedData });
+          if (!operationCurrent()) return;
+          remapHistoryRecord(historyRecord, created.id, created.revision);
+          void loadRecords(capturedNodeId);
+        },
+      });
+      finish();
+      await loadRecords(nodeId);
     } catch (err) {
       setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
+      finish();
       setSavingRecordId(null);
     }
   }
@@ -617,89 +701,96 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
+    const owner = authIdentity();
+    const submitted = structuredClone(data);
+    const workspaceId = user()?.workspace_id;
+    if (!workspaceId) return;
     const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
-
-    // Capture previous field values before overwriting.
-    const prevRecord = records().find((r) => r.id === recordId);
+    // Bind the submitted values to what the user saw, before waiting for history.
+    let prevRecord = records().find((r) => r.id === recordId);
+    const observedData = prevRecord?.data ? structuredClone(prevRecord.data) : {};
     const schemaRevision = selectedNodeData()?.schema_revision;
-    if (!prevRecord || !schemaRevision) {
-      setFailedRecordDrafts((drafts) => [...drafts, { id: nextDraftId++, data: JSON.stringify(data, null, 2) }]);
-      setSaveError(t("errors.failedToSave"));
+    while (historyAcknowledgement) {
+      const pending = historyAcknowledgement;
+      await pending.done;
+      if (prevRecord && pending.record?.id === recordId && pending.beforeRevision === prevRecord.revision) {
+        prevRecord = pending.record;
+      }
+    }
+    if (!operationCurrent() || !prevRecord || !schemaRevision) {
+      recordDrafts.add(owner, workspaceId, nodeId, recordId, submitted);
       return;
     }
-    const prevData: Record<string, unknown> = prevRecord.data ? { ...prevRecord.data } : {};
-    const previousUndoRevision = undoRevisions.get(recordId);
-    if (previousUndoRevision && previousUndoRevision !== prevRecord.revision) {
+    const prevData: Record<string, unknown> = prevRecord.data ? structuredClone(prevRecord.data) : {};
+    const rebased = rebaseRecordEdit(observedData, submitted, prevData);
+    let historyRecord = historyRecords.get(recordId);
+    if (historyRecord && historyRecord.revision !== prevRecord.revision) {
       undoActions.clear();
-      undoRevisions.clear();
+      historyRecords.clear();
+      historyRecord = undefined;
     }
+    const trackedRecord = historyRecord ?? { id: recordId, revision: prevRecord.revision };
 
+    const finish = beginRecordMutation();
     let committed = false;
     try {
       setSavingRecordId(recordId);
       // Invalidate cache since data is changing
       setAllRecords(null);
       const saved = await ws.updateRecord(nodeId, recordId, {
-        data,
+        data: rebased,
         expected_revision: prevRecord.revision,
         expected_schema_revision: schemaRevision,
       });
       committed = true;
       if (!operationCurrent()) return;
-      undoRevisions.set(recordId, saved.record.revision);
-      await loadRecords(nodeId);
-      if (!operationCurrent()) return;
+      trackedRecord.revision = saved.record.revision;
+      applyCommittedRecord(saved.record, prevRecord.revision);
+      historyRecords.set(trackedRecord.id, trackedRecord);
       setSaveError(null);
 
-      if (!isUndoing) {
-        const capturedNodeId = nodeId;
-        const capturedRecordId = recordId;
-        const capturedPrevData = prevData;
-        const capturedNewData = { ...data };
-        undoActions.push({
-          description: t("common.undo"),
-          undo: async () => {
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              const result = await ws2.updateRecord(capturedNodeId, capturedRecordId, {
-                data: capturedPrevData,
-                expected_revision: undoRevisions.get(capturedRecordId) ?? saved.record.revision,
-                expected_schema_revision: schemaRevision,
-              });
-              if (!operationCurrent()) return;
-              undoRevisions.set(capturedRecordId, result.record.revision);
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-          redo: async () => {
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              const result = await ws2.updateRecord(capturedNodeId, capturedRecordId, {
-                data: capturedNewData,
-                expected_revision: undoRevisions.get(capturedRecordId) ?? saved.record.revision,
-                expected_schema_revision: schemaRevision,
-              });
-              if (!operationCurrent()) return;
-              undoRevisions.set(capturedRecordId, result.record.revision);
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-        });
-      }
+      const capturedNodeId = nodeId;
+      const capturedPrevData = prevData;
+      const capturedNewData = rebased;
+      undoActions.push({
+        description: t("common.undo"),
+        undo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          const beforeRevision = trackedRecord.revision;
+          const result = await ws2.updateRecord(capturedNodeId, trackedRecord.id, {
+            data: capturedPrevData,
+            expected_revision: trackedRecord.revision,
+            expected_schema_revision: schemaRevision,
+          });
+          if (!operationCurrent()) return;
+          trackedRecord.revision = result.record.revision;
+          applyCommittedRecord(result.record, beforeRevision);
+          void loadRecords(capturedNodeId);
+        },
+        redo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          const beforeRevision = trackedRecord.revision;
+          const result = await ws2.updateRecord(capturedNodeId, trackedRecord.id, {
+            data: capturedNewData,
+            expected_revision: trackedRecord.revision,
+            expected_schema_revision: schemaRevision,
+          });
+          if (!operationCurrent()) return;
+          trackedRecord.revision = result.record.revision;
+          applyCommittedRecord(result.record, beforeRevision);
+          void loadRecords(capturedNodeId);
+        },
+      });
+      finish();
+      await loadRecords(nodeId);
     } catch (err) {
-      if (operationCurrent() && !committed) {
-        setFailedRecordDrafts((drafts) => [...drafts, { id: nextDraftId++, data: JSON.stringify(data, null, 2) }]);
-      }
-      if (operationCurrent()) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+      if (!committed) recordDrafts.add(owner, workspaceId, nodeId, recordId, rebased);
+      else if (operationCurrent())
+        setSaveError(`${t("errors.failedToSave")}: ${translateError(err instanceof APIError ? err.code : "unknown")}`);
     } finally {
+      finish();
       setSavingRecordId(null);
     }
   }
@@ -709,64 +800,64 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
-    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
+    const operationCurrent = () => !disposed && identity === recordIdentity(untrack(selectedNodeId) ?? "");
+    while (historyAcknowledgement) await historyAcknowledgement.done;
+    if (!operationCurrent()) return;
     if (!confirm(t("table.confirmDeleteRecord") || "Delete this record?")) return;
 
     // Capture full record data before deletion for undo.
     const record = records().find((r) => r.id === recordId);
-    const savedData: Record<string, unknown> = record?.data ? { ...record.data } : {};
+    if (!record) {
+      setSaveError(t("errors.failedToDelete"));
+      return;
+    }
+    const savedData: Record<string, unknown> = record.data ? structuredClone(record.data) : {};
+    let historyRecord = historyRecords.get(recordId);
+    if (historyRecord && historyRecord.revision !== record.revision) {
+      undoActions.clear();
+      historyRecords.clear();
+      historyRecord = undefined;
+    }
+    const trackedRecord = historyRecord ?? { id: recordId, revision: record.revision };
 
+    const finish = beginRecordMutation();
     try {
       setDeletingRecordId(recordId);
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.deleteRecord(nodeId, recordId);
-      if (!operationCurrent()) return;
-      await loadRecords(nodeId);
+      await ws.deleteRecord(nodeId, recordId, { expected_revision: record.revision });
       if (!operationCurrent()) return;
       setSaveError(null);
 
-      if (!isUndoing) {
-        const capturedNodeId = nodeId;
-        const capturedData = savedData;
-        // Track the re-created record ID so redo can delete the right record.
-        let reCreatedId: string | null = null;
-        undoActions.push({
-          description: t("common.undo"),
-          undo: async () => {
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              const result = await ws2.createRecord(capturedNodeId, {
-                data: capturedData,
-              });
-              if (!operationCurrent()) return;
-              reCreatedId = result.id;
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-          redo: async () => {
-            if (!reCreatedId) return;
-            if (!operationCurrent()) return;
-            const ws2 = ws;
-            isUndoing = true;
-            try {
-              await ws2.deleteRecord(capturedNodeId, reCreatedId);
-              if (!operationCurrent()) return;
-              reCreatedId = null;
-              await loadRecords(capturedNodeId);
-            } finally {
-              isUndoing = false;
-            }
-          },
-        });
-      }
+      const capturedNodeId = nodeId;
+      const capturedData = savedData;
+      historyRecords.set(trackedRecord.id, trackedRecord);
+      undoActions.push({
+        description: t("common.undo"),
+        undo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          const result = await ws2.createRecord(capturedNodeId, {
+            data: capturedData,
+          });
+          if (!operationCurrent()) return;
+          remapHistoryRecord(trackedRecord, result.id, result.revision);
+          void loadRecords(capturedNodeId);
+        },
+        redo: async () => {
+          if (!operationCurrent()) return;
+          const ws2 = ws;
+          await ws2.deleteRecord(capturedNodeId, trackedRecord.id, { expected_revision: trackedRecord.revision });
+          if (!operationCurrent()) return;
+          void loadRecords(capturedNodeId);
+        },
+      });
+      finish();
+      await loadRecords(nodeId);
     } catch (err) {
       setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
     } finally {
+      finish();
       setDeletingRecordId(null);
     }
   }
@@ -777,10 +868,13 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
     const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
+    while (historyAcknowledgement) await historyAcknowledgement.done;
+    if (!operationCurrent()) return;
 
     const record = records().find((r) => r.id === recordId);
     if (!record) return;
 
+    const finish = beginRecordMutation();
     try {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
@@ -788,12 +882,14 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       await ws.createRecord(nodeId, { data: record.data || {} });
       if (!operationCurrent()) return;
+      finish();
       await loadRecords(nodeId);
       if (!operationCurrent()) return;
       setSaveError(null);
     } catch (err) {
       setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
     } finally {
+      finish();
       setSavingRecordId(null);
     }
   }
@@ -810,34 +906,34 @@ export const RecordsProvider: ParentComponent = (props) => {
       const res = await ws.createView(nodeId, { name, type });
       if (!operationCurrent()) return;
 
-      // Ideally reload node to get updated views list, but we can also optimistically update
-      // Since we need the full View object which CreateViewResponse doesn't return (only ID),
-      // we probably should reload the node.
-      // But we can construct a placeholder view.
-      const newView: View = {
-        id: res.id,
-        name,
-        type,
-        default: false,
-        filters: [],
-        sorts: [],
-        columns: [], // Defaults
-        groups: [],
-      };
-
       batch(() => {
-        setViews([...views(), newView]);
-        setActiveViewIdSignal(res.id);
+        setViews([...views(), res.view]);
+        setActiveViewIdSignal(res.view.id);
         setActiveFilters([]);
         setActiveSorts([]);
       });
       setSaveError(null);
       // No need to reload records as filters are empty
     } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${String(err)}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${translateError(err instanceof APIError ? err.code : "unknown")}`);
     } finally {
       setSavingView(false);
     }
+  }
+
+  // Serialize writes for each view so a later local edit uses the revision from
+  // the preceding save. A failed save rejects all already queued edits.
+  const viewWrites = new Map<string, Promise<void>>();
+  function queueViewWrite(key: string, write: () => Promise<void>): Promise<void> {
+    const previous = viewWrites.get(key) ?? Promise.resolve();
+    const pending = previous.then(write);
+    viewWrites.set(key, pending);
+    void pending
+      .finally(() => {
+        if (viewWrites.get(key) === pending) viewWrites.delete(key);
+      })
+      .catch(() => undefined);
+    return pending;
   }
 
   async function updateView(viewId: string, updates: Partial<View>) {
@@ -845,28 +941,23 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
-    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
-
+    const operationCurrent = () => !disposed && identity === recordIdentity(untrack(selectedNodeId) ?? "");
+    if (viewFailures().has(viewErrorKey(identity, viewId))) return;
+    setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
     try {
       setSavingView(true);
-      // We only send the fields that are updated.
-      // The API expects UpdateViewRequest which matches Partial<View> structure mostly.
-      // But we need to map View properties to UpdateViewRequest properties if they differ.
-      // They are identical in our DTOs.
-      await ws.updateView(nodeId, viewId, updates);
-      if (!operationCurrent()) return;
-
-      setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
-
-      // Note: we do NOT re-apply sorts/filters here. The caller is expected to
-      // use setSorts()/setFilters() for immediate local application before calling
-      // updateView() for persistence. Re-applying after the async API call would
-      // overwrite any user changes made while the request was in flight.
-      setSaveError(null);
+      await queueViewWrite(`${identity}:${viewId}`, async () => {
+        if (!operationCurrent()) throw new Error("View changed while saving");
+        const current = untrack(views).find((v) => v.id === viewId);
+        if (!current) throw new Error("View no longer available");
+        const res = await ws.updateView(nodeId, viewId, { ...updates, expected_revision: current.revision });
+        if (operationCurrent())
+          setViews(untrack(views).map((v) => (v.id === viewId ? { ...v, revision: res.view.revision } : v)));
+      });
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+      if (operationCurrent()) setViewFailure(identity, viewId, err);
     } finally {
-      setSavingView(false);
+      if (operationCurrent()) setSavingView(false);
     }
   }
 
@@ -875,48 +966,53 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
     const identity = recordIdentity(nodeId);
-    const operationCurrent = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
-
-    if (!confirm(t("table.confirmDeleteView") || "Delete this view?")) return;
-
+    const operationCurrent = () => !disposed && identity === recordIdentity(untrack(selectedNodeId) ?? "");
+    if (viewFailures().has(viewErrorKey(identity, viewId))) return;
+    if (!confirm(t("table.confirmDeleteView"))) return;
     try {
       setSavingView(true);
-      await ws.deleteView(nodeId, viewId);
+      await queueViewWrite(`${identity}:${viewId}`, async () => {
+        if (!operationCurrent()) throw new Error("View changed while deleting");
+        const current = untrack(views).find((v) => v.id === viewId);
+        if (!current) throw new Error("View no longer available");
+        await ws.deleteView(nodeId, viewId, { expected_revision: current.revision });
+      });
       if (!operationCurrent()) return;
-
       const newViews = views().filter((v) => v.id !== viewId);
       setViews(newViews);
-
-      if (activeViewId() === viewId) {
-        // Switch to another view or clear
-        const firstView = newViews[0];
-        if (firstView) {
-          setActiveViewId(firstView.id);
-        } else {
-          setActiveViewId(undefined);
-        }
-      }
-      setSaveError(null);
+      if (activeViewId() === viewId) setActiveViewId(newViews[0]?.id);
     } catch (err) {
-      setSaveError(`${t("errors.failedToDelete")}: ${String(err)}`);
+      if (operationCurrent()) setViewFailure(identity, viewId, err);
     } finally {
-      setSavingView(false);
+      if (operationCurrent()) setSavingView(false);
     }
   }
 
   async function runHistory(redo: boolean) {
+    const identity = recordIdentity(selectedNodeId() ?? "");
+    const current = () => !disposed && identity === recordIdentity(selectedNodeId() ?? "");
+    while (historyAcknowledgement) await historyAcknowledgement.done;
+    if (!current()) return;
+    const finish = beginRecordMutation();
     try {
       await (redo ? undoActions.redo() : undoActions.undo());
-      setSaveError(null);
+      if (current()) setSaveError(null);
     } catch (err) {
-      setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+      if (!current()) return;
+      setSaveError(
+        err instanceof APIError && err.status === 409
+          ? t("errors.recordHistoryConflict")
+          : `${t("errors.failedToSave")}: ${translateError(err instanceof APIError ? err.code : "unknown")}`,
+      );
+    } finally {
+      finish();
     }
   }
 
   const value: RecordsContextValue = {
     records,
-    failedRecordDrafts,
-    dismissRecordDraft: (id) => setFailedRecordDrafts((drafts) => drafts.filter((draft) => draft.id !== id)),
+    viewErrors,
+    discardViewError,
     workspaceMembers,
     resolvedUsers,
     hasMore,

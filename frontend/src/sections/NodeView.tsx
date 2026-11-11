@@ -1,11 +1,12 @@
 // Owns live editing, conflict recovery, and historical previews under their departure intent.
-import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from "solid-js";
+import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack, onCleanup } from "solid-js";
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
 import TableTable from "../components/TableTable";
 import TableList from "../components/TableList";
 import TableGallery from "../components/TableGallery";
 import TableBoard from "../components/TableBoard";
 import RecordDetail from "../components/RecordDetail";
+import { Button } from "../components/shared/Button";
 import ViewTabs from "../components/table/ViewTabs";
 import { AddColumnDropdown } from "../components/table/AddColumnDropdown";
 import MarkdownPreview from "../components/MarkdownPreview";
@@ -14,6 +15,7 @@ import { PageHeader } from "../components/editor/PageHeader";
 import { useAssetUpload } from "../components/editor/useAssetUpload";
 import { useAuthScope, useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from "../contexts";
 import { useI18n } from "../i18n";
+import { useRecordDrafts } from "../contexts/RecordDraftContext";
 import { nodeUrl, stripSlug } from "../utils/urls";
 import { relativeLinksToSpaUrls } from "../utils/markdown-utils";
 import type { EditorIntent } from "../contexts/EditorContext";
@@ -26,8 +28,13 @@ import CloudDoneIcon from "@material-symbols/svg-400/outlined/cloud_done.svg?sol
 const Editor = lazy(() => import("../components/editor/Editor"));
 
 export default function NodeView() {
-  const { t } = useI18n();
+  const { t, translateError } = useI18n();
   let titleInput: HTMLInputElement | undefined;
+  let tableView: HTMLDivElement | undefined;
+  let live = true;
+  onCleanup(() => {
+    live = false;
+  });
   const navigate = useNavigate();
   const params = useParams<{ wsId: string; nodeId: string }>();
   const { user, wsApi } = useAuth();
@@ -83,10 +90,12 @@ export default function NodeView() {
   });
   const {
     records,
-    failedRecordDrafts,
-    dismissRecordDraft,
+    saveError,
+    viewErrors,
+    discardViewError,
     hasMore,
     loadMoreRecords,
+    loadRecords: loadMoreAfterRecovery,
     addRecord,
     updateRecord,
     deleteRecord,
@@ -96,6 +105,12 @@ export default function NodeView() {
     setActiveViewId,
     updateView,
   } = useRecords();
+  const recordDrafts = useRecordDrafts();
+  const failedRecordDrafts = createMemo(() =>
+    recordDrafts
+      .drafts()
+      .filter((draft) => draft.workspaceId === user()?.workspace_id && draft.nodeId === selectedNodeId()),
+  );
   const [searchParams, setSearchParams] = useSearchParams<{ view?: string }>();
 
   const [previewContent, setPreviewContent] = createSignal<string | null>(null);
@@ -496,19 +511,124 @@ export default function NodeView() {
               </Show>
 
               <Show when={selectedNodeData()?.has_table}>
-                <div class={styles.tableView}>
-                  <For each={failedRecordDrafts()}>
-                    {(draft) => (
-                      <section class={styles.recordDraft} role="alert">
-                        <p>{t("errors.recordDraft")}</p>
-                        <pre class={styles.recordDraftContent}>{draft.data}</pre>
-                        <button type="button" onClick={() => dismissRecordDraft(draft.id)}>
-                          {t("common.close")}
+                <div class={styles.tableView} ref={tableView} tabIndex={-1}>
+                  <Show when={saveError()}>
+                    {(error) => (
+                      <p class={styles.viewError} role="alert">
+                        {error()}
+                      </p>
+                    )}
+                  </Show>
+                  <For each={viewErrors()}>
+                    {(error) => (
+                      <section class={styles.viewError} role="alert">
+                        <p>
+                          {error.name}: {translateError(error.code)}. {t("errors.viewRecovery")}
+                        </p>
+                        <button type="button" onClick={() => void discardViewError(error.id)}>
+                          {t("errors.discardViewChanges")}
                         </button>
                       </section>
                     )}
                   </For>
-                  <div class={styles.viewBar}>
+                  <For each={failedRecordDrafts().map((draft) => draft.id)}>
+                    {(id) => {
+                      const initial = failedRecordDrafts().find((item) => item.id === id);
+                      if (!initial) throw new Error("Record draft is missing");
+                      const draft = createMemo(() => failedRecordDrafts().find((item) => item.id === id) ?? initial);
+                      let section: HTMLElement | undefined;
+                      let reviewButton: HTMLButtonElement | undefined;
+                      onCleanup(() => {
+                        if (
+                          !live ||
+                          recordDrafts.drafts().some((item) => item.id === id) ||
+                          !section?.contains(document.activeElement)
+                        )
+                          return;
+                        const next = [
+                          ...(tableView?.querySelectorAll<HTMLElement>("[data-record-draft] button") ?? []),
+                        ].find((button) => !section.contains(button));
+                        (
+                          next ??
+                          tableView?.querySelector<HTMLElement>("[data-view-focus-target] button") ??
+                          tableView
+                        )?.focus({ preventScroll: true });
+                      });
+                      return (
+                        <section class={styles.recordDraft} role="alert" data-record-draft ref={section}>
+                          <p>{t("errors.recordDraft")}</p>
+                          <p>{t("errors.recordYourChanges")}</p>
+                          <pre class={styles.recordDraftContent}>{JSON.stringify(draft().data, null, 2)}</pre>
+                          <Show when={draft().review}>
+                            {(review) => (
+                              <>
+                                <p>{t("errors.recordCurrent")}</p>
+                                <pre class={styles.recordDraftContent}>{JSON.stringify(review().data, null, 2)}</pre>
+                              </>
+                            )}
+                          </Show>
+                          <Show when={draft().error}>{(error) => <p>{translateError(error())}</p>}</Show>
+                          <div class={styles.recordDraftActions}>
+                            <Button
+                              class={styles.recordDraftButton}
+                              ref={reviewButton}
+                              aria-disabled={draft().busy}
+                              onClick={() => {
+                                if (!draft().busy) void recordDrafts.review(id);
+                              }}
+                            >
+                              {t("errors.recordReview")}
+                            </Button>
+                            <Show when={draft().review}>
+                              {(_review) => {
+                                let replaceButton: HTMLButtonElement | undefined;
+                                onCleanup(() => {
+                                  if (
+                                    live &&
+                                    document.activeElement === replaceButton &&
+                                    recordDrafts.drafts().some((item) => item.id === id)
+                                  )
+                                    reviewButton?.focus({ preventScroll: true });
+                                });
+                                return (
+                                  <Button
+                                    class={styles.recordDraftButton}
+                                    ref={replaceButton}
+                                    aria-disabled={draft().busy}
+                                    onClick={() => {
+                                      if (draft().busy) return;
+                                      const captured = draft();
+                                      void recordDrafts.save(id).then((saved) => {
+                                        if (
+                                          saved &&
+                                          live &&
+                                          user()?.workspace_id === captured.workspaceId &&
+                                          selectedNodeId() === captured.nodeId
+                                        )
+                                          void loadMoreAfterRecovery(captured.nodeId);
+                                      });
+                                    }}
+                                  >
+                                    {t("errors.recordReplace")}
+                                  </Button>
+                                );
+                              }}
+                            </Show>
+                            <Button
+                              class={styles.recordDraftButton}
+                              aria-disabled={draft().busy}
+                              onClick={() => {
+                                if (!draft().busy) recordDrafts.dismiss(id);
+                              }}
+                            >
+                              {t("errors.recordDiscard")}
+                            </Button>
+                          </div>
+                        </section>
+                      );
+                    }}
+                  </For>
+                  <div class={styles.viewBar} data-view-focus-target>
                     <ViewTabs />
                     <Show when={viewType() !== "table"}>
                       <div class={styles.viewBarAddField}>

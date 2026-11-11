@@ -1,4 +1,4 @@
-// Handles hierarchical nodes and revision-conditional page and table mutations.
+// Handles hierarchical nodes and revision-conditional page, table, and record mutations.
 
 package handlers
 
@@ -604,12 +604,20 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 		Modified: now,
 	}
 
+	canonical, err := content.CanonicalRecord(record)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to normalize record", err)
+	}
+	revision, err := content.RecordRevision(canonical)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to compute record revision", err)
+	}
 	author := GitAuthor(user)
 	if err := ws.AppendRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
 	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, id, user.ID)
-	return &dto.CreateRecordResponse{ID: id}, nil
+	return &dto.CreateRecordResponse{ID: id, Revision: revision}, nil
 }
 
 // UpdateRecord updates an existing record in a table.
@@ -681,8 +689,17 @@ func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID ksid.ID, user *iden
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := GitAuthor(user)
-	if err := ws.DeleteRecord(ctx, req.ID, req.RID, author); err != nil {
-		return nil, dto.NotFound("record")
+	if err := ws.DeleteRecord(ctx, req.ID, req.RID, req.ExpectedRevision, author); err != nil {
+		if conflict, ok := errors.AsType[*content.RevisionConflictError](err); ok {
+			return nil, dto.NewAPIError(409, dto.ErrorCodeConflict, "Record changed; read the current record before deleting").WithDetail("recovery", "read_current").WithDetail("current_revision", conflict.CurrentRevision)
+		}
+		if errors.Is(err, content.ErrRecordNotFound) {
+			return nil, dto.NotFound("record")
+		}
+		if errors.Is(err, content.ErrTableNotFound) {
+			return nil, dto.NotFound("table")
+		}
+		return nil, dto.InternalWithError("Failed to delete record", err)
 	}
 	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, req.RID, user.ID)
 	return &dto.DeleteRecordResponse{Ok: true}, nil
