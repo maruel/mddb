@@ -1,0 +1,66 @@
+# mddb release archives for Linux, macOS and Windows.
+version: 2
+project_name: mddb
+builds:
+  - id: unix
+    main: ./backend/cmd/mddb
+    binary: mddb
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+  - id: windows
+    main: ./backend/cmd/mddb
+    binary: mddb
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+archives:
+  - id: unix
+    ids:
+      - unix
+    formats:
+      - tar.gz
+    name_template: mddb_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - src: contrib/config.toml
+        strip_parent: true
+      - src: 'contrib/mddb.{{ if eq .Os "linux" }}service{{ else }}plist{{ end }}'
+        strip_parent: true
+  - id: windows
+    ids:
+      - windows
+    formats:
+      - zip
+    name_template: mddb_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - src: contrib/config.toml
+        strip_parent: true
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+release:
+  github:
+    owner: maruel
+    name: mddb
+  prerelease: auto
+changelog:
+  use: git

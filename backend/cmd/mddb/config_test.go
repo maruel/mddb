@@ -10,8 +10,10 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/maruel/gomode/httpserver/geoip"
 	"github.com/maruel/gomode/voicegateway"
@@ -129,6 +131,7 @@ func TestLoadTOMLConfig(t *testing.T) {
 	t.Run("parses every field", func(t *testing.T) {
 		t.Parallel()
 		dir := writeConfig(t, `
+auto_update = "0 3 * * 6"
 [server]
 http = ":9090"
 data_dir = "/srv/mddb"
@@ -165,6 +168,7 @@ log_level = "debug"
 			t.Fatal(err)
 		}
 		want := tomlConfig{
+			AutoUpdate: "0 3 * * 6",
 			Server: tomlServer{
 				HTTP:         ":9090",
 				DataDir:      "/srv/mddb",
@@ -250,6 +254,53 @@ log_level = "debug"
 
 func TestResolveConfig(t *testing.T) {
 	cfgDir := t.TempDir()
+	t.Run("automatic updates", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			for _, expr := range []string{"50 4 * * *", "0 3 * * 6", ""} {
+				t.Run(expr, func(t *testing.T) {
+					dir := t.TempDir()
+					if err := os.WriteFile(configPath(dir), []byte("auto_update = "+strconv.Quote(expr)), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					tc, err := loadTOMLConfig(dir)
+					if err != nil {
+						t.Fatal(err)
+					}
+					cfg, err := resolveConfig(&tc, dir)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if expr == "" {
+						if cfg.AutoUpdate != nil {
+							t.Fatal("empty schedule enabled updates")
+						}
+						return
+					}
+					if cfg.AutoUpdate == nil {
+						t.Fatal("schedule disabled updates")
+					}
+					loc := time.FixedZone("local", -5*60*60)
+					now := time.Date(2026, 11, 13, 23, 0, 0, 0, loc)
+					want := time.Date(2026, 11, 14, 4, 50, 0, 0, loc)
+					if expr == "0 3 * * 6" {
+						want = time.Date(2026, 11, 14, 3, 0, 0, 0, loc)
+					}
+					if got := cfg.AutoUpdate.Next(now); !got.Equal(want) || got.Location() != loc {
+						t.Fatalf("next update = %v, want %v", got, want)
+					}
+				})
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			for _, expr := range []string{"nightly", "60 4 * * *", "0 0 31 2 *"} {
+				tc := defaultConfig()
+				tc.AutoUpdate = expr
+				if _, err := resolveConfig(&tc, cfgDir); err == nil || !strings.Contains(err.Error(), "auto_update:") {
+					t.Fatalf("schedule %q: %v", expr, err)
+				}
+			}
+		})
+	})
 
 	t.Run("defaults", func(t *testing.T) {
 		tc := defaultConfig()
@@ -271,6 +322,9 @@ func TestResolveConfig(t *testing.T) {
 		}
 		if len(got.TrustedProxies) != 0 {
 			t.Errorf("expected no trusted proxies: %v", got.TrustedProxies)
+		}
+		if got.AutoUpdate == nil || tc.AutoUpdate != "50 4 * * *" {
+			t.Fatalf("default update schedule = %q, %v", tc.AutoUpdate, got.AutoUpdate)
 		}
 	})
 

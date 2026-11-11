@@ -22,13 +22,16 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/lmittmann/tint"
+	"github.com/maruel/gomode/autoupdate"
 	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/gomode/voicegateway/voicertc"
 	"github.com/maruel/mddb/backend/internal/email"
@@ -54,6 +57,17 @@ func main() {
 }
 
 func mainImpl() (result error) {
+	// Register before all resource cleanup: a committed update may restart only
+	// after HTTP requests, background work, watchers and voice sessions drain.
+	var updater *autoupdate.Updater
+	var updateWorkers sync.WaitGroup
+	var updated bool // Read only after updateWorkers joins.
+	defer func() {
+		updateWorkers.Wait()
+		if updated && result == nil {
+			result = updater.Restart()
+		}
+	}()
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		_, _ = fmt.Fprintf(w, `Usage: mddb [flags]
@@ -156,6 +170,20 @@ Flags:
 		},
 	}))
 	slog.SetDefault(logger)
+	binary, ext := "mddb", ".tar.gz"
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+		ext = ".zip"
+	}
+	// New also cleans a previous Windows image when scheduling is disabled.
+	updater, err = autoupdate.New(autoupdate.Config{
+		Repository: "maruel/mddb", CurrentVersion: autoupdate.Version(), Binary: binary,
+		ArchiveName: func(string) string { return "mddb_" + runtime.GOOS + "_" + runtime.GOARCH + ext },
+		Log:         logger,
+	})
+	if err != nil {
+		return fmt.Errorf("configure updates: %w", err)
+	}
 
 	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create data directory: %w", err)
@@ -446,6 +474,11 @@ Flags:
 		serverErr <- httpServer.ListenAndServe()
 		return nil
 	})
+	if cfg.AutoUpdate != nil {
+		updateWorkers.Go(func() {
+			updated = runAutoUpdate(workerCtx, updater, *cfg.AutoUpdate, stop)
+		})
+	}
 
 	// Wait for either context cancellation or server error
 	select {
@@ -465,6 +498,20 @@ Flags:
 		slog.InfoContext(ctx, "Server stopped")
 	}
 	return nil
+}
+
+// runAutoUpdate initiates shutdown on a committed install, including when later
+// temporary-file cleanup fails. The caller joins this worker before restarting.
+func runAutoUpdate(ctx context.Context, u *autoupdate.Updater, schedule autoupdate.Schedule, stop context.CancelFunc) bool {
+	installed, err := u.Run(ctx, schedule)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		slog.WarnContext(ctx, "automatic update", "err", err)
+	}
+	if installed == "" {
+		return false
+	}
+	stop()
+	return true
 }
 
 // shutdownHTTPServer preserves the graceful deadline and closes active HTTP
@@ -488,16 +535,12 @@ func printVersion() {
 }
 
 func getBuildInfo() (version, goVersion, revision string, dirty bool) {
-	version = "unknown"
+	version = autoupdate.Version()
 	goVersion = "unknown"
 	revision = "unknown"
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
-	}
-	version = info.Main.Version
-	if version == "" || version == "(devel)" {
-		version = "dev"
 	}
 	goVersion = info.GoVersion
 	for _, setting := range info.Settings {

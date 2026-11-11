@@ -9,6 +9,11 @@
 # The file holds client secrets, so keep it readable by the server account only:
 #   install -m 600 contrib/config.toml ~/.config/mddb/config.toml
 
+# Check stable releases daily at 04:50 local time, with up to five minutes of
+# random delay. Uses five-field cron syntax. Empty disables automatic updates.
+# Development, dirty and prerelease builds never update themselves.
+#auto_update = "50 4 * * *"
+
 # ── Server ───────────────────────────────────────────────────────────────────
 
 [server]

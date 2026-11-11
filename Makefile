@@ -1,7 +1,9 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark
+.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark release
+
+GORELEASER ?= go run github.com/goreleaser/goreleaser/v2@v2.20.0
 
 FRONTEND_STAMP=node_modules/.modules.yaml
 
@@ -28,10 +30,11 @@ help:
 	@echo 'Available targets:'
 	@printf '  %-18s - %s\n' 'make fix' 'Apply every autofix, then refresh the file index'
 	@printf '  %-18s - %s\n' 'make verify' 'Fast static gate: lint, formatting, generated docs (pre-push gate)'
-	@printf '  %-18s - %s\n' 'make test' 'Run unit tests (Go, frontend)'
+	@printf '  %-18s - %s\n' 'make test' 'Run unit tests'
 	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
 	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel)'
+	@printf '  %-18s - %s\n' 'make release' 'Build and publish release archives (requires GITHUB_TOKEN)'
 	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
 	@printf '  %-18s - %s\n' 'make dev' 'Run the server in development mode (scripts/run-dev.py)'
 	@printf '  %-18s - %s\n' 'make frontend-dev' 'Run frontend dev server (http://localhost:5173)'
@@ -63,6 +66,9 @@ build: $(FRONTEND_STAMP) types
 # config.toml and runs `go run`. See the script for the flags.
 dev:
 	@uv run --locked python scripts/run-dev.py
+
+release:
+	@$(GORELEASER) release --clean
 
 test: $(FRONTEND_STAMP)
 	@./scripts/run-concurrently.sh go,frontend \
@@ -101,8 +107,9 @@ test-e2e-go: frontend-build
 	@go test -tags e2e ./backend/...
 
 coverage: $(FRONTEND_STAMP)
-	@go test -coverprofile=coverage.out ./...
-	@$(FRONTEND_TEST) --experimental-test-coverage $(FRONTEND_TEST_FILES)
+	@./scripts/run-concurrently.sh go,frontend \
+		'go test -coverprofile=coverage.out ./...' \
+		'$(FRONTEND_TEST) --experimental-test-coverage $(FRONTEND_TEST_FILES)'
 
 verify: custom-gcl $(FRONTEND_STAMP)
 	@./scripts/run-concurrently.sh sdk,workflows,go,js,ts,eslint,python,shell,misc \

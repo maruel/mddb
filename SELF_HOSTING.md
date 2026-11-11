@@ -1,10 +1,22 @@
 # Self-hosting and deployment instructions for mddb
 
-## Installation / Building
+## Installation
 
-As of January 2026, there is no binary releases yet, so you need the [Go toolchain](https://go.dev/dl).
+On Linux or macOS, install the latest checksummed release and start the user service:
 
+```sh
+curl -fsSL https://raw.githubusercontent.com/maruel/mddb/main/contrib/install.sh -o /tmp/install-mddb.sh
+bash /tmp/install-mddb.sh
 ```
+
+Repeat the command to update. It installs `~/.local/bin/mddb` and preserves
+configuration, mutable settings and data. See [deployment files](contrib/README.md).
+
+### From source
+
+With the [Go toolchain](https://go.dev/dl):
+
+```sh
 go install github.com/maruel/mddb/backend/cmd/mddb@latest
 ```
 
@@ -255,40 +267,27 @@ It requires your webserver to be accessible from the internet over HTTPS.
 
 ## Running
 
-### Running as a systemd Service
+### Linux and macOS user services
 
-mddb is very resource light! If you plan to run on linux, you can take the absolute cheapest VM to run it.
+The installer starts the service with working directory `~/mddb` and data in
+`~/mddb/data`. Edit the configuration, then restart the service:
 
-A hardened systemd user service file is provided in [contrib//mddb.service](contrib//mddb.service):
+```sh
+# Linux
+systemctl --user restart mddb.service
+journalctl --user -u mddb.service -f
 
-```bash
-# Install
-mkdir -p ~/.config/systemd/user ~/.config/mddb
-install -m 600 contrib/config.toml ~/.config/mddb/config.toml
-cp contrib/mddb.service ~/.config/systemd/user/
-
-# Edit the config: set server.http, server.base_url to the tailscale hostname,
-# and the OAuth or GitHub App credentials you use.
-nano ~/.config/mddb/config.toml
-
-# Configure data directory (edit paths if needed)
-mkdir -p ~/mddb/data
-
-# Enable and start
-systemctl --user daemon-reload
-systemctl --user enable --now mddb
-
-# View logs
-journalctl --user -u mddb -f
+# macOS
+launchctl kickstart -k gui/$(id -u)/com.maruel.mddb
+tail -f ~/Library/Logs/mddb/stdout.log ~/Library/Logs/mddb/stderr.log
 ```
-
-### Running on macOS
-
-To describe later. Ask "how to run a program via launchd"
 
 ### Running on Windows
 
-To describe later. Ask "how to run a service on windows"
+Download the matching Windows amd64 or arm64 zip from [Releases](https://github.com/maruel/mddb/releases),
+extract it into a directory owned by your account, and run `mddb.exe`. Git must be on PATH.
+Configuration stays in `~/.config/mddb/config.toml` (or `$XDG_CONFIG_HOME/mddb/config.toml`),
+and the default `data` directory is relative to the working directory.
 
 ## Serving over the web
 

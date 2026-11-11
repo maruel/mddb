@@ -12,6 +12,7 @@
 /custom-gcl
 /data-e2e/
 /data/
+/dist/
 /go.work
 /go.work.sum
 /mddb

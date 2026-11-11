@@ -1,4 +1,4 @@
-// Tests production HTTP shutdown under ordinary and stalled-body requests.
+// Tests automatic-update shutdown decisions and production HTTP draining.
 
 package main
 
@@ -10,8 +10,40 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/synctest"
 	"time"
+
+	"github.com/maruel/gomode/autoupdate"
 )
+
+func TestRunAutoUpdate(t *testing.T) {
+	for _, version := range []string{"devel", "1.0.0+dirty", "0.0.0-20261109120000-abcdef123456", "1.0.0"} {
+		t.Run(version, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				u, err := autoupdate.New(autoupdate.Config{
+					Repository: "maruel/mddb", CurrentVersion: version, Binary: "mddb",
+					ArchiveName: func(string) string { return "mddb_linux_amd64.tar.gz" },
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				schedule, err := autoupdate.ParseSchedule("50 4 * * *")
+				if err != nil {
+					t.Fatal(err)
+				}
+				ctx, cancel := context.WithCancel(t.Context())
+				stopped := false
+				done := make(chan bool, 1)
+				go func() { done <- runAutoUpdate(ctx, u, schedule, func() { stopped = true }) }()
+				synctest.Wait()
+				cancel()
+				if <-done || stopped {
+					t.Fatal("uncommitted update requested a restart")
+				}
+			})
+		})
+	}
+}
 
 func TestShutdownHTTPServer(t *testing.T) {
 	t.Run("graceful", func(t *testing.T) {

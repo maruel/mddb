@@ -1,10 +1,4 @@
-# mddb systemd user service
-# Install: mkdir -p ~/.config/systemd/user ~/.config/mddb
-#          install -m 600 contrib/config.toml ~/.config/mddb/config.toml
-#          cp contrib/mddb.service ~/.config/systemd/user/
-# Enable:  systemctl --user daemon-reload && systemctl --user enable --now mddb
-# Logs:    journalctl --user -u mddb -f
-
+# mddb systemd user service; install with contrib/install.sh.
 [Unit]
 Description=mddb - Notion-like document and table system
 Documentation=https://github.com/maruel/mddb
@@ -17,7 +11,7 @@ Type=simple
 # a documented example. Secrets are read from that file, so keep it mode 0600.
 # Don't forget to run:
 #  tailscale serve -bg 8080
-ExecStart=%h/go/bin/mddb
+ExecStart=%h/.local/bin/mddb
 WorkingDirectory=%h/mddb
 Restart=always
 RestartSec=1s
@@ -27,7 +21,8 @@ RestartSec=1s
 # Filesystem isolation
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/mddb/data
+# Automatic updates stage and replace the executable within its directory.
+ReadWritePaths=%h/mddb/data %h/.config/mddb %h/.cache/mddb %h/.local/bin
 PrivateTmp=true
 # PrivateDevices=true
 ProtectControlGroups=true

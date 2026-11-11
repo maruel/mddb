@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/maruel/gomode/autoupdate"
 	"github.com/maruel/gomode/httpserver"
 	"github.com/maruel/gomode/httpserver/geoip"
 	"github.com/maruel/gomode/voicegateway"
@@ -49,6 +50,7 @@ func configPath(cfgDir string) string {
 // IMPORTANT: When adding or modifying configuration fields, update
 // contrib/config.toml accordingly. Document all default values in the example.
 type tomlConfig struct {
+	AutoUpdate   string           `toml:"auto_update"`
 	Server       tomlServer       `toml:"server"`
 	OAuth        tomlOAuth        `toml:"oauth"`
 	GitHub       tomlGitHub       `toml:"github"`
@@ -115,6 +117,7 @@ type tomlDebug struct {
 // partially written config.toml resolves to.
 func defaultConfig() tomlConfig {
 	return tomlConfig{
+		AutoUpdate: autoupdate.DefaultSchedule,
 		Server: tomlServer{
 			HTTP:    "localhost:8080",
 			DataDir: "data",
@@ -193,6 +196,7 @@ type githubAppSettings struct {
 // resolvedConfig is the startup configuration after defaults, path resolution,
 // and validation.
 type resolvedConfig struct {
+	AutoUpdate     *autoupdate.Schedule // nil disables scheduled updates.
 	ConfigDir      string
 	HTTP           string
 	DataDir        string // relative to the working directory, or absolute
@@ -276,7 +280,16 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 			return nil, fmt.Errorf("voice-gateway.config: %w", err)
 		}
 	}
+	var schedule *autoupdate.Schedule
+	if tc.AutoUpdate != "" {
+		s, err := autoupdate.ParseSchedule(tc.AutoUpdate)
+		if err != nil {
+			return nil, fmt.Errorf("auto_update: %w", err)
+		}
+		schedule = &s
+	}
 	return &resolvedConfig{
+		AutoUpdate:     schedule,
 		ConfigDir:      cfgDir,
 		HTTP:           tc.Server.HTTP,
 		DataDir:        dataDir,
