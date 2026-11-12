@@ -103,7 +103,7 @@ for (const external of [true, false]) {
     await output.selectOption("browser");
     await expect(recognition).toHaveValue("model:asr");
     const speakingVoice = page.getByRole("combobox", { name: "Speaking voice", exact: true });
-    const language = page.getByRole("textbox", { name: "Voice language (e.g. en-US)", exact: true });
+    const language = page.getByRole("textbox", { name: "Voice language", exact: true });
     await expect(speakingVoice.locator("option")).toHaveText([
       "Browser default",
       "UK English (en-GB)",
