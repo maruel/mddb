@@ -3,8 +3,11 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -66,6 +69,46 @@ func TestValidateJWTAndSession(t *testing.T) {
 		}
 		if _, _, _, err := validateJWTAndSession(request(second), users, restarted, testJWTSecret); err != nil {
 			t.Fatal("independent session rejected", err)
+		}
+	})
+	t.Run("valid/authenticated request records use", func(t *testing.T) {
+		token, sid, err := cfg.IssueToken(sessions, user, "192.0.2.1", "Browser", "CA")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Backdate the persisted use beyond the recording resolution.
+		stale := storage.ToTime(time.Now().Add(-2 * identity.LastUsedResolution))
+		data, err := os.ReadFile(path) //nolint:gosec // G304: fixture path comes from t.TempDir
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := bytes.Split(data, []byte("\n"))
+		for i, line := range lines {
+			var s identity.Session
+			if json.Unmarshal(line, &s) != nil || s.ID != sid {
+				continue
+			}
+			s.LastUsed = stale
+			if lines[i], err = json.Marshal(&s); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.WriteFile(path, bytes.Join(lines, []byte("\n")), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		restarted, err := identity.NewSessionService(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s, err := restarted.Get(sid); err != nil || s.LastUsed != stale {
+			t.Fatalf("backdated session: %v", err)
+		}
+		svc := &handlers.Services{User: users, Session: restarted}
+		if _, _, err := validateAuthWithContext(t.Context(), request(token), svc, cfg); err != nil {
+			t.Fatal(err)
+		}
+		if s, err := restarted.Get(sid); err != nil || !s.LastUsed.After(stale) {
+			t.Fatalf("authenticated request did not record use: %v", err)
 		}
 	})
 	t.Run("error", func(t *testing.T) {

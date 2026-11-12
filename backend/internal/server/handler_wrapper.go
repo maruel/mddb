@@ -160,6 +160,11 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 	if err != nil {
 		return nil, ctx, err
 	}
+	// Recency only orders sessions for quota eviction; a failed write must not
+	// reject an authenticated request.
+	if err := svc.Session.RecordUse(sessionID); err != nil {
+		slog.WarnContext(ctx, "Failed to record session use", "err", err, "session_id", sessionID)
+	}
 	ctx = reqctx.WithSession(ctx, session)
 	ctx = reqctx.WithSessionID(ctx, sessionID)
 	ctx = reqctx.WithTokenString(ctx, tokenString)

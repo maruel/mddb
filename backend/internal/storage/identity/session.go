@@ -3,9 +3,11 @@
 package identity
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"iter"
+	"slices"
 	"sync"
 	"time"
 
@@ -119,7 +121,12 @@ func (s *SessionService) Create(userID ksid.ID, tokenHash, deviceInfo, ipAddress
 
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
-// maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
+//
+// maxSessions limits the number of active sessions per user; 0 disables the
+// limit. At the limit, CreateWithID revokes the user's least recently used
+// active sessions, as RecordUse tracks them, so a new sign-in succeeds and the
+// user keeps at most maxSessions. A revocation failure returns before creation
+// and preserves earlier revocations.
 // A row installed before a persistence error is returned alongside that error for cleanup.
 func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
 	s.creationMu.Lock()
@@ -134,14 +141,14 @@ func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo,
 		return nil, errSessionTokenHashRequired
 	}
 
-	// Check session quota if enabled
 	if maxSessions > 0 {
-		activeCount := 0
-		for range s.GetActiveByUserID(userID) {
-			activeCount++
-		}
-		if activeCount >= maxSessions {
-			return nil, ErrSessionQuotaExceeded
+		active := slices.SortedFunc(s.GetActiveByUserID(userID), func(a, b *Session) int {
+			return cmp.Or(cmp.Compare(a.LastUsed, b.LastUsed), cmp.Compare(a.Created, b.Created), cmp.Compare(a.ID, b.ID))
+		})
+		for _, old := range active[:max(0, len(active)-maxSessions+1)] {
+			if err := s.Revoke(old.ID); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -246,12 +253,24 @@ func (s *SessionService) RevokeAllForUser(userID ksid.ID) (int, error) {
 	return count, nil
 }
 
-// UpdateLastUsed updates the LastUsed timestamp for a session.
-func (s *SessionService) UpdateLastUsed(id ksid.ID) error {
+// LastUsedResolution bounds how stale Session.LastUsed may be. Each session
+// writes at most once per period, because each write rewrites the table.
+const LastUsedResolution = time.Hour
+
+// RecordUse marks the session as used now unless LastUsed is already within
+// LastUsedResolution.
+func (s *SessionService) RecordUse(id ksid.ID) error {
+	now := storage.Now()
 	_, err := s.table.Modify(id, func(session *Session) error {
-		session.LastUsed = storage.Now()
+		if now.AsTime().Sub(session.LastUsed.AsTime()) < LastUsedResolution {
+			return errLastUsedCurrent
+		}
+		session.LastUsed = now
 		return nil
 	})
+	if errors.Is(err, errLastUsedCurrent) {
+		return nil
+	}
 	return err
 }
 
@@ -311,6 +330,6 @@ var (
 	errSessionTokenHashRequired = errors.New("session token_hash is required")
 	errSessionNotFound          = errors.New("session not found")
 	errSessionInactive          = errors.New("session is no longer active")
-	// ErrSessionQuotaExceeded is returned when a user has too many active sessions.
-	ErrSessionQuotaExceeded = errors.New("maximum number of active sessions exceeded")
+	// errLastUsedCurrent skips a RecordUse write; it never escapes RecordUse.
+	errLastUsedCurrent = errors.New("session last use is current")
 )

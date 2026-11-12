@@ -201,7 +201,8 @@ type ServerQuotas struct {
 	// MaxRequestBodyBytes limits the size of any single HTTP request body.
 	MaxRequestBodyBytes int64 `json:"max_request_body_bytes"`
 
-	// MaxSessionsPerUser limits active sessions per user.
+	// MaxSessionsPerUser limits active sessions per user. A sign-in at the
+	// limit revokes the least recently used session.
 	MaxSessionsPerUser int `json:"max_sessions_per_user"`
 
 	// MaxOrganizations limits total organizations on the server.

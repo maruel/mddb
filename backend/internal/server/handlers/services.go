@@ -438,9 +438,6 @@ func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.
 	// Create session with the pre-generated ID and token hash
 	deviceInfo := devicelogin.UserAgent(userAgent)
 	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
-		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
-			return "", 0, dto.QuotaExceeded("sessions per user", c.Quotas.MaxSessionsPerUser)
-		}
 		if created != nil {
 			return tokenString, sessionID, err
 		}

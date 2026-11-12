@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -98,7 +97,7 @@ func TestSessionService(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0)
+					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(LastUsedResolution+time.Hour)), 0)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -107,8 +106,12 @@ func TestSessionService(t *testing.T) {
 						t.Fatal(err)
 					}
 					t.Cleanup(cancel)
-					if err := s.UpdateLastUsed(session.ID); err != nil {
+					time.Sleep(LastUsedResolution)
+					if err := s.RecordUse(session.ID); err != nil {
 						t.Fatal(err)
+					}
+					if got, err := s.Get(session.ID); err != nil || got.LastUsed == session.LastUsed {
+						t.Fatalf("RecordUse did not record: %v", err)
 					}
 					if ctx.Err() != nil {
 						t.Fatal("activity update canceled the session")
@@ -198,34 +201,74 @@ func TestSessionService(t *testing.T) {
 			t.Fatal("partial session cleanup was not persistent")
 		}
 	})
-	t.Run("Create", func(t *testing.T) {
+	t.Run("Create/concurrent at quota", func(t *testing.T) {
 		s, err := NewSessionService(filepath.Join(t.TempDir(), "sessions.jsonl"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		userID := ksid.NewID()
-		var created atomic.Int32
 		var wg sync.WaitGroup
 		start := make(chan struct{})
 		for range 16 {
 			wg.Go(func() {
 				<-start
-				_, err := s.Create(userID, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 1)
-				if err == nil {
-					created.Add(1)
-				} else if !errors.Is(err, ErrSessionQuotaExceeded) {
+				if _, err := s.Create(userID, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 1); err != nil {
 					t.Error(err)
 				}
 			})
 		}
 		close(start)
 		wg.Wait()
-		if n := created.Load(); n != 1 {
-			t.Fatalf("created %d sessions for quota 1", n)
-		}
 		if n := s.CountActive(); n != 1 {
-			t.Fatalf("active sessions = %d", n)
+			t.Fatalf("active sessions = %d, want 1", n)
 		}
+	})
+	t.Run("Create/revokes least recently used", func(t *testing.T) {
+		// ksid needs real time: the synctest epoch precedes it.
+		userID, other := ksid.NewID(), ksid.NewID()
+		ids := make(chan ksid.ID, 6)
+		for range cap(ids) {
+			ids <- ksid.NewID()
+		}
+		synctest.Test(t, func(t *testing.T) {
+			s, err := NewSessionService(filepath.Join(t.TempDir(), "sessions.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			expires := storage.ToTime(time.Now().Add(24 * time.Hour))
+			create := func(user ksid.ID, maxSessions int) *Session {
+				session, err := s.CreateWithID(<-ids, user, "hash", "Browser", "", "", expires, maxSessions)
+				if err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Minute)
+				return session
+			}
+			first, second, third := create(userID, 3), create(userID, 3), create(userID, 3)
+			otherSession := create(other, 3)
+			time.Sleep(LastUsedResolution)
+			if err := s.RecordUse(first.ID); err != nil {
+				t.Fatal(err)
+			}
+			// At quota 3, the fourth sign-in revokes second, which is used least
+			// recently although first is older.
+			fourth := create(userID, 3)
+			// Lowering the quota to 2 revokes third, then first: fourth
+			// was created after first's recorded use.
+			fifth := create(userID, 2)
+			for _, want := range []struct {
+				session *Session
+				active  bool
+			}{{first, false}, {second, false}, {third, false}, {fourth, true}, {fifth, true}, {otherSession, true}} {
+				got, err := s.Get(want.session.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.RevokedAt.IsZero() != want.active {
+					t.Errorf("session created at %v active = %t, want %t", want.session.Created.AsTime(), got.RevokedAt.IsZero(), want.active)
+				}
+			}
+		})
 	})
 }
 

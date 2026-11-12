@@ -560,6 +560,26 @@ func TestOAuthHandler(t *testing.T) {
 			}
 		})
 		t.Run("valid", func(t *testing.T) {
+			t.Run("sign-in at the session quota succeeds", func(t *testing.T) {
+				e := newOAuthTestEnv(t, "http://localhost:8080")
+				limit := e.h.cfg.Quotas.MaxSessionsPerUser
+				var u *identity.User
+				for i := range limit + 1 {
+					w := e.login(t, identity.OAuthProviderGoogle)
+					if w.Code != http.StatusFound {
+						t.Fatalf("sign-in %d: %d %s", i+1, w.Code, w.Body)
+					}
+					if u == nil {
+						var err error
+						if u, err = e.svc.User.GetByOAuth(identity.OAuthProviderGoogle, fakeIDs[identity.OAuthProviderGoogle]); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
+				if n := e.sessions(u); n != limit {
+					t.Fatalf("active sessions = %d, want %d", n, limit)
+				}
+			})
 			t.Run("verified email creates an account", func(t *testing.T) {
 				for _, p := range providers {
 					t.Run(string(p), func(t *testing.T) {
