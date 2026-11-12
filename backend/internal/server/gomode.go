@@ -79,11 +79,9 @@ func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.Nod
 				writeMCPError(w, http.StatusBadRequest, "Invalid workspaceId")
 				return
 			}
-			var msg string
-			var status int
-			role, msg, status = svc.EffectiveWorkspaceRole(u, wsID)
-			if msg != "" {
-				writeMCPError(w, status, msg)
+			var apiErr *dto.APIError
+			if role, apiErr = svc.EffectiveWorkspaceRole(u, wsID); apiErr != nil {
+				writeMCPError(w, apiErr.StatusCode(), apiErr.Error())
 				return
 			}
 		}
@@ -885,8 +883,8 @@ func (m *workspaceRegistry) streamAuthorized() bool {
 	if m.wsID == 0 {
 		return true
 	}
-	role, message, _ := m.svc.EffectiveWorkspaceRole(m.user, m.wsID)
-	return message == "" && role == m.role
+	role, err := m.svc.EffectiveWorkspaceRole(m.user, m.wsID)
+	return err == nil && role == m.role
 }
 
 func (m *workspaceRegistry) resource(n *content.Node) mcp.ResourceDescriptor {
@@ -896,8 +894,7 @@ func (m *workspaceRegistry) resource(n *content.Node) mcp.ResourceDescriptor {
 func (m *workspaceRegistry) accessibleWorkspaces() []mcpschema.WorkspaceSummary {
 	out := []mcpschema.WorkspaceSummary{}
 	for ws := range m.svc.Workspace.Iter(0) {
-		role, msg, _ := m.svc.EffectiveWorkspaceRole(m.user, ws.ID)
-		if msg == "" {
+		if role, err := m.svc.EffectiveWorkspaceRole(m.user, ws.ID); err == nil {
 			out = append(out, mcpschema.WorkspaceSummary{ID: ws.ID.String(), Title: ws.Name, Role: string(role)})
 		}
 	}
@@ -918,9 +915,9 @@ func (m *workspaceRegistry) bindWorkspace(ctx context.Context) (*workspaceRegist
 			id, _ = ksid.Parse(workspaces[0].ID)
 		}
 	}
-	role, msg, _ := m.svc.EffectiveWorkspaceRole(m.user, id)
-	if msg != "" {
-		return nil, mcp.ErrInvalidParams("%s", msg)
+	role, apiErr := m.svc.EffectiveWorkspaceRole(m.user, id)
+	if apiErr != nil {
+		return nil, mcp.ErrInvalidParams("%s", apiErr.Error())
 	}
 	bound := *m
 	bound.wsID = id
@@ -945,9 +942,9 @@ func (m *workspaceRegistry) selectWorkspace(ctx context.Context, req *mcp.ToolRe
 	if m.wsID != 0 && id != m.wsID {
 		return mcp.ToolError[mcpschema.WorkspaceSelectOutput]("workspace is outside this connection's scope")
 	}
-	role, msg, _ := m.svc.EffectiveWorkspaceRole(m.user, id)
-	if msg != "" {
-		return mcp.ToolError[mcpschema.WorkspaceSelectOutput](msg)
+	role, apiErr := m.svc.EffectiveWorkspaceRole(m.user, id)
+	if apiErr != nil {
+		return mcp.ToolError[mcpschema.WorkspaceSelectOutput](apiErr.Error())
 	}
 	ws, err := m.svc.Workspace.Get(id)
 	if err != nil {

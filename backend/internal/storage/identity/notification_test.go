@@ -272,10 +272,19 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := ksid.NewID()
-		for range 5 {
-			if _, err := svc2.Create(uid, NotifOrgInvite, "x", "", "", 0); err != nil {
-				t.Fatalf("Create failed: %v", err)
+		// Interleave two users; each keeps its newest notifications.
+		uid, other := ksid.NewID(), ksid.NewID()
+		var created []*Notification
+		for i := range 5 {
+			for _, u := range []ksid.ID{uid, other} {
+				if u == other && i >= 2 {
+					continue
+				}
+				n, err := svc2.Create(u, NotifOrgInvite, "x", "", "", 0)
+				if err != nil {
+					t.Fatalf("Create failed: %v", err)
+				}
+				created = append(created, n)
 			}
 		}
 
@@ -286,8 +295,12 @@ func TestNotificationService(t *testing.T) {
 		if count != 2 {
 			t.Errorf("DeleteExcessPerUser: deleted %d, want 2", count)
 		}
-		if got := svc2.CountByUser(uid); got != 3 {
-			t.Errorf("CountByUser after excess deletion: got %d, want 3", got)
+		// created holds uid's rows at 0, 2, 4, 5, 6 and other's at 1, 3.
+		for i, n := range created {
+			_, err := svc2.Get(n.ID)
+			if wantKept := i != 0 && i != 2; (err == nil) != wantKept {
+				t.Errorf("notification %d kept = %t, want %t", i, err == nil, wantKept)
+			}
 		}
 	})
 

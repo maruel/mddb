@@ -93,12 +93,11 @@ func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *ht
 	}
 	if err != nil {
 		if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
-			apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
-			writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+			writeAPIError(w, dto.PayloadTooLarge(maxBytesErr.Limit))
 			return false
 		}
 		slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-		writeBadRequestError(w, "Failed to read request body")
+		writeAPIError(w, invalidBody("Failed to read request body"))
 		return false
 	}
 
@@ -107,7 +106,7 @@ func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *ht
 		d.DisallowUnknownFields()
 		if err := d.Decode(input); err != nil {
 			slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-			writeBadRequestError(w, "Invalid request body")
+			writeAPIError(w, invalidBody("Invalid request body"))
 			return false
 		}
 	}
@@ -174,13 +173,9 @@ func checkWSMembership(
 	svc *handlers.Services,
 	requiredRole identity.WorkspaceRole,
 ) *dto.APIError {
-	role, msg, status := svc.EffectiveWorkspaceRole(user, wsID)
-	if msg != "" {
-		code := dto.ErrorCodeForbidden
-		if status == http.StatusNotFound {
-			code = dto.ErrorCodeNotFound
-		}
-		return dto.NewAPIError(status, code, msg)
+	role, err := svc.EffectiveWorkspaceRole(user, wsID)
+	if err != nil {
+		return err
 	}
 	if !hasWSPermission(role, requiredRole) {
 		return dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: insufficient permissions")
@@ -745,11 +740,7 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 	if err != nil {
 		return nil, 0, "", errUserNotFound
 	}
-	// Recency only orders sessions for eviction; a failed write must not reject
-	// the credential.
-	if err := sessionService.RecordUse(sessionID); err != nil {
-		slog.WarnContext(r.Context(), "Failed to record session use", "err", err, "session_id", sessionID)
-	}
+	sessionService.RecordUse(sessionID)
 	return user, sessionID, tokenString, nil
 }
 
@@ -880,9 +871,9 @@ func handleValidationError(ctx context.Context, w http.ResponseWriter, err error
 	writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
 }
 
-// writeBadRequestError writes a 400 Bad Request error response as JSON (internal use).
-func writeBadRequestError(w http.ResponseWriter, message string) {
-	writeErrorResponseWithCode(w, http.StatusBadRequest, dto.ErrorCodeInternal, message, nil)
+// invalidBody reports a request body that cannot be read or decoded.
+func invalidBody(message string) *dto.APIError {
+	return dto.NewAPIError(http.StatusBadRequest, dto.ErrorCodeInvalidFormat, message)
 }
 
 // writeErrorResponseWithCode writes a detailed error response as JSON with code and details.

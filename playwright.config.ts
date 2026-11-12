@@ -22,12 +22,14 @@ export default defineConfig({
     },
   ],
   // Start the server before running tests with isolated test data directory.
+  // Run through `make test-e2e [SPEC=e2e/file.spec.ts[:LINE]]`, which rebuilds
+  // the embedded frontend first; a direct run refuses a stale build.
   // scripts/run-dev.py --fake builds with the e2e tag (fake OAuth providers, a
   // raised user quota, and a 10000x rate-limit multiplier) and writes a
   // temporary config, never an environment variable. Server logs are captured
   // to data-e2e/server.log (copied to report by make e2e).
   webServer: {
-    command: `uv run --locked python scripts/clean_data_e2e.py && uv run --locked python scripts/run-dev.py --data-dir ./data-e2e --fake > ./data-e2e/server.log 2>&1`,
+    command: `uv run --locked python scripts/check_frontend_build.py && uv run --locked python scripts/clean_data_e2e.py && uv run --locked python scripts/run-dev.py --data-dir ./data-e2e --fake > ./data-e2e/server.log 2>&1`,
     url: "http://localhost:8080/api/v1/health",
     reuseExistingServer: false, // Always start fresh so the server uses this config's settings
     timeout: 30000,

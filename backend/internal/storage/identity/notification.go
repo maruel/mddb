@@ -264,43 +264,24 @@ func (s *NotificationService) Delete(id, userID ksid.ID) error {
 
 // DeleteOlderThan deletes notifications created before cutoff. Returns count deleted.
 func (s *NotificationService) DeleteOlderThan(cutoff storage.Time) (int, error) {
-	var toDelete []ksid.ID
-	for n := range s.table.Iter(0) {
-		if n.Created.Before(cutoff) {
-			toDelete = append(toDelete, n.ID)
-		}
-	}
-	count := 0
-	for _, id := range toDelete {
-		if _, err := s.table.Delete(id); err != nil {
-			return count, err
-		}
-		count++
-	}
-	return count, nil
+	deleted, err := s.table.DeleteFunc(func(n *Notification) bool { return n.Created.Before(cutoff) })
+	return len(deleted), err
 }
 
 // DeleteExcessPerUser caps notifications per user at maxPerUser, deleting oldest. Returns total deleted.
 func (s *NotificationService) DeleteExcessPerUser(maxPerUser int) (int, error) {
-	byUser := make(map[ksid.ID][]*Notification)
+	// Rows are in ascending ID order (oldest first): keep each user's newest
+	// maxPerUser by counting each user's rows from the end.
+	total := make(map[ksid.ID]int)
 	for n := range s.table.Iter(0) {
-		byUser[n.UserID] = append(byUser[n.UserID], n)
+		total[n.UserID]++
 	}
-	totalDeleted := 0
-	for _, notifs := range byUser {
-		if len(notifs) <= maxPerUser {
-			continue
-		}
-		// notifs are in ascending ID order (oldest first); delete from the beginning.
-		excess := len(notifs) - maxPerUser
-		for i := range excess {
-			if _, err := s.table.Delete(notifs[i].ID); err != nil {
-				return totalDeleted, err
-			}
-			totalDeleted++
-		}
-	}
-	return totalDeleted, nil
+	seen := make(map[ksid.ID]int)
+	deleted, err := s.table.DeleteFunc(func(n *Notification) bool {
+		seen[n.UserID]++
+		return seen[n.UserID] <= total[n.UserID]-maxPerUser
+	})
+	return len(deleted), err
 }
 
 var (

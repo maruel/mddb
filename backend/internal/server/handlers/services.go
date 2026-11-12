@@ -324,25 +324,26 @@ func (s *Services) ActiveWorkspaceID(user *identity.User) ksid.ID {
 }
 
 // EffectiveWorkspaceRole applies current workspace membership and the organization owner/admin override.
-func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (role identity.WorkspaceRole, errMsg string, statusCode int) {
+// It returns NOT_FOUND for an unknown workspace and FORBIDDEN without membership.
+func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (identity.WorkspaceRole, *dto.APIError) {
 	ws, err := svc.Workspace.Get(wsID)
 	if err != nil {
-		return "", "Workspace not found", http.StatusNotFound
+		return "", dto.NewAPIError(http.StatusNotFound, dto.ErrorCodeNotFound, "Workspace not found")
 	}
 
 	orgMem, err := svc.OrgMembership.Get(user.ID, ws.OrganizationID)
 	if err != nil {
-		return "", "Forbidden: not a member of this organization", http.StatusForbidden
+		return "", dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: not a member of this organization")
 	}
 	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-		return identity.WSRoleAdmin, "", 0
+		return identity.WSRoleAdmin, nil
 	}
 
 	wsMem, err := svc.WSMembership.Get(user.ID, wsID)
 	if err != nil {
-		return "", "Forbidden: not a member of this workspace", http.StatusForbidden
+		return "", dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: not a member of this workspace")
 	}
-	return wsMem.Role, "", 0
+	return wsMem.Role, nil
 }
 
 func (s *Services) rollbackUnpublishedWorkspace(wsID ksid.ID) error {

@@ -212,6 +212,107 @@ func (t *Table[T]) Delete(id ksid.ID) (T, error) {
 	return deleted, nil
 }
 
+// DeleteFunc deletes every row for which del returns true and returns them in
+// table order. It rewrites the table once, so bulk cleanup costs one rewrite
+// instead of one per row. del runs under the table lock: it must not call the
+// table or modify the row. Publication, blob cleanup, and observer semantics
+// match Delete.
+func (t *Table[T]) DeleteFunc(del func(T) bool) ([]T, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	kept := make([]T, 0, len(t.rows))
+	var deleted []T
+	for _, row := range t.rows {
+		if del(row) {
+			deleted = append(deleted, row)
+		} else {
+			kept = append(kept, row)
+		}
+	}
+	if len(deleted) == 0 {
+		return nil, nil
+	}
+
+	prevRows := t.rows
+	t.rows = kept
+	if err := t.saveLocked(); err != nil {
+		t.rows = prevRows
+		return nil, err
+	}
+	for _, row := range deleted {
+		delete(t.byID, row.GetID())
+	}
+	for i, row := range t.rows {
+		t.byID[row.GetID()] = i
+	}
+
+	// Cleanup can fail after publication; observers must still see the deletions.
+	var cleanupErr error
+	for _, row := range deleted {
+		cleanupErr = errors.Join(cleanupErr, t.untrackBlobRefsLocked(row))
+		for _, obs := range t.observers {
+			obs.OnDelete(row)
+		}
+	}
+	if cleanupErr != nil {
+		return deleted, fmt.Errorf("row deletion persisted, but blob cleanup failed: %w", cleanupErr)
+	}
+	return deleted, nil
+}
+
+// UpdateFunc applies update to a clone of every row and persists the rows it
+// changed with one rewrite, so bulk maintenance costs one rewrite instead of
+// one per row. update reports whether it changed its clone and must keep the
+// row's ID; it runs under the table lock and must not call the table. It
+// returns how many rows changed. Validation, publication, blob cleanup, and
+// observer semantics match Update.
+func (t *Table[T]) UpdateFunc(update func(row T) bool) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	next := slices.Clone(t.rows)
+	var changed []int
+	for i, row := range t.rows {
+		c := row.Clone()
+		if !update(c) {
+			continue
+		}
+		if c.GetID() != row.GetID() {
+			return 0, fmt.Errorf("update changed row ID %s to %s", row.GetID(), c.GetID())
+		}
+		if err := c.Validate(); err != nil {
+			return 0, fmt.Errorf("invalid row after update: %w", err)
+		}
+		next[i] = c
+		changed = append(changed, i)
+	}
+	if len(changed) == 0 {
+		return 0, nil
+	}
+
+	prevRows := t.rows
+	t.rows = next
+	if err := t.saveLocked(); err != nil {
+		t.rows = prevRows
+		return 0, err
+	}
+
+	// Track new references first so a blob shared by the old and new row survives.
+	var cleanupErr error
+	for _, i := range changed {
+		t.trackBlobRefsLocked(next[i])
+		cleanupErr = errors.Join(cleanupErr, t.untrackBlobRefsLocked(prevRows[i]))
+		for _, obs := range t.observers {
+			obs.OnUpdate(prevRows[i], next[i])
+		}
+	}
+	if cleanupErr != nil {
+		return len(changed), fmt.Errorf("row update persisted, but blob cleanup failed: %w", cleanupErr)
+	}
+	return len(changed), nil
+}
+
 // trackBlobRefsLocked increments the refcount for all blobs in the row. Caller must hold t.mu.
 func (t *Table[T]) trackBlobRefsLocked(row T) {
 	for _, blob := range blobFields(row) {

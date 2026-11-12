@@ -125,7 +125,7 @@ func TestShutdownHTTPServer(t *testing.T) {
 	})
 }
 
-func TestRunSessionCleanup(t *testing.T) {
+func TestRunSessionMaintenance(t *testing.T) {
 	// ksid needs real time: the synctest epoch precedes it.
 	user, early, late, current := ksid.NewID(), ksid.NewID(), ksid.NewID(), ksid.NewID()
 	synctest.Test(t, func(t *testing.T) {
@@ -143,22 +143,44 @@ func TestRunSessionCleanup(t *testing.T) {
 		create(current, 30*sessionRetention)
 		ctx, cancel := context.WithCancel(t.Context())
 		var wg sync.WaitGroup
-		wg.Go(func() { runSessionCleanup(ctx, s) })
+		wg.Go(func() { runSessionMaintenance(ctx, s) })
 		exists := func(id ksid.ID) bool {
 			_, err := s.Get(id)
 			return err == nil
+		}
+		lastUsed := func() storage.Time {
+			got, err := s.Get(current)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return got.LastUsed
 		}
 
 		synctest.Wait()
 		if exists(early) || !exists(late) {
 			t.Fatal("startup pass did not delete exactly the long-expired session")
 		}
-		time.Sleep(sessionRetention + 24*time.Hour)
+		before := lastUsed()
+		time.Sleep(time.Minute)
+		s.RecordUse(current)
+		time.Sleep(sessionUseFlushPeriod)
+		synctest.Wait()
+		flushed := lastUsed()
+		if !flushed.After(before) {
+			t.Fatal("periodic flush did not store the use")
+		}
+
+		time.Sleep(sessionRetention + sessionCleanupPeriod)
 		synctest.Wait()
 		if exists(late) || !exists(current) {
 			t.Fatal("daily pass did not delete exactly the long-expired session")
 		}
+
+		s.RecordUse(current)
 		cancel()
 		wg.Wait()
+		if !lastUsed().After(flushed) {
+			t.Fatal("shutdown did not store the last use")
+		}
 	})
 }

@@ -238,6 +238,119 @@ func TestTable(t *testing.T) {
 		})
 	})
 
+	t.Run("UpdateFunc", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error {
+				_, err := table.UpdateFunc(func(row *testRow) bool { row.Name += "!"; return row.ID == 10 })
+				return err
+			})
+		})
+		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "UpdateFunc") })
+		t.Run("valid", func(t *testing.T) {
+			table, path := setupTable(t)
+			for _, row := range []*testRow{{ID: 1, Name: "One"}, {ID: 2, Name: "Two"}, {ID: 3, Name: "Three"}} {
+				if err := table.Append(row); err != nil {
+					t.Fatal(err)
+				}
+			}
+			observer := &mockObserver{}
+			table.AddObserver(observer)
+
+			n, err := table.UpdateFunc(func(row *testRow) bool {
+				if row.ID == 2 {
+					return false
+				}
+				row.Name += "!"
+				return true
+			})
+			if err != nil || n != 2 {
+				t.Fatalf("UpdateFunc = %d, %v; want 2", n, err)
+			}
+			if !reflect.DeepEqual(observer.updates, [][2]int{{1, 1}, {3, 3}}) {
+				t.Errorf("observed updates = %v", observer.updates)
+			}
+			for id, want := range map[ksid.ID]string{1: "One!", 2: "Two", 3: "Three!"} {
+				if got := table.Get(id); got == nil || got.Name != want {
+					t.Errorf("Get(%d) = %+v, want %q", id, got, want)
+				}
+			}
+			reloaded, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(table.rows, reloaded.rows) {
+				t.Errorf("stored rows %+v, cached %+v", reloaded.rows, table.rows)
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			for name, update := range map[string]func(*validatingRow) bool{
+				"changed ID": func(row *validatingRow) bool { row.ID++; return true },
+				"invalid":    func(row *validatingRow) bool { row.FailValidate = true; return true },
+			} {
+				t.Run(name, func(t *testing.T) {
+					table, err := NewTable[*validatingRow](filepath.Join(t.TempDir(), "table.jsonl"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := table.Append(&validatingRow{ID: 1, Name: "One"}); err != nil {
+						t.Fatal(err)
+					}
+					if n, err := table.UpdateFunc(update); err == nil || n != 0 {
+						t.Fatalf("UpdateFunc = %d, %v; want error", n, err)
+					}
+					if got := table.Get(1); got == nil || got.Name != "One" || got.FailValidate {
+						t.Errorf("row changed after rejected update: %+v", got)
+					}
+				})
+			}
+		})
+	})
+	t.Run("DeleteFunc", func(t *testing.T) {
+		t.Run("failed publication", func(t *testing.T) {
+			checkFailedPublication(t, func(table *Table[*testRow]) error {
+				_, err := table.DeleteFunc(func(row *testRow) bool { return row.ID == 10 })
+				return err
+			})
+		})
+		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "DeleteFunc") })
+		t.Run("valid", func(t *testing.T) {
+			table, path := setupTable(t)
+			for _, row := range []*testRow{{ID: 1, Name: "One"}, {ID: 2, Name: "Two"}, {ID: 3, Name: "Three"}, {ID: 4, Name: "Four"}} {
+				if err := table.Append(row); err != nil {
+					t.Fatal(err)
+				}
+			}
+			observer := &mockObserver{}
+			table.AddObserver(observer)
+
+			deleted, err := table.DeleteFunc(func(row *testRow) bool { return row.ID == 1 || row.ID == 3 })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(deleted) != 2 || deleted[0].ID != 1 || deleted[1].ID != 3 {
+				t.Fatalf("deleted = %+v, want rows 1 and 3", deleted)
+			}
+			if !reflect.DeepEqual(observer.deletes, []int{1, 3}) {
+				t.Errorf("observed deletes = %v, want [1 3]", observer.deletes)
+			}
+			for id, want := range map[ksid.ID]string{1: "", 2: "Two", 3: "", 4: "Four"} {
+				got := table.Get(id)
+				if (got == nil) != (want == "") || (got != nil && got.Name != want) {
+					t.Errorf("Get(%d) = %+v, want %q", id, got, want)
+				}
+			}
+			reloaded, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(table.rows, reloaded.rows) {
+				t.Errorf("stored rows %+v, cached %+v", reloaded.rows, table.rows)
+			}
+			if deleted, err := table.DeleteFunc(func(*testRow) bool { return false }); err != nil || deleted != nil {
+				t.Fatalf("no match = %+v, %v; want nil", deleted, err)
+			}
+		})
+	})
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("failed publication", func(t *testing.T) {
 			checkFailedPublication(t, func(table *Table[*testRow]) error { _, err := table.Delete(10); return err })
@@ -1713,6 +1826,18 @@ func checkBlobCleanupFailure(t *testing.T, operation string) {
 	switch operation {
 	case "Delete":
 		result, err = table.Delete(10)
+	case "UpdateFunc":
+		var n int
+		n, err = table.UpdateFunc(func(row *blobTestRow) bool { row.Name = "after"; row.Content = Blob{}; return true })
+		if n == 1 {
+			result = table.Get(10)
+		}
+	case "DeleteFunc":
+		var rows []*blobTestRow
+		rows, err = table.DeleteFunc(func(row *blobTestRow) bool { return row.ID == 10 })
+		if len(rows) == 1 {
+			result = rows[0]
+		}
 	case "Update":
 		result, err = table.Update(&blobTestRow{ID: 10, Name: "after"})
 	case "Modify":
@@ -1727,7 +1852,7 @@ func checkBlobCleanupFailure(t *testing.T, operation string) {
 	if _, exists := index.byKey["before"]; exists {
 		t.Error("observer retained removed index key after publication")
 	}
-	if operation != "Delete" && index.Get("after") == nil {
+	if operation != "Delete" && operation != "DeleteFunc" && index.Get("after") == nil {
 		t.Error("observer missed published replacement")
 	}
 	if len(table.blobRefCount) != 0 {

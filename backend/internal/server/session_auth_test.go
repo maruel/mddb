@@ -77,7 +77,7 @@ func TestValidateJWTAndSession(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Backdate the persisted use beyond the recording resolution.
-		stale := storage.ToTime(time.Now().Add(-2 * identity.LastUsedResolution))
+		stale := storage.ToTime(time.Now().Add(-2 * time.Hour))
 		data, err := os.ReadFile(path) //nolint:gosec // G304: fixture path comes from t.TempDir
 		if err != nil {
 			t.Fatal(err)
@@ -105,6 +105,9 @@ func TestValidateJWTAndSession(t *testing.T) {
 		}
 		svc := &handlers.Services{User: users, Session: restarted}
 		if _, _, err := validateAuthWithContext(t.Context(), request(token), svc, cfg); err != nil {
+			t.Fatal(err)
+		}
+		if err := restarted.FlushUses(); err != nil {
 			t.Fatal(err)
 		}
 		if s, err := restarted.Get(sid); err != nil || !s.LastUsed.After(stale) {

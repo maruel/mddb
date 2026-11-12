@@ -63,6 +63,11 @@ type SessionService struct {
 	table     *jsonldb.Table[*Session]
 	byUserID  *jsonldb.Index[ksid.ID, *Session]
 	lifetimes *sessionLifetimes
+
+	// usesMu guards uses: the latest use of each session that FlushUses has
+	// not stored yet.
+	usesMu sync.Mutex
+	uses   map[ksid.ID]storage.Time
 }
 
 // NewSessionService creates a new session service.
@@ -74,7 +79,7 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 	byUserID := jsonldb.NewIndex(table, func(s *Session) ksid.ID { return s.UserID })
 	lifetimes := &sessionLifetimes{bindings: make(map[ksid.ID]map[*sessionBinding]struct{})}
 	table.AddObserver(lifetimes)
-	return &SessionService{table: table, byUserID: byUserID, lifetimes: lifetimes}, nil
+	return &SessionService{table: table, byUserID: byUserID, lifetimes: lifetimes, uses: make(map[ksid.ID]storage.Time)}, nil
 }
 
 // Context binds a long-lived authenticated request to its validated session.
@@ -124,7 +129,7 @@ func (s *SessionService) Create(userID ksid.ID, tokenHash, deviceInfo, ipAddress
 //
 // maxSessions limits the number of active sessions per user; 0 disables the
 // limit. At the limit, CreateWithID revokes the user's least recently used
-// active sessions, as RecordUse tracks them, so a new sign-in succeeds and the
+// active sessions, including uses not yet flushed, so a new sign-in succeeds and the
 // user keeps at most maxSessions. A revocation failure returns before creation
 // and preserves earlier revocations.
 // A row installed before a persistence error is returned alongside that error for cleanup.
@@ -142,9 +147,12 @@ func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo,
 	}
 
 	if maxSessions > 0 {
+		s.usesMu.Lock()
+		lastUsed := func(session *Session) storage.Time { return max(session.LastUsed, s.uses[session.ID]) }
 		active := slices.SortedFunc(s.GetActiveByUserID(userID), func(a, b *Session) int {
-			return cmp.Or(cmp.Compare(a.LastUsed, b.LastUsed), cmp.Compare(a.Created, b.Created), cmp.Compare(a.ID, b.ID))
+			return cmp.Or(cmp.Compare(lastUsed(a), lastUsed(b)), cmp.Compare(a.Created, b.Created), cmp.Compare(a.ID, b.ID))
 		})
+		s.usesMu.Unlock()
 		for _, old := range active[:max(0, len(active)-maxSessions+1)] {
 			if err := s.Revoke(old.ID); err != nil {
 				return nil, err
@@ -253,23 +261,39 @@ func (s *SessionService) RevokeAllForUser(userID ksid.ID) (int, error) {
 	return count, nil
 }
 
-// LastUsedResolution bounds how stale Session.LastUsed may be. Each session
-// writes at most once per period, because each write rewrites the table.
-const LastUsedResolution = time.Hour
-
-// RecordUse marks the session as used now unless LastUsed is already within
-// LastUsedResolution.
-func (s *SessionService) RecordUse(id ksid.ID) error {
+// RecordUse notes that the session was used now. It performs no I/O:
+// FlushUses stores pending uses, and eviction reads them before they are stored.
+func (s *SessionService) RecordUse(id ksid.ID) {
 	now := storage.Now()
-	_, err := s.table.Modify(id, func(session *Session) error {
-		if now.AsTime().Sub(session.LastUsed.AsTime()) < LastUsedResolution {
-			return errLastUsedCurrent
+	s.usesMu.Lock()
+	defer s.usesMu.Unlock()
+	s.uses[id] = now
+}
+
+// FlushUses stores pending uses in Session.LastUsed with one table rewrite and
+// drops uses of deleted sessions. A failure keeps the uses pending.
+func (s *SessionService) FlushUses() error {
+	s.usesMu.Lock()
+	pending := s.uses
+	s.uses = make(map[ksid.ID]storage.Time)
+	s.usesMu.Unlock()
+	if len(pending) == 0 {
+		return nil
+	}
+	_, err := s.table.UpdateFunc(func(session *Session) bool {
+		used, ok := pending[session.ID]
+		if !ok || !used.After(session.LastUsed) {
+			return false
 		}
-		session.LastUsed = now
-		return nil
+		session.LastUsed = used
+		return true
 	})
-	if errors.Is(err, errLastUsedCurrent) {
-		return nil
+	if err != nil {
+		s.usesMu.Lock()
+		defer s.usesMu.Unlock()
+		for id, used := range pending {
+			s.uses[id] = max(s.uses[id], used)
+		}
 	}
 	return err
 }
@@ -277,22 +301,8 @@ func (s *SessionService) RecordUse(id ksid.ID) error {
 // CleanupExpired removes sessions that have been expired for more than the given duration.
 func (s *SessionService) CleanupExpired(olderThan time.Duration) (int, error) {
 	cutoff := storage.ToTime(time.Now().Add(-olderThan))
-	var toDelete []ksid.ID
-
-	for session := range s.table.Iter(0) {
-		if session.ExpiresAt.Before(cutoff) {
-			toDelete = append(toDelete, session.ID)
-		}
-	}
-
-	count := 0
-	for _, id := range toDelete {
-		if _, err := s.table.Delete(id); err != nil {
-			return count, err
-		}
-		count++
-	}
-	return count, nil
+	deleted, err := s.table.DeleteFunc(func(session *Session) bool { return session.ExpiresAt.Before(cutoff) })
+	return len(deleted), err
 }
 
 type sessionBinding struct {
@@ -330,6 +340,4 @@ var (
 	errSessionTokenHashRequired = errors.New("session token_hash is required")
 	errSessionNotFound          = errors.New("session not found")
 	errSessionInactive          = errors.New("session is no longer active")
-	// errLastUsedCurrent skips a RecordUse write; it never escapes RecordUse.
-	errLastUsedCurrent = errors.New("session last use is current")
 )

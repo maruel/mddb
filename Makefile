@@ -33,7 +33,7 @@ help:
 	@printf '  %-18s - %s\n' 'make test' 'Run unit tests'
 	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
-	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel)'
+	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel); SPEC=e2e/x.spec.ts[:LINE] runs one'
 	@printf '  %-18s - %s\n' 'make release' 'Build and publish release archives (requires GITHUB_TOKEN)'
 	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
 	@printf '  %-18s - %s\n' 'make dev' 'Run the server in development mode (scripts/run-dev.py)'
@@ -87,17 +87,18 @@ benchmark:
 	@pnpm exec tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'
 
 # Run the complete browser suite and verify its saved data with normal pairing limits.
-# The embedded frontend is rebuilt before test-e2e-go compiles it, so a stale dist
-# never serves superseded browser code. Focused diagnostics use pnpm exec playwright
-# test e2e/file.spec.ts directly.
-test-e2e: $(FRONTEND_STAMP) test-e2e-go
+# SPEC=e2e/file.spec.ts[:LINE] runs one spec and skips the tagged Go tests and
+# the saved-data verification, which expects the whole suite's pages. Both
+# rebuild the embedded frontend first, so a stale dist never serves superseded
+# browser code.
+test-e2e: $(FRONTEND_STAMP) $(if $(SPEC),frontend-build,test-e2e-go)
 	@pnpm exec playwright install --no-shell chromium
 	@uv run --locked python scripts/clean_data_e2e.py
-	@pnpm exec playwright test $(PLAYWRIGHT_ARGS); \
+	@pnpm exec playwright test $(SPEC) $(PLAYWRIGHT_ARGS); \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then echo 'Server Log: ./data-e2e/server.log'; exit $$e2e_exit; fi
-	@uv run --locked python scripts/verify_e2e_data.py
+	@[ -n "$(SPEC)" ] || uv run --locked python scripts/verify_e2e_data.py
 	@pnpm exec node e2e/inject-tag-colors.cjs
 
 # The e2e build tag also switches on the Go tests that only exist in that build,
@@ -130,13 +131,15 @@ verify: custom-gcl $(FRONTEND_STAMP)
 fix: custom-gcl $(FRONTEND_STAMP)
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
+	@# Type-aware ESLint reads the CSS Module declarations, so regenerate them
+	@# from the stylelint-fixed CSS first.
+	@pnpm exec stylelint --fix "frontend/src/**/*.css"
+	@pnpm exec node scripts/css_module_types.mjs --source-path frontend/src --write
 	@pnpm exec eslint frontend/src e2e playwright.config.ts scripts/css_module_types.mjs scripts/css_module_types.test.mjs scripts/vite_proxy.test.mjs --fix
 	@pnpm exec prettier --write --log-level warn .
 	@uv run --locked ruff check --quiet --fix .
 	@uv run --locked ruff format . >/dev/null
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || go tool shfmt -w $$files
-	@pnpm exec stylelint --fix "frontend/src/**/*.css"
-	@pnpm exec node scripts/css_module_types.mjs --source-path frontend/src --write
 	@uv run --locked python scripts/update_agents_file_index.py
 
 git-hooks:

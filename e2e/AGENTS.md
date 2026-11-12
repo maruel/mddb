@@ -7,8 +7,10 @@ starts it, and runs every spec in parallel; it is the only e2e gate. Rebuilding 
 `backend/frontend/dist` snapshot never serves superseded browser code here. The tag raises every rate limit
 10000x, because the suite registers a fresh account per test and would otherwise exhaust the production auth
 tier. Tests have zero retries, so they must be deterministic. Iterate on one test with
-`pnpm exec playwright test e2e/file.spec.ts:LINE`, and add `--trace on` to record a trace. Use
-`make test-e2e PLAYWRIGHT_ARGS=--ui` for interactive UI mode.
+`make test-e2e SPEC=e2e/file.spec.ts:LINE`; it rebuilds the frontend and skips the tagged Go tests and the
+saved-data check. Add `PLAYWRIGHT_ARGS="--trace on"` to record a trace, or `PLAYWRIGHT_ARGS=--ui` for
+interactive UI mode. A bare `pnpm exec playwright test` refuses to start when the embedded frontend is older
+than its sources.
 
 The `e2e` build tag also swaps the OAuth providers for fakes that log in deterministic accounts and raises the
 server user quota so every spec can register its own user. A binary built without the tag has none of it, so

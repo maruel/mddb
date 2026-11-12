@@ -97,7 +97,7 @@ func TestSessionService(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(LastUsedResolution+time.Hour)), 0)
+					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(2*time.Hour)), 0)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -106,12 +106,13 @@ func TestSessionService(t *testing.T) {
 						t.Fatal(err)
 					}
 					t.Cleanup(cancel)
-					time.Sleep(LastUsedResolution)
-					if err := s.RecordUse(session.ID); err != nil {
+					time.Sleep(time.Hour)
+					s.RecordUse(session.ID)
+					if err := s.FlushUses(); err != nil {
 						t.Fatal(err)
 					}
 					if got, err := s.Get(session.ID); err != nil || got.LastUsed == session.LastUsed {
-						t.Fatalf("RecordUse did not record: %v", err)
+						t.Fatalf("FlushUses did not store the use: %v", err)
 					}
 					if ctx.Err() != nil {
 						t.Fatal("activity update canceled the session")
@@ -201,6 +202,53 @@ func TestSessionService(t *testing.T) {
 			t.Fatal("partial session cleanup was not persistent")
 		}
 	})
+	t.Run("FlushUses", func(t *testing.T) {
+		// ksid needs real time: the synctest epoch precedes it.
+		user, id := ksid.NewID(), ksid.NewID()
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "sessions.jsonl")
+			s, err := NewSessionService(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			created, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(24*time.Hour)), 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Minute)
+			s.RecordUse(id)
+			if got, err := s.Get(id); err != nil || got.LastUsed != created.LastUsed {
+				t.Fatalf("RecordUse wrote before a flush: %v", err)
+			}
+
+			// A failed flush keeps the use pending for the next one.
+			if err := os.Rename(path, path+".saved"); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(path, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.FlushUses(); err == nil {
+				t.Fatal("flush into a directory succeeded")
+			}
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Rename(path+".saved", path); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.FlushUses(); err != nil {
+				t.Fatal(err)
+			}
+			reloaded, err := NewSessionService(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, err := reloaded.Get(id); err != nil || !got.LastUsed.After(created.LastUsed) {
+				t.Fatalf("stored use = %+v, %v; want after %v", got, err, created.LastUsed)
+			}
+		})
+	})
 	t.Run("Create/concurrent at quota", func(t *testing.T) {
 		s, err := NewSessionService(filepath.Join(t.TempDir(), "sessions.jsonl"))
 		if err != nil {
@@ -246,10 +294,9 @@ func TestSessionService(t *testing.T) {
 			}
 			first, second, third := create(userID, 3), create(userID, 3), create(userID, 3)
 			otherSession := create(other, 3)
-			time.Sleep(LastUsedResolution)
-			if err := s.RecordUse(first.ID); err != nil {
-				t.Fatal(err)
-			}
+			// The use stays pending: eviction must read it before any flush.
+			time.Sleep(time.Hour)
+			s.RecordUse(first.ID)
 			// At quota 3, the fourth sign-in revokes second, which is used least
 			// recently although first is older.
 			fourth := create(userID, 3)

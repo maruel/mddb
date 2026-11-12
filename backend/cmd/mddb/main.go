@@ -457,7 +457,7 @@ Flags:
 		return nil
 	})
 	workers.Go(func() error {
-		runSessionCleanup(workerCtx, sessionService)
+		runSessionMaintenance(workerCtx, sessionService)
 		return nil
 	})
 
@@ -722,26 +722,46 @@ func runNotificationCleanup(ctx context.Context, notifSvc *identity.Notification
 	}
 }
 
-// sessionRetention is how long an expired session row stays listed before
-// runSessionCleanup deletes it.
-const sessionRetention = 7 * 24 * time.Hour
+const (
+	// sessionRetention is how long an expired session row stays listed before
+	// runSessionMaintenance deletes it.
+	sessionRetention = 7 * 24 * time.Hour
+	// sessionUseFlushPeriod bounds how far stored Session.LastUsed lags real use.
+	sessionUseFlushPeriod = time.Hour
+	// sessionCleanupPeriod is how often expired sessions are deleted.
+	sessionCleanupPeriod = 24 * time.Hour
+)
 
-// runSessionCleanup deletes sessions expired for longer than sessionRetention
-// at startup and then daily until ctx is canceled. The root .gitignore keeps
-// sessions out of history, so deletion needs no commit.
-func runSessionCleanup(ctx context.Context, s *identity.SessionService) {
-	ticker := time.NewTicker(24 * time.Hour)
+// runSessionMaintenance stores recorded session uses every
+// sessionUseFlushPeriod and once more when ctx is canceled, and deletes
+// sessions expired for longer than sessionRetention at startup and every
+// sessionCleanupPeriod. The root .gitignore keeps sessions out of history, so
+// neither needs a commit. Uses recorded after the final flush are lost; they
+// only order eviction.
+func runSessionMaintenance(ctx context.Context, s *identity.SessionService) {
+	ticker := time.NewTicker(sessionUseFlushPeriod)
 	defer ticker.Stop()
+	flush := func() {
+		if err := s.FlushUses(); err != nil {
+			slog.WarnContext(ctx, "Failed to store session uses", "err", err)
+		}
+	}
+	var lastCleanup time.Time
 	for {
-		if count, err := s.CleanupExpired(sessionRetention); err != nil {
-			slog.WarnContext(ctx, "Failed to clean up expired sessions", "err", err)
-		} else if count > 0 {
-			slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
+		if time.Since(lastCleanup) >= sessionCleanupPeriod {
+			lastCleanup = time.Now()
+			if count, err := s.CleanupExpired(sessionRetention); err != nil {
+				slog.WarnContext(ctx, "Failed to clean up expired sessions", "err", err)
+			} else if count > 0 {
+				slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
+			}
 		}
 		select {
 		case <-ctx.Done():
+			flush()
 			return
 		case <-ticker.C:
+			flush()
 		}
 	}
 }

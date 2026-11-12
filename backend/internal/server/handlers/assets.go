@@ -224,7 +224,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, dto.Forbidden("session_user"))
 		return
 	}
-	if _, message, _ := h.Svc.EffectiveWorkspaceRole(user, wsID); message != "" {
+	if _, err := h.Svc.EffectiveWorkspaceRole(user, wsID); err != nil {
 		writeErrorResponse(w, dto.Forbidden("workspace_membership"))
 		return
 	}

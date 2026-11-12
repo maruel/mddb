@@ -12,6 +12,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zstd"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 )
 
 // decompressMiddleware returns a handler that decompresses request bodies
@@ -29,7 +30,7 @@ func decompressMiddleware(next http.Handler) http.Handler {
 		case "zstd":
 			dec, err := zstd.NewReader(r.Body, zstd.WithDecoderMaxMemory(10<<20))
 			if err != nil {
-				writeBadRequestError(w, "invalid zstd body")
+				writeAPIError(w, invalidBody("invalid zstd body"))
 				return
 			}
 			reader = dec.IOReadCloser()
@@ -38,12 +39,12 @@ func decompressMiddleware(next http.Handler) http.Handler {
 		case "gzip":
 			gr, err := gzip.NewReader(r.Body)
 			if err != nil {
-				writeBadRequestError(w, "invalid gzip body")
+				writeAPIError(w, invalidBody("invalid gzip body"))
 				return
 			}
 			reader = gr
 		default:
-			writeBadRequestError(w, "unsupported Content-Encoding: "+ce)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnsupportedMediaType, dto.ErrorCodeInvalidFormat, "unsupported Content-Encoding: "+ce))
 			return
 		}
 
