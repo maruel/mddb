@@ -63,6 +63,15 @@ test.describe("OAuth Login", () => {
     });
   }
 
+  test("a failed provider callback explains the failure on the login page", async ({ page }) => {
+    // Without the state cookie of a started sign-in, the callback reports it as expired.
+    await page.goto("/api/v1/auth/oauth/google/callback?code=unused&state=unknown");
+
+    await expect(page.getByRole("heading", { name: /login|sign in/i })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveText("Sign-in timed out or started in another browser. Try again.");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
   test("OAuth callback with token sets auth and redirects", async ({ page, context: _context }) => {
     // This test simulates what happens after Google redirects back with a token
     // We need a valid JWT for this to work, so we'll check the flow mechanics

@@ -223,3 +223,43 @@ func TestTrackedLoginEntrypoints(t *testing.T) {
 		t.Fatalf("other session revoked: %d", got)
 	}
 }
+
+// TestAuthorizationErrors checks that every authorization wrapper answers with
+// the JSON error body the SDK client decodes.
+func TestAuthorizationErrors(t *testing.T) {
+	e := setupTestEnv(t)
+	// The first account becomes the global admin; reg is an ordinary user.
+	var admin, reg dto.AuthResponse
+	for _, a := range []struct {
+		email string
+		resp  *dto.AuthResponse
+	}{{"admin@example.com", &admin}, {"authz@example.com", &reg}} {
+		if got := e.doJSON(t, "POST", "/api/v1/auth/register", dto.RegisterRequest{Email: a.email, Password: "password123", Name: "User"}, a.resp, ""); got != http.StatusOK {
+			t.Fatalf("register %s: %d", a.email, got)
+		}
+	}
+	unknown := ksid.NewID().String()
+	for _, tc := range []struct {
+		name, method, path, token string
+		status                    int
+		code                      dto.ErrorCode
+	}{
+		{"WrapAuth without credential", "GET", "/api/v1/auth/me", "", http.StatusUnauthorized, dto.ErrorCodeUnauthorized},
+		{"raw without credential", "POST", "/api/v1/auth/oauth/link", "", http.StatusUnauthorized, dto.ErrorCodeUnauthorized},
+		{"org without credential", "GET", "/api/v1/organizations/" + unknown, "", http.StatusUnauthorized, dto.ErrorCodeUnauthorized},
+		{"org invalid ID", "GET", "/api/v1/organizations/bad!", reg.Token, http.StatusBadRequest, dto.ErrorCodeInvalidFormat},
+		{"org non-member", "GET", "/api/v1/organizations/" + unknown, reg.Token, http.StatusForbidden, dto.ErrorCodeForbidden},
+		{"workspace without credential", "GET", "/api/v1/workspaces/" + unknown, "", http.StatusUnauthorized, dto.ErrorCodeUnauthorized},
+		{"workspace invalid ID", "GET", "/api/v1/workspaces/bad!", reg.Token, http.StatusBadRequest, dto.ErrorCodeInvalidFormat},
+		{"workspace unknown", "GET", "/api/v1/workspaces/" + unknown, reg.Token, http.StatusNotFound, dto.ErrorCodeNotFound},
+		{"global admin without credential", "GET", "/api/v1/server/config", "", http.StatusUnauthorized, dto.ErrorCodeUnauthorized},
+		{"global admin non-admin", "GET", "/api/v1/server/config", reg.Token, http.StatusForbidden, dto.ErrorCodeForbidden},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var resp dto.ErrorResponse
+			if got := e.doJSON(t, tc.method, tc.path, nil, &resp, tc.token); got != tc.status || resp.Error.Code != tc.code {
+				t.Fatalf("got %d %q, want %d %q", got, resp.Error.Code, tc.status, tc.code)
+			}
+		})
+	}
+}

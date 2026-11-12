@@ -133,6 +133,17 @@ export const dict: Dictionary = {
     loginWithGoogle: "Mit Google anmelden",
     loginWithMicrosoft: "Mit Microsoft anmelden",
     loginWithGitHub: "Mit GitHub anmelden",
+    oauthErrors: {
+      default: "Anmeldung fehlgeschlagen. Erneut versuchen.",
+      CONFLICT: "Dieses Anbieterkonto ist bereits mit einem anderen Benutzer verknüpft.",
+      EMAIL_IN_USE:
+        "Ein Konto verwendet diese E-Mail-Adresse bereits. Melden Sie sich mit dessen Passwort an und bestätigen Sie zuerst die E-Mail-Adresse.",
+      EMAIL_NOT_VERIFIED:
+        "Der Anbieter hat Ihre E-Mail-Adresse nicht bestätigt. Bestätigen Sie sie dort, oder melden Sie sich anders an und verknüpfen Sie den Anbieter in den Einstellungen.",
+      EXPIRED: "Die Anmeldung ist abgelaufen oder wurde in einem anderen Browser begonnen. Erneut versuchen.",
+      INVALID_PROVIDER: "Diese Anmeldemethode ist nicht verfügbar.",
+      OAUTH_ERROR: "Der Anbieter konnte die Anmeldung nicht abschließen. Erneut versuchen.",
+    },
   },
 
   editor: {

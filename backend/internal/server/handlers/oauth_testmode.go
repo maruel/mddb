@@ -31,11 +31,20 @@ func NewFakeOAuthHandler(svc *Services, cfg *Config, providers []identity.OAuthP
 func (h *FakeOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	provider := identity.OAuthProvider(r.PathValue("provider"))
 	if !h.providers[provider] {
-		writeErrorResponse(w, dto.InvalidProvider())
+		redirectOAuthError(w, r, loginPath, dto.InvalidProvider())
+		return
+	}
+	next, err := loginReturnPath(r.URL.Query().Get("next"))
+	if err != nil {
+		redirectOAuthError(w, r, loginPath, err)
 		return
 	}
 	slog.InfoContext(r.Context(), "e2e build: bypassing real OAuth, using fake account", "provider", provider)
-	finishOAuthLogin(h.svc, h.cfg, w, r, provider, testUserInfo(provider), r.URL.Query().Get("next"))
+	if err := finishOAuthLogin(h.svc, h.cfg, w, r, provider, testUserInfo(provider)); err != nil {
+		redirectOAuthError(w, r, loginErrorPath(next), err)
+		return
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther) //nolint:gosec // G710: loginReturnPath validated next.
 }
 
 // testUserInfo returns deterministic fake user info for an e2e build.

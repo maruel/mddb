@@ -311,6 +311,55 @@ describe("Auth", () => {
     expect(microsoftLink.getAttribute("href")).toBe("/api/v1/auth/oauth/microsoft");
   });
 
+  describe("provider sign-in failure", () => {
+    afterEach(() => {
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("explains the code and drops it from the URL", async () => {
+      window.history.replaceState(null, "", "/device?oauth_error=EXPIRED&user_code=ABCD");
+      renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert").textContent).toBe(
+          "Sign-in timed out or started in another browser. Try again.",
+        );
+      });
+      expect(window.location.pathname + window.location.search).toBe("/device?user_code=ABCD");
+    });
+
+    it("explains an unknown code generically", async () => {
+      window.history.replaceState(null, "", "/login?oauth_error=INTERNAL_ERROR");
+      renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert").textContent).toBe("Sign-in failed. Try again.");
+      });
+    });
+
+    it("clears the explanation on the next attempt", async () => {
+      window.history.replaceState(null, "", "/login?oauth_error=OAUTH_ERROR");
+      mockFetch.mockImplementation((url: string) => {
+        if (url === "/api/v1/auth/providers") {
+          return Promise.resolve(mockProvidersResponse);
+        }
+        return new Promise(() => {});
+      });
+      renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toBeTruthy();
+      });
+
+      fireEvent.input(screen.getByLabelText(/email/i), { target: { value: "test@example.com" } });
+      fireEvent.input(screen.getByLabelText(/password/i), { target: { value: "password123" } });
+      fireEvent.click(screen.getByRole("button", { name: /login/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole("alert")).toBeNull();
+      });
+    });
+  });
+
   it("shows privacy policy link", async () => {
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 

@@ -132,6 +132,16 @@ export const dict: Dictionary = {
     loginWithGoogle: "Login with Google",
     loginWithMicrosoft: "Login with Microsoft",
     loginWithGitHub: "Login with GitHub",
+    oauthErrors: {
+      default: "Sign-in failed. Try again.",
+      CONFLICT: "This provider account is already linked to another user.",
+      EMAIL_IN_USE: "An account already uses this email. Sign in with its password and verify the email first.",
+      EMAIL_NOT_VERIFIED:
+        "The provider has not verified your email. Verify it there, or sign in another way and link the provider in settings.",
+      EXPIRED: "Sign-in timed out or started in another browser. Try again.",
+      INVALID_PROVIDER: "This sign-in method is not available.",
+      OAUTH_ERROR: "The provider could not complete sign-in. Try again.",
+    },
   },
 
   editor: {

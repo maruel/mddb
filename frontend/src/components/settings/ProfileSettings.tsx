@@ -9,6 +9,7 @@ import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
 import { IconButton } from "../shared";
 import { useI18n, type Locale } from "../../i18n";
 import { settingsUrl } from "../../utils/urls";
+import { OAUTH_ERROR_PARAM, oauthErrorMessage } from "../../utils/oauthErrors";
 import LinkedAccountsSection from "./LinkedAccountsSection";
 import SessionsSection from "./SessionsSection";
 import PasswordSection from "./PasswordSection";
@@ -37,9 +38,9 @@ export default function ProfileSettings() {
       // Clean up URL params - use replaceState to update URL without navigation
       window.history.replaceState({}, "", location.pathname);
     }
-    const oauthError = params.get("oauth_error");
+    const oauthError = params.get(OAUTH_ERROR_PARAM);
     if (oauthError) {
-      setError(`${t("settings.linkingFailed")}: ${oauthError}`);
+      setError(`${t("settings.linkingFailed")}: ${oauthErrorMessage(t, oauthError)}`);
       // Clean up URL params - use replaceState to update URL without navigation
       window.history.replaceState({}, "", location.pathname);
     }

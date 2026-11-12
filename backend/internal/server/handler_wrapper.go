@@ -171,22 +171,26 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 	return &authResult{user: user, sessionID: sessionID, tokenString: tokenString}, ctx, nil
 }
 
-// checkWSMembership validates workspace membership and returns the effective role.
-// Returns an error string and HTTP status code if access is denied.
+// checkWSMembership returns an error unless the user holds requiredRole in
+// the workspace.
 func checkWSMembership(
 	user *identity.User,
 	wsID ksid.ID,
 	svc *handlers.Services,
 	requiredRole identity.WorkspaceRole,
-) (errMsg string, statusCode int) {
+) *dto.APIError {
 	role, msg, status := svc.EffectiveWorkspaceRole(user, wsID)
 	if msg != "" {
-		return msg, status
+		code := dto.ErrorCodeForbidden
+		if status == http.StatusNotFound {
+			code = dto.ErrorCodeNotFound
+		}
+		return dto.NewAPIError(status, code, msg)
 	}
 	if !hasWSPermission(role, requiredRole) {
-		return "Forbidden: insufficient permissions", http.StatusForbidden
+		return dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: insufficient permissions")
 	}
-	return "", 0
+	return nil
 }
 
 // Wrap wraps a handler function to work as an http.Handler.
@@ -300,7 +304,7 @@ func WrapAuth[In any, PtrIn interface {
 		// Validate JWT and session
 		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnauthorized, dto.ErrorCodeUnauthorized, err.Error()))
 			return
 		}
 
@@ -353,7 +357,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 		// Validate JWT and session
 		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnauthorized, dto.ErrorCodeUnauthorized, err.Error()))
 			return
 		}
 
@@ -369,23 +373,23 @@ func WrapOrgAuth[In any, PtrIn interface {
 		// Extract and validate organization ID from path
 		orgIDStr := r.PathValue("orgID")
 		if orgIDStr == "" {
-			http.Error(w, "Organization ID required", http.StatusBadRequest)
+			writeAPIError(w, dto.MissingField("orgID"))
 			return
 		}
 		orgID, err := ksid.Parse(orgIDStr)
 		if err != nil {
-			http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+			writeAPIError(w, dto.NewAPIError(http.StatusBadRequest, dto.ErrorCodeInvalidFormat, "Invalid organization ID format"))
 			return
 		}
 
 		// Check organization membership and role
 		membership, err := svc.OrgMembership.Get(auth.user.ID, orgID)
 		if err != nil {
-			http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+			writeAPIError(w, dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: not a member of this organization"))
 			return
 		}
 		if !hasOrgPermission(membership.Role, requiredRole) {
-			http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+			writeAPIError(w, dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: insufficient permissions"))
 			return
 		}
 
@@ -430,7 +434,7 @@ func WrapWSAuth[In any, PtrIn interface {
 		// Validate JWT and session
 		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnauthorized, dto.ErrorCodeUnauthorized, err.Error()))
 			return
 		}
 
@@ -449,12 +453,12 @@ func WrapWSAuth[In any, PtrIn interface {
 		if wsIDStr != "" {
 			wsID, err = ksid.Parse(wsIDStr)
 			if err != nil {
-				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
+				writeAPIError(w, dto.NewAPIError(http.StatusBadRequest, dto.ErrorCodeInvalidFormat, "Invalid workspace ID format"))
 				return
 			}
 
-			if errMsg, status := checkWSMembership(auth.user, wsID, svc, requiredRole); errMsg != "" {
-				http.Error(w, errMsg, status)
+			if err := checkWSMembership(auth.user, wsID, svc, requiredRole); err != nil {
+				writeAPIError(w, err)
 				return
 			}
 		}
@@ -528,7 +532,7 @@ func wrapAuthRaw(
 			user = auth.user
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnauthorized, dto.ErrorCodeUnauthorized, err.Error()))
 			return
 		}
 
@@ -548,12 +552,12 @@ func wrapAuthRaw(
 			var err error
 			wsID, err = ksid.Parse(wsIDStr)
 			if err != nil {
-				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
+				writeAPIError(w, dto.NewAPIError(http.StatusBadRequest, dto.ErrorCodeInvalidFormat, "Invalid workspace ID format"))
 				return
 			}
 
-			if errMsg, status := checkWSMembership(user, wsID, svc, requiredRole); errMsg != "" {
-				http.Error(w, errMsg, status)
+			if err := checkWSMembership(user, wsID, svc, requiredRole); err != nil {
+				writeAPIError(w, err)
 				return
 			}
 		}
@@ -600,12 +604,12 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 			user = auth.user
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			writeAPIError(w, dto.NewAPIError(http.StatusUnauthorized, dto.ErrorCodeUnauthorized, err.Error()))
 			return
 		}
 
 		if !user.IsGlobalAdmin {
-			http.Error(w, "Forbidden: global admin required", http.StatusForbidden)
+			writeAPIError(w, dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: global admin required"))
 			return
 		}
 
@@ -856,7 +860,10 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.
 
 // writeRateLimitError writes a 429 rate limit error response.
 func writeRateLimitError(w http.ResponseWriter, result ratelimit.Result) {
-	retryAfter := int(result.RetryAfter.Seconds())
-	apiErr := dto.RateLimitExceeded(retryAfter)
-	writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+	writeAPIError(w, dto.RateLimitExceeded(int(result.RetryAfter.Seconds())))
+}
+
+// writeAPIError writes e as the JSON error body that SDK clients decode.
+func writeAPIError(w http.ResponseWriter, e *dto.APIError) {
+	writeErrorResponseWithCode(w, e.StatusCode(), e.Code(), e.Error(), e.Details())
 }

@@ -1,13 +1,14 @@
 // Authentication component handling login and registration forms.
 
-import { createSignal, createResource, createMemo, Show, For, type JSX } from "solid-js";
-import { A } from "@solidjs/router";
+import { createSignal, createResource, createMemo, onMount, Show, For, type JSX } from "solid-js";
+import { A, useSearchParams } from "@solidjs/router";
 import { createApiClient, APIError } from "@sdk/api.gen";
 import type { UserResponse, OAuthProvider } from "@sdk/types.gen";
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
 import styles from "./Auth.module.css";
 import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "./OAuthIcons";
 import { useI18n } from "../i18n";
+import { OAUTH_ERROR_PARAM, oauthErrorMessage } from "../utils/oauthErrors";
 
 interface AuthProps {
   hideDeviceLogin?: boolean;
@@ -63,9 +64,25 @@ export default function Auth(props: AuthProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [loading, setLoading] = createSignal(false);
 
+  // A failed provider sign-in returns here with its error code. Show it until the
+  // next attempt, and drop it from the URL so a reload does not repeat it.
+  const [searchParams, setSearchParams] = useSearchParams<{ [OAUTH_ERROR_PARAM]?: string }>();
+  const initialOAuthError = searchParams[OAUTH_ERROR_PARAM];
+  const [oauthError, setOAuthError] = createSignal(typeof initialOAuthError === "string" ? initialOAuthError : null);
+  onMount(() => {
+    if (initialOAuthError !== undefined) {
+      setSearchParams({ [OAUTH_ERROR_PARAM]: undefined }, { replace: true });
+    }
+  });
+  const shownError = () => {
+    const code = oauthError();
+    return error() ?? (code === null ? null : oauthErrorMessage(t, code));
+  };
+
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setError(null);
+    setOAuthError(null);
     setLoading(true);
 
     try {
@@ -97,7 +114,13 @@ export default function Auth(props: AuthProps) {
           <A href="/device-login">{t("deviceLogin.start")}</A>
         </Show>
 
-        {error() && <div class={styles.error}>{error()}</div>}
+        <Show when={shownError()}>
+          {(message) => (
+            <div class={styles.error} role="alert">
+              {message()}
+            </div>
+          )}
+        </Show>
 
         <Show when={sortedProviders().length > 0}>
           <div class={styles.oauthButtons}>

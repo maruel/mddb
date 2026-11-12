@@ -133,6 +133,17 @@ export const dict: Dictionary = {
     loginWithGoogle: "Se connecter avec Google",
     loginWithMicrosoft: "Se connecter avec Microsoft",
     loginWithGitHub: "Se connecter avec GitHub",
+    oauthErrors: {
+      default: "La connexion a échoué. Réessayez.",
+      CONFLICT: "Ce compte du fournisseur est déjà associé à un autre utilisateur.",
+      EMAIL_IN_USE:
+        "Un compte utilise déjà cet e-mail. Connectez-vous avec son mot de passe et vérifiez d'abord l'e-mail.",
+      EMAIL_NOT_VERIFIED:
+        "Le fournisseur n'a pas vérifié votre e-mail. Vérifiez-le chez lui, ou connectez-vous autrement et associez le fournisseur dans les paramètres.",
+      EXPIRED: "La connexion a expiré ou a commencé dans un autre navigateur. Réessayez.",
+      INVALID_PROVIDER: "Ce mode de connexion n'est pas disponible.",
+      OAUTH_ERROR: "Le fournisseur n'a pas pu terminer la connexion. Réessayez.",
+    },
   },
 
   editor: {

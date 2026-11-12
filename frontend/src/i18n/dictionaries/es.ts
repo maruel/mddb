@@ -133,6 +133,16 @@ export const dict: Dictionary = {
     loginWithGoogle: "Iniciar sesión con Google",
     loginWithMicrosoft: "Iniciar sesión con Microsoft",
     loginWithGitHub: "Iniciar sesión con GitHub",
+    oauthErrors: {
+      default: "No se pudo iniciar sesión. Inténtalo de nuevo.",
+      CONFLICT: "Esta cuenta del proveedor ya está vinculada a otro usuario.",
+      EMAIL_IN_USE: "Ya hay una cuenta con este correo. Inicia sesión con su contraseña y verifica primero el correo.",
+      EMAIL_NOT_VERIFIED:
+        "El proveedor no ha verificado tu correo. Verifícalo allí, o inicia sesión de otra forma y vincula el proveedor en la configuración.",
+      EXPIRED: "El inicio de sesión caducó o empezó en otro navegador. Inténtalo de nuevo.",
+      INVALID_PROVIDER: "Este método de inicio de sesión no está disponible.",
+      OAUTH_ERROR: "El proveedor no pudo completar el inicio de sesión. Inténtalo de nuevo.",
+    },
   },
 
   editor: {

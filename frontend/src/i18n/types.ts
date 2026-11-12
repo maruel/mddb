@@ -134,6 +134,15 @@ export interface Dictionary {
     loginWithGoogle: string;
     loginWithMicrosoft: string;
     loginWithGitHub: string;
+    oauthErrors: {
+      default: string;
+      CONFLICT: string;
+      EMAIL_IN_USE: string;
+      EMAIL_NOT_VERIFIED: string;
+      EXPIRED: string;
+      INVALID_PROVIDER: string;
+      OAUTH_ERROR: string;
+    };
   };
 
   editor: {

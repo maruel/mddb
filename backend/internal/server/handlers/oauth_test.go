@@ -226,8 +226,12 @@ func (e *oauthTestEnv) startLink(t *testing.T, p identity.OAuthProvider) (string
 
 // callback runs the provider callback with the given state and cookies.
 func (e *oauthTestEnv) callback(t *testing.T, p identity.OAuthProvider, state string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	return e.callbackQuery(t, p, url.Values{"code": {"c"}, "state": {state}}, cookies...)
+}
+
+// callbackQuery runs the provider callback with the query the provider sends.
+func (e *oauthTestEnv) callbackQuery(t *testing.T, p identity.OAuthProvider, q url.Values, cookies ...*http.Cookie) *httptest.ResponseRecorder {
 	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, &http.Client{Transport: e.fake})
-	q := url.Values{"code": {"c"}, "state": {state}}
 	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"/callback?"+q.Encode(), http.NoBody)
 	r.SetPathValue("provider", string(p))
 	for _, c := range cookies {
@@ -279,9 +283,7 @@ func (e *oauthTestEnv) linkIdentity(t *testing.T, u *identity.User, p identity.O
 // wantLoggedIn checks that the login succeeded and returns the account that
 // holds the provider identity.
 func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identity.OAuthProvider, w *httptest.ResponseRecorder) *identity.User {
-	if w.Code != http.StatusFound || w.Header().Get("Location") != "/" {
-		t.Fatalf("status = %d, location %q; body %s", w.Code, w.Header().Get("Location"), w.Body)
-	}
+	wantRedirect(t, w, "/")
 	wantCleared(t, w)
 	u, err := e.svc.User.GetByOAuth(p, fakeIDs[p])
 	if err != nil {
@@ -335,13 +337,10 @@ func (e *oauthTestEnv) wantVictimUntouched(t *testing.T) {
 	}
 }
 
-// wantRefused checks that the login failed with status and code, and that it
-// created no account and signed in nobody.
-func (e *oauthTestEnv) wantRefused(t *testing.T, w *httptest.ResponseRecorder, status int, code dto.ErrorCode) {
-	var resp dto.ErrorResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil || w.Code != status || resp.Error.Code != code {
-		t.Errorf("status = %d, body %s; want %d %s", w.Code, w.Body, status, code)
-	}
+// wantRefused checks that the login returned to the login page with code, and
+// that it created no account and signed in nobody.
+func (e *oauthTestEnv) wantRefused(t *testing.T, w *httptest.ResponseRecorder, code dto.ErrorCode) {
+	wantRedirect(t, w, "/login?oauth_error="+string(code))
 	wantCleared(t, w)
 	e.wantVictimUntouched(t)
 	if n := e.svc.User.Count(); n != 2 {
@@ -352,12 +351,10 @@ func (e *oauthTestEnv) wantRefused(t *testing.T, w *httptest.ResponseRecorder, s
 	}
 }
 
-// wantRejected checks that the callback failed before the token exchange and
-// linked nothing to either account.
+// wantRejected checks that the callback returned to the login page as expired
+// before the token exchange and linked nothing to either account.
 func (e *oauthTestEnv) wantRejected(t *testing.T, w *httptest.ResponseRecorder) {
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d; body %s", w.Code, http.StatusBadRequest, w.Body)
-	}
+	wantRedirect(t, w, "/login?oauth_error="+string(dto.ErrorCodeExpired))
 	if n := e.fake.exchanges.Load(); n != 0 {
 		t.Errorf("token exchanges = %d, want 0", n)
 	}
@@ -367,6 +364,13 @@ func (e *oauthTestEnv) wantRejected(t *testing.T, w *httptest.ResponseRecorder) 
 		}
 	}
 	wantCleared(t, w)
+}
+
+// wantRedirect checks that the response is a See Other redirect to location.
+func wantRedirect(t *testing.T, w *httptest.ResponseRecorder, location string) {
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != location {
+		t.Fatalf("status = %d, location %q; want %d %q; body %s", w.Code, w.Header().Get("Location"), http.StatusSeeOther, location, w.Body)
+	}
 }
 
 // wantCleared checks that the response deletes the state cookie.
@@ -473,13 +477,8 @@ func TestOAuthHandler(t *testing.T) {
 					}
 					state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
 					changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte("/device")), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
-					if got := e.callback(t, p, changed, cookie); got.Code != http.StatusBadRequest {
-						t.Fatalf("tampered state = %d", got.Code)
-					}
-					result := e.callback(t, p, state, cookie)
-					if result.Code != http.StatusFound || result.Header().Get("Location") != "/device" {
-						t.Fatalf("callback = %d, %q: %s", result.Code, result.Header().Get("Location"), result.Body)
-					}
+					wantRedirect(t, e.callback(t, p, changed, cookie), "/login?oauth_error=EXPIRED")
+					wantRedirect(t, e.callback(t, p, state, cookie), "/device")
 				})
 			}
 			e := newOAuthTestEnv(t, "https://mddb.example.com")
@@ -489,14 +488,16 @@ func TestOAuthHandler(t *testing.T) {
 					r.SetPathValue("provider", "google")
 					w := httptest.NewRecorder()
 					e.h.LoginRedirect(w, r)
-					if w.Code != http.StatusBadRequest || w.Header().Get("Location") != "" || len(w.Result().Cookies()) != 0 {
-						t.Fatalf("unsafe destination = %d, %q, cookies %v", w.Code, w.Header().Get("Location"), w.Result().Cookies())
+					wantRedirect(t, w, "/login?oauth_error=VALIDATION_FAILED")
+					if len(w.Result().Cookies()) != 0 {
+						t.Fatalf("unsafe destination cookies %v", w.Result().Cookies())
 					}
 					// Even signed state must pass validation before exchanging credentials.
 					state := loginStatePrefix + base64.RawURLEncoding.EncodeToString([]byte(path)) + ":nonce"
 					cookie := e.h.stateCookie(oauthserver.SignState(state, e.h.stateKey), oauthStateMaxAge)
-					if got := e.callback(t, identity.OAuthProviderGoogle, state, cookie); got.Code != http.StatusBadRequest || e.fake.exchanges.Load() != 0 {
-						t.Fatalf("unsafe signed destination = %d; exchanges = %d", got.Code, e.fake.exchanges.Load())
+					wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, cookie), "/login?oauth_error=VALIDATION_FAILED")
+					if n := e.fake.exchanges.Load(); n != 0 {
+						t.Fatalf("unsafe signed destination exchanges = %d", n)
 					}
 				})
 			}
@@ -551,10 +552,7 @@ func TestOAuthHandler(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			w := e.callback(t, identity.OAuthProviderGoogle, state, c)
-			if w.Code != http.StatusFound || w.Header().Get("Location") != "/?oauth_linked=true" {
-				t.Fatalf("completed link: %d %s", w.Code, w.Body)
-			}
+			wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, c), "/settings/user?oauth_linked=true")
 			if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != "google:"+fakeIDs[identity.OAuthProviderGoogle] {
 				t.Fatalf("persisted identities: %v", ids)
 			}
@@ -566,8 +564,8 @@ func TestOAuthHandler(t *testing.T) {
 				var u *identity.User
 				for i := range limit + 1 {
 					w := e.login(t, identity.OAuthProviderGoogle)
-					if w.Code != http.StatusFound {
-						t.Fatalf("sign-in %d: %d %s", i+1, w.Code, w.Body)
+					if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/" {
+						t.Fatalf("sign-in %d: %d %q", i+1, w.Code, w.Header().Get("Location"))
 					}
 					if u == nil {
 						var err error
@@ -625,7 +623,7 @@ func TestOAuthHandler(t *testing.T) {
 					t.Run(string(p), func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
 						e.fake.setEmail(e.victim.Email, true)
-						e.wantRefused(t, e.login(t, p), http.StatusConflict, dto.ErrorCodeEmailNotVerified)
+						e.wantRefused(t, e.login(t, p), dto.ErrorCodeEmailInUse)
 						if _, err := e.svc.User.Authenticate(e.victim.Email, "password123"); err != nil {
 							t.Fatal("collision changed existing password", err)
 						}
@@ -681,10 +679,7 @@ func TestOAuthHandler(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
 						tc.edit(e.fake)
 						state, c := e.startLink(t, tc.p)
-						w := e.callback(t, tc.p, state, c)
-						if w.Code != http.StatusFound || w.Header().Get("Location") != "/?oauth_linked=true" {
-							t.Fatalf("status = %d, location %q; body %s", w.Code, w.Header().Get("Location"), w.Body)
-						}
+						wantRedirect(t, e.callback(t, tc.p, state, c), "/settings/user?oauth_linked=true")
 						if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != string(tc.p)+":"+fakeIDs[tc.p] {
 							t.Errorf("caller identities = %v", ids)
 						}
@@ -703,9 +698,7 @@ func TestOAuthHandler(t *testing.T) {
 						e.fake.apis[graphMeAPI] = `{"id":"m4242","mail":"victim@example.com"}`
 						state, c := e.startLink(t, p)
 						w := e.callback(t, p, state, c)
-						if w.Code != http.StatusFound || w.Header().Get("Location") != "/?oauth_linked=true" {
-							t.Fatalf("status = %d, location %q; body %s", w.Code, w.Header().Get("Location"), w.Body)
-						}
+						wantRedirect(t, w, "/settings/user?oauth_linked=true")
 						wantCleared(t, w)
 						if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != string(p)+":"+fakeIDs[p] {
 							t.Errorf("caller identities = %v", ids)
@@ -754,7 +747,7 @@ func TestOAuthHandler(t *testing.T) {
 						if tc.edit != nil {
 							tc.edit(e.fake)
 						}
-						e.wantRefused(t, e.login(t, tc.p), http.StatusForbidden, dto.ErrorCodeEmailNotVerified)
+						e.wantRefused(t, e.login(t, tc.p), dto.ErrorCodeEmailNotVerified)
 					})
 				}
 			})
@@ -780,14 +773,61 @@ func TestOAuthHandler(t *testing.T) {
 						} else {
 							tc.edit(e.fake.idClaims)
 						}
-						e.wantRefused(t, e.login(t, identity.OAuthProviderMicrosoft), http.StatusBadRequest, dto.ErrorCodeValidationFailed)
+						e.wantRefused(t, e.login(t, identity.OAuthProviderMicrosoft), dto.ErrorCodeOAuthError)
 					})
 				}
 			})
 			t.Run("GitHub emails unavailable", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				delete(e.fake.apis, githubEmailsAPI)
-				e.wantRefused(t, e.login(t, identity.OAuthProviderGitHub), http.StatusInternalServerError, dto.ErrorCodeOAuthError)
+				e.wantRefused(t, e.login(t, identity.OAuthProviderGitHub), dto.ErrorCodeOAuthError)
+			})
+			t.Run("provider response", func(t *testing.T) {
+				for _, tc := range []struct {
+					name  string
+					query url.Values
+					want  string
+				}{
+					{"declined", url.Values{"error": {"access_denied"}}, "/login"},
+					{"refused", url.Values{"error": {"server_error"}}, "/login?oauth_error=OAUTH_ERROR"},
+					{"missing code", url.Values{}, "/login?oauth_error=OAUTH_ERROR"},
+				} {
+					t.Run(tc.name, func(t *testing.T) {
+						e := newOAuthTestEnv(t, "http://localhost:8080")
+						state, c := e.loginRedirect(t, identity.OAuthProviderGoogle)
+						tc.query.Set("state", state)
+						w := e.callbackQuery(t, identity.OAuthProviderGoogle, tc.query, c)
+						wantRedirect(t, w, tc.want)
+						wantCleared(t, w)
+						if n := e.fake.exchanges.Load(); n != 0 {
+							t.Errorf("token exchanges = %d, want 0", n)
+						}
+					})
+				}
+			})
+			t.Run("failure returns to the starting page", func(t *testing.T) {
+				e := newOAuthTestEnv(t, "http://localhost:8080")
+				e.fake.setEmail("new@example.com", false)
+				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/google?next=%2Fdevice%3Fuser_code%3DABCD", http.NoBody)
+				r.SetPathValue("provider", "google")
+				w := httptest.NewRecorder()
+				e.h.LoginRedirect(w, r)
+				state, c := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
+				wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, c), "/device?oauth_error=EMAIL_NOT_VERIFIED&user_code=ABCD")
+			})
+			t.Run("link of an identity another account holds", func(t *testing.T) {
+				e := newOAuthTestEnv(t, "http://localhost:8080")
+				e.linkIdentity(t, e.victim, identity.OAuthProviderGitHub)
+				state, c := e.startLink(t, identity.OAuthProviderGitHub)
+				wantRedirect(t, e.callback(t, identity.OAuthProviderGitHub, state, c), "/settings/user?oauth_error=CONFLICT")
+				if ids := e.providerIDs(t, e.caller); len(ids) != 0 {
+					t.Errorf("caller identities = %v, want none", ids)
+				}
+			})
+			t.Run("unknown provider", func(t *testing.T) {
+				e := newOAuthTestEnv(t, "http://localhost:8080")
+				state, c := e.loginRedirect(t, identity.OAuthProviderGoogle)
+				wantRedirect(t, e.callback(t, "other", state, c), "/login?oauth_error=INVALID_PROVIDER")
 			})
 			t.Run("missing cookie", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
