@@ -613,6 +613,14 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 				"An account already claims this email. Verify its email before linking, or change its email and retry provider sign-in.")
 		}
 		created := err != nil
+		// TODO: Enforce Quotas.MaxUsers here. AuthHandler.Register (auth.go)
+		// rejects a password registration once User.Count() reaches MaxUsers
+		// (50 by default), but this provider path creates the account without
+		// that check, so Google, GitHub, and Microsoft sign-in can exceed the
+		// cap. Move the check into one place that every account creation uses,
+		// such as the user service, and return dto.QuotaExceeded("users", ...)
+		// here too. docs.mddb.app's authentication guide states the cap applies
+		// to password registration only; update it with the fix.
 		if err != nil {
 			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
@@ -733,7 +741,7 @@ type microsoftIDClaims struct {
 // audience, the expiry, and the v2.0 issuer of the token's tenant.
 //
 // The email and xms_edov claims are optional claims that the operator adds to
-// the app registration; see SELF_HOSTING.md.
+// the app registration; see https://docs.mddb.app/guide/authentication#microsoft.
 func microsoftVerifiedEmail(t *oauth2.Token, clientID string) (string, error) {
 	raw, ok := t.Extra("id_token").(string)
 	if !ok || raw == "" {

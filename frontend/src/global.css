@@ -12,10 +12,21 @@ body {
   height: 100%;
 }
 
+body {
+  font-family: system-ui, sans-serif;
+}
+
 :root {
   /* Semantic color, surface, state, and elevation foundation for the light theme. */
 
   /* Interactive accent roles. Separate roles may diverge in future themes. */
+
+  /* TODO: Move the accent roles from blue (#2563eb) to the mddb indigo palette.
+     mddb.app's README Brand table owns it (brand #4f46e5, brand strong #4338ca,
+     focus #b45309), taken from the app icon's indigo accent
+     (frontend/public/icon.svg). The app blue no longer matches its websites.
+     Check WCAG AA contrast for each role, including the dark theme, then run
+     `make screenshots-update` and publish the captures to both sites. */
   --c-action-primary: #2563eb;
   --c-action-primary-hover: #1d4ed8;
   --c-border-accent: #2563eb;

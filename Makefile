@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark release
+.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev screenshots-check screenshots-update test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark release
 
 GORELEASER ?= go run github.com/goreleaser/goreleaser/v2@v2.20.0
 
@@ -34,6 +34,8 @@ help:
 	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
 	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel); SPEC=e2e/x.spec.ts[:LINE] runs one'
+	@printf '  %-18s - %s\n' 'make screenshots-update' 'Capture documentation scenes twice and replace their WebP baselines (slow)'
+	@printf '  %-18s - %s\n' 'make screenshots-check' 'Compare documentation scenes with their WebP baselines (slow)'
 	@printf '  %-18s - %s\n' 'make release' 'Build and publish release archives (requires GITHUB_TOKEN)'
 	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
 	@printf '  %-18s - %s\n' 'make dev' 'Run the server in development mode (scripts/run-dev.py)'
@@ -100,6 +102,12 @@ test-e2e: $(FRONTEND_STAMP) $(if $(SPEC),frontend-build,test-e2e-go)
 	if [ $$e2e_exit -ne 0 ]; then echo 'Server Log: ./data-e2e/server.log'; exit $$e2e_exit; fi
 	@[ -n "$(SPEC)" ] || uv run --locked python scripts/verify_e2e_data.py
 	@pnpm exec node e2e/inject-tag-colors.cjs
+
+# Documentation captures for the websites. Both rebuild the embedded frontend
+# and start their own e2e server, so they cannot run beside test-e2e.
+screenshots-check screenshots-update: $(FRONTEND_STAMP) frontend-build
+	@pnpm exec playwright install --no-shell chromium
+	@uv run --locked python scripts/docs_screenshots.py $(subst screenshots-,,$@)
 
 # The e2e build tag also switches on the Go tests that only exist in that build,
 # which assert what a production binary must not do. Running the whole tagged

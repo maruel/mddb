@@ -12,7 +12,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ViewManifest defines the structure of a view manifest file.
+// ViewManifest defines the views to create for imported databases, because the
+// Notion API does not expose database views. It is a YAML file:
+//
+//	version: 1
+//	databases:
+//	  - notion_id: "0123456789abcdef0123456789abcdef"
+//	    views:
+//	      - name: By status
+//	        type: board        # table, list, gallery, board, or calendar
+//	        default: true
+//	        group_by: Status   # property names, not IDs
+//	        hidden_groups: [Archived]
+//	        columns: [{property: Title, width: 240, visible: true}]
+//	        sorts: [{property: Due, direction: asc}]   # asc or desc
+//	        filters: [{property: Status, operator: not_equals, value: Done}]
+//
+// Filters nest with and/or lists; operators are listed in mapFilterOp.
+// Validate requires version 1, a notion_id per database, and a name and a
+// valid type per view.
+//
+// TODO: date_property, cover_property, and title_property parse but
+// configToView ignores them, and mapFilterOp silently maps an unknown operator
+// to equals. Apply the properties once views support them, and reject unknown
+// operators in Validate.
 type ViewManifest struct {
 	Version   int                  `yaml:"version"`
 	Databases []DatabaseViewConfig `yaml:"databases"`

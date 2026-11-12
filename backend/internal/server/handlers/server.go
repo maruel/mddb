@@ -61,7 +61,14 @@ func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.
 
 // UpdateConfig updates the server configuration and saves to disk.
 func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req *dto.UpdateServerConfigRequest) (*dto.UpdateServerConfigResponse, error) {
-	// Update SMTP if provided
+	// TODO: Make saved SMTP settings take effect and allow disabling SMTP.
+	// cmd/mddb/main.go builds email.Service and the email verification
+	// service once at startup from serverCfg.SMTP, so changes saved here only
+	// apply after a restart. Clearing every field cannot disable SMTP either:
+	// the empty password below keeps the stored one, so the config is no
+	// longer IsZero and Validate fails with "host is required". Rebuild or
+	// swap the email services when the config changes, and treat an all-empty
+	// request as "disable". docs.mddb.app's email guide documents the restart.
 	if req.SMTP != nil {
 		newSMTP := email.Config{
 			Host:     req.SMTP.Host,

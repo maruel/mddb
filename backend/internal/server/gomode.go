@@ -35,10 +35,19 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
+// goModeMCPEndpoint serves the workspace MCP tool group that discovery
+// advertises. It accepts the web API's bearer token.
 const goModeMCPEndpoint = "/api/v1/gomode/mcp"
 
 const voiceItemsURI = "mddb://catalog"
 
+// goModeSettings builds the public discovery manifest at
+// /.well-known/gomode.json. It advertises one MCP tool group, "workspace", at
+// goModeMCPEndpoint, and the embedded voice gateway at "/" when voiceEnabled.
+// NewRouter replaces the gateway with the external URL and voiceTokenEndpoint
+// in external mode. Discovery stays public; every advertised endpoint requires
+// authentication. The browser shows the voice bar only when the manifest
+// advertises a non-empty gateway URL.
 func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 	voice := gomode.VoiceGatewaySettings{Required: false}
 	if voiceEnabled {
@@ -58,6 +67,16 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 	}
 }
 
+// goModeMCP serves goModeMCPEndpoint for Go Mode clients, browser voice, and
+// native voice.
+//
+// A request carrying an Origin header must come from cfg.BaseURL. The optional
+// workspaceId query parameter fixes the connection's workspace; the hosted
+// frontend sets it to the user's open workspace. Without it, each conversation
+// binds a workspace through browser focus or workspace_select, and a user with
+// one accessible workspace binds it implicitly. Every workspace member sees
+// readSpecs; editors and admins also see writeSpecs. Each write is a commit in
+// the workspace's git history, like any other edit.
 func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
 	sessions := mcp.NewSessionStore(goModeSessionOwner)
 	return func(w http.ResponseWriter, r *http.Request) {

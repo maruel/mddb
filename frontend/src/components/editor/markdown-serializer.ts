@@ -13,6 +13,12 @@ interface ListContext {
  * Serializes a flat block document back to markdown.
  * Reconstructs list structure by tracking consecutive blocks of same type/indent.
  */
+// TODO: Separate every block with a blank line. Only paragraph/paragraph,
+// paragraph/list, and list-end transitions get one, so headings, code fences,
+// quotes, and rules are emitted flush against their neighbors; the Markdown
+// editor mode shows a compact, hard-to-read page. Emit a blank line between
+// all top-level blocks except consecutive items of the same list, and update
+// markdown-serializer.test.ts and the parser round-trip tests.
 export function serializeToMarkdown(doc: ProseMirrorNode): string {
   const lines: string[] = [];
   const listContext: ListContext[] = [];

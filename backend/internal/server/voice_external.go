@@ -26,6 +26,17 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
 
+// voiceTokenEndpoint issues external gateway authorization. Authenticated
+// clients call it with GET (Go Mode Android) or POST (browser) and receive a
+// voicev2.ServiceAuthorization: kind "mddb", the instance ID, the issuer
+// (server.base_url), and a five-minute token for the signed-in user. The mddb
+// login bearer never leaves mddb's origin.
+//
+// Scoped mode signs an Ed25519 service token; startup logs the public key to
+// copy into the gateway's trusted_issuers entry. OAuth mode signs an access
+// token with the persistent voice-oauth-key.pem in the config directory and
+// publishes /.well-known/oauth-authorization-server and /oauth/jwks for the
+// gateway's discovery; the issuer must exactly equal server.base_url.
 const voiceTokenEndpoint = "/api/v1/gomode/voice/token" //nolint:gosec // Route, not a credential.
 
 // VoiceTokenMode selects the external gateway authorization format.

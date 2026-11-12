@@ -1,7 +1,7 @@
 # mddb systemd user service; install with contrib/install.sh.
 [Unit]
 Description=mddb - Notion-like document and table system
-Documentation=https://github.com/maruel/mddb
+Documentation=https://docs.mddb.app/guide/running
 After=network-online.target
 Wants=network-online.target
 

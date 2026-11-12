@@ -106,6 +106,13 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
           onClick={() => setShowDropdown(!showDropdown())}
           title={t("table.addColumn") || "Add Column"}
         >
+          {/* TODO: Replace the bare "+" text. Beside the view tabs
+              (NodeView.tsx viewBarAddField, non-table views) it sits next to
+              "+ New View", which uses the Material add icon and a visible
+              label, so the two read as duplicates and only the tooltip names
+              this one (see e2e/screenshots/docs/board-view.webp). Use AddIcon
+              with a visible "Add field" label there, and give the table
+              header variant an accessible name beyond title. */}
           +
         </button>
         <Show when={showDropdown()}>

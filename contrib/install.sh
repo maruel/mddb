@@ -1,5 +1,10 @@
 #!/bin/bash
 # Install the latest checksummed mddb release and start its per-user service.
+#
+# Takes no arguments; rerun to update. Installs ~/.local/bin/mddb and a systemd
+# user unit (Linux) or launchd agent (macOS), writes the example config.toml
+# only when none exists, and never changes config.toml, settings.json, or
+# ~/mddb/data. User documentation: https://docs.mddb.app/guide/installation.
 
 set -euo pipefail
 umask 077
@@ -56,6 +61,11 @@ else
   command -v launchctl >/dev/null || fail 'launchctl is required.'
   command -v plutil >/dev/null || fail 'plutil is required.'
 fi
+# TODO: Also require git. mddb runs the git binary for every workspace
+# operation (backend/internal/storage/git/exec_repo.go), but this script does
+# not check for it, so a host without git installs a service that fails on
+# first use. Add git to this list after confirming the error mddb reports
+# without it; docs.mddb.app's installation guide already lists git.
 for tool in curl tar install; do command -v "$tool" >/dev/null || fail "$tool is required."; done
 if command -v sha256sum >/dev/null; then
   hash_command=(sha256sum)

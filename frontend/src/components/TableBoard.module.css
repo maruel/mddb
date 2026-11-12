@@ -104,6 +104,11 @@
 }
 
 .cards {
+  /* TODO: Center cards in their column. The 28px left padding against
+     var(--s-2) on the right shifts every card right (visible in
+     e2e/screenshots/docs/board-view.webp). It likely mirrors the table row
+     drag-handle gutter (hypothesis); boards render no handle. Use symmetric
+     padding unless a board handle needs the space. */
   flex: 1;
   padding: 0 var(--s-2) var(--s-2) 28px;
   overflow-y: auto;

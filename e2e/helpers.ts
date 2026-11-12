@@ -278,9 +278,12 @@ const baseTest = base.extend<CustomFixtures>({
         const screenshotPath = testInfo.outputPath(filename);
 
         // Save screenshot with meaningful name
+        // Finished transitions and a hidden caret make captures repeatable.
         await page.screenshot({
           path: screenshotPath,
           fullPage: options.fullPage ?? false,
+          animations: "disabled",
+          caret: "hide",
         });
 
         // Add annotation on first screenshot - visible in test details panel
@@ -301,6 +304,12 @@ const baseTest = base.extend<CustomFixtures>({
   ],
 });
 
+// TODO: Report screenshot tests at their spec location. Playwright records
+// a test's location from where it is declared, and this wrapper declares every
+// screenshot test here, so reports and `--list` show e2e/helpers.ts instead
+// of the spec file. Pass the caller's location (Playwright's test.info() is
+// unavailable at declaration time), or declare with
+// test(title, { tag: "@screenshot" }, fn) in each spec and drop the wrapper.
 // Helper to create a test with @screenshot tag visible in test list
 // Usage: test.screenshot('test name', async ({ page, takeScreenshot }) => { ... })
 (baseTest as TestWithScreenshot).screenshot = (title: string, fn: ScreenshotTestFn) => {

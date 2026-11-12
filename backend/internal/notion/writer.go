@@ -263,6 +263,9 @@ func (w *Writer) AppendRecord(nodeID ksid.ID, record *content.DataRecord) error 
 }
 
 // IDMapping stores the Notion ID to mddb ID mapping for incremental imports.
+// It lives in notion_id_mapping.json in the workspace directory. A rerun
+// reuses the mapped IDs, so references between nodes stay valid, and rewrites
+// nodes.jsonl and each table's data.jsonl.
 type IDMapping struct {
 	Version int                `json:"version"`
 	IDs     map[string]ksid.ID `json:"ids"` // Notion ID -> mddb ID

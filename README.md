@@ -1,157 +1,30 @@
 # mddb - Markdown Document & Table System
 
-A Notion-like document and table system for managing your information. Store everything locally as files, no external services required.
+A self-hosted, Notion-like document and table system. Pages are Markdown files, tables are JSONL files, and every
+edit is a Git commit.
 
 [![codecov](https://codecov.io/gh/maruel/mddb/graph/badge.svg?token=Q4SYDP0B00)](https://codecov.io/gh/maruel/mddb)
 
-## Why?
+- Product: [mddb.app](https://mddb.app)
+- Installation, configuration, and integration guides: [docs.mddb.app](https://docs.mddb.app)
 
-an anecdote:
+## Development
 
-<a href="https://x.com/anothercohen/status/2014136100894199968"><img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" /></a>
-
-and then:
-
-<a href="https://x.com/ivanhzhao/status/2003510041010405790"><img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="width: 400px;" /></a>
-
-\-\- Ivan Zhao, Notion CEO
-
-## What is mddb?
-
-Go Mode clients can discover mddb at `/.well-known/gomode.json`. The advertised
-`/api/v1/gomode/mcp` endpoint accepts the same bearer token as the web API and
-reads nodes from the user's most recently selected workspace. Switching
-workspaces in mddb changes the workspace exposed on subsequent MCP requests.
-The MCP tools `nodes_list` and `node_read` and node resources are read-only;
-resource discovery includes nested documents and tables. Users must have viewer
-access to the selected workspace. Editors also get `page_create` for Markdown
-text pages, `table_create` for tables with column schemas, `node_update`,
-and `node_append`; every edit is committed to the workspace git history, and the
-web editor flags the page as externally changed instead of overwriting it. In
-the Go Mode Android shell, the hosted
-frontend hands its validated bearer token to the native MCP client and clears
-it on logout.
-
-The frontend also hosts Go Mode's voice overlay. Voice is disabled by default.
-Set `voice-gateway.mode = "embedded"` with explicit realtime, chat, or local-stack
-pipelines, or use `mode = "external"` with a standalone gateway. Provider
-credentials authenticate configured pipelines without enabling voice. See
-[voice setup](SELF_HOSTING.md#voice-overlay) for complete examples.
-
-Embedded signaling uses the signed-in user's mddb bearer token. A standalone
-gateway receives a short-lived service token; the login bearer stays on mddb's
-origin. Embedded sessions allow one active session per user and eight globally,
-with offer rate limits and a two-hour lifetime. Transcript activity logs live in
-a private temporary directory until shutdown. WebRTC media requires UDP access.
-
-Connected Gemini sessions send microphone audio, session instructions, and MCP
-tool results to Google. Local-stack sessions use the configured ASR/LLM/TTS
-endpoints or managed local models. Standalone gateways apply their own model
-and storage configuration. mddb does not store voice audio.
-
-Voice can call the same workspace MCP tools that Go Mode clients use at
-`/api/v1/gomode/mcp`: `nodes_list` and `node_read`, plus node resources, and —
-for editors — `page_create`, `table_create`, `node_update`, and `node_append`. The browser or
-Android client executes each tool call with the signed-in user's bearer token
-against the user's active workspace, so voice only reaches the workspaces and
-nodes the user already has access to, and an edit is committed to the workspace
-git history like any other change.
-
-mddb lets you:
-
-- 📝 **Create and edit documents**: Write in markdown with live preview (Google Docs)
-- 📊 **Build tables**: Store structured data with typed columns and cross table references (Google Sheets)
-- 🗂️ **Organize information**: Create folders and nested structures (Google Drive)
-- ⚡ **Auto-save**: Changes save automatically as you work
-- 📁 **Keep it local**: All data stored as files on your computer
-- 🔄 **Git-native**: Every change is a git commit—sync to any remote, track history, branch and merge
-- 🔍 **Search**: Search across documents, tables, and folders
-- 🚀 **Designed for LLM agents**: storage is easy for an agent to navigate
-
-> **Note**: mddb uses a two-level hierarchy:
->
-> - **Organization**: Billing and administrative entity (like a company or team)
-> - **Workspace**: Isolated content container within an organization (like a project or department)
-> - **Table** instead of Notion's "Database" (a collection of records with columns)
->
-> Each workspace has its own pages, tables, and git remote for syncing.
-
-## Getting Started
-
-See [SELF_HOSTING.md](SELF_HOSTING.md) to run it yourself for free and access it securely from Tailscale.
-
-## File Structure
-
-All data is stored as plain files. Each workspace is a separate git repository:
-
-```
-data/
-├── db/                             # Identity database (users, orgs, memberships)
-└── <workspace-id>/                 # Each workspace is independent
-    ├── AGENTS.md                   # Workspace documentation for AI agents
-    └── <node-id>/                  # Node (document, table, or hybrid)
-        ├── index.md                # Document content with YAML front matter
-        ├── data.jsonl              # Table records (one JSON per line)
-        ├── data.blobs/             # Binary assets (images, files)
-        └── <asset-files>           # Asset files stored alongside
-```
-
-Instance configuration lives outside `data/`: the hand-written startup settings
-in `~/.config/mddb/config.toml` and the mutable server settings mddb writes to
-`~/.config/mddb/settings.json` (mode 0600, since it holds the JWT secret and the
-Web Push key pair).
-
-Every content mutation is a git commit. You can:
-
-- Edit files directly with any text editor
-- Sync each workspace to GitHub, GitLab, or any git remote
-- Use git history, branches, and merge workflows
-- Back up with standard tools
-
-Organization membership is stored in the identity database, not in the file structure.
-
-## FAQ
-
-**Q: Is my data private?**
-A: Workspaces are stored locally. Git sync sends workspace data to a remote only
-if you configure one. Optional voice sends session content to the configured gateway and model
-providers; a local stack can keep inference on your own machines.
-
-**Q: Can I sync across devices?**
-A: Configure a git remote in workspace settings—changes push automatically.
-
-**Q: Can I import/export my data?**
-A: The data is itself in text form.
-
-## Advanced Users
-
-For developers or advanced setup:
-
-- Review [AGENTS.md](AGENTS.md) for development guidelines
-
-## Building from Source
-
-Development requires Node.js 26 and pnpm 12.
+Development requires Go, Node.js 26, and pnpm 12.
 
 ```bash
 git clone https://github.com/maruel/mddb.git
 cd mddb
+make git-hooks
 make build
 ```
 
-## Comparison
+`make build` installs `mddb` and `notion-import` into your Go binary directory. `make dev` runs a development
+server with a temporary configuration. `make test` runs the Go and frontend unit tests, `make test-e2e` runs the
+browser suite, and `make` lists every target.
 
-| Feature              | Notion | Obsidian | HackMD / ([CodiMD](https://github.com/hackmdio/codimd)) |
-| -------------------- | ------ | -------- | ------------------------------------------------------- |
-| Organization         | ✅     | ✅       | ✅                                                      |
-| Workspace            | ✅     | ✅       | ✅                                                      |
-| Git native storage   | ❌     | ❌       | ❌                                                      |
-| Export to Git        | ❌     | ✅       | ✅                                                      |
-| Markdown             | ✅     | ✅       | ✅                                                      |
-| Self hosted          | ❌     | ✅       | ✅                                                      |
-| Backend open source  | ❌     | ❌       | ✅                                                      |
-| Web app first        | ✅     | ❌       | ✅                                                      |
-| Native table support | ✅     | ✅       | ❌                                                      |
+[AGENTS.md](AGENTS.md) describes the repository workflow. The HTTP API reference is
+[sdk/mddb/API.v1.md](sdk/mddb/API.v1.md).
 
 ## License
 

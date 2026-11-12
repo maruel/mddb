@@ -77,8 +77,10 @@
 .iconWrapper {
   position: relative;
   flex-shrink: 0;
+}
 
-  /* Pull icon up to overlap cover when cover is visible */
+/* Pull the icon up to overlap a visible cover. */
+.coverWrapper + .metaRow .iconWrapper {
   margin-top: -28px;
 }
 

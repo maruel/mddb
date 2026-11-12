@@ -3,6 +3,14 @@
 // notion-import extracts data from Notion workspaces and imports it into mddb
 // storage format. It supports extracting pages, databases, and records with
 // rate limiting to respect Notion's API limits.
+//
+// It is a standalone export: it writes <output>/<workspace>/ with nodes.jsonl,
+// notion_id_mapping.json, and one directory per node holding index.md,
+// data.jsonl, metadata.json for manifest views, and downloaded assets. It does
+// not register a workspace or commit to git; the web import
+// (handlers.NotionImportHandler) imports into a running server. -views takes a
+// notion.ViewManifest file. User documentation:
+// https://docs.mddb.app/guide/notion-import.
 package main
 
 import (

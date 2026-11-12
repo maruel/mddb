@@ -26,6 +26,10 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
 
+// Embedded gateway admission: one active session per user and eight in total;
+// three new offers per minute per user and twenty in total. A new offer from
+// the same user replaces that user's session when capacity allows. Sessions
+// end after voiceSessionTTL.
 const (
 	voiceMaxPerUser = 1
 	voiceMaxGlobal  = 8

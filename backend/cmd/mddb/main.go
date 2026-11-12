@@ -75,7 +75,7 @@ func mainImpl() (result error) {
 mddb serves the web UI, the HTTP API, and the workspace MCP endpoint.
 
 Configuration is read from config.toml in the config directory
-(default: ~/.config/mddb/). See contrib/config.toml for a documented example.
+(default: ~/.config/mddb/). See https://docs.mddb.app/guide/configuration.
 
 Flags:
 `)
@@ -639,7 +639,7 @@ func runOnboarding(cfgDir string, defaults *tomlServer) error {
 	var b strings.Builder
 	b.WriteString("# mddb instance configuration written by the onboarding wizard.\n")
 	b.WriteString("# This file holds client secrets; keep it readable by the server account only (mode 0600).\n")
-	b.WriteString("# See contrib/config.toml for every option and its default.\n\n")
+	b.WriteString("# See https://docs.mddb.app/guide/configuration for every option and its default.\n\n")
 	b.WriteString("[server]\n")
 	fmt.Fprintf(&b, "base_url = %q\n", baseURL)
 	for _, provider := range []struct {
@@ -665,7 +665,7 @@ func runOnboarding(cfgDir string, defaults *tomlServer) error {
 	}
 
 	fmt.Printf("\nConfiguration saved to %s\n", path)
-	fmt.Println("You can edit this file later to change your settings; see contrib/config.toml.")
+	fmt.Println("You can edit this file later; see https://docs.mddb.app/guide/configuration.")
 	fmt.Println("")
 
 	return nil
