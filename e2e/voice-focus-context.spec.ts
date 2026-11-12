@@ -8,19 +8,20 @@ test.use({ launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake
 
 const frames = (page: Page) => page.evaluate(() => window.browserToolFixture.sent);
 
+// gomode sends each resource text verbatim, separated by blank lines; the context resource carries "focus".
+// Changes queued during a turn accumulate oldest first, so the newest block wins.
 function publicContext(
   frame: Record<string, unknown> | undefined,
 ): { focus: { id: string; uri: string } | null } | null {
   const text = (frame?.context as { text?: string } | undefined)?.text;
   if (!text) return null;
-  for (const line of text.split("\n")) {
-    const section = JSON.parse(line) as { resource: string; status: string; content?: string };
-    if (
-      section.resource === "mddb://conversation/context" &&
-      section.status === "known" &&
-      section.content !== undefined
-    )
-      return JSON.parse(section.content) as { focus: { id: string; uri: string } | null };
+  for (const block of text.split("\n\n").reverse()) {
+    try {
+      const value = JSON.parse(block) as Record<string, unknown>;
+      if ("focus" in value) return value as { focus: { id: string; uri: string } | null };
+    } catch {
+      // Not JSON: another resource's text.
+    }
   }
   return null;
 }
@@ -225,23 +226,24 @@ test("two tabs publish their own selected nested node before setup and update or
   const readResult = await browserResult(page, "offscreen-read");
   expect(readResult).toHaveProperty("node.id", offscreen.id);
   expect(readResult).not.toHaveProperty("_meta");
+  // Updates carry changed resources only, and queued changes accumulate oldest
+  // first: read the newest context block of the newest update that has one.
   const watchedState = (watchedURI: string) =>
     page.evaluate((uri) => {
-      const latest = window.browserToolFixture.sent.filter((frame) => frame.kind === "context.update").at(-1);
-      const text = (latest?.context as { text?: string } | undefined)?.text ?? "";
-      for (const line of text.split("\n"))
-        if (line.startsWith("{")) {
-          const section = JSON.parse(line) as {
-            resource?: string;
-            status?: string;
-            content?: string;
-          };
-          if (section.resource === "mddb://conversation/context" && section.status === "known") {
-            const model = JSON.parse(section.content ?? "{}") as { resources?: Array<{ uri: string; state: string }> };
-            const watched = model.resources?.find((resource) => resource.uri === uri);
-            if (watched !== undefined) return watched.state;
+      const updates = window.browserToolFixture.sent.filter((frame) => frame.kind === "context.update");
+      for (const frame of updates.reverse()) {
+        const text = (frame.context as { text?: string } | undefined)?.text ?? "";
+        for (const block of text.split("\n\n").reverse()) {
+          let model: { focus?: unknown; resources?: Array<{ uri: string; state: string }> };
+          try {
+            model = JSON.parse(block) as typeof model;
+          } catch {
+            continue; // Not JSON: another resource's text.
           }
+          if (!("focus" in model)) continue;
+          return model.resources?.find((resource) => resource.uri === uri)?.state ?? null;
         }
+      }
       return null;
     }, watchedURI);
   await expect.poll(() => watchedState(`mddb://workspaces/${first.id}/nodes/${offscreen.id}`)).toBe("read");
@@ -289,8 +291,12 @@ test("two tabs publish their own selected nested node before setup and update or
   await page.getByRole("menuitem", { name: "Profile", exact: true }).click();
   await expect
     .poll(async () => {
-      const latest = (await frames(page)).filter((frame) => frame.kind === "context.update").at(-1);
-      return publicContext(latest)?.focus;
+      // Updates carry changed resources only; the newest one with context decides.
+      const updates = (await frames(page)).filter((frame) => frame.kind === "context.update");
+      return updates
+        .reverse()
+        .map(publicContext)
+        .find((value) => value !== null)?.focus;
     })
     .toBeNull();
   expect((await frames(page)).filter((frame) => frame.kind === "context.update" && frame.generate)).toHaveLength(0);

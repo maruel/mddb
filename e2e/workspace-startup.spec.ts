@@ -144,6 +144,14 @@ test("a successful deep-linked node cannot erase failed preparation or its user 
     .createPage("0", { title: "Deep-linked page", content: "Existing content" });
   const requested = gate();
   const release = gate();
+  // The stream's resync supersedes a root read still in flight, and preparation
+  // then reads again. Hold the stream until the injected failure settles so it
+  // stays the canonical outcome that only the user's retry replaces.
+  const stream = gate();
+  await page.route(`**/api/v1/workspaces/${workspace.id}/events**`, async (route) => {
+    await stream.promise;
+    await route.continue();
+  });
   await page.route(`**/api/v1/workspaces/${workspace.id}/nodes/${node.id}`, async (route) => {
     const response = await route.fetch();
     requested.resolve();
@@ -164,6 +172,7 @@ test("a successful deep-linked node cannot erase failed preparation or its user 
     await requested.promise;
     await expect(page.getByRole("alert")).toContainText("Initial roots unavailable");
   } finally {
+    stream.resolve();
     release.resolve();
   }
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Existing content");

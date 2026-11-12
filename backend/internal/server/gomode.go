@@ -991,17 +991,14 @@ func (m *workspaceRegistry) serviceItems(ctx context.Context) (mcpschema.Service
 }
 
 const mddbVoiceSystemInstruction = "You are the voice assistant for the authenticated user's " +
-	"active mddb workspace.\n\n" +
+	"active mddb workspace of pages and tables.\n\n" +
 	"Use nodes_list to discover pages and tables. " +
 	"Use node_read before answering questions about a page's contents, and answer only from its result. Follow nextContentCursor or nextContentURI until complete before replacing a long page. " +
-	"Editors can use page_create for text pages with Markdown content and table_create for tables with a column schema. " +
-	"Editors can update and append pages. Read a page before updating it because node_update replaces " +
-	"both its title and its complete Markdown body. Every edit is committed to the workspace git history. " +
-	"Refer to pages and tables by title. " +
-	"mddb://conversation/context is mddb conversation state: focus is the selected node or null; resources describe authorized offscreen reads. " +
-	"A resource marked changed requires a current read before relying on its contents; read records the revision actually read; unavailable is an authoritative failed availability check. " +
-	"Omitted or evicted entries do not mean deletion. Context changes are quiet information, not requests to speak or start a tool call. " +
-	"mddb://catalog is the bounded workspace catalog; use nodes_list for further discovery."
+	"Editors can create text pages with page_create and Markdown content, tables with table_create and a column schema, and update and append pages. " +
+	"Read a page before updating it because node_update replaces both its title and its complete Markdown body. " +
+	"Every edit is committed to the workspace git history. Refer to pages and tables by title. " +
+	"The JSON with \"focus\" names the selected node, or null, and lists offscreen resources: read one in state changed before relying on it; unavailable means it failed an availability check. " +
+	"The JSON with \"items\" is a bounded workspace catalog; use nodes_list for more."
 
 func (m *workspaceRegistry) decodeCursor(raw, kind string, parent, node ksid.ID, limit int) (mcpschema.Cursor, error) {
 	c := mcpschema.Cursor{Version: 1, Workspace: m.wsID, Kind: kind, Parent: parent, Node: node, Limit: limit}
