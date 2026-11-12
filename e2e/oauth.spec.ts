@@ -79,9 +79,7 @@ test.describe("OAuth Login", () => {
     // First, go to the callback URL with a fake token
     await page.goto("/?token=fake.jwt.token");
 
-    // The frontend should try to use this token and call /api/v1/auth/me
-    // Since it's a fake token, it will fail with 401
-    // Check that we end up back at the login page
+    // The frontend discards the URL token, and the session probe finds no account.
     await expect(page.getByRole("heading", { name: /login|sign in/i })).toBeVisible();
 
     // Token should be cleared from URL

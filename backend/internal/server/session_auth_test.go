@@ -263,3 +263,27 @@ func TestAuthorizationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSession(t *testing.T) {
+	e := setupTestEnv(t)
+	var reg dto.AuthResponse
+	if got := e.doJSON(t, "POST", "/api/v1/auth/register", dto.RegisterRequest{Email: "session-probe@example.com", Password: "password123", Name: "User"}, &reg, ""); got != http.StatusOK {
+		t.Fatalf("register: %d", got)
+	}
+	t.Run("valid", func(t *testing.T) {
+		var resp dto.SessionUserResponse
+		if got := e.doJSON(t, "GET", "/api/v1/auth/session", nil, &resp, reg.Token); got != http.StatusOK || resp.User == nil || resp.User.ID != reg.User.ID || resp.User.SessionID.IsZero() {
+			t.Fatalf("signed in: %d %+v", got, resp.User)
+		}
+	})
+	t.Run("signed out", func(t *testing.T) {
+		for name, token := range map[string]string{"no credential": "", "invalid credential": "not-a-jwt"} {
+			t.Run(name, func(t *testing.T) {
+				var resp dto.SessionUserResponse
+				if got := e.doJSON(t, "GET", "/api/v1/auth/session", nil, &resp, token); got != http.StatusOK || resp.User != nil {
+					t.Fatalf("got %d %+v, want 200 and no user", got, resp.User)
+				}
+			})
+		}
+	})
+}

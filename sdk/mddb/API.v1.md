@@ -23,6 +23,7 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/auth/invitations/ws/accept` |  | `AcceptInvitationRequest` | `UserResponse` |
 | GET | `/api/v1/auth/providers` |  |  | `ProvidersResponse` |
 | GET | `/api/v1/auth/me` |  |  | `UserResponse` |
+| GET | `/api/v1/auth/session` |  |  | `SessionUserResponse` |
 | POST | `/api/v1/auth/logout` |  |  | `OkResponse` |
 | GET | `/api/v1/auth/sessions` |  |  | `ListSessionsResponse` |
 | POST | `/api/v1/auth/sessions/revoke` |  | `RevokeSessionRequest` | `OkResponse` |
@@ -606,6 +607,14 @@ ProvidersResponse is a response containing the list of configured OAuth provider
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `providers` | `OAuthProvider[] \| null` |  | yes |
+
+### SessionUserResponse
+
+SessionUserResponse reports the account of the request's session.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `user` | `UserResponse \| null` |  | yes |
 
 ### SessionResponse
 

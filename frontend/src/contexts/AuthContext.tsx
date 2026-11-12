@@ -146,7 +146,6 @@ export const AuthProvider: ParentComponent = (props) => {
     settle(id, value);
     signalChange();
   };
-  const confirmLoggedOut = () => settle(changing(), null);
   const reloadIdentity = () => {
     if (disposed) return;
     changing();
@@ -158,12 +157,9 @@ export const AuthProvider: ParentComponent = (props) => {
     const request = generation;
     let probe: IdentityProbe;
     try {
-      const fresh = await createApiClient(async (url, init) => {
-        const response = await fetch(url, { ...init, signal, cache: "no-store", credentials: "same-origin" });
-        // Authentication middleware can reject before a JSON API response exists.
-        if (response.status === 401) throw new APIError(401, "UNAUTHORIZED");
-        return response;
-      }).getMe();
+      const fresh = await createApiClient((url, init) =>
+        fetch(url, { ...init, signal, cache: "no-store", credentials: "same-origin" }),
+      ).getMe();
       probe = { user: fresh };
     } catch (error) {
       probe = { error };
@@ -225,10 +221,7 @@ export const AuthProvider: ParentComponent = (props) => {
     if (disposed) return;
     const id = generation;
     try {
-      const value = await createApi(() => {
-        // Middleware can reject authentication before a JSON API response exists.
-        if (id === generation) confirmLoggedOut();
-      }).getMe();
+      const value = await createApi().getMe();
       if (id !== generation) return;
       if (user()?.id !== value.id || user()?.session_id !== value.session_id) {
         const next = changing();
@@ -246,10 +239,10 @@ export const AuthProvider: ParentComponent = (props) => {
     if (disposed) return;
     const id = changing();
     try {
-      const value = await createApi().getMe();
-      settle(id, value);
+      // The session probe answers signed-out visits without a 401.
+      settle(id, (await createApi().getSession()).user);
     } catch (err) {
-      if (!(err instanceof APIError && err.status === 401)) console.error("Failed to load user", err);
+      console.error("Failed to load user", err);
       settle(id, null);
     }
   };

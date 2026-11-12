@@ -71,7 +71,7 @@ func (h *AuthHandler) IssueSession(ctx context.Context, user *identity.User) (*d
 
 	token, sid, err := h.cfg.IssueToken(h.svc.Session, user, httpserver.ClientIP(ctx), reqctx.UserAgent(ctx), httpserver.Origin(ctx))
 	if err != nil {
-		return nil, sid, dto.InternalWithError("Failed to generate token", err)
+		return nil, sid, err
 	}
 
 	userResp.SessionID = sid
@@ -95,7 +95,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	// Check if user already exists
 	_, err := h.svc.User.GetByEmail(req.Email)
 	if err == nil {
-		return nil, dto.NewAPIError(409, dto.ErrorCodeConflict, "User already exists")
+		return nil, dto.NewAPIError(http.StatusConflict, dto.ErrorCodeEmailInUse, "User already exists")
 	}
 
 	user, err := h.svc.User.Create(req.Email, req.Password, req.Name)
@@ -117,6 +117,20 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	return response, nil
+}
+
+// GetSession returns the signed-in account, or a null user for a nil user.
+// Unlike GetMe, a signed-out request is not an error, so a page that only
+// discovers its session never answers 401.
+func (h *AuthHandler) GetSession(ctx context.Context, user *identity.User, _ *dto.GetSessionRequest) (*dto.SessionUserResponse, error) {
+	if user == nil {
+		return &dto.SessionUserResponse{}, nil
+	}
+	resp, err := h.GetMe(ctx, user, &dto.GetMeRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return &dto.SessionUserResponse{User: resp}, nil
 }
 
 // GetMe returns the current user info.

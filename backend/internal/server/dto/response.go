@@ -223,6 +223,11 @@ type ResolveUsersResponse struct {
 	Users []ResolvedUser `json:"users" jsonschema:"description=Resolved user details indexed by user ID"`
 }
 
+// SessionUserResponse reports the account of the request's session.
+type SessionUserResponse struct {
+	User *UserResponse `json:"user" jsonschema:"description=Signed-in account, or null without a valid session"`
+}
+
 // SwitchWorkspaceResponse is a response from switching workspace.
 type SwitchWorkspaceResponse struct {
 	User *UserResponse `json:"user"`

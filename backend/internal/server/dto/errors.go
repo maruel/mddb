@@ -139,12 +139,12 @@ func BadRequest(message string) *APIError {
 
 // MissingField creates a 400 Bad Request error for a missing field.
 func MissingField(fieldName string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, "Missing required field: "+fieldName)
+	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, "Missing required field: "+fieldName).WithDetail("field", fieldName)
 }
 
 // InvalidField creates a 400 Bad Request error for an invalid field value.
 func InvalidField(fieldName, reason string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrorCodeInvalidFormat, fieldName+": "+reason)
+	return NewAPIError(http.StatusBadRequest, ErrorCodeInvalidFormat, fieldName+": "+reason).WithDetail("field", fieldName)
 }
 
 // Internal returns a 500 Internal Server Error.

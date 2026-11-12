@@ -128,7 +128,7 @@ test("a delayed import cannot switch or poll using a replacement session", async
   const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
   if (!cookie) throw new Error("Missing browser cookie");
   await context.addCookies([{ ...cookie, value: replacement.token }]);
-  const bootstrapped = page.waitForResponse((res) => res.url().endsWith("/auth/me") && res.ok());
+  const bootstrapped = page.waitForResponse((res) => res.url().endsWith("/auth/session") && res.ok());
   await page.evaluate(() =>
     window.dispatchEvent(
       new StorageEvent("storage", {
@@ -177,7 +177,7 @@ test("a late autosave response cannot restore the old session's navigation", asy
   const cookie = (await context.cookies()).find((entry) => entry.name === "__Host-mddb_session");
   if (!cookie) throw new Error("Missing browser cookie");
   await context.addCookies([{ ...cookie, value: replacement.token }]);
-  const bootstrapped = page.waitForResponse((res) => res.url().endsWith("/auth/me") && res.ok());
+  const bootstrapped = page.waitForResponse((res) => res.url().endsWith("/auth/session") && res.ok());
   await page.evaluate(() =>
     window.dispatchEvent(
       new StorageEvent("storage", {

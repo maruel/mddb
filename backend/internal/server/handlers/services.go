@@ -414,6 +414,7 @@ type SessionClaims struct {
 
 // IssueToken persists a session and returns its signed credential and non-secret ID.
 // A nonzero ID on error identifies partial creation that the caller must revoke.
+// Errors are dto API errors, so callers return them unchanged.
 func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent, countryCode string) (credential string, id ksid.ID, err error) {
 	now := time.Now().Truncate(time.Second)
 	expiresAt := now.Add(tokenExpiration)
@@ -432,12 +433,13 @@ func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
 	tokenString, err := token.SignedString(c.JWTSecret)
 	if err != nil {
-		return "", 0, err
+		return "", 0, dto.InternalWithError("token_generation", err)
 	}
 
 	// Create session with the pre-generated ID and token hash
 	deviceInfo := devicelogin.UserAgent(userAgent)
 	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
+		err = dto.InternalWithError("session_creation", err)
 		if created != nil {
 			return tokenString, sessionID, err
 		}

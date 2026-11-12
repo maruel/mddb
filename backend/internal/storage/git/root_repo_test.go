@@ -607,7 +607,7 @@ func TestRootRepo(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "db"), 0o755); err != nil { //nolint:gosec // G301: test data
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "db", "sessions.jsonl"), []byte("{}\n"), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "db", "users.jsonl"), []byte("{}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		rr, err := NewRootRepo(ctx, dir, "", "")
@@ -616,7 +616,7 @@ func TestRootRepo(t *testing.T) {
 		}
 
 		// Modify file
-		if err := os.WriteFile(filepath.Join(dir, "db", "sessions.jsonl"), []byte("{\"id\":1}\n"), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "db", "users.jsonl"), []byte("{\"id\":1}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -631,6 +631,68 @@ func TestRootRepo(t *testing.T) {
 		}
 		if strings.TrimSpace(string(out)) != "mddb <mddb@localhost>" {
 			t.Errorf("expected default author, got: %s", string(out))
+		}
+	})
+
+	t.Run("sessions stay out of history", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		ctx := t.Context()
+		sessions := filepath.Join(dir, "db", "sessions.jsonl")
+		if err := os.MkdirAll(filepath.Dir(sessions), 0o755); err != nil { //nolint:gosec // G301: test data
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(sessions, []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		rr, err := NewRootRepo(ctx, dir, "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(sessions, []byte("{\"id\":1}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := rr.CommitDBChanges(ctx, Author{}, "login"); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := gitOutput(dir, "log", "--all", "--format=%h", "--", "db/sessions.jsonl"); err != nil || len(out) != 0 {
+			t.Fatalf("sessions history = %q, %v; want none", out, err)
+		}
+	})
+	t.Run("restart untracks sessions an older version committed", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		ctx := t.Context()
+		if _, err := NewRootRepo(ctx, dir, "", ""); err != nil {
+			t.Fatal(err)
+		}
+		// Reproduce an older root: no ignore rule and a committed sessions file.
+		sessions := filepath.Join(dir, "db", "sessions.jsonl")
+		if err := os.MkdirAll(filepath.Dir(sessions), 0o755); err != nil { //nolint:gosec // G301: test data
+			t.Fatal(err)
+		}
+		for _, f := range []struct{ path, data string }{{sessions, "{}\n"}, {filepath.Join(dir, ".gitignore"), ""}} {
+			if err := os.WriteFile(f.path, []byte(f.data), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for _, args := range [][]string{{"add", "-f", "--", ".gitignore", "db/sessions.jsonl"}, {"commit", "-m", "older version"}} {
+			if out, err := gitOutput(dir, args...); err != nil {
+				t.Fatalf("git %v: %v\n%s", args, err, out)
+			}
+		}
+
+		if _, err := NewRootRepo(ctx, dir, "", ""); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := gitOutput(dir, "ls-files", "--", "db/sessions.jsonl"); err != nil || len(out) != 0 {
+			t.Fatalf("tracked sessions = %q, %v; want none", out, err)
+		}
+		if out, err := gitOutput(dir, "status", "--porcelain"); err != nil || len(out) != 0 {
+			t.Fatalf("status = %q, %v; want clean", out, err)
+		}
+		if _, err := os.Stat(sessions); err != nil {
+			t.Fatalf("sessions file: %v", err)
 		}
 	})
 

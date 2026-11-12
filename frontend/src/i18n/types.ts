@@ -134,6 +134,9 @@ export interface Dictionary {
     loginWithGoogle: string;
     loginWithMicrosoft: string;
     loginWithGitHub: string;
+    invalidCredentials: string;
+    invalidEmail: string;
+    passwordRules: string;
     oauthErrors: {
       default: string;
       CONFLICT: string;
@@ -517,6 +520,17 @@ export interface Dictionary {
     CONFLICT: string;
     UNAUTHORIZED: string;
     FORBIDDEN: string;
+    CANNOT_UNLINK_ONLY_AUTH: string;
+    EMAIL_IN_USE: string;
+    EMAIL_NOT_VERIFIED: string;
+    EXPIRED: string;
+    INVALID_PROVIDER: string;
+    OAUTH_ERROR: string;
+    PAYLOAD_TOO_LARGE: string;
+    PROVIDER_ALREADY_LINKED: string;
+    PROVIDER_NOT_LINKED: string;
+    QUOTA_EXCEEDED: string;
+    RATE_LIMIT_EXCEEDED: string;
     unknown: string;
     sessionExpired: string;
     titleRequired: string;

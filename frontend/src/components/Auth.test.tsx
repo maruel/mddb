@@ -182,7 +182,7 @@ describe("Auth", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Invalid credentials")).toBeTruthy();
+      expect(screen.getByRole("alert").textContent).toBe("Incorrect email or password.");
     });
 
     expect(mockOnLogin).not.toHaveBeenCalled();
@@ -217,6 +217,52 @@ describe("Auth", () => {
     });
 
     expect(mockOnLogin).not.toHaveBeenCalled();
+  });
+
+  describe("registration rejection", () => {
+    const cases: Array<{ name: string; body: ErrorResponse; want: string }> = [
+      {
+        name: "explains the password rules",
+        body: {
+          error: { code: "INVALID_FORMAT", message: "password: must contain at least one letter and one digit" },
+          details: { field: "password" },
+        },
+        want: "Use at least 8 characters, with a letter and a digit.",
+      },
+      {
+        name: "explains an email already in use",
+        body: { error: { code: "EMAIL_IN_USE", message: "User already exists" } },
+        want: "An account already uses this email.",
+      },
+    ];
+    for (const tc of cases) {
+      it(tc.name, async () => {
+        mockFetch.mockImplementation((url: string) => {
+          if (url === "/api/v1/auth/providers") return Promise.resolve(mockProvidersResponse);
+          if (url === "/api/v1/auth/browser/register") {
+            return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve(tc.body) });
+          }
+          return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+        });
+        renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
+        await waitFor(() => {
+          expect(screen.getByLabelText(/email/i)).toBeTruthy();
+        });
+        fireEvent.click(screen.getByRole("button", { name: /register/i }));
+        await waitFor(() => {
+          expect(screen.getByLabelText(/name/i)).toBeTruthy();
+        });
+        fireEvent.input(screen.getByLabelText(/name/i), { target: { value: "New User" } });
+        fireEvent.input(screen.getByLabelText(/email/i), { target: { value: "new@example.com" } });
+        fireEvent.input(screen.getByLabelText(/password/i), { target: { value: "password" } });
+        fireEvent.click(screen.getByRole("button", { name: /^register$/i }));
+
+        await waitFor(() => {
+          expect(screen.getByRole("alert").textContent).toBe(tc.want);
+        });
+        expect(mockOnLogin).not.toHaveBeenCalled();
+      });
+    }
   });
 
   it("handles successful registration", async () => {
@@ -435,7 +481,7 @@ describe("Auth", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/invalid response/i)).toBeTruthy();
+      expect(screen.getByRole("alert").textContent).toBe("An unexpected error occurred");
     });
 
     expect(mockOnLogin).not.toHaveBeenCalled();

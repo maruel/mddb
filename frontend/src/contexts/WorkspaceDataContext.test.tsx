@@ -139,6 +139,7 @@ beforeEach(() => {
   window.goModeHost = {};
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/auth/session")) return Response.json({ user });
     if (url.endsWith("/auth/me")) return Response.json(user);
     if (url.endsWith("/nodes/0/children")) {
       rootRequests.push(url);

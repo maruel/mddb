@@ -30,6 +30,7 @@ var SDKAPI = apispec.Config[ErrorCode]{
 		{Name: "acceptWSInvitation", Method: "POST", Path: "/api/v1/auth/invitations/ws/accept", Req: reflect.TypeFor[AcceptInvitationRequest](), Resp: reflect.TypeFor[UserResponse]()},
 		{Name: "listProviders", Method: "GET", Path: "/api/v1/auth/providers", Resp: reflect.TypeFor[ProvidersResponse]()},
 		{Name: "getMe", Method: "GET", Path: "/api/v1/auth/me", Resp: reflect.TypeFor[UserResponse]()},
+		{Name: "getSession", Method: "GET", Path: "/api/v1/auth/session", Resp: reflect.TypeFor[SessionUserResponse]()},
 		{Name: "logout", Method: "POST", Path: "/api/v1/auth/logout", Resp: reflect.TypeFor[LogoutResponse]()},
 		{Name: "listSessions", Method: "GET", Path: "/api/v1/auth/sessions", Resp: reflect.TypeFor[ListSessionsResponse]()},
 		{Name: "revokeSession", Method: "POST", Path: "/api/v1/auth/sessions/revoke", Req: reflect.TypeFor[RevokeSessionRequest](), Resp: reflect.TypeFor[RevokeSessionResponse]()},

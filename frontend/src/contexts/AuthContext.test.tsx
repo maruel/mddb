@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { expect, vi } from "@tests/expect";
+import { sessionFromMe } from "@tests/session";
 import { APIError } from "@sdk/api.gen";
 import type { UserResponse } from "@sdk/types.gen";
 import { I18nProvider } from "../i18n";
@@ -65,6 +66,7 @@ beforeEach(() => {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url === "/api/v1/auth/browser/logout") return nextResponse(logoutResponses);
+    if (url === "/api/v1/auth/session") return sessionFromMe(nextResponse(responses));
     expect(url).toBe("/api/v1/auth/me");
     return nextResponse(responses);
   });

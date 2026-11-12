@@ -229,6 +229,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}/callback", oh.Callback)
 	// Authenticated
 	mux.Handle("GET /api/v1/auth/me", WrapAuth(authh.GetMe, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/auth/session", WrapOptionalAuth(authh.GetSession, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/logout", WrapAuth(authh.Logout, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/auth/sessions", WrapAuth(authh.ListSessions, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/sessions/revoke", WrapAuth(authh.RevokeSession, svc, hcfg, limiters))

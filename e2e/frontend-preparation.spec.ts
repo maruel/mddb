@@ -47,7 +47,7 @@ test("native preparation survives cold settings and workspace navigation, then r
       preparationMessages: messages,
     });
   });
-  await page.route("**/api/v1/auth/me", async (route) => {
+  await page.route("**/api/v1/auth/session", async (route) => {
     requested.resolve();
     await identity.promise;
     await route.continue();

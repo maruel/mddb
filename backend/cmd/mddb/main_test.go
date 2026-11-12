@@ -9,11 +9,16 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
 
 	"github.com/maruel/gomode/autoupdate"
+	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestRunAutoUpdate(t *testing.T) {
@@ -117,5 +122,43 @@ func TestShutdownHTTPServer(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("shutdown left an active request blocked reading its body")
 		}
+	})
+}
+
+func TestRunSessionCleanup(t *testing.T) {
+	// ksid needs real time: the synctest epoch precedes it.
+	user, early, late, current := ksid.NewID(), ksid.NewID(), ksid.NewID(), ksid.NewID()
+	synctest.Test(t, func(t *testing.T) {
+		s, err := identity.NewSessionService(filepath.Join(t.TempDir(), "sessions.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		create := func(id ksid.ID, expires time.Duration) {
+			if _, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(expires)), 0); err != nil {
+				t.Fatal(err)
+			}
+		}
+		create(early, -sessionRetention-time.Hour)
+		create(late, time.Hour)
+		create(current, 30*sessionRetention)
+		ctx, cancel := context.WithCancel(t.Context())
+		var wg sync.WaitGroup
+		wg.Go(func() { runSessionCleanup(ctx, s) })
+		exists := func(id ksid.ID) bool {
+			_, err := s.Get(id)
+			return err == nil
+		}
+
+		synctest.Wait()
+		if exists(early) || !exists(late) {
+			t.Fatal("startup pass did not delete exactly the long-expired session")
+		}
+		time.Sleep(sessionRetention + 24*time.Hour)
+		synctest.Wait()
+		if exists(late) || !exists(current) {
+			t.Fatal("daily pass did not delete exactly the long-expired session")
+		}
+		cancel()
+		wg.Wait()
 	})
 }

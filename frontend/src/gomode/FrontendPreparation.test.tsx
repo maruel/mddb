@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { expect, vi } from "@tests/expect";
+import { sessionFromMe } from "@tests/session";
 import type { UserResponse } from "@sdk/types.gen";
 import { WSRoleViewer } from "@sdk/types.gen";
 import { WorkspaceDataProvider } from "../contexts/WorkspaceDataContext";
@@ -75,10 +76,12 @@ beforeEach(() => {
   window.gomodeFrontendReadiness = { postMessage: (message) => readiness.push(JSON.parse(message)) };
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (url.endsWith("/auth/me")) {
+    const identity = /\/auth\/(me|session)$/.exec(url);
+    if (identity) {
       const response = responses.shift();
       if (!response) throw new Error("No cookie identity response queued");
-      return new Response(JSON.stringify(await response), { headers: { "Content-Type": "application/json" } });
+      const me = new Response(JSON.stringify(await response), { headers: { "Content-Type": "application/json" } });
+      return identity[1] === "session" ? sessionFromMe(me) : me;
     }
     if (url.endsWith("/nodes/0/children")) return Response.json({ nodes: [] });
     return new Response("{}", { headers: { "Content-Type": "application/json" } });

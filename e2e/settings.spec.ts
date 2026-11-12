@@ -301,3 +301,16 @@ test.describe("Authentication", () => {
     await takeScreenshot("login-page");
   });
 });
+
+test("profile settings report the outcome of a provider link once", async ({ page, request }) => {
+  const { token } = await registerUser(request, "link-outcome");
+  await gotoWithSession(page, token, "/settings/user?oauth_error=CONFLICT");
+  await expect(
+    page.getByText("Failed to link account: This provider account is already linked to another user."),
+  ).toBeVisible();
+  await expect(page).toHaveURL("/settings/user");
+
+  await page.goto("/settings/user?oauth_linked=true");
+  await expect(page.getByText("Account linked successfully")).toBeVisible();
+  await expect(page).toHaveURL("/settings/user");
+});

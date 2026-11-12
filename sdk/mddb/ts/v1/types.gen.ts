@@ -448,6 +448,11 @@ export interface ProvidersResponse {
   providers: OAuthProvider[] | null;
 }
 
+/** SessionUserResponse reports the account of the request's session. */
+export interface SessionUserResponse {
+  user: UserResponse | null;
+}
+
 /** SessionResponse is the API representation of a session. */
 export interface SessionResponse {
   expires_at: number;

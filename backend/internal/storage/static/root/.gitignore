@@ -1,0 +1,2 @@
+# Sessions are runtime state: keep client IPs and credential hashes out of history.
+/db/sessions.jsonl

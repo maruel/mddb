@@ -1,7 +1,7 @@
 // User profile settings panel for personal preferences, linked accounts, and revocable sessions.
 
 import { createSignal, createEffect, onMount, Show, For } from "solid-js";
-import { useNavigate, useLocation } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
 import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
 import { useAuth, useAuthScope } from "../../contexts";
@@ -19,7 +19,6 @@ import styles from "./ProfileSettings.module.css";
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, api, refreshUser } = useAuth();
   const captureScope = useAuthScope();
 
@@ -30,19 +29,16 @@ export default function ProfileSettings() {
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  // Handle OAuth callback URL params on mount
+  // The OAuth link callback returns here with its outcome. Show it, and drop it
+  // from the URL so a reload does not repeat it.
+  const [searchParams, setSearchParams] = useSearchParams<{ oauth_linked?: string; [OAUTH_ERROR_PARAM]?: string }>();
   onMount(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("oauth_linked") === "true") {
-      setSuccess(t("settings.accountLinked"));
-      // Clean up URL params - use replaceState to update URL without navigation
-      window.history.replaceState({}, "", location.pathname);
-    }
-    const oauthError = params.get(OAUTH_ERROR_PARAM);
-    if (oauthError) {
-      setError(`${t("settings.linkingFailed")}: ${oauthErrorMessage(t, oauthError)}`);
-      // Clean up URL params - use replaceState to update URL without navigation
-      window.history.replaceState({}, "", location.pathname);
+    const linked = searchParams.oauth_linked;
+    const code = searchParams[OAUTH_ERROR_PARAM];
+    if (linked === "true") setSuccess(t("settings.accountLinked"));
+    if (typeof code === "string") setError(`${t("settings.linkingFailed")}: ${oauthErrorMessage(t, code)}`);
+    if (linked !== undefined || code !== undefined) {
+      setSearchParams({ oauth_linked: undefined, [OAUTH_ERROR_PARAM]: undefined }, { replace: true });
     }
   });
 

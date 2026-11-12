@@ -271,16 +271,6 @@ Flags:
 		return fmt.Errorf("failed to initialize session service: %w", err)
 	}
 
-	// Cleanup old expired sessions (older than 7 days past expiration)
-	if count, err := sessionService.CleanupExpired(7 * 24 * time.Hour); err != nil {
-		slog.WarnContext(ctx, "Failed to cleanup expired sessions", "error", err)
-	} else if count > 0 {
-		slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
-		if err := rootRepo.CommitDBChanges(ctx, git.Author{}, fmt.Sprintf("cleanup %d expired sessions", count)); err != nil {
-			slog.WarnContext(ctx, "Failed to commit session cleanup", "error", err)
-		}
-	}
-
 	notificationService, err := identity.NewNotificationService(filepath.Join(dbDir, "notifications.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize notification service: %w", err)
@@ -464,6 +454,10 @@ Flags:
 	// Start notification cleanup goroutine (runs once on startup, then daily).
 	workers.Go(func() error {
 		runNotificationCleanup(workerCtx, notificationService, rootRepo, &serverCfg.Quotas)
+		return nil
+	})
+	workers.Go(func() error {
+		runSessionCleanup(workerCtx, sessionService)
 		return nil
 	})
 
@@ -724,6 +718,30 @@ func runNotificationCleanup(ctx context.Context, notifSvc *identity.Notification
 			return
 		case <-ticker.C:
 			cleanup()
+		}
+	}
+}
+
+// sessionRetention is how long an expired session row stays listed before
+// runSessionCleanup deletes it.
+const sessionRetention = 7 * 24 * time.Hour
+
+// runSessionCleanup deletes sessions expired for longer than sessionRetention
+// at startup and then daily until ctx is canceled. The root .gitignore keeps
+// sessions out of history, so deletion needs no commit.
+func runSessionCleanup(ctx context.Context, s *identity.SessionService) {
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		if count, err := s.CleanupExpired(sessionRetention); err != nil {
+			slog.WarnContext(ctx, "Failed to clean up expired sessions", "err", err)
+		} else if count > 0 {
+			slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
 		}
 	}
 }

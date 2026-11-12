@@ -5,6 +5,7 @@
 
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { expect, vi } from "@tests/expect";
+import { sessionFromMe } from "@tests/session";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
@@ -41,9 +42,7 @@ function jsonResponse(body: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
-globalThis.fetch = ((request: RequestInfo | URL, init?: RequestInit) => {
-  const url = typeof request === "string" ? request : request instanceof URL ? request.href : request.url;
-  fetchCalls.push({ url, init });
+function routeResponse(url: string, init?: RequestInit): Promise<Response> {
   for (const route of fetchRoutes) {
     if (route.method && (init?.method ?? "GET") !== route.method) continue;
     if (typeof route.match === "string" ? url === route.match : route.match.test(url)) {
@@ -63,6 +62,14 @@ globalThis.fetch = ((request: RequestInfo | URL, init?: RequestInit) => {
       { status: unauthenticated ? 401 : 404 },
     ),
   );
+}
+
+globalThis.fetch = ((request: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof request === "string" ? request : request instanceof URL ? request.href : request.url;
+  fetchCalls.push({ url, init });
+  // The startup session probe reports the account that the /auth/me routes describe.
+  if (url === "/api/v1/auth/session") return routeResponse("/api/v1/auth/me", init).then(sessionFromMe);
+  return routeResponse(url, init);
 }) as typeof fetch;
 
 function api(method: string, match: string | RegExp, respond: (url: string, init?: RequestInit) => unknown): void {
@@ -385,8 +392,8 @@ describe("App", () => {
       );
 
       await waitFor(() => {
-        const calls = fetchCalls.filter(({ url }) => url === "/api/v1/auth/me");
-        expect(calls.length).toBeGreaterThan(0);
+        const calls = fetchCalls.filter(({ url }) => url === "/api/v1/auth/session");
+        expect(calls.length).toBeGreaterThan(1);
       });
       await waitFor(() => expect(screen.getByTestId("user-menu-button")).toHaveAttribute("title", "Other User"));
       await waitFor(() => expect(window.location.pathname).toMatch(/^\/w\/@ws-2(?:[+/]|$)/));

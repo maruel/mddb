@@ -7,6 +7,7 @@ import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
 import { HostModeProvider } from "@maruel/gomode/web/HostMode";
 import type { NodeResponse, UpdatePageRequest, UserResponse } from "@sdk/types.gen";
 import { expect, vi } from "@tests/expect";
+import { sessionFromMe } from "@tests/session";
 import { AuthProvider, useAuth } from "./AuthContext";
 import { WorkspaceDataProvider, useWorkspaceData } from "./WorkspaceDataContext";
 import { WorkspaceNavigationProvider, useWorkspaceNavigation } from "./WorkspaceNavigationContext";
@@ -190,12 +191,14 @@ beforeEach(() => {
   delete window.goModeHost;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
-    if (url.endsWith("/auth/me"))
-      return Response.json({
+    const me = () =>
+      Response.json({
         ...account,
         workspace_name: accountWorkspaceName,
         settings: { ...account.settings, language: accountLocale },
       });
+    if (url.endsWith("/auth/session")) return sessionFromMe(me());
+    if (url.endsWith("/auth/me")) return me();
     if (url.endsWith("/auth/browser/logout")) return Response.json({ ok: true });
     if (url.endsWith("/switch-workspace")) {
       switches++;

@@ -4,7 +4,14 @@ import { createSignal, createResource, createMemo, onMount, Show, For, type JSX 
 import { A, useSearchParams } from "@solidjs/router";
 import { createApiClient, APIError } from "@sdk/api.gen";
 import type { UserResponse, OAuthProvider } from "@sdk/types.gen";
-import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
+import {
+  ErrorCodeInvalidFormat,
+  ErrorCodeMissingField,
+  ErrorCodeUnauthorized,
+  OAuthProviderGoogle,
+  OAuthProviderMicrosoft,
+  OAuthProviderGitHub,
+} from "@sdk/types.gen";
 import styles from "./Auth.module.css";
 import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "./OAuthIcons";
 import { useI18n } from "../i18n";
@@ -44,7 +51,7 @@ function getProviderConfig(provider: OAuthProvider): { style: string; label: str
 const api = createApiClient((url, init) => fetch(url, init));
 
 export default function Auth(props: AuthProps) {
-  const { t } = useI18n();
+  const { t, translateError } = useI18n();
   const [providers] = createResource(() => api.listProviders().then((r) => r.providers));
   const sortedProviders = createMemo(() => {
     const list = providers() ?? [];
@@ -79,6 +86,16 @@ export default function Auth(props: AuthProps) {
     return error() ?? (code === null ? null : oauthErrorMessage(t, code));
   };
 
+  // Explains a rejected sign-in or registration in the user's language.
+  const formErrorMessage = (err: APIError): string => {
+    if (err.code === ErrorCodeUnauthorized) return t("auth.invalidCredentials");
+    if (err.code === ErrorCodeInvalidFormat || err.code === ErrorCodeMissingField) {
+      if (err.details?.field === "password" && isRegister()) return t("auth.passwordRules");
+      if (err.details?.field === "email") return t("auth.invalidEmail");
+    }
+    return translateError(err.code);
+  };
+
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setError(null);
@@ -93,14 +110,10 @@ export default function Auth(props: AuthProps) {
       if (typeof data.id === "string") {
         props.onLogin(data);
       } else {
-        setError("Invalid response from server");
+        setError(t("errors.unknown"));
       }
     } catch (err) {
-      if (err instanceof APIError) {
-        setError(err.message || "Authentication failed");
-      } else {
-        setError("An error occurred. Please try again.");
-      }
+      setError(err instanceof APIError ? formErrorMessage(err) : t("errors.unknown"));
     } finally {
       setLoading(false);
     }
@@ -111,7 +124,9 @@ export default function Auth(props: AuthProps) {
       <form class={styles.authForm} onSubmit={handleSubmit}>
         <h2>{isRegister() ? t("auth.createAccount") : t("auth.loginTitle")}</h2>
         <Show when={!props.hideDeviceLogin}>
-          <A href="/device-login">{t("deviceLogin.start")}</A>
+          <A href="/device-login" class={styles.deviceLogin}>
+            {t("deviceLogin.start")}
+          </A>
         </Show>
 
         <Show when={shownError()}>

@@ -162,6 +162,7 @@ beforeEach(() => {
   vi.stubGlobal("EventSource", Events);
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
+    if (url.endsWith("/auth/session")) return Response.json({ user: account });
     if (url.endsWith("/auth/me")) return Response.json(account);
     if (url.endsWith("/nodes/0/children")) {
       const response = roots.shift();

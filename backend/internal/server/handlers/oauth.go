@@ -231,7 +231,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		redirectOAuthError(w, r, loginErrorPath(next), dto.InternalWithError("state_generation", err))
 		return
 	}
-	http.Redirect(w, r, authCodeURL(config, provider, state), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, authCodeURL(config, provider, state), http.StatusTemporaryRedirect) //nolint:gosec // G710: the authorization URL of a configured provider.
 }
 
 // Callback handles the OAuth provider callback.
@@ -669,7 +669,7 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 		if sid != 0 {
 			err = errors.Join(err, svc.Session.Revoke(sid))
 		}
-		return dto.InternalWithError("token_generation", err)
+		return err
 	}
 
 	if err := svc.RootRepo.CommitDBChanges(ctx, GitAuthor(user), "OAuth login "+string(provider)); err != nil {

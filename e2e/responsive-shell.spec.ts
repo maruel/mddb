@@ -125,12 +125,12 @@ test.describe("Responsive shell", () => {
       }),
     );
 
-    let interceptedMe = false;
-    await page.route(/\/api\/v1\/auth\/me(?:\?.*)?$/, async (route) => {
-      interceptedMe = true;
+    let interceptedSession = false;
+    await page.route(/\/api\/v1\/auth\/session(?:\?.*)?$/, async (route) => {
+      interceptedSession = true;
       await route.fulfill({
         contentType: "application/json",
-        body: JSON.stringify(firstWorkspaceUser),
+        body: JSON.stringify({ user: firstWorkspaceUser }),
       });
     });
     await gotoWithSession(page, token, `/w/@first-workspace`);
@@ -138,7 +138,7 @@ test.describe("Responsive shell", () => {
     const menuButton = page.getByRole("button", { name: "Toggle menu" });
     const sidebar = page.locator("aside").first();
     await expect(menuButton).toBeVisible({ timeout: 10000 });
-    expect(interceptedMe).toBe(true);
+    expect(interceptedSession).toBe(true);
     await menuButton.click();
     await expect(sidebar).toHaveClass(/open/i);
     await expect.poll(async () => (await sidebar.boundingBox())?.x).toBe(0);

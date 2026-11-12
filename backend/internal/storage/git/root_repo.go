@@ -53,6 +53,9 @@ func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string)
 	if err := rr.initialCommit(ctx, staticFiles); err != nil {
 		return nil, err
 	}
+	if err := rr.syncStaticFiles(ctx, staticFiles); err != nil {
+		return nil, err
+	}
 
 	if err := rr.migrateExistingWorkspaces(ctx); err != nil {
 		return nil, err
@@ -254,6 +257,40 @@ func (rr *RootRepo) initialCommit(ctx context.Context, staticFiles []string) err
 	authorStr := fmt.Sprintf("%s <%s>", rr.repo.defaultName, rr.repo.defaultEmail)
 	if out, err := rr.repo.gitCombinedOutput(ctx, "commit", "-m", "initial commit", "--author", authorStr, "--allow-empty"); err != nil {
 		return fmt.Errorf("failed to create initial commit: %w\nOutput: %s", err, string(out))
+	}
+	return nil
+}
+
+// syncStaticFiles commits root static files that WriteRootStaticFiles
+// refreshed, and stops tracking files their ignore rules exclude. A root that an
+// older version created keeps earlier copies of those files in its history.
+func (rr *RootRepo) syncStaticFiles(ctx context.Context, staticFiles []string) error {
+	out, err := rr.repo.gitOutput(ctx, "ls-files", "-z", "--cached", "--ignored", "--exclude-standard")
+	if err != nil {
+		return fmt.Errorf("list ignored tracked files: %w", err)
+	}
+	if ignored := strings.Split(strings.TrimSuffix(string(out), "\x00"), "\x00"); ignored[0] != "" {
+		args := append([]string{"rm", "--cached", "--quiet", "--"}, ignored...)
+		if out, err := rr.repo.gitCombinedOutput(ctx, args...); err != nil {
+			return fmt.Errorf("untrack ignored files: %w\nOutput: %s", err, out)
+		}
+	}
+	if len(staticFiles) != 0 {
+		args := append([]string{"add", "--"}, staticFiles...)
+		if out, err := rr.repo.gitCombinedOutput(ctx, args...); err != nil {
+			return fmt.Errorf("stage static files: %w\nOutput: %s", err, out)
+		}
+	}
+	out, err = rr.repo.gitCombinedOutput(ctx, "diff", "--cached", "--quiet")
+	if err == nil {
+		return nil
+	}
+	if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != 1 {
+		return fmt.Errorf("inspect staged static files: %w\nOutput: %s", err, out)
+	}
+	authorStr := fmt.Sprintf("%s <%s>", rr.repo.defaultName, rr.repo.defaultEmail)
+	if out, err := rr.repo.gitCombinedOutput(ctx, "commit", "-m", "update root static files", "--author", authorStr); err != nil {
+		return fmt.Errorf("commit static files: %w\nOutput: %s", err, out)
 	}
 	return nil
 }

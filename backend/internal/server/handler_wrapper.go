@@ -160,11 +160,6 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 	if err != nil {
 		return nil, ctx, err
 	}
-	// Recency only orders sessions for quota eviction; a failed write must not
-	// reject an authenticated request.
-	if err := svc.Session.RecordUse(sessionID); err != nil {
-		slog.WarnContext(ctx, "Failed to record session use", "err", err, "session_id", sessionID)
-	}
 	ctx = reqctx.WithSession(ctx, session)
 	ctx = reqctx.WithSessionID(ctx, sessionID)
 	ctx = reqctx.WithTokenString(ctx, tokenString)
@@ -332,6 +327,51 @@ func WrapAuth[In any, PtrIn interface {
 
 		output, err := fn(ctx, auth.user, PtrIn(input))
 		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(auth.user))
+		writeJSONResponse(ctx, w, output, err)
+	})
+}
+
+// WrapOptionalAuth wraps a read-only handler that serves signed-in and
+// signed-out requests alike. The handler receives a nil user when the request
+// carries no valid credential; such a request never answers 401.
+func WrapOptionalAuth[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](
+	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	limiters *ratelimit.Limiters,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := addRequestMetadataToContext(r.Context(), r)
+		var user *identity.User
+		tier, limitKey := limiters.MatchUnauth(r.Method, r.URL.Path), httpserver.ClientIP(ctx)
+		if auth, authCtx, err := validateAuthWithContext(ctx, r, svc, cfg); err == nil {
+			user, ctx = auth.user, authCtx
+			tier = limiters.MatchAuth(r.Method, r.URL.Path)
+			if tier != nil {
+				limitKey = getRateLimitIdentifier(tier, user, r)
+			}
+		}
+		if tier != nil {
+			var ok bool
+			if w, ok = checkRateLimit(w, tier, limitKey); !ok {
+				return
+			}
+		}
+
+		input := new(In)
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
+		}
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+		output, err := fn(ctx, user, PtrIn(input))
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -654,6 +694,7 @@ var (
 // validateJWTAndSession extracts and validates the JWT token and session from the request.
 // Returns the user, session ID, token string, and any error.
 // Every credential must exactly match a live, persisted session owned by its subject.
+// A valid credential records the session's use for least-recently-used eviction.
 func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, ksid.ID, string, error) {
 	tokenString, err := requestCredential(r)
 	if err != nil {
@@ -704,7 +745,11 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 	if err != nil {
 		return nil, 0, "", errUserNotFound
 	}
-
+	// Recency only orders sessions for eviction; a failed write must not reject
+	// the credential.
+	if err := sessionService.RecordUse(sessionID); err != nil {
+		slog.WarnContext(r.Context(), "Failed to record session use", "err", err, "session_id", sessionID)
+	}
 	return user, sessionID, tokenString, nil
 }
 

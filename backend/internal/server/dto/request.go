@@ -193,6 +193,14 @@ func (r *GetMeRequest) Validate() error {
 	return nil
 }
 
+// GetSessionRequest is a request to read the browser's session, if any.
+type GetSessionRequest struct{}
+
+// Validate is a no-op for GetSessionRequest.
+func (r *GetSessionRequest) Validate() error {
+	return nil
+}
+
 // --- Node Content (Page) ---
 
 // CreatePageRequest is a request to create a page under a parent node.

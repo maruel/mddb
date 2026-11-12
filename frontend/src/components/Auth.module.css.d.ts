@@ -3,6 +3,7 @@ declare const classes: {
   readonly "authContainer": string;
   readonly "authFooter": string;
   readonly "authForm": string;
+  readonly "deviceLogin": string;
   readonly "divider": string;
   readonly "error": string;
   readonly "formGroup": string;
