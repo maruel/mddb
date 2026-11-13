@@ -798,6 +798,7 @@ label = "Local stack"
 provider = "llamacpp"
 llamacppsrv = true
 model = "gemma-local"
+context_size = 32768
 [[voice-gateway.config.voice]]
 label = "Local stack preset"
 asr = "remote"
