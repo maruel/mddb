@@ -11,7 +11,7 @@ Target 95% coverage.
   `func(context.Context, *Request) (*Response, error)`.
 - Use GET for reads and POST for writes. Destructive actions end in `/delete`. Responses are JSON.
 - `internal/server/dto/sdk.go` specifies the routes. When you add or change an endpoint, update it beside
-  `router.go` and run `make types`, which uses `github.com/maruel/apisdkgen` to regenerate the versioned
+  `router.go` and run `make fix`, which uses `github.com/maruel/apisdkgen` to regenerate the versioned
   TypeScript package in `sdk/mddb/ts/` and `sdk/mddb/API.v1.md`. `sdk_test.go` fails when the specification and
   router registrations diverge; raw handlers are excluded.
 - Types in `internal/storage/` and `internal/server/handlers/` never reach the SDK.

@@ -11,7 +11,7 @@ data as Markdown, JSONL, and assets in git repositories. Read [backend/AGENTS.md
   frontend unit tests; `make coverage` reports their coverage.
 - After a UI or API change, also run `make test-e2e`. The server log is at `data-e2e/server.log`.
 - After a visible UI change, run `make screenshots-update` and commit the documentation captures.
-- `make` lists every target and its cost.
+- `make` lists the common targets and their cost.
 - `.editorconfig` sets indentation and width. Ruff repeats the width in `pyproject.toml` because it does not
   read `.editorconfig`.
 - The first-line comment of each file feeds the file index below; update it when the file's purpose changes.

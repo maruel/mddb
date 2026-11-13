@@ -12,7 +12,7 @@ sanitizer.
 ## Build
 
 `make build` runs `go generate`, which builds the frontend into `backend/frontend/dist/` for `go:embed`; the
-dist directory is tracked in git. `make frontend-dev` serves Vite with live reload and proxies the API to
+dist directory is tracked in git. `pnpm dev` serves Vite with live reload and proxies the API to
 `localhost:8080`.
 
 CSS Module declarations (`*.module.css.d.ts`) are generated. `make fix` updates

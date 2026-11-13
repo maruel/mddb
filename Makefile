@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build coverage dev fix git-hooks frontend-build frontend-dev screenshots-check screenshots-update test test-smoke-voice test-e2e test-e2e-go types verify custom-gcl benchmark release
+.PHONY: help build coverage fix git-hooks frontend-build screenshots-update test test-smoke test-e2e test-e2e-go types verify custom-gcl benchmark release
 
 GORELEASER ?= go run github.com/goreleaser/goreleaser/v2@v2.20.0
 
@@ -28,23 +28,15 @@ help:
 	@echo 'mddb - Markdown Document & Table System'
 	@echo ''
 	@echo 'Available targets:'
-	@printf '  %-18s - %s\n' 'make fix' 'Apply every autofix, then refresh the file index'
-	@printf '  %-18s - %s\n' 'make verify' 'Fast static gate: lint, formatting, generated docs (pre-push gate)'
-	@printf '  %-18s - %s\n' 'make test' 'Run unit tests'
-	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
-	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
-	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel); SPEC=e2e/x.spec.ts[:LINE] runs one'
-	@printf '  %-18s - %s\n' 'make screenshots-update' 'Capture documentation scenes twice and replace their WebP baselines (slow)'
-	@printf '  %-18s - %s\n' 'make screenshots-check' 'Compare documentation scenes with their WebP baselines (slow)'
-	@printf '  %-18s - %s\n' 'make release' 'Build and publish release archives (requires GITHUB_TOKEN)'
-	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
-	@printf '  %-18s - %s\n' 'make dev' 'Run the server in development mode (scripts/run-dev.py)'
-	@printf '  %-18s - %s\n' 'make frontend-dev' 'Run frontend dev server (http://localhost:5173)'
-	@printf '  %-18s - %s\n' 'make coverage' 'Run tests with coverage'
-	@printf '  %-18s - %s\n' 'make types' 'Generate TypeScript DTOs, client, and API reference'
-	@printf '  %-18s - %s\n' 'make git-hooks' 'Install git pre-commit hooks'
-	@echo ''
-	@echo 'make dev runs scripts/run-dev.py; pass --help to see its flags.'
+	@printf '  %-24s - %s\n' 'make fix' 'Apply every autofix and regenerate the SDK and file index'
+	@printf '  %-24s - %s\n' 'make verify' 'Fast static gate: lint, formatting, generated docs (pre-push gate)'
+	@printf '  %-24s - %s\n' 'make test' 'Run unit tests'
+	@printf '  %-24s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, parallel); SPEC=e2e/x.spec.ts[:LINE] runs one'
+	@printf '  %-24s - %s\n' 'make test-smoke' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
+	@printf '  %-24s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
+	@printf '  %-24s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
+	@printf '  %-24s - %s\n' 'make screenshots-update' 'Capture documentation scenes twice and replace their WebP files (slow)'
+	@printf '  %-24s - %s\n' 'make git-hooks' 'Install git pre-commit hooks'
 
 # Install frontend dependencies (only when lockfile changes)
 $(FRONTEND_STAMP): pnpm-lock.yaml
@@ -64,11 +56,6 @@ build: $(FRONTEND_STAMP) types
 	@go generate ./...
 	@go install -trimpath -ldflags="-s -w -buildid=" ./backend/cmd/...
 
-# Run the server in development mode. scripts/run-dev.py writes a temporary
-# config.toml and runs `go run`. See the script for the flags.
-dev:
-	@uv run --locked python scripts/run-dev.py
-
 release:
 	@$(GORELEASER) release --clean
 
@@ -80,7 +67,7 @@ test: $(FRONTEND_STAMP)
 # Slow and opt-in: needs GEMINI_API_KEY and reachable WebRTC UDP. Runs one live
 # Gemini voice turn through the embedded gateway, executes the workspace MCP
 # nodes_list tool, and checks that hang-up releases session capacity.
-test-smoke-voice:
+test-smoke:
 	@go test -tags=smoke -run TestSmokeVoiceGatewayGemini -v -timeout 5m ./backend/internal/server/
 
 # Frontend micro-benchmarks (tinybench) over frontend/src/**/*.bench.ts. Fast;
@@ -103,11 +90,11 @@ test-e2e: $(FRONTEND_STAMP) $(if $(SPEC),frontend-build,test-e2e-go)
 	@[ -n "$(SPEC)" ] || uv run --locked python scripts/verify_e2e_data.py
 	@pnpm exec node e2e/inject-tag-colors.cjs
 
-# Documentation captures for the websites. Both rebuild the embedded frontend
-# and start their own e2e server, so they cannot run beside test-e2e.
-screenshots-check screenshots-update: $(FRONTEND_STAMP) frontend-build
+# Documentation captures for the websites. Rebuilds the embedded frontend and
+# starts its own e2e servers, so it cannot run beside test-e2e.
+screenshots-update: $(FRONTEND_STAMP) frontend-build
 	@pnpm exec playwright install --no-shell chromium
-	@uv run --locked python scripts/docs_screenshots.py $(subst screenshots-,,$@)
+	@uv run --locked python scripts/docs_screenshots.py
 
 # The e2e build tag also switches on the Go tests that only exist in that build,
 # which assert what a production binary must not do. Running the whole tagged
@@ -132,11 +119,12 @@ verify: custom-gcl $(FRONTEND_STAMP)
 		'files=$$(git ls-files "*.sh" "scripts/hooks/*"); [ -z "$$files" ] || go tool shfmt -d $$files' \
 		'uv run --locked python scripts/lint_binaries.py && uv run --locked python scripts/update_agents_file_index.py --check'
 
-# Apply every autofix, then refresh the generated file index. Order matters:
+# Regenerate the SDK, apply every autofix, then refresh the generated file
+# index. Order matters:
 # the stylelint fixer runs last because its cascade-sensitive rewrites must not
 # be undone by another formatter, and the index refresh runs after fixes so the
 # index matches the fixed tree. Does not re-check; run verify for that.
-fix: custom-gcl $(FRONTEND_STAMP)
+fix: custom-gcl $(FRONTEND_STAMP) types
 	@./custom-gcl run --show-stats=false ./... --fix
 	@go tool golangci-lint fmt
 	@# Type-aware ESLint reads the CSS Module declarations, so regenerate them
@@ -152,6 +140,3 @@ fix: custom-gcl $(FRONTEND_STAMP)
 
 git-hooks:
 	@./scripts/install-git-hooks.sh
-
-frontend-dev: $(FRONTEND_STAMP)
-	@pnpm --silent dev

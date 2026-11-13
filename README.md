@@ -19,9 +19,10 @@ make git-hooks
 make build
 ```
 
-`make build` installs `mddb` and `notion-import` into your Go binary directory. `make dev` runs a development
-server with a temporary configuration. `make test` runs the Go and frontend unit tests, `make test-e2e` runs the
-browser suite, and `make` lists every target.
+`make build` installs `mddb` and `notion-import` into your Go binary directory.
+`uv run --locked python scripts/run-dev.py` runs a development server with a temporary configuration.
+`make test` runs the Go and frontend unit tests, `make test-e2e` runs the browser suite, and `make` lists the
+common targets.
 
 [AGENTS.md](AGENTS.md) describes the repository workflow. The HTTP API reference is
 [sdk/mddb/API.v1.md](sdk/mddb/API.v1.md).

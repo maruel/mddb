@@ -20,9 +20,8 @@ server user quota so every spec can register its own user. A binary built withou
 
 `docs-screenshots.spec.ts` owns the website scenes; each `takeScreenshot` name becomes
 `screenshots/docs/<name>.webp`. `make screenshots-update` renders them twice on fresh servers, requires
-identical pixels, and replaces the lossless WebP baselines; commit them. `make screenshots-check` fails when
-product pixels drift. Fonts and the Chrome build change pixels, so compare only captures made in this
-container. Failed captures stay in `test-results/docs-screenshots/`. Websites copy the captures their pages
+identical pixels, and replaces the lossless WebP files; commit them. Fonts and the Chrome build change pixels,
+so publish only from this container. Failed captures stay in `test-results/docs-screenshots/`. Websites copy the captures their pages
 reference with `uv run --locked python scripts/publish_screenshots.py ../docs.mddb.app`.
 
 ## Helpers

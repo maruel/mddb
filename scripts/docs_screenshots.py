@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Capture mddb's documentation scenes and keep their lossless WebP baselines in e2e/screenshots/docs.
+"""Capture mddb's documentation scenes as lossless WebP files in e2e/screenshots/docs.
 
 e2e/docs-screenshots.spec.ts owns the scenes; each takeScreenshot name becomes
-<name>.webp. `update` renders the scenes twice against fresh e2e servers,
-requires identical decoded pixels, then replaces the baselines. `check` renders
-once and requires the baseline pixels. Fonts and the browser build change
-pixels, so compare only captures made in the same environment. Run through
-`make screenshots-update` or `make screenshots-check`, which rebuild the
-embedded frontend first. Captures stay in test-results/docs-screenshots.
-scripts/publish_screenshots.py copies the referenced baselines into a website.
+<name>.webp. The scenes render twice against fresh e2e servers, must have
+identical decoded pixels, then replace the published files. Fonts and the
+browser build change pixels, so publish from the development container. Run
+through `make screenshots-update`, which rebuilds the embedded frontend first.
+Captures stay in test-results/docs-screenshots.
+scripts/publish_screenshots.py copies the referenced captures into a website.
 """
 
 import argparse
@@ -21,7 +20,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPEC = "e2e/docs-screenshots.spec.ts"
-BASELINES = ROOT / "e2e/screenshots/docs"
+PUBLISHED = ROOT / "e2e/screenshots/docs"
 WORK = ROOT / "test-results/docs-screenshots"
 # takeScreenshot in e2e/helpers.ts writes <index>_<name>.png in each test's output directory.
 CAPTURE = re.compile(r"\d{2}_([a-z-]+)\.png")
@@ -85,36 +84,30 @@ def encode(source: pathlib.Path, destination: pathlib.Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=("check", "update"))
-    mode = parser.parse_args().mode
+    parser.parse_args()
     for executable in ("ffmpeg", "ffprobe", "pnpm"):
         if shutil.which(executable) is None:
             print(f"docs_screenshots: {executable} is required", file=sys.stderr)
             return 1
     try:
         first = render(WORK / "first")
-        if mode == "check":
-            baselines = {path.stem: path for path in BASELINES.glob("*.webp")}
-            compare(first, baselines, f"{BASELINES.relative_to(ROOT)} baselines")
-            print(f"{len(first)} captures match {BASELINES.relative_to(ROOT)}")
-            return 0
         compare(first, render(WORK / "second"), "Two renders")
         encoded = WORK / "webp"
         shutil.rmtree(encoded, ignore_errors=True)
         encoded.mkdir()
         for name, path in first.items():
             encode(path, encoded / f"{name}.webp")
-        BASELINES.mkdir(parents=True, exist_ok=True)
+        PUBLISHED.mkdir(parents=True, exist_ok=True)
         names = {f"{name}.webp" for name in first}
-        for stale in BASELINES.iterdir():
+        for stale in PUBLISHED.iterdir():
             if stale.name not in names:
                 stale.unlink()
         for name in first:
-            shutil.copyfile(encoded / f"{name}.webp", BASELINES / f"{name}.webp")
+            shutil.copyfile(encoded / f"{name}.webp", PUBLISHED / f"{name}.webp")
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f"docs_screenshots: {error}; captures are in {WORK.relative_to(ROOT)}", file=sys.stderr)
         return 1
-    print(f"Updated {len(first)} captures in {BASELINES.relative_to(ROOT)}")
+    print(f"Updated {len(first)} captures in {PUBLISHED.relative_to(ROOT)}")
     return 0
 
 
