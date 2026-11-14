@@ -97,7 +97,6 @@ type tomlVoiceGateway struct {
 	InstanceID           string                `toml:"instance_id"`
 	TokenMode            server.VoiceTokenMode `toml:"token_mode"`
 	SigningPrivateKeyPEM string                `toml:"signing_private_key_pem"`
-	Config               voicegateway.Config   `toml:"config"`
 }
 
 // voiceGatewayMode selects the host transport without consulting provider credentials.
@@ -275,9 +274,12 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 	}
 	var voiceConfig voicegateway.ResolvedConfig
 	if tc.VoiceGateway.Mode == voiceGatewayEmbedded {
-		voiceConfig, err = tc.VoiceGateway.Config.Resolve()
+		decl, err := voicegateway.ReadConfig(cfgDir)
 		if err != nil {
-			return nil, fmt.Errorf("voice-gateway.config: %w", err)
+			return nil, err
+		}
+		if voiceConfig, err = decl.Resolve(); err != nil {
+			return nil, fmt.Errorf("voice gateway: %w", err)
 		}
 	}
 	var schedule *autoupdate.Schedule
