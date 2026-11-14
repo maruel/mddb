@@ -783,6 +783,7 @@ token_mode = "oauth"
 mode = "embedded"
 webrtc_udp_port = 3478
 [[voice-gateway.config.realtime]]
+id = "gemini-live"
 label = "Gemini Live"
 provider = "gemini"
 model = "gemini-3.8-live"
@@ -800,6 +801,7 @@ llamacppsrv = true
 model = "gemma-local"
 context_size = 32768
 [[voice-gateway.config.voice]]
+id = "local-stack-preset"
 label = "Local stack preset"
 asr = "remote"
 llm = "local_stack"
@@ -880,7 +882,7 @@ voice = "alternate-voice"
 			config voicegateway.Config
 		}{
 			{"missing pipelines", voicegateway.Config{}},
-			{"missing model", voicegateway.Config{LLM: []voicegateway.NamedLLMConfig{{ID: "model", LLMConfig: voicegateway.LLMConfig{Label: "Model", ModelConfig: voicegateway.ModelConfig{Provider: "gemini"}}}}}},
+			{"missing model", voicegateway.Config{LLM: []voicegateway.LLMConfig{{ID: "model", Label: "Model", ModelConfig: voicegateway.ModelConfig{Provider: "gemini"}}}}},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				c := defaultConfig()
@@ -897,7 +899,7 @@ voice = "alternate-voice"
 			c := defaultConfig()
 			c.VoiceGateway.Mode = voiceGatewayEmbedded
 			c.VoiceGateway.WebRTCUDPPort = port
-			c.VoiceGateway.Config.Realtime = []voicegateway.RealtimeConfig{{Label: "Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}
+			c.VoiceGateway.Config.Realtime = []voicegateway.RealtimeConfig{{ID: "live", Label: "Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}
 			if _, err := resolveConfig(&c, t.TempDir()); err == nil {
 				t.Fatalf("invalid UDP port %d accepted", port)
 			}
@@ -912,7 +914,7 @@ voice = "alternate-voice"
 	})
 	t.Run("dormant declarations do not enable voice", func(t *testing.T) {
 		c := defaultConfig()
-		c.VoiceGateway.Config.LLM = []voicegateway.NamedLLMConfig{{ID: "preconfigured", LLMConfig: voicegateway.LLMConfig{Label: "Preconfigured", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-flash"}}}}
+		c.VoiceGateway.Config.LLM = []voicegateway.LLMConfig{{ID: "preconfigured", Label: "Preconfigured", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-flash"}}}
 		cfg, err := resolveConfig(&c, t.TempDir())
 		if err != nil {
 			t.Fatal(err)

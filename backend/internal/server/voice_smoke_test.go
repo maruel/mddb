@@ -75,7 +75,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 		t.Fatalf("switch workspace status = %d", status)
 	}
 
-	declarations := voicegateway.Config{Realtime: []voicegateway.RealtimeConfig{{Label: "Gemini Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}}
+	declarations := voicegateway.Config{Realtime: []voicegateway.RealtimeConfig{{ID: "gemini-live", Label: "Gemini Live", ModelConfig: voicegateway.ModelConfig{Provider: "gemini", Model: "gemini-3.8-live"}}}}
 	voiceCfg, err := declarations.Resolve()
 	if err != nil {
 		t.Fatalf("voice config: %v", err)

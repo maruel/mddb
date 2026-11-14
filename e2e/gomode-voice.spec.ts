@@ -94,7 +94,7 @@ for (const external of [true, false]) {
     await waitForWorkspace(page);
     if (!external) await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("button", { name: "Voice settings", exact: true }).click();
-    await page.getByRole("tab", { name: "Select parts", exact: true }).click();
+    await page.getByRole("radio", { name: "Separate stages", exact: true }).check();
     const recognition = page.getByRole("combobox", { name: "Recognition", exact: true });
     const output = page.getByRole("combobox", { name: "Speech", exact: true });
     await expect(recognition).toHaveValue("model:asr");
@@ -115,18 +115,14 @@ for (const external of [true, false]) {
     await expect(speakingVoice).toHaveValue("english-uk");
     await language.fill("fr-CA");
     await language.press("Tab");
-    await expect(speakingVoice.locator("option")).toHaveText([
-      "Choose an available speaking voice",
-      "Browser default",
-      "French (fr-FR)",
-    ]);
-    await expect(speakingVoice).toHaveValue("english-uk");
+    await expect(speakingVoice.locator("option")).toHaveText(["Browser default", "French (fr-FR)"]);
+    await expect(speakingVoice).toHaveValue("");
     await speakingVoice.selectOption("french");
     await page.screenshot({ path: test.info().outputPath("voice-settings.png") });
     await output.selectOption("model:tts");
     await page.reload();
     await page.getByRole("button", { name: "Voice settings", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "Select parts", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("radio", { name: "Separate stages", exact: true })).toBeChecked();
     await expect(recognition).toHaveValue("model:asr");
     await expect(output).toHaveValue("model:tts");
     await page.getByRole("button", { name: "Close voice settings", exact: true }).click();
@@ -139,7 +135,7 @@ for (const external of [true, false]) {
   });
 }
 
-test("German voice setup keeps both tabs and stage choices usable on mobile", async ({ page, request, baseURL }) => {
+test("German voice setup keeps both setups and stage choices usable on mobile", async ({ page, request, baseURL }) => {
   const { token } = await registerUser(request, "voice-setup-de");
   await createClient(request, token).updateUserSettings({ settings: { theme: "system", language: "de" } });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -170,21 +166,22 @@ test("German voice setup keeps both tabs and stage choices usable on mobile", as
   );
   await gotoWithSession(page, token);
   await page.getByRole("button", { name: "Spracheinstellungen", exact: true }).click();
-  const allInOne = page.getByRole("tab", { name: "Komplettmodell", exact: true });
-  const parts = page.getByRole("tab", { name: "Bausteine wählen", exact: true });
-  await expect(allInOne).toHaveAttribute("aria-selected", "true");
+  const allInOne = page.getByRole("radio", { name: "Alles in einem", exact: true });
+  const parts = page.getByRole("radio", { name: "Einzelne Stufen", exact: true });
+  await expect(allInOne).toBeChecked();
   await expect(parts).toBeEnabled();
   await allInOne.focus();
   await allInOne.press("ArrowRight");
   await expect(parts).toBeFocused();
-  await expect(parts).toHaveAttribute("aria-selected", "true");
+  await expect(parts).toBeChecked();
   await expect(page.getByRole("combobox", { name: "Spracherkennung", exact: true })).toHaveValue("model:asr");
   await expect(page.getByRole("combobox", { name: "Sprachmodell", exact: true })).toHaveValue("parts");
   await expect(page.getByRole("combobox", { name: "Sprachausgabe", exact: true })).toHaveValue("model:tts");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: test.info().outputPath("voice-parts-de-mobile.png") });
-  await parts.press("Home");
+  await parts.press("ArrowLeft");
   await expect(allInOne).toBeFocused();
+  await expect(allInOne).toBeChecked();
   await expect(page.getByRole("combobox", { name: "Modell", exact: true })).toHaveValue("native");
   await page.screenshot({ path: test.info().outputPath("voice-all-in-one-de-mobile.png") });
 });
