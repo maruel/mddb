@@ -220,7 +220,9 @@ test.screenshot("voice settings over a document", async ({ page, request, baseUR
   await expect(page.getByTestId("wysiwyg-editor").getByText("Update the help center")).toBeVisible();
   await expect(page.getByTestId("voice-overlay")).toBeVisible();
   await page.getByRole("button", { name: "Voice settings", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Model", exact: true })).toHaveValue("live");
+  await expect(
+    page.getByRole("radiogroup", { name: "Model", exact: true }).locator('input[value="live"]'),
+  ).toBeChecked();
   await settleWorkspace(page);
   await takeScreenshot("voice-settings");
 });

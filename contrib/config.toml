@@ -105,6 +105,10 @@
 # UDP ICE mux: 0 assigns an ephemeral port, 1..65535 fixes the port.
 # Use voice-gateway.mode to disable voice.
 #webrtc_udp_port = 0
+# STUN servers that WebRTC clients use to learn their public address.
+# [] keeps clients from contacting any STUN server; that works when clients
+# can reach webrtc_udp_port directly or through its UPnP mapping.
+#stun_servers = ["stun:stun.l.google.com:19302"]
 
 # Embedded mode serves Go Mode's voice choices and stages from voice-choices.toml
 # beside this file. Without it, mddb uses the defaults built into this release:

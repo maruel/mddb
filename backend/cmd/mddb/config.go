@@ -14,6 +14,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/maruel/gomode/autoupdate"
@@ -92,6 +93,7 @@ type tomlGitHubApp struct {
 
 type tomlVoiceGateway struct {
 	WebRTCUDPPort        int                   `toml:"webrtc_udp_port"`
+	STUNServers          []string              `toml:"stun_servers"`
 	Mode                 voiceGatewayMode      `toml:"mode"`
 	URL                  string                `toml:"url"`
 	InstanceID           string                `toml:"instance_id"`
@@ -125,7 +127,7 @@ func defaultConfig() tomlConfig {
 			AllowOrigins:   []string{},
 			TrustedProxies: []string{},
 		},
-		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped},
+		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped, STUNServers: slices.Clone(voicegateway.DefaultSTUNServers)},
 		Debug:        tomlDebug{LogLevel: "info"},
 	}
 }
@@ -208,7 +210,7 @@ type resolvedConfig struct {
 	GitHubApp      githubAppSettings
 	VoiceMode      voiceGatewayMode
 	VoiceConfig    voicegateway.ResolvedConfig
-	VoiceUDPPort   int
+	VoiceServer    voicegateway.ServerConfig // WebRTC listener and STUN servers for embedded mode.
 	ExternalVoice  *server.ExternalVoiceGateway
 }
 
@@ -304,7 +306,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		GitHubApp:      ghApp,
 		VoiceMode:      tc.VoiceGateway.Mode,
 		VoiceConfig:    voiceConfig,
-		VoiceUDPPort:   tc.VoiceGateway.WebRTCUDPPort,
+		VoiceServer:    voicegateway.ServerConfig{WebRTCUDPPort: tc.VoiceGateway.WebRTCUDPPort, STUNServers: tc.VoiceGateway.STUNServers},
 		ExternalVoice:  voice,
 	}, nil
 }

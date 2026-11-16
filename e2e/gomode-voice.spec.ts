@@ -95,13 +95,15 @@ for (const external of [true, false]) {
     if (!external) await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole("button", { name: "Voice settings", exact: true }).click();
     await page.getByRole("radio", { name: "Separate stages", exact: true }).check();
-    const recognition = page.getByRole("combobox", { name: "Recognition", exact: true });
-    const output = page.getByRole("combobox", { name: "Speech", exact: true });
-    await expect(recognition).toHaveValue("model:asr");
-    await expect(page.getByRole("combobox", { name: "Language model", exact: true })).toHaveValue("fake");
-    await expect(output).toHaveValue("model:tts");
-    await output.selectOption("browser");
-    await expect(recognition).toHaveValue("model:asr");
+    const recognition = page.getByRole("radiogroup", { name: "Recognition", exact: true });
+    const output = page.getByRole("radiogroup", { name: "Speech", exact: true });
+    await expect(recognition.locator('input[value="model:asr"]')).toBeChecked();
+    await expect(
+      page.getByRole("radiogroup", { name: "Language model", exact: true }).locator('input[value="fake"]'),
+    ).toBeChecked();
+    await expect(output.locator('input[value="model:tts"]')).toBeChecked();
+    await output.locator('input[value="browser"]').check();
+    await expect(recognition.locator('input[value="model:asr"]')).toBeChecked();
     const speakingVoice = page.getByRole("combobox", { name: "Speaking voice", exact: true });
     const language = page.getByRole("textbox", { name: "Voice language", exact: true });
     await expect(speakingVoice.locator("option")).toHaveText([
@@ -119,12 +121,12 @@ for (const external of [true, false]) {
     await expect(speakingVoice).toHaveValue("");
     await speakingVoice.selectOption("french");
     await page.screenshot({ path: test.info().outputPath("voice-settings.png") });
-    await output.selectOption("model:tts");
+    await output.locator('input[value="model:tts"]').check();
     await page.reload();
     await page.getByRole("button", { name: "Voice settings", exact: true }).click();
     await expect(page.getByRole("radio", { name: "Separate stages", exact: true })).toBeChecked();
-    await expect(recognition).toHaveValue("model:asr");
-    await expect(output).toHaveValue("model:tts");
+    await expect(recognition.locator('input[value="model:asr"]')).toBeChecked();
+    await expect(output.locator('input[value="model:tts"]')).toBeChecked();
     await page.getByRole("button", { name: "Close voice settings", exact: true }).click();
     const offer = page.waitForRequest(`${gateway}/api/voicegateway/v2/voice/rtc/offer`);
     await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
@@ -174,15 +176,23 @@ test("German voice setup keeps both setups and stage choices usable on mobile", 
   await allInOne.press("ArrowRight");
   await expect(parts).toBeFocused();
   await expect(parts).toBeChecked();
-  await expect(page.getByRole("combobox", { name: "Spracherkennung", exact: true })).toHaveValue("model:asr");
-  await expect(page.getByRole("combobox", { name: "Sprachmodell", exact: true })).toHaveValue("parts");
-  await expect(page.getByRole("combobox", { name: "Sprachausgabe", exact: true })).toHaveValue("model:tts");
+  await expect(
+    page.getByRole("radiogroup", { name: "Spracherkennung", exact: true }).locator('input[value="model:asr"]'),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("radiogroup", { name: "Sprachmodell", exact: true }).locator('input[value="parts"]'),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("radiogroup", { name: "Sprachausgabe", exact: true }).locator('input[value="model:tts"]'),
+  ).toBeChecked();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: test.info().outputPath("voice-parts-de-mobile.png") });
   await parts.press("ArrowLeft");
   await expect(allInOne).toBeFocused();
   await expect(allInOne).toBeChecked();
-  await expect(page.getByRole("combobox", { name: "Modell", exact: true })).toHaveValue("native");
+  await expect(
+    page.getByRole("radiogroup", { name: "Modell", exact: true }).locator('input[value="native"]'),
+  ).toBeChecked();
   await page.screenshot({ path: test.info().outputPath("voice-all-in-one-de-mobile.png") });
 });
 

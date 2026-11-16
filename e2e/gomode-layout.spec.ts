@@ -58,7 +58,9 @@ async function exerciseReservedViewport(page: Page, request: APIRequestContext, 
   await gotoWithSession(page, token);
   await expect(page.getByTestId("user-menu-button")).toBeVisible();
   await page.getByRole("button", { name: "Voice settings", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Model", exact: true })).toHaveValue("layout");
+  await expect(
+    page.getByRole("radiogroup", { name: "Model", exact: true }).locator('input[value="layout"]'),
+  ).toBeChecked();
   await page.getByRole("button", { name: "Close voice settings", exact: true }).click();
   await expect(page.getByTestId("voice-overlay").getByRole("alert")).toHaveCount(0);
   const workspaceId = await waitForWorkspace(page);

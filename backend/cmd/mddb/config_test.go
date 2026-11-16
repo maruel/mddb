@@ -155,6 +155,7 @@ webhook_secret = "webhook-secret"
 
 [voice-gateway]
 mode = "embedded"
+stun_servers = []
 
 [debug]
 log_level = "debug"
@@ -184,7 +185,7 @@ log_level = "debug"
 				PrivateKeyFile: "github-app.pem",
 				WebhookSecret:  "webhook-secret",
 			}},
-			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped},
+			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped, STUNServers: []string{}},
 			Debug:        tomlDebug{LogLevel: "debug"},
 		}
 		if !reflect.DeepEqual(got, want) {
@@ -722,7 +723,7 @@ token_mode = "oauth"
 	})
 	t.Run("embedded declarations replace the defaults", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte("[voice-gateway]\nmode = \"embedded\"\nwebrtc_udp_port = 3478\n"), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "config.toml"), []byte("[voice-gateway]\nmode = \"embedded\"\nwebrtc_udp_port = 3478\nstun_servers = [\"stun:stun.example:3478\"]\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		voice := "[[realtime]]\nid = \"live\"\nlabel = \"Live\"\nprovider = \"gemini\"\nmodel = \"gemini-live-test\"\n"
@@ -737,8 +738,8 @@ token_mode = "oauth"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.VoiceMode != voiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceUDPPort != 3478 {
-			t.Fatalf("voice settings: mode %q, port %d", cfg.VoiceMode, cfg.VoiceUDPPort)
+		if cfg.VoiceMode != voiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceServer.WebRTCUDPPort != 3478 || !slices.Equal(cfg.VoiceServer.STUNServers, []string{"stun:stun.example:3478"}) {
+			t.Fatalf("voice settings: mode %q, server %+v", cfg.VoiceMode, cfg.VoiceServer)
 		}
 		if len(cfg.VoiceConfig.Realtime) != 1 || cfg.VoiceConfig.Realtime[0].Model != "gemini-live-test" || len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
 			t.Fatalf("voice choices: %+v", cfg.VoiceConfig)
