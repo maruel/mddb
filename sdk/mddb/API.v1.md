@@ -803,8 +803,7 @@ OrganizationResponse is the API representation of an organization.
 | `member_count` | `int` |  | yes |
 | `workspace_count` | `int` |  | yes |
 | `created` | `number` |  | yes |
-| `server_resource_limits` | `ResourceQuotas` | ServerResourceLimits shows the server-imposed upper bound for each resource quota.
-The organization's resource quotas cannot exceed these server-level limits. | yes |
+| `server_resource_limits` | `ResourceQuotas` | ServerResourceLimits shows the server-imposed upper bound for each resource quota. The organization's resource quotas cannot exceed these server-level limits. | yes |
 
 ### UpdateOrganizationRequest
 
@@ -932,9 +931,7 @@ WorkspaceResponse is the API representation of a workspace.
 | `git_remote` | `GitRemoteResponse` |  |  |
 | `member_count` | `int` |  | yes |
 | `created` | `number` |  | yes |
-| `parent_resource_limits` | `ResourceQuotas` | ParentResourceLimits shows the effective upper bound imposed by the server and organization.
-The workspace's resource quotas cannot exceed these combined limits.
-Zero means unlimited at the parent level. | yes |
+| `parent_resource_limits` | `ResourceQuotas` | ParentResourceLimits shows the effective upper bound imposed by the server and organization. The workspace's resource quotas cannot exceed these combined limits. Zero means unlimited at the parent level. | yes |
 
 ### NotionImportRequest
 
@@ -1199,8 +1196,7 @@ Property represents a table column with its configuration.
 | `name` | `string` |  | yes |
 | `type` | `PropertyType` |  | yes |
 | `required` | `boolean` |  |  |
-| `options` | `SelectOption[]` | Options contains the allowed values for select and multi_select properties.
-Each option has an ID (used in storage), name (display), and optional color. |  |
+| `options` | `SelectOption[]` | Options contains the allowed values for select and multi_select properties. Each option has an ID (used in storage), name (display), and optional color. |  |
 
 ### ViewColumn
 

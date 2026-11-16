@@ -185,7 +185,7 @@ log_level = "debug"
 				PrivateKeyFile: "github-app.pem",
 				WebhookSecret:  "webhook-secret",
 			}},
-			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped, STUNServers: []string{}},
+			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped, WebRTCConfig: voicegateway.WebRTCConfig{STUNServers: []string{}}},
 			Debug:        tomlDebug{LogLevel: "debug"},
 		}
 		if !reflect.DeepEqual(got, want) {
@@ -738,8 +738,8 @@ token_mode = "oauth"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.VoiceMode != voiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceServer.WebRTCUDPPort != 3478 || !slices.Equal(cfg.VoiceServer.STUNServers, []string{"stun:stun.example:3478"}) {
-			t.Fatalf("voice settings: mode %q, server %+v", cfg.VoiceMode, cfg.VoiceServer)
+		if cfg.VoiceMode != voiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceWebRTC.UDPPort != 3478 || !slices.Equal(cfg.VoiceWebRTC.STUNServers, []string{"stun:stun.example:3478"}) {
+			t.Fatalf("voice settings: mode %q, WebRTC %+v", cfg.VoiceMode, cfg.VoiceWebRTC)
 		}
 		if len(cfg.VoiceConfig.Realtime) != 1 || cfg.VoiceConfig.Realtime[0].Model != "gemini-live-test" || len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
 			t.Fatalf("voice choices: %+v", cfg.VoiceConfig)
@@ -794,7 +794,7 @@ token_mode = "oauth"
 		for _, port := range []int{-1, 65536} {
 			c := defaultConfig()
 			c.VoiceGateway.Mode = voiceGatewayEmbedded
-			c.VoiceGateway.WebRTCUDPPort = port
+			c.VoiceGateway.UDPPort = port
 			if _, err := resolveConfig(&c, t.TempDir()); err == nil {
 				t.Fatalf("invalid UDP port %d accepted", port)
 			}

@@ -83,7 +83,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	bridgeCtx, bridgeCancel := context.WithCancel(context.WithoutCancel(t.Context()))
 	t.Cleanup(bridgeCancel)
 	started := time.Now()
-	bridge, err := voicertc.NewBridge(bridgeCtx, &voiceCfg, voicegateway.ServerConfig{}, t.TempDir())
+	bridge, err := voicertc.NewBridge(bridgeCtx, &voiceCfg, voicegateway.WebRTCConfig{}, t.TempDir())
 	if err != nil {
 		t.Fatalf("start voice bridge: %v", err)
 	}

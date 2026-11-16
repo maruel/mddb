@@ -14,7 +14,6 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/maruel/gomode/autoupdate"
@@ -92,8 +91,8 @@ type tomlGitHubApp struct {
 }
 
 type tomlVoiceGateway struct {
-	WebRTCUDPPort        int                   `toml:"webrtc_udp_port"`
-	STUNServers          []string              `toml:"stun_servers"`
+	voicegateway.WebRTCConfig
+
 	Mode                 voiceGatewayMode      `toml:"mode"`
 	URL                  string                `toml:"url"`
 	InstanceID           string                `toml:"instance_id"`
@@ -127,7 +126,7 @@ func defaultConfig() tomlConfig {
 			AllowOrigins:   []string{},
 			TrustedProxies: []string{},
 		},
-		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped, STUNServers: slices.Clone(voicegateway.DefaultSTUNServers)},
+		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped, WebRTCConfig: voicegateway.NewWebRTCConfig()},
 		Debug:        tomlDebug{LogLevel: "info"},
 	}
 }
@@ -210,7 +209,7 @@ type resolvedConfig struct {
 	GitHubApp      githubAppSettings
 	VoiceMode      voiceGatewayMode
 	VoiceConfig    voicegateway.ResolvedConfig
-	VoiceServer    voicegateway.ServerConfig // WebRTC listener and STUN servers for embedded mode.
+	VoiceWebRTC    voicegateway.WebRTCConfig
 	ExternalVoice  *server.ExternalVoiceGateway
 }
 
@@ -306,7 +305,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		GitHubApp:      ghApp,
 		VoiceMode:      tc.VoiceGateway.Mode,
 		VoiceConfig:    voiceConfig,
-		VoiceServer:    voicegateway.ServerConfig{WebRTCUDPPort: tc.VoiceGateway.WebRTCUDPPort, STUNServers: tc.VoiceGateway.STUNServers},
+		VoiceWebRTC:    tc.VoiceGateway.WebRTCConfig,
 		ExternalVoice:  voice,
 	}, nil
 }
@@ -435,8 +434,8 @@ func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.Exter
 	case voiceGatewayDisabled:
 		return nil, nil //nolint:nilnil // Disabled mode has no external gateway.
 	case voiceGatewayEmbedded:
-		if c.WebRTCUDPPort < 0 || c.WebRTCUDPPort > 65535 {
-			return nil, errors.New("voice-gateway.webrtc_udp_port must be between 0 and 65535; use mode = disabled to disable voice")
+		if err := c.Validate(); err != nil {
+			return nil, fmt.Errorf("voice-gateway.%w", err)
 		}
 		return nil, nil //nolint:nilnil // Embedded mode has no external gateway.
 	case voiceGatewayExternal:
