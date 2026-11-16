@@ -22,7 +22,8 @@ data as Markdown, JSONL, and assets in git repositories. Read [backend/AGENTS.md
 ## Roll Go Mode
 
 Pick a Git commit and roll both the `github.com/maruel/gomode` Go module and the `@maruel/gomode` package in
-`package.json` to it.
+`package.json` to it. Run `make frontend-build` and commit `backend/frontend/dist`: `make fix` does not rebuild
+the embedded bundle.
 
 ## Python tools
 
