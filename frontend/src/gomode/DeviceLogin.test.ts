@@ -2,7 +2,7 @@
 
 import { it } from "node:test";
 import { expect } from "@tests/expect";
-import { defaultDeviceLoginMessages, defaultDeviceLoginRecoveryMessages } from "@maruel/gomode/web/DeviceLogin";
+import { defaultDeviceLoginMessages, defaultDeviceLoginRecoveryMessages } from "@gomodedev/gomode/web/DeviceLogin";
 import { dict as de } from "../i18n/dictionaries/de";
 import { dict as en } from "../i18n/dictionaries/en";
 import { dict as es } from "../i18n/dictionaries/es";

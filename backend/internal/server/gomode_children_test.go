@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/gomode"
-	"github.com/maruel/gomode/mcp"
+	"github.com/gomodedev/gomode"
+	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"

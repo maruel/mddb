@@ -7,7 +7,7 @@ import {
   DeviceLoginApproval,
   type DeviceLoginMessages,
   type DeviceLoginRecoveryMessages,
-} from "@maruel/gomode/web/DeviceLogin";
+} from "@gomodedev/gomode/web/DeviceLogin";
 import type { UserResponse } from "@sdk/types.gen";
 import Auth from "../components/Auth";
 import { useAuth } from "../contexts";

@@ -13,16 +13,16 @@ import {
   type Accessor,
   type ParentComponent,
 } from "solid-js";
-import type { FrontendPreparationScope } from "@maruel/gomode/web/FrontendVoiceTools";
-import BrowserVoiceShell from "@maruel/gomode/web/BrowserVoiceShell";
-import { defaultVoiceMessages, type VoiceMessages } from "@maruel/gomode/web/VoiceMessages";
+import type { FrontendPreparationScope } from "@gomodedev/gomode/web/FrontendVoiceTools";
+import BrowserVoiceShell from "@gomodedev/gomode/web/BrowserVoiceShell";
+import { defaultVoiceMessages, type VoiceMessages } from "@gomodedev/gomode/web/VoiceMessages";
 import { useWorkspaceData } from "../contexts/WorkspaceDataContext";
 import { useWorkspaceNavigation } from "../contexts/WorkspaceNavigationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useI18n } from "../i18n";
 import { workspaceResourceEvents } from "./workspaceResourceEvents";
 import { voiceAuthorization } from "./voiceAuthorization";
-import type { McpResourceNotification } from "@maruel/gomode/web/McpClient";
+import type { McpResourceNotification } from "@gomodedev/gomode/web/McpClient";
 import { createVoiceFocusPublisher } from "./voiceFocus";
 import styles from "./GoMode.module.css";
 import type { WorkspaceEvent } from "@sdk/types.gen";

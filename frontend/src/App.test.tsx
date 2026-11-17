@@ -11,7 +11,7 @@ import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import App from "./App";
 import { I18nProvider, useI18n } from "./i18n";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import { WorkspaceDataProvider } from "./contexts/WorkspaceDataContext";
 import { AuthProvider, useAuth, type AuthContextValue } from "./contexts/AuthContext";
 import { WorkspaceNavigationProvider } from "./contexts/WorkspaceNavigationContext";

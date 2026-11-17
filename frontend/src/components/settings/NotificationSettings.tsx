@@ -4,7 +4,7 @@ import type { ChannelSetDTO, NotificationPrefsDTO } from "@sdk/types.gen";
 import { useAuth } from "../../contexts";
 import { useNotifications } from "../../contexts/NotificationContext";
 import { useI18n } from "../../i18n";
-import { useHostMode } from "@maruel/gomode/web/HostMode";
+import { useHostMode } from "@gomodedev/gomode/web/HostMode";
 import styles from "./NotificationSettings.module.css";
 
 const NOTIFICATION_TYPES = [

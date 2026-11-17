@@ -1,6 +1,6 @@
 // Projects authenticated workspace effects onto resource identities for the existing conversation monitor.
 
-import type { McpResourceNotification } from "@maruel/gomode/web/McpClient";
+import type { McpResourceNotification } from "@gomodedev/gomode/web/McpClient";
 import type { WorkspaceEvent } from "@sdk/types.gen";
 
 export function workspaceResourceEvents(workspace: string, event: WorkspaceEvent): McpResourceNotification[] {

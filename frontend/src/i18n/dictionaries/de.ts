@@ -1,6 +1,6 @@
 // German translation dictionary.
 
-import { voiceMessages } from "@maruel/gomode/web/VoiceMessages/de";
+import { voiceMessages } from "@gomodedev/gomode/web/VoiceMessages/de";
 import type { Dictionary } from "../types";
 
 export const dict: Dictionary = {

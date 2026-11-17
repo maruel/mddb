@@ -8,7 +8,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/maruel/gomode/mcp"
+	"github.com/gomodedev/gomode/mcp"
 )
 
 func TestResourceInvalidations(t *testing.T) {

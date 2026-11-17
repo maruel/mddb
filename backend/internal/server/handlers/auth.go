@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/gomode/httpserver"
+	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"

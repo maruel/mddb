@@ -13,7 +13,7 @@ import type { NotificationDTO } from "@sdk/types.gen";
 import type { APIClient } from "@sdk/api.gen";
 import { registerServiceWorker } from "../notifications/sw-register";
 import { subscribeToPush, unsubscribeFromPush } from "../notifications/push-manager";
-import { useHostMode } from "@maruel/gomode/web/HostMode";
+import { useHostMode } from "@gomodedev/gomode/web/HostMode";
 
 const POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 20;

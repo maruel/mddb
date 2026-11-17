@@ -20,7 +20,7 @@ import (
 
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/gomode/devicelogin"
+	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"

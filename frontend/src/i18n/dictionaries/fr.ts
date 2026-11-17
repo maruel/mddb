@@ -1,6 +1,6 @@
 // French translation dictionary.
 
-import { voiceMessages } from "@maruel/gomode/web/VoiceMessages/fr";
+import { voiceMessages } from "@gomodedev/gomode/web/VoiceMessages/fr";
 import type { Dictionary } from "../types";
 
 export const dict: Dictionary = {

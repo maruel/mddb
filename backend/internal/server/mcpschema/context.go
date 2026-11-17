@@ -2,7 +2,7 @@
 
 package mcpschema
 
-import "github.com/maruel/gomode"
+import "github.com/gomodedev/gomode"
 
 // ServiceFocus identifies a focused resource independently of a host's domain
 // or the current bounded item catalog. Reference is a host-owned display label.

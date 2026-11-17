@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/maruel/gomode/mcp"
+	"github.com/gomodedev/gomode/mcp"
 )
 
 // resourceInvalidations belongs to one authorized workspace stream. Its keys

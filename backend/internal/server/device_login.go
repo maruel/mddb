@@ -5,8 +5,8 @@ package server
 import (
 	"net/http"
 
-	"github.com/maruel/gomode/devicelogin"
-	"github.com/maruel/gomode/httpserver"
+	"github.com/gomodedev/gomode/devicelogin"
+	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 )

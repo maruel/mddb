@@ -16,7 +16,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/maruel/gomode/httpserver/geoip"
+	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"

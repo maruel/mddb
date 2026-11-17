@@ -19,9 +19,9 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 
-	"github.com/maruel/gomode/voicegateway"
-	voiceapi "github.com/maruel/gomode/voicegateway/api"
-	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
+	"github.com/gomodedev/gomode/voicegateway"
+	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
+	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )

@@ -15,7 +15,7 @@ import {
 } from "solid-js";
 import { useLocation, useNavigate } from "@solidjs/router";
 import type { NodeResponse } from "@sdk/types.gen";
-import type { FrontendVoiceToolContext } from "@maruel/gomode/web/FrontendVoiceTools";
+import type { FrontendVoiceToolContext } from "@gomodedev/gomode/web/FrontendVoiceTools";
 import type { EditorIntent } from "./EditorContext";
 import { useI18n } from "../i18n";
 import { useAuth } from "./AuthContext";

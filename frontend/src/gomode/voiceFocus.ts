@@ -4,7 +4,7 @@ import {
   FrontendVoiceContextConflict,
   type FrontendVoiceContextPublisher,
   type FrontendVoiceContextRelease,
-} from "@maruel/gomode/web/FrontendVoiceTools";
+} from "@gomodedev/gomode/web/FrontendVoiceTools";
 import type { UpdateVoiceFocusRequest, UpdateVoiceFocusResponse } from "@sdk/types.gen";
 
 // Bind workspace focus policy to one shared preparation-owned conversation.

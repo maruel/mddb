@@ -2,7 +2,7 @@
 
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 import { gate } from "./gomode-fixtures";
-import type { Settings } from "@maruel/gomode/sdk/gomode/v1/types.gen.ts";
+import type { Settings } from "@gomodedev/gomode/sdk/gomode/v1/types.gen.ts";
 import { test, expect, registerUser, gotoWithSession, waitForWorkspace, createClient } from "./helpers";
 
 // A service worker cache would mask the network failures this journey owns.

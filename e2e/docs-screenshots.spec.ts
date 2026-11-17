@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext, Page } from "@playwright/test";
-import type { VoiceChoicesResp } from "@maruel/gomode/sdk/voicegateway/v2/types.gen.ts";
+import type { VoiceChoicesResp } from "@gomodedev/gomode/sdk/voicegateway/v2/types.gen.ts";
 import { test, expect, createClient, gotoWithSession, registerUser, waitForWorkspace } from "./helpers";
 import { nodeUrl } from "../frontend/src/utils/urls";
 

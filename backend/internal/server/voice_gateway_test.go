@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
+	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"

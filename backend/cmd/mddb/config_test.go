@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/gomode/httpserver/geoip"
-	"github.com/maruel/gomode/voicegateway"
+	"github.com/gomodedev/gomode/httpserver/geoip"
+	"github.com/gomodedev/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
 )

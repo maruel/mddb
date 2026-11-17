@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/gomode/devicelogin"
-	"github.com/maruel/gomode/httpserver"
+	"github.com/gomodedev/gomode/devicelogin"
+	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"

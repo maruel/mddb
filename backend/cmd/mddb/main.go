@@ -30,10 +30,10 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/gomodedev/gomode/autoupdate"
+	"github.com/gomodedev/gomode/voicegateway"
+	"github.com/gomodedev/gomode/voicegateway/voicertc"
 	"github.com/lmittmann/tint"
-	"github.com/maruel/gomode/autoupdate"
-	"github.com/maruel/gomode/voicegateway"
-	"github.com/maruel/gomode/voicegateway/voicertc"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server"

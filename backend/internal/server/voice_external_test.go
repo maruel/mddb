@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/gomode"
-	"github.com/maruel/gomode/oauth/oauthverify"
-	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
+	"github.com/gomodedev/gomode"
+	"github.com/gomodedev/gomode/oauth/oauthverify"
+	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )

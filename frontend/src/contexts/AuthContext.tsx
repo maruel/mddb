@@ -16,7 +16,7 @@ import {
 import { createApi, APIError, type Api } from "../useApi";
 import { createApiClient } from "@sdk/api.gen";
 import type { UserResponse } from "@sdk/types.gen";
-import { createFrontendPreparationClient, type FrontendPreparation } from "@maruel/gomode/web/FrontendVoiceTools";
+import { createFrontendPreparationClient, type FrontendPreparation } from "@gomodedev/gomode/web/FrontendVoiceTools";
 import { useI18n, type Locale } from "../i18n";
 
 export interface AuthContextValue {

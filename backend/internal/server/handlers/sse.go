@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/maruel/gomode/sse"
+	"github.com/gomodedev/gomode/sse"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	workspacefeed "github.com/maruel/mddb/backend/internal/server/sse"

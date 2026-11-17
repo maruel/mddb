@@ -16,10 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/maruel/gomode/autoupdate"
-	"github.com/maruel/gomode/httpserver"
-	"github.com/maruel/gomode/httpserver/geoip"
-	"github.com/maruel/gomode/voicegateway"
+	"github.com/gomodedev/gomode/autoupdate"
+	"github.com/gomodedev/gomode/httpserver"
+	"github.com/gomodedev/gomode/httpserver/geoip"
+	"github.com/gomodedev/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
 )

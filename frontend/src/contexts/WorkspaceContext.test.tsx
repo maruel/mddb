@@ -5,7 +5,7 @@ import { setImmediate } from "node:timers/promises";
 import { createServer, type ServerResponse } from "node:http";
 import { cleanup, render, waitFor } from "@solidjs/testing-library";
 import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import type { NodeResponse, UserResponse } from "@sdk/types.gen";
 import { WSRoleViewer } from "@sdk/types.gen";
 import { expect, vi } from "@tests/expect";

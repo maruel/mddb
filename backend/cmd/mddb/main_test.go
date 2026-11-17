@@ -15,7 +15,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/maruel/gomode/autoupdate"
+	"github.com/gomodedev/gomode/autoupdate"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"

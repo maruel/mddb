@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/gomode/httpserver"
-	"github.com/maruel/gomode/oauth/oauthserver"
+	"github.com/gomodedev/gomode/httpserver"
+	"github.com/gomodedev/gomode/oauth/oauthserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"

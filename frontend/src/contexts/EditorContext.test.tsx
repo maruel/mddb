@@ -4,7 +4,7 @@ import { afterEach, beforeEach, it } from "node:test";
 import { cleanup, render, waitFor, screen, fireEvent } from "@solidjs/testing-library";
 import { createEffect, on, Show, type ParentComponent } from "solid-js";
 import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import type { NodeResponse, UpdatePageRequest, UserResponse } from "@sdk/types.gen";
 import { expect, vi } from "@tests/expect";
 import { sessionFromMe } from "@tests/session";

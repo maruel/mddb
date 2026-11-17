@@ -21,11 +21,11 @@ regenerates declarations. Do not edit generated declarations by hand.
 
 ## Go Mode
 
-`@maruel/gomode` is pinned to a git commit in `package.json`. To exercise a local gomode checkout, pack it
+`@gomodedev/gomode` is pinned to a git commit in `package.json`. To exercise a local gomode checkout, pack it
 rather than linking it: `pnpm link ../gomode` resolves gomode's own `@solidjs/router` and `solid-js` copies,
 so the app runs against a second router instance and the tests fail. In the gomode checkout run
 `pnpm pack --pack-destination /tmp`, then in mddb run
-`pnpm add @maruel/gomode@file:/tmp/maruel-gomode-0.1.0.tgz`. Restore the pinned dependency and lockfile
+`pnpm add @gomodedev/gomode@file:/tmp/gomodedev-gomode-0.1.0.tgz`. Restore the pinned dependency and lockfile
 before committing with `git checkout -- package.json pnpm-lock.yaml && pnpm install --frozen-lockfile`. Do not
 commit a local override.
 

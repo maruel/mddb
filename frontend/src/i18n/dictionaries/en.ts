@@ -1,6 +1,6 @@
 // English translation dictionary (default).
 
-import { defaultVoiceMessages as voiceMessages } from "@maruel/gomode/web/VoiceMessages";
+import { defaultVoiceMessages as voiceMessages } from "@gomodedev/gomode/web/VoiceMessages";
 import type { Dictionary } from "../types";
 
 export const dict: Dictionary = {

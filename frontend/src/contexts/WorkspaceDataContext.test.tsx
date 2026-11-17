@@ -4,7 +4,7 @@ import { afterEach, beforeEach, it } from "node:test";
 import { render, cleanup, waitFor } from "@solidjs/testing-library";
 import { createSignal, Show } from "solid-js";
 import { Router, Route, useNavigate } from "@solidjs/router";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import type { NodeResponse, UserResponse } from "@sdk/types.gen";
 import { OrgRoleOwner, WSRoleAdmin, WSRoleViewer } from "@sdk/types.gen";
 import { expect, vi } from "@tests/expect";

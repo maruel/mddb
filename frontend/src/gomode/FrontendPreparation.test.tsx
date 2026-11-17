@@ -10,7 +10,7 @@ import { WorkspaceDataProvider } from "../contexts/WorkspaceDataContext";
 import { WorkspaceNavigationProvider } from "../contexts/WorkspaceNavigationContext";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { Router, useNavigate } from "@solidjs/router";
-import { HostModeProvider, useHostMode } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider, useHostMode } from "@gomodedev/gomode/web/HostMode";
 import { GoModeProvider, useGoMode } from "./GoMode";
 import { I18nProvider } from "../i18n";
 

@@ -6,7 +6,7 @@ import styles from "./App.module.css";
 import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
 import { RecordDraftProvider } from "./contexts/RecordDraftContext";
 import AppErrorBoundary from "./components/ErrorBoundary";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import { WorkspaceDataProvider } from "./contexts/WorkspaceDataContext";
 import { WorkspaceNavigationProvider } from "./contexts/WorkspaceNavigationContext";
 import { GoModeProvider } from "./gomode/GoMode";

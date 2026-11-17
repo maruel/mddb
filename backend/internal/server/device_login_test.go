@@ -22,7 +22,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/gomode/devicelogin"
+	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"

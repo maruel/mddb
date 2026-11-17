@@ -17,7 +17,7 @@ import type {
   PlaywrightWorkerOptions,
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import type { DeviceLoginCode, DeviceLoginRequest } from "@maruel/gomode/web/DeviceLogin";
+import type { DeviceLoginCode, DeviceLoginRequest } from "@gomodedev/gomode/web/DeviceLogin";
 import { APIError, createApiClient, type APIClient } from "../sdk/mddb/ts/v1/api.gen";
 
 // Install the asynchronous native auth bridge used by host journeys.

@@ -4,7 +4,7 @@ import { createSignal, createEffect, onCleanup, Show } from "solid-js";
 import { useLocation } from "@solidjs/router";
 import { useI18n } from "../i18n";
 import styles from "./PWAInstallBanner.module.css";
-import { useHostMode } from "@maruel/gomode/web/HostMode";
+import { useHostMode } from "@gomodedev/gomode/web/HostMode";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;

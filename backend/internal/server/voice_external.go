@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maruel/gomode"
-	"github.com/maruel/gomode/oauth"
-	"github.com/maruel/gomode/oauth/oauthserver"
-	"github.com/maruel/gomode/voicegateway"
-	voicev2 "github.com/maruel/gomode/voicegateway/api/v2"
+	"github.com/gomodedev/gomode"
+	"github.com/gomodedev/gomode/oauth"
+	"github.com/gomodedev/gomode/oauth/oauthserver"
+	"github.com/gomodedev/gomode/voicegateway"
+	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 )
 

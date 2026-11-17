@@ -2,7 +2,7 @@
 
 import { waitForWorkspace, test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 import { installBrowserTools } from "./gomode-fixtures";
-import type { VoiceChoicesResp } from "@maruel/gomode/sdk/voicegateway/v2/types.gen.ts";
+import type { VoiceChoicesResp } from "@gomodedev/gomode/sdk/voicegateway/v2/types.gen.ts";
 
 // Individual tests grant capture explicitly; auto-grant UI would bypass denied permissions.
 test.use({ launchOptions: { args: ["--use-fake-device-for-media-stream"] } });

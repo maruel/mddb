@@ -4,7 +4,7 @@ import { afterEach, describe, it } from "node:test";
 import { expect } from "@tests/expect";
 import { cleanup, render, screen } from "@solidjs/testing-library";
 import { Router } from "@solidjs/router";
-import { HostModeProvider } from "@maruel/gomode/web/HostMode";
+import { HostModeProvider } from "@gomodedev/gomode/web/HostMode";
 import { AuthContext, type AuthContextValue } from "../../contexts/AuthContext";
 import { NotificationContext, type NotificationContextValue } from "../../contexts/NotificationContext";
 import { I18nProvider } from "../../i18n";

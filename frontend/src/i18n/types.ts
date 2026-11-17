@@ -1,6 +1,6 @@
 // Type definitions for internationalization (dictionaries and locales).
 
-import type { VoiceMessages } from "@maruel/gomode/web/VoiceMessages";
+import type { VoiceMessages } from "@gomodedev/gomode/web/VoiceMessages";
 
 // Supported locales
 export type Locale = "en" | "fr" | "de" | "es";
