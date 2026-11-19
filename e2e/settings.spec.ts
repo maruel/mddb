@@ -1,4 +1,4 @@
-// E2E tests for user settings and language switching.
+// Exercises profile, appearance, and workspace settings through the browser.
 import type { Page } from "@playwright/test";
 import { waitForWorkspace, test, expect, registerUser, createClient, gotoWithSession } from "./helpers";
 
@@ -106,20 +106,35 @@ test.describe("User Profile Settings", () => {
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
   });
 
-  test("icon-only save stays reachable and saves with the keyboard", async ({ page, request }, testInfo) => {
-    const { token } = await registerUser(request, "theme-change");
+  test("theme follows the browser until an explicit preference is saved with the keyboard", async ({
+    page,
+    request,
+  }, testInfo) => {
+    const { email, token } = await registerUser(request, "theme-change");
+    await page.emulateMedia({ colorScheme: "light" });
     await gotoWithSession(page, token);
     await waitForWorkspace(page);
 
     await openUserMenuAndClick(page, "Profile");
     await expect(page).toHaveURL("/settings/user", { timeout: 5000 });
 
-    // Find theme selector
-    const themeSelect = page.locator("select").filter({ has: page.locator('option[value="dark"]') });
-    await expect(themeSelect).toBeVisible({ timeout: 5000 });
+    const themeSelect = page.getByRole("combobox", { name: "Theme" });
+    const canvas = page.locator("body");
+    const root = page.locator("html");
+    const chromeColor = page.locator('meta[name="theme-color"]').first();
+    await expect(themeSelect).toHaveValue("system");
+    const lightChrome = await chromeColor.getAttribute("content");
+    const lightBackground = await canvas.evaluate((body) => getComputedStyle(body).backgroundColor);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(canvas).not.toHaveCSS("background-color", lightBackground);
+    expect(await chromeColor.getAttribute("content")).not.toBe(lightChrome);
+    const darkChrome = await chromeColor.getAttribute("content");
+    const darkBackground = await canvas.evaluate((body) => getComputedStyle(body).backgroundColor);
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(canvas).toHaveCSS("background-color", lightBackground);
 
-    // Change to dark
     await themeSelect.selectOption("dark");
+    await expect(canvas).toHaveCSS("background-color", lightBackground);
 
     const saveButton = page.getByRole("button", { name: "Save Changes", exact: true });
     await expect(saveButton).toHaveAttribute("title", "Save Changes");
@@ -139,8 +154,30 @@ test.describe("User Profile Settings", () => {
       await page.screenshot({ path: testInfo.outputPath(`settings-save-${width}.png`) });
     }
     await saveButton.press("Space");
+    await expect(root).toHaveCSS("color-scheme", "dark");
+    expect(await chromeColor.getAttribute("content")).toBe(darkChrome);
+    await expect(canvas).toHaveCSS("background-color", darkBackground);
+    const accountEmail = page.getByText(email, { exact: true });
+    expect(await accountEmail.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(
+      await accountEmail.evaluate((el) => el.clientWidth),
+    );
+    await page.screenshot({ path: testInfo.outputPath("settings-dark-320.png") });
 
-    await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
+    await page.reload();
+    await expect(themeSelect).toHaveValue("dark");
+    await expect(canvas).toHaveCSS("background-color", darkBackground);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await themeSelect.selectOption("light");
+    await saveButton.click();
+    await expect(root).toHaveCSS("color-scheme", "light");
+    await expect(canvas).toHaveCSS("background-color", lightBackground);
+
+    await themeSelect.selectOption("system");
+    await saveButton.click();
+    await expect(canvas).toHaveCSS("background-color", darkBackground);
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(canvas).toHaveCSS("background-color", lightBackground);
   });
 
   test("back button returns to previous page", async ({ page, request }) => {

@@ -35,7 +35,7 @@ help:
 	@printf '  %-24s - %s\n' 'make test-smoke' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-24s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
 	@printf '  %-24s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
-	@printf '  %-24s - %s\n' 'make screenshots-update' 'Capture documentation scenes twice and replace their WebP files (slow)'
+	@printf '  %-24s - %s\n' 'make screenshots-update' 'Capture light and dark documentation scenes twice (slow)'
 	@printf '  %-24s - %s\n' 'make git-hooks' 'Install git pre-commit hooks'
 
 # Install frontend dependencies (only when lockfile changes)

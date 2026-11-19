@@ -44,7 +44,7 @@
 .formGroup button {
   flex-shrink: 0;
   padding: var(--s-3);
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;

@@ -192,7 +192,6 @@ func containsDot(p string) bool {
 //   - /assets/* (Vite hashed files): immutable, 1 year
 //   - workbox-*.js (hashed): immutable, 1 year
 //   - sw.js, registerSW.js: no-cache (service workers must be fresh)
-//   - manifest.webmanifest, manifest.json: 1 hour
 //   - icons (png, svg, ico): 1 hour
 //   - other files with extensions: 1 hour
 func setCacheHeaders(w http.ResponseWriter, urlPath string) {
@@ -226,12 +225,6 @@ func setCacheHeaders(w http.ResponseWriter, urlPath string) {
 	// Workbox runtime is hashed, can be cached long-term
 	if strings.HasPrefix(filename, "workbox-") && strings.HasSuffix(filename, ".js") {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		return
-	}
-
-	// PWA manifests - cache 1 hour (increase later)
-	if filename == "manifest.webmanifest" || filename == "manifest.json" {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
 		return
 	}
 

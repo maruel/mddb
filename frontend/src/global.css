@@ -1,4 +1,4 @@
-/* Shared application styles. */
+/* Shared mddb appearance, including the semantic palette used by the editor and hosted controls. */
 *,
 *::before,
 *::after {
@@ -16,35 +16,38 @@ body {
   font-family: system-ui, sans-serif;
 }
 
+:root[data-theme] body {
+  color: var(--c-text);
+  background: var(--c-surface-page);
+}
+
 :root {
-  /* Semantic color, surface, state, and elevation foundation for the light theme. */
+  accent-color: var(--c-control-accent);
+  color-scheme: light dark;
 
-  /* Interactive accent roles. Separate roles may diverge in future themes. */
-
-  /* TODO: Move the accent roles from blue (#2563eb) to the mddb indigo palette.
-     mddb.app's README Brand table owns it (brand #4f46e5, brand strong #4338ca,
-     focus #b45309), taken from the app icon's indigo accent
-     (frontend/public/icon.svg). The app blue no longer matches its websites.
-     Check WCAG AA contrast for each role, including the dark theme, then run
-     `make screenshots-update` and publish the captures to both sites. */
-  --c-action-primary: #2563eb;
-  --c-action-primary-hover: #1d4ed8;
-  --c-border-accent: #2563eb;
-  --c-border-focus: #2563eb;
-  --c-control-accent: #2563eb;
-  --c-divider: #e5e7eb;
+  /* Indigo, paper, ink, and focus colors follow the Brand table in mddb.app's README. */
+  --c-action-primary: #4f46e5;
+  --c-action-primary-hover: #4338ca;
+  --c-border-accent: #4f46e5;
+  --c-border-focus: #b45309;
+  --c-control-accent: #4f46e5;
+  --c-divider: #d8d6e8;
   --c-focus-on-brand: #fff;
-  --c-text-accent: #2563eb;
+  --c-text-accent: #4338ca;
+  --c-text-on-accent: #fff;
+
+  /* The workspace toolbar and install banner use deep indigo in both schemes. */
+  --c-surface-toolbar: #4338ca;
 
   /* Third-party sign-in provider brand surfaces. */
   --c-provider-github-surface: #24292e;
   --c-provider-microsoft-surface: #2f2f2f;
 
   /* Text roles. */
-  --c-text: #1f2937;
-  --c-text-muted: #4b5563;
+  --c-text: #1e1b3a;
+  --c-text-muted: #55536f;
   --c-text-inverse: #fff;
-  --c-text-code: #c7254e;
+  --c-text-code: #a31e49;
   --c-text-danger: #b91c1c;
   --c-text-success: #166534;
   --c-text-warning: #92400e;
@@ -52,22 +55,22 @@ body {
 
   /* Neutral and interaction surfaces. */
   --c-surface: #fff;
-  --c-surface-subtle: #f5f5f5;
-  --c-surface-sunken: #e5e7eb;
-  --c-surface-hover: rgb(0 0 0 / 4%);
-  --c-surface-badge-neutral: #e5e7eb;
-  --c-surface-control: #e5e7eb;
-  --c-surface-control-disabled: #e5e7eb;
-  --c-surface-control-hover: #e5e7eb;
-  --c-surface-code: #e5e7eb;
-  --c-surface-panel: #e5e7eb;
-  --c-surface-page: #e5e7eb;
-  --c-surface-table-header: #e5e7eb;
-  --c-surface-selected: #dbeafe;
+  --c-surface-subtle: #f8f8fc;
+  --c-surface-sunken: #ecebf6;
+  --c-surface-hover: rgb(30 27 58 / 6%);
+  --c-surface-badge-neutral: #ecebf6;
+  --c-surface-control: #ecebf6;
+  --c-surface-control-disabled: #ecebf6;
+  --c-surface-control-hover: #e1dff2;
+  --c-surface-code: #f1f0f8;
+  --c-surface-panel: #ecebf6;
+  --c-surface-page: #f8f8fc;
+  --c-surface-table-header: #ecebf6;
+  --c-surface-selected: #e0e3ff;
   --c-over-image-control-surface: rgb(255 255 255 / 90%);
-  --c-surface-info: #eff6ff;
-  --c-surface-accent: #eef6ff;
-  --c-surface-accent-solid: #2563eb;
+  --c-surface-info: #eff1ff;
+  --c-surface-accent: #eef0ff;
+  --c-surface-accent-solid: #4f46e5;
 
   /* Status surfaces. */
   --c-surface-danger: #fef2f2;
@@ -76,7 +79,8 @@ body {
   --c-surface-danger-solid: #dc2626;
   --c-surface-success: #f0fdf4;
   --c-surface-success-strong: #dcfce7;
-  --c-surface-success-solid: #16a34a;
+  --c-surface-success-solid: #18753e;
+  --c-status-connected: #9be0b2;
   --c-surface-warning: #fff3cd;
   --c-surface-warning-strong: #fef3c7;
   --c-surface-warning-subtle: #fffbeb;
@@ -84,18 +88,28 @@ body {
   --c-surface-warning-solid: #ffc107;
 
   /* Border roles. */
-  --c-border: #e5e7eb;
-  --c-border-muted: #4b5563;
-  --c-border-strong: #1f2937;
+  --c-border: #d8d6e8;
+  --c-border-muted: #706d89;
+  --c-border-strong: #1e1b3a;
   --c-border-danger: #fecaca;
-  --c-border-danger-strong: #dc2626;
-  --c-border-success: #22c55e;
-  --c-border-warning: #ffc107;
+  --c-border-danger-strong: #b91c1c;
+  --c-border-success: #218449;
+  --c-border-warning: #b45309;
   --c-border-warning-subtle: #fde68a;
-  --c-border-warning-cancelled: #eab308;
+  --c-border-warning-cancelled: #b45309;
+
+  /* Mermaid uses the diagram surface for pie labels. Light fills vary in brightness and blue-yellow hue. */
+  --c-chart-series-1: #4f46e5;
+  --c-chart-series-2: #791943;
+  --c-chart-series-3: #427512;
+  --c-chart-series-4: #a35500;
+  --c-chart-series-5: #116b70;
+  --c-chart-series-6: #37230d;
+  --c-chart-series-7: #06305b;
+  --c-chart-series-8: #71388a;
 
   /* Calculated contrast for colored select-option chips. */
-  --c-chip-text-dark: #111;
+  --c-chip-text-dark: #000;
   --c-chip-text-light: #fff;
 
   /* Overlay layers: modal, drawer, and lower-priority responsive scrims. */
@@ -106,9 +120,9 @@ body {
   --c-on-brand-text-muted: rgb(255 255 255 / 92%);
   --c-on-brand-text-subtle: rgb(255 255 255 / 50%);
   --c-on-brand-surface-subtle: rgb(255 255 255 / 10%);
-  --c-on-brand-control: rgb(255 255 255 / 15%);
-  --c-on-brand-control-strong: rgb(255 255 255 / 20%);
-  --c-on-brand-control-hover: rgb(255 255 255 / 25%);
+  --c-on-brand-control: rgb(255 255 255 / 8%);
+  --c-on-brand-control-strong: rgb(255 255 255 / 12%);
+  --c-on-brand-control-hover: rgb(255 255 255 / 14%);
   --c-on-brand-border: rgb(255 255 255 / 30%);
   --c-on-brand-border-strong: rgb(255 255 255 / 50%);
   --c-on-brand-border-hover: rgb(255 255 255 / 60%);
@@ -142,6 +156,77 @@ body {
 
   /* Motion scale. */
   --transition-fast: 0.15s ease;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --c-action-primary: #a5b4fc;
+  --c-action-primary-hover: #c7d2fe;
+  --c-border-accent: #a5b4fc;
+  --c-border-focus: #fbbf24;
+  --c-control-accent: #a5b4fc;
+  --c-divider: #3c3b60;
+  --c-text-accent: #c7d2fe;
+  --c-text-on-accent: #14132a;
+  --c-surface-toolbar: #383479;
+  --c-text: #eceaf8;
+  --c-text-muted: #c4c2de;
+  --c-text-code: #ffa8c1;
+  --c-text-danger: #ffabab;
+  --c-text-success: #9be0b2;
+  --c-text-warning: #ffce80;
+  --c-text-warning-strong: #ffe0a6;
+  --c-surface: #191831;
+  --c-surface-subtle: #22213f;
+  --c-surface-sunken: #14132a;
+  --c-surface-hover: rgb(236 234 248 / 10%);
+  --c-surface-badge-neutral: #333154;
+  --c-surface-control: #292849;
+  --c-surface-control-disabled: #22213f;
+  --c-surface-control-hover: #333154;
+  --c-surface-code: #22213f;
+  --c-surface-panel: #22213f;
+  --c-surface-page: #14132a;
+  --c-surface-table-header: #292849;
+  --c-surface-selected: #37346c;
+  --c-over-image-control-surface: rgb(25 24 49 / 94%);
+  --c-surface-info: #262650;
+  --c-surface-accent: #2c2a58;
+  --c-surface-accent-solid: #a5b4fc;
+  --c-surface-danger: #39222f;
+  --c-surface-danger-strong: #522838;
+  --c-surface-danger-subtle: rgb(255 171 171 / 12%);
+  --c-surface-success: #192e29;
+  --c-surface-success-strong: #224033;
+  --c-surface-warning: #342938;
+  --c-surface-warning-strong: #443240;
+  --c-surface-warning-subtle: #292435;
+  --c-surface-warning-cancelled: #373136;
+  --c-border: #403e64;
+  --c-border-muted: #908db3;
+  --c-border-strong: #c4c2de;
+  --c-border-danger: #744452;
+  --c-border-danger-strong: #fa8c9a;
+  --c-border-success: #70c997;
+  --c-border-warning: #fbbf24;
+  --c-border-warning-subtle: #684d36;
+  --c-border-warning-cancelled: #f0c474;
+  --c-chart-series-1: #a5b4fc;
+  --c-chart-series-2: #f89eb8;
+  --c-chart-series-3: #91d8a8;
+  --c-chart-series-4: #f6b777;
+  --c-chart-series-5: #7cd2d4;
+  --c-chart-series-6: #dbb29a;
+  --c-chart-series-7: #94cbf6;
+  --c-chart-series-8: #d5a8e8;
+  --c-on-brand-control: rgb(255 255 255 / 15%);
+  --c-on-brand-control-strong: rgb(255 255 255 / 20%);
+  --c-on-brand-control-hover: rgb(255 255 255 / 25%);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 /* Global Icon Styling */

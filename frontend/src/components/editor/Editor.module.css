@@ -73,7 +73,7 @@
 }
 
 .formatButton.isActive {
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   background: var(--c-surface-accent-solid);
 }
 
@@ -669,7 +669,7 @@
   cursor: pointer;
   content: "";
   background: var(--c-surface);
-  border: 2px solid var(--c-border);
+  border: 2px solid var(--c-border-muted);
   border-radius: 3px;
   transition: all 0.15s ease;
 }
@@ -682,7 +682,7 @@
   font-size: 12px;
   font-weight: bold;
   line-height: 12px;
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   text-align: center;
   content: "✓";
   background: var(--c-surface-accent-solid);
@@ -751,13 +751,6 @@
 .prosemirrorEditor :global(.mermaid-diagram) {
   max-width: 100%;
   overflow-x: auto;
-}
-
-.prosemirrorEditor :global(.mermaid-diagram) svg {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
 }
 
 .prosemirrorEditor :global(.block-row[data-type="code"]) {

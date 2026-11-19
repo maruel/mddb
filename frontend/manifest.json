@@ -4,8 +4,8 @@
   "description": "A markdown-based document and table application",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a1a",
-  "theme_color": "#1a1a1a",
+  "background_color": "#f8f8fc",
+  "theme_color": "#4338ca",
   "icons": [
     {
       "src": "/favicon.png",
@@ -21,6 +21,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon.svg",

@@ -62,7 +62,7 @@
   padding: var(--s-1) var(--s-3);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;

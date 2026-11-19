@@ -1,0 +1,25 @@
+/* Maps Pele's public color hooks for both editor and preview diagrams. */
+.diagram {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+
+  --pele-bg: var(--c-surface);
+  --pele-fg: var(--c-text);
+  --pele-muted: var(--c-text-muted);
+  --pele-line: var(--c-border-strong);
+  --pele-surface: var(--c-surface-subtle);
+  --pele-surface-alt: var(--c-surface-selected);
+  --pele-border: var(--c-border-muted);
+  --pele-accent: var(--c-text-accent);
+  --pele-critical: var(--c-text-danger);
+  --pele-series-1: var(--c-chart-series-1);
+  --pele-series-2: var(--c-chart-series-2);
+  --pele-series-3: var(--c-chart-series-3);
+  --pele-series-4: var(--c-chart-series-4);
+  --pele-series-5: var(--c-chart-series-5);
+  --pele-series-6: var(--c-chart-series-6);
+  --pele-series-7: var(--c-chart-series-7);
+  --pele-series-8: var(--c-chart-series-8);
+}

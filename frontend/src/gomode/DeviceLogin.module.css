@@ -10,7 +10,7 @@
 
   --device-login-color: var(--c-text);
   --device-login-background: var(--c-surface);
-  --device-login-button-color: var(--c-text-inverse);
+  --device-login-button-color: var(--c-text-on-accent);
   --device-login-button-background: var(--c-action-primary);
   --device-login-input-color: var(--c-text);
   --device-login-input-background: var(--c-surface);

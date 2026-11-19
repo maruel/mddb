@@ -1,5 +1,6 @@
 // User profile settings panel for personal preferences, linked accounts, and revocable sessions.
 
+import { accountTheme } from "../../theme";
 import { createSignal, createEffect, onMount, Show, For } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
@@ -22,7 +23,7 @@ export default function ProfileSettings() {
   const { user, api, refreshUser } = useAuth();
   const captureScope = useAuthScope();
 
-  const [theme, setTheme] = createSignal("light");
+  const [theme, setTheme] = createSignal("system");
   const [language, setLanguage] = createSignal("en");
 
   const [loading, setLoading] = createSignal(false);
@@ -67,8 +68,7 @@ export default function ProfileSettings() {
 
   createEffect(() => {
     const u = user();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
-    setTheme(u?.settings?.theme || "light");
+    setTheme(accountTheme(u));
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
     setLanguage(u?.settings?.language || "en");
   });
@@ -182,8 +182,8 @@ export default function ProfileSettings() {
               <h3>{t("settings.personalSettings")}</h3>
               <form onSubmit={savePersonalSettings} class={styles.settingsForm}>
                 <div class={styles.formItem}>
-                  <label>{t("settings.theme")}</label>
-                  <select value={theme()} onChange={(e) => setTheme(e.target.value)}>
+                  <label for="profile-theme">{t("settings.theme")}</label>
+                  <select id="profile-theme" value={theme()} onChange={(e) => setTheme(e.target.value)}>
                     <option value="light">{t("settings.themeLight")}</option>
                     <option value="dark">{t("settings.themeDark")}</option>
                     <option value="system">{t("settings.themeSystem")}</option>

@@ -27,7 +27,7 @@
   min-height: 2.75rem;
   padding: var(--s-2) var(--s-4);
   font: inherit;
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;

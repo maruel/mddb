@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Capture mddb's documentation scenes as lossless WebP files in e2e/screenshots/docs.
+"""Capture paired light and dark documentation scenes as lossless WebP files.
 
-e2e/docs-screenshots.spec.ts owns the scenes; each takeScreenshot name becomes
-<name>.webp. The scenes render twice against fresh e2e servers, must have
-identical decoded pixels, then replace the published files. Fonts and the
+e2e/docs-screenshots.spec.ts owns the scenes. Each scene yields <name>-light.webp
+and <name>-dark.webp with matching dimensions. Both schemes render twice on
+fresh e2e servers and must match pixel for pixel between runs. Fonts and the
 browser build change pixels, so publish from the development container. Run
 through `make screenshots-update`, which rebuilds the embedded frontend first.
 Captures stay in test-results/docs-screenshots.
@@ -65,12 +65,27 @@ def pixels(path: pathlib.Path) -> tuple[int, int, bytes]:
     return stream["width"], stream["height"], raw
 
 
-def compare(actual: dict[str, pathlib.Path], expected: dict[str, pathlib.Path], label: str) -> None:
-    if actual.keys() != expected.keys():
-        raise RuntimeError(f"{label}: scenes differ: {sorted(actual)} versus {sorted(expected)}")
-    changed = [name for name in sorted(actual) if pixels(actual[name]) != pixels(expected[name])]
+def verify(first: dict[str, pathlib.Path], second: dict[str, pathlib.Path]) -> None:
+    """Verify matching dimensions across schemes and identical pixels across runs."""
+    if first.keys() != second.keys():
+        raise RuntimeError(f"Scene names differ between runs: {sorted(first)} versus {sorted(second)}")
+    light = {name.removesuffix("-light") for name in first if name.endswith("-light")}
+    dark = {name.removesuffix("-dark") for name in first if name.endswith("-dark")}
+    if light != dark or len(first) != 2 * len(light):
+        raise RuntimeError(f"Every scene needs a light and dark capture: {sorted(first)}")
+    changed: list[str] = []
+    for name in sorted(light):
+        light_name, dark_name = f"{name}-light", f"{name}-dark"
+        light_image, dark_image = pixels(first[light_name]), pixels(first[dark_name])
+        if light_image[:2] != dark_image[:2]:
+            raise RuntimeError(f"{name}: light and dark dimensions differ")
+        if light_image == dark_image:
+            raise RuntimeError(f"{name}: light and dark pixels are identical")
+        for scheme_name, image in ((light_name, light_image), (dark_name, dark_image)):
+            if image != pixels(second[scheme_name]):
+                changed.append(scheme_name)
     if changed:
-        raise RuntimeError(f"{label}: pixels differ in {', '.join(changed)}")
+        raise RuntimeError(f"Pixels differ between runs in {', '.join(changed)}")
 
 
 def encode(source: pathlib.Path, destination: pathlib.Path) -> None:
@@ -91,7 +106,7 @@ def main() -> int:
             return 1
     try:
         first = render(WORK / "first")
-        compare(first, render(WORK / "second"), "Two renders")
+        verify(first, render(WORK / "second"))
         encoded = WORK / "webp"
         shutil.rmtree(encoded, ignore_errors=True)
         encoded.mkdir()

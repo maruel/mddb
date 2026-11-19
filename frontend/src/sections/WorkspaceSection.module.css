@@ -23,7 +23,7 @@
   min-height: 36px;
   padding: var(--s-1) var(--s-4);
   color: var(--c-text-inverse);
-  background: var(--c-surface-accent-solid);
+  background: var(--c-surface-toolbar);
 }
 
 .headerLeft {
@@ -52,7 +52,7 @@
 .connectionIndicator {
   width: 0.5rem;
   height: 0.5rem;
-  background: var(--c-surface-success-solid);
+  background: var(--c-status-connected);
   border-radius: 50%;
 }
 

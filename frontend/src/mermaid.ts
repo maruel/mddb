@@ -2,6 +2,7 @@
 
 import DOMPurify from "dompurify";
 import type * as peleApi from "pele/lazy";
+import styles from "./Mermaid.module.css";
 
 type Pele = typeof peleApi;
 
@@ -72,6 +73,7 @@ export function insertMermaidSvg(diagramEl: HTMLElement, svg: string): void {
   diagramEl.innerHTML = svg;
   const root = diagramEl.querySelector("svg");
   if (!root) return;
+  root.classList.add(styles.diagram);
   // Cached drawings can appear several times in one document. Pele uses IDs for
   // accessible titles/descriptions; give each inserted instance its own names.
   const prefix = `mermaid_svg_${nextDiagramId++}`;

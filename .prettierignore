@@ -20,3 +20,6 @@ test-results
 
 # CSS export declarations belong to the generator.
 **/*.module.css.d.ts
+
+# Machine-local Claude settings.
+/.claude/settings.local.json

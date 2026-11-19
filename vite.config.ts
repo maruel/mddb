@@ -2,9 +2,10 @@
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import solidSVG from "vite-solid-svg";
-import { VitePWA } from "vite-plugin-pwa";
+import { VitePWA, type ManifestOptions } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
 import { resolve } from "path";
+import manifest from "./frontend/manifest.json" with { type: "json" };
 
 export default defineConfig({
   root: "frontend",
@@ -25,33 +26,9 @@ export default defineConfig({
       filename: "sw.ts",
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "apple-touch-icon.png", "icon.svg"],
-      manifest: {
-        name: "mddb - Markdown Document & Table",
-        short_name: "mddb",
-        description: "A markdown-based document and table application",
-        theme_color: "#1a1a1a",
-        background_color: "#ffffff",
-        display: "standalone",
-        start_url: "/",
-        icons: [
-          {
-            src: "icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      // Installed apps use the original manifest URL.
+      manifestFilename: "manifest.json",
+      manifest: manifest as ManifestOptions,
       injectManifest: {
         // index.html is intentionally excluded: the document names the hashed
         // bundle, so precaching it would serve the previous build until the

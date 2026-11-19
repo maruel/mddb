@@ -36,6 +36,7 @@ for (const width of [390, 1280]) {
   for (const kind of ["prose", "code", "mermaid"]) {
     test(`Native caret survives focus reconciliation in ${kind} at ${width}px`, async ({ page, request }) => {
       await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ colorScheme: "light" });
       const { token } = await registerUser(request, "caret");
       const client = createClient(request, token);
       await gotoWithSession(page, token);
@@ -100,6 +101,7 @@ for (const width of [390, 1280]) {
     expect(rendererRequests).toEqual([]);
     const ws = client.ws(workspaceId);
     const flowchart = "flowchart LR\naccTitle: Pipeline\naccDescr: Build and test\nBuild --> Test";
+    const pieSource = "pie\n" + Array.from({ length: 8 }, (_, i) => `"Slice ${i + 1}" : 1`).join("\n");
     const sources = [
       flowchart,
       flowchart,
@@ -108,6 +110,7 @@ for (const width of [390, 1280]) {
       "stateDiagram-v2\n[*] --> Ready\nReady --> [*]",
       "architecture-beta\nservice api(server)[API]\nservice db(database)[Database]\napi:R -- L:db",
       'flowchart LR\nA["<img src=x onerror=alert(1)>"] --> B\nclick A "https://example.com/"',
+      pieSource,
       "invalid diagram syntax %%%",
     ];
     const content = sources.map((source) => `\`\`\`mermaid\n${source}\n\`\`\``).join("\n\n");
@@ -115,7 +118,7 @@ for (const width of [390, 1280]) {
     const plain = await ws.createPage("0", { title: "Source", content: content.replace(/```mermaid/g, "```text") });
     const baselineStart = Date.now();
     await page.goto(`/w/@${wsID}/@${plain.id}`);
-    await expect(page.getByTestId("wysiwyg-editor").locator("pre code")).toHaveCount(8);
+    await expect(page.getByTestId("wysiwyg-editor").locator("pre code")).toHaveCount(sources.length);
     const sourceLoadMs = Date.now() - baselineStart;
     expect(rendererRequests).toEqual([]);
     const node = await ws.createPage("0", { title: "Diagrams", content });
@@ -123,12 +126,12 @@ for (const width of [390, 1280]) {
     // Navigate directly so this also exercises cold renderer loading.
     await page.goto(`/w/@${wsID}/@${node.id}`);
     const editor = page.getByTestId("wysiwyg-editor");
-    await expect(editor.locator(".mermaid-diagram > svg")).toHaveCount(7);
+    await expect(editor.locator(".mermaid-diagram > svg")).toHaveCount(sources.length - 1);
     await testInfo.attach("diagram-load", {
       body: JSON.stringify({ width, sourceLoadMs, diagramLoadMs: Date.now() - start }),
       contentType: "application/json",
     });
-    await expect(editor.locator("pre code")).toHaveCount(8);
+    await expect(editor.locator("pre code")).toHaveCount(sources.length);
     expect((await editor.locator(".mermaid-diagram > svg").first().boundingBox())!.width).toBeGreaterThan(150);
     expect(rendererRequests.length).toBeGreaterThan(0);
     expect(
@@ -136,6 +139,43 @@ for (const width of [390, 1280]) {
     ).toBe(0);
     const ids = await editor.locator("svg title").evaluateAll((titles) => titles.map((title) => title.id));
     expect(new Set(ids).size).toBe(ids.length);
+
+    const diagram = editor.locator(".mermaid-diagram > svg").first();
+    const diagramText = diagram.locator(".pele-label").first();
+    const lightFill = await diagramText.evaluate((label) => getComputedStyle(label).fill);
+    const pie = editor.locator("svg.pele-pie");
+    const pieContrast = () =>
+      pie.evaluate((svg) => {
+        const label = svg.querySelector(".pele-slice-labels text");
+        if (!label) throw new Error("The pie chart has no slice labels");
+        const luminance = (element: Element) => {
+          const channels = getComputedStyle(element)
+            .fill.match(/\d+(?:\.\d+)?/g)
+            ?.map(Number);
+          if (!channels || channels.length !== 3) throw new Error("Expected an RGB fill");
+          return channels.reduce((sum, value, index) => {
+            const channel = value / 255;
+            const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            return sum + (index === 0 ? 0.2126 : index === 1 ? 0.7152 : 0.0722) * linear;
+          }, 0);
+        };
+        const text = luminance(label);
+        return Array.from(svg.querySelectorAll(".pele-slice"), (slice) => {
+          const fill = luminance(slice);
+          return (Math.max(text, fill) + 0.05) / (Math.min(text, fill) + 0.05);
+        });
+      });
+    const lightPie = await pieContrast();
+    expect(lightPie).toHaveLength(8);
+    expect(Math.min(...lightPie)).toBeGreaterThanOrEqual(4.5);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(diagramText).not.toHaveCSS("fill", lightFill);
+    await page.screenshot({ path: testInfo.outputPath(`mermaid-dark-${width}.png`) });
+    const darkPie = await pieContrast();
+    expect(Math.min(...darkPie)).toBeGreaterThanOrEqual(4.5);
+    await pie.screenshot({ path: testInfo.outputPath(`pie-dark-${width}.png`) });
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(diagramText).toHaveCSS("fill", lightFill);
 
     const editableSource = editor.locator("pre code").first();
     await editableSource.click();
@@ -181,7 +221,7 @@ for (const width of [390, 1280]) {
     await page.getByTestId(`sidebar-node-${node.id}`).click({ button: "right" });
     await page.getByTestId("context-menu-history").click();
     const preview = page.getByRole("region", { name: "Markdown preview" });
-    await expect(preview.locator("[data-mermaid-diagram] > svg")).toHaveCount(7);
+    await expect(preview.locator("[data-mermaid-diagram] > svg")).toHaveCount(sources.length - 1);
     expect((await preview.locator("[data-mermaid-diagram] > svg").first().boundingBox())!.width).toBeGreaterThan(150);
     const disclosure = preview.locator("details").first();
     await expect(disclosure).not.toHaveAttribute("open");

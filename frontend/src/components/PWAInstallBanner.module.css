@@ -11,7 +11,7 @@
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
   color: var(--c-text-inverse);
-  background: var(--c-surface-accent-solid);
+  background: var(--c-surface-toolbar);
   animation: slide-up 0.2s ease-out;
 }
 

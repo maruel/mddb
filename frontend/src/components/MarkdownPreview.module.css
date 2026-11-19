@@ -139,13 +139,6 @@
   overflow-x: auto;
 }
 
-.preview [data-mermaid-diagram] svg {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-}
-
 .preview summary {
   cursor: pointer;
 }

@@ -6,7 +6,14 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 BUILD_MARKER = ROOT_DIR / "backend" / "frontend" / "dist" / "index.html.br"
-SOURCES = ("frontend/index.html", "frontend/public", "frontend/src", "sdk/mddb/ts", "vite.config.ts")
+SOURCES = (
+    "frontend/index.html",
+    "frontend/manifest.json",
+    "frontend/public",
+    "frontend/src",
+    "sdk/mddb/ts",
+    "vite.config.ts",
+)
 
 
 def bundled(path: Path) -> bool:

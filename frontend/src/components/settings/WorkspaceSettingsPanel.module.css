@@ -101,7 +101,7 @@
 .saveButton {
   padding: var(--s-3);
   font-weight: 500;
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;
@@ -148,7 +148,7 @@
 
 .smallButton {
   padding: var(--s-3);
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;
@@ -290,7 +290,7 @@
 }
 
 .activeSetupTab {
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   background: var(--c-surface-accent-solid);
   border-color: var(--c-border-accent);
 }

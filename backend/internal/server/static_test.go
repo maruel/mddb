@@ -37,7 +37,7 @@ func TestSetCacheHeaders(t *testing.T) {
 		{name: "document", path: "/index.html", want: "no-cache"},
 		{name: "hashed asset", path: "/assets/app-abc123.js", want: "public, max-age=31536000, immutable"},
 		{name: "service worker", path: "/sw.js", want: "no-cache, no-store, must-revalidate"},
-		{name: "web manifest", path: "/manifest.webmanifest", want: "public, max-age=3600"},
+		{name: "web manifest", path: "/manifest.json", want: "public, max-age=3600"},
 		{name: "icon", path: "/icon.svg", want: "public, max-age=3600"},
 	} {
 		t.Run(test.name, func(t *testing.T) {

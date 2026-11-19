@@ -1,4 +1,4 @@
-// Documentation scenes that scripts/docs_screenshots.py publishes as lossless WebP baselines.
+// Paired light and dark documentation scenes captured from the same rendered app state.
 
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext, Page } from "@playwright/test";
@@ -104,7 +104,7 @@ async function openDemoWorkspace(page: Page, request: APIRequestContext): Promis
     name: "Alex Morgan",
   });
   const client = createClient(request, auth.token);
-  await client.updateUserSettings({ settings: { theme: "light", language: "en" } });
+  await client.updateUserSettings({ settings: { theme: "system", language: "en" } });
   await page.clock.setFixedTime(NOW);
   // Model an already dismissed installation offer; it has its own foreground journey.
   await page.addInitScript(() => localStorage.setItem("mddb_pwa_dismissed", "2026-03-01T00:00:00.000Z"));
@@ -164,6 +164,16 @@ async function settle(page: Page) {
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
+// Switch the browser preference on the same page so both captures share the viewport and fixture.
+async function capturePair(page: Page, name: string, takeScreenshot: (name: string) => Promise<void>) {
+  const root = page.locator("html");
+  await expect(root).toHaveCSS("color-scheme", "light");
+  await takeScreenshot(`${name}-light`);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(root).toHaveCSS("color-scheme", "dark");
+  await takeScreenshot(`${name}-dark`);
+}
+
 test.screenshot("document page in the editor", async ({ page, request, takeScreenshot }) => {
   const demo = await openDemoWorkspace(page, request);
   await page.goto(nodeUrl(demo.workspaceId, undefined, demo.launchPlanId));
@@ -171,7 +181,7 @@ test.screenshot("document page in the editor", async ({ page, request, takeScree
   await expect(editor.getByText("Update the help center")).toBeVisible();
   await expect(editor.getByRole("link", { name: "Roadmap", exact: true })).toBeVisible();
   await settleWorkspace(page);
-  await takeScreenshot("document-editor");
+  await capturePair(page, "document-editor", takeScreenshot);
 });
 
 test.screenshot("roadmap table view", async ({ page, request, takeScreenshot }) => {
@@ -179,7 +189,7 @@ test.screenshot("roadmap table view", async ({ page, request, takeScreenshot }) 
   await page.goto(`${nodeUrl(demo.workspaceId, undefined, demo.roadmapId)}?view=${demo.tableViewId}`);
   await expect(page.locator("table").getByText("Shared templates")).toBeVisible();
   await settleWorkspace(page);
-  await takeScreenshot("table-view");
+  await capturePair(page, "table-view", takeScreenshot);
 });
 
 test.screenshot("roadmap board view", async ({ page, request, takeScreenshot }) => {
@@ -187,7 +197,7 @@ test.screenshot("roadmap board view", async ({ page, request, takeScreenshot }) 
   await page.goto(`${nodeUrl(demo.workspaceId, undefined, demo.roadmapId)}?view=${demo.boardViewId}`);
   await expect(page.getByTestId("board-column")).toHaveCount(3);
   await settleWorkspace(page);
-  await takeScreenshot("board-view");
+  await capturePair(page, "board-view", takeScreenshot);
 });
 
 test.screenshot("workspace Git sync settings", async ({ page, request, takeScreenshot }) => {
@@ -197,7 +207,7 @@ test.screenshot("workspace Git sync settings", async ({ page, request, takeScree
   await gitTab.click();
   await expect(gitTab).toHaveClass(/active/i);
   await settle(page);
-  await takeScreenshot("settings-git-sync");
+  await capturePair(page, "settings-git-sync", takeScreenshot);
 });
 
 test.screenshot("voice settings over a document", async ({ page, request, baseURL, takeScreenshot }) => {
@@ -224,5 +234,5 @@ test.screenshot("voice settings over a document", async ({ page, request, baseUR
     page.getByRole("radiogroup", { name: "Model", exact: true }).locator('input[value="live"]'),
   ).toBeChecked();
   await settleWorkspace(page);
-  await takeScreenshot("voice-settings");
+  await capturePair(page, "voice-settings", takeScreenshot);
 });

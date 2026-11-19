@@ -36,8 +36,15 @@
 .formGroup input {
   width: 100%;
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-muted);
   border-radius: var(--radius-md);
+}
+
+.formGroup input:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: 2px;
 }
 
 .authForm button[type="submit"] {
@@ -45,7 +52,7 @@
   padding: var(--s-3);
   margin-top: var(--s-3);
   font-size: 0.9rem;
-  color: var(--c-text-inverse);
+  color: var(--c-text-on-accent);
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;

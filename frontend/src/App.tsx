@@ -1,6 +1,6 @@
 // Main application component with router setup.
 
-import { Show, Switch, Match, Suspense, type ParentComponent } from "solid-js";
+import { Show, Switch, Match, Suspense, createRenderEffect, onCleanup, type ParentComponent } from "solid-js";
 import { Router, Route, Navigate, A, useParams } from "@solidjs/router";
 import styles from "./App.module.css";
 import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
@@ -17,6 +17,7 @@ import Privacy from "./components/Privacy";
 import Terms from "./components/Terms";
 import Onboarding from "./sections/Onboarding";
 import { stripSlug, workspaceUrl } from "./utils/urls";
+import { accountTheme } from "./theme";
 
 // Route components are imported directly rather than through lazy(). The router renders a
 // route it is navigating to before it commits the location and again afterwards, so a route
@@ -150,6 +151,30 @@ const WorkspaceSectionWithAuth: ParentComponent = (props) => {
 
 // App routes wrapped in router
 function AppRoutes() {
+  const { user } = useAuth();
+  const root = document.documentElement;
+  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+  const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const applyTheme = (theme: "light" | "dark") => {
+    // The document retains its last scheme if a fatal route error replaces this subtree.
+    root.dataset.theme = theme;
+    if (themeColor) {
+      themeColor.content = getComputedStyle(root).getPropertyValue("--c-surface-toolbar").trim();
+      themeColor.removeAttribute("media");
+    }
+  };
+  createRenderEffect(() => {
+    const preference = accountTheme(user());
+    if (preference !== "system") {
+      applyTheme(preference);
+      return;
+    }
+    const applySystem = () => applyTheme(systemTheme.matches ? "dark" : "light");
+    applySystem();
+    systemTheme.addEventListener("change", applySystem);
+    onCleanup(() => systemTheme.removeEventListener("change", applySystem));
+  });
+
   return (
     <Router
       explicitLinks
