@@ -10,7 +10,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.9.1
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gomodedev/gomode v0.3.1-0.20261117163420-1d9ef781b340
+	github.com/gomodedev/gomode v0.4.0
 	github.com/invopop/jsonschema v0.14.0
 	github.com/klauspost/compress v1.20.3
 	github.com/lmittmann/tint v1.2.1
@@ -166,7 +166,7 @@ require (
 	github.com/manuelarte/funcorder v0.6.0 // indirect
 	github.com/maratori/testableexamples v1.0.1 // indirect
 	github.com/maratori/testpackage v1.1.2 // indirect
-	github.com/maruel/genai v0.11.3 // indirect
+	github.com/maruel/genai v0.11.4 // indirect
 	github.com/maruel/genaipy v0.2.0 // indirect
 	github.com/maruel/httpjson v0.5.3 // indirect
 	github.com/maruel/roundtrippers v0.5.1 // indirect
