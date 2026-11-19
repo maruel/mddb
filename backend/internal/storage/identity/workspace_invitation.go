@@ -8,102 +8,57 @@ import (
 	"iter"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
-// WorkspaceInvitation represents an invitation for a user to join a workspace.
-type WorkspaceInvitation struct {
-	ID          ksid.ID       `json:"id" jsonschema:"description=Unique invitation identifier"`
-	WorkspaceID ksid.ID       `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
-	Email       string        `json:"email" jsonschema:"description=Email address of the invitee"`
-	Role        WorkspaceRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
-	Token       string        `json:"token" jsonschema:"description=Secret token for invitation verification"`
-	InvitedBy   ksid.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt   storage.Time  `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
-	Created     storage.Time  `json:"created" jsonschema:"description=Invitation creation timestamp"`
-}
-
-// Clone returns a copy of the WorkspaceInvitation.
-func (i *WorkspaceInvitation) Clone() *WorkspaceInvitation {
-	c := *i
-	return &c
-}
-
-// GetID returns the WorkspaceInvitation's ID.
-func (i *WorkspaceInvitation) GetID() ksid.ID {
-	return i.ID
-}
-
-// Validate checks that the WorkspaceInvitation is valid.
-func (i *WorkspaceInvitation) Validate() error {
-	if i.ID.IsZero() {
-		return errIDRequired
-	}
-	if i.WorkspaceID.IsZero() {
-		return errWSIDEmpty
-	}
-	if i.Email == "" {
-		return errEmailEmpty
-	}
-	if !i.Role.IsValid() {
-		return errInvalidWSRole
-	}
-	if i.Token == "" {
-		return errTokenRequired
-	}
-	return nil
-}
-
-// IsExpired returns true if the invitation has expired.
-func (i *WorkspaceInvitation) IsExpired() bool {
-	return storage.Now().After(i.ExpiresAt)
-}
-
 // WorkspaceInvitationService handles workspace invitations.
 type WorkspaceInvitationService struct {
-	table   *jsonldb.Table[*WorkspaceInvitation]
-	byToken *jsonldb.UniqueIndex[string, *WorkspaceInvitation]
-	byWSID  *jsonldb.Index[ksid.ID, *WorkspaceInvitation]
+	table   *jsonldb.Table[*identityv1.WorkspaceInvitation]
+	byToken *jsonldb.UniqueIndex[string, *identityv1.WorkspaceInvitation]
+	byWSID  *jsonldb.Index[ksid.ID, *identityv1.WorkspaceInvitation]
 }
 
 // NewWorkspaceInvitationService creates a new workspace invitation service.
 func NewWorkspaceInvitationService(tablePath string) (*WorkspaceInvitationService, error) {
-	table, err := jsonldb.NewTable[*WorkspaceInvitation](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.WorkspaceInvitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byToken := jsonldb.NewUniqueIndex(table, func(i *WorkspaceInvitation) string { return i.Token })
-	byWSID := jsonldb.NewIndex(table, func(i *WorkspaceInvitation) ksid.ID { return i.WorkspaceID })
+	byToken := jsonldb.NewUniqueIndex(table, func(i *identityv1.WorkspaceInvitation) string { return i.Token })
+	byWSID := jsonldb.NewIndex(table, func(i *identityv1.WorkspaceInvitation) ksid.ID { return i.WorkspaceID })
 	return &WorkspaceInvitationService{table: table, byToken: byToken, byWSID: byWSID}, nil
 }
 
 // Create creates a new workspace invitation.
-func (s *WorkspaceInvitationService) Create(email string, wsID ksid.ID, role WorkspaceRole, invitedBy ksid.ID) (*WorkspaceInvitation, error) {
+func (s *WorkspaceInvitationService) Create(email string, wsID ksid.ID, role identityv1.WorkspaceRole, invitedBy ksid.ID) (*identityv1.WorkspaceInvitation, error) {
 	if email == "" {
-		return nil, errEmailEmpty
+		return nil, identityv1.ErrEmailEmpty
 	}
 	if wsID.IsZero() {
-		return nil, errWSIDEmpty
+		return nil, identityv1.ErrWSIDEmpty
 	}
 	if !role.IsValid() {
-		return nil, errInvalidWSRole
+		return nil, identityv1.ErrInvalidWSRole
 	}
 	token, err := utils.GenerateToken(32)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
-	invitation := &WorkspaceInvitation{
+	invitation := &identityv1.WorkspaceInvitation{
 		ID:          ksid.NewID(),
 		WorkspaceID: wsID,
 		Email:       email,
 		Role:        role,
 		Token:       token,
 		InvitedBy:   invitedBy,
-		ExpiresAt:   storage.ToTime(time.Now().Add(7 * 24 * time.Hour)), // 7 days
-		Created:     storage.Now(),
+		ExpiresAt:   storagev1.ToTime(time.Now().Add(7 * 24 * time.Hour)), // 7 days
+		Created:     storagev1.Now(),
 	}
 	if err := s.table.Append(invitation); err != nil {
 		return nil, err
@@ -112,7 +67,7 @@ func (s *WorkspaceInvitationService) Create(email string, wsID ksid.ID, role Wor
 }
 
 // GetByToken retrieves an invitation by its token. O(1) via index.
-func (s *WorkspaceInvitationService) GetByToken(token string) (*WorkspaceInvitation, error) {
+func (s *WorkspaceInvitationService) GetByToken(token string) (*identityv1.WorkspaceInvitation, error) {
 	inv := s.byToken.Get(token)
 	if inv == nil {
 		return nil, errWSInvitationNotFound
@@ -135,7 +90,7 @@ func (s *WorkspaceInvitationService) Delete(id ksid.ID) error {
 }
 
 // IterByWorkspace iterates over all invitations for a workspace. O(1) via index.
-func (s *WorkspaceInvitationService) IterByWorkspace(wsID ksid.ID) iter.Seq[*WorkspaceInvitation] {
+func (s *WorkspaceInvitationService) IterByWorkspace(wsID ksid.ID) iter.Seq[*identityv1.WorkspaceInvitation] {
 	return s.byWSID.Iter(wsID)
 }
 

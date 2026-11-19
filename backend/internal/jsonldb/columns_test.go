@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	jsonldbv1 "github.com/maruel/mddb/backend/internal/jsonldb/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
@@ -17,36 +19,36 @@ func TestSchemaHeader(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			tests := []struct {
 				name   string
-				header schemaHeader
+				header jsonldbv1.SchemaHeader
 			}{
 				{
 					"minimal valid header",
-					schemaHeader{Version: "1.0", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "1.0", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"version 1.1",
-					schemaHeader{Version: "1.1", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "1.1", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"version 1.99",
-					schemaHeader{Version: "1.99", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "1.99", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"header with columns",
-					schemaHeader{
+					jsonldbv1.SchemaHeader{
 						Version: "1.0",
-						Columns: []column{
-							{Name: "id", Type: columnTypeNumber},
-							{Name: "name", Type: columnTypeText},
+						Columns: []jsonldbv1.Column{
+							{Name: "id", Type: jsonldbv1.ColumnTypeNumber},
+							{Name: "name", Type: jsonldbv1.ColumnTypeText},
 						},
 					},
 				},
 				{
 					"header with description",
-					schemaHeader{
+					jsonldbv1.SchemaHeader{
 						Version: "1.0",
-						Columns: []column{
-							{Name: "id", Type: columnTypeNumber, Required: true, Description: "Primary key"},
+						Columns: []jsonldbv1.Column{
+							{Name: "id", Type: jsonldbv1.ColumnTypeNumber, Required: true, Description: "Primary key"},
 						},
 					},
 				},
@@ -64,41 +66,41 @@ func TestSchemaHeader(t *testing.T) {
 		t.Run("errors", func(t *testing.T) {
 			tests := []struct {
 				name   string
-				header schemaHeader
+				header jsonldbv1.SchemaHeader
 			}{
 				{
 					"empty version",
-					schemaHeader{Version: "", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"unsupported version 2.0",
-					schemaHeader{Version: "2.0", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "2.0", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"unsupported version 0.9",
-					schemaHeader{Version: "0.9", Columns: []column{}},
+					jsonldbv1.SchemaHeader{Version: "0.9", Columns: []jsonldbv1.Column{}},
 				},
 				{
 					"column with empty name",
-					schemaHeader{
+					jsonldbv1.SchemaHeader{
 						Version: "1.0",
-						Columns: []column{{Name: "", Type: columnTypeText}},
+						Columns: []jsonldbv1.Column{{Name: "", Type: jsonldbv1.ColumnTypeText}},
 					},
 				},
 				{
 					"column with empty type",
-					schemaHeader{
+					jsonldbv1.SchemaHeader{
 						Version: "1.0",
-						Columns: []column{{Name: "id", Type: ""}},
+						Columns: []jsonldbv1.Column{{Name: "id", Type: ""}},
 					},
 				},
 				{
 					"multiple columns one invalid",
-					schemaHeader{
+					jsonldbv1.SchemaHeader{
 						Version: "1.0",
-						Columns: []column{
-							{Name: "id", Type: columnTypeNumber},
-							{Name: "", Type: columnTypeText}, // invalid
+						Columns: []jsonldbv1.Column{
+							{Name: "id", Type: jsonldbv1.ColumnTypeNumber},
+							{Name: "", Type: jsonldbv1.ColumnTypeText}, // invalid
 						},
 					},
 				},
@@ -281,46 +283,46 @@ func TestGoTypeToColumnType(t *testing.T) {
 		tests := []struct {
 			name string
 			typ  reflect.Type
-			want columnType
+			want jsonldbv1.ColumnType
 		}{
 			// Basic types
-			{"string", reflect.TypeFor[string](), columnTypeText},
-			{"bool", reflect.TypeFor[bool](), columnTypeBool},
-			{"int", reflect.TypeFor[int](), columnTypeNumber},
-			{"int8", reflect.TypeFor[int8](), columnTypeNumber},
-			{"int16", reflect.TypeFor[int16](), columnTypeNumber},
-			{"int32", reflect.TypeFor[int32](), columnTypeNumber},
-			{"int64", reflect.TypeFor[int64](), columnTypeNumber},
-			{"uint", reflect.TypeFor[uint](), columnTypeNumber},
-			{"uint8", reflect.TypeFor[uint8](), columnTypeNumber},
-			{"uint16", reflect.TypeFor[uint16](), columnTypeNumber},
-			{"uint32", reflect.TypeFor[uint32](), columnTypeNumber},
-			{"uint64", reflect.TypeFor[uint64](), columnTypeNumber},
-			{"float32", reflect.TypeFor[float32](), columnTypeNumber},
-			{"float64", reflect.TypeFor[float64](), columnTypeNumber},
+			{"string", reflect.TypeFor[string](), jsonldbv1.ColumnTypeText},
+			{"bool", reflect.TypeFor[bool](), jsonldbv1.ColumnTypeBool},
+			{"int", reflect.TypeFor[int](), jsonldbv1.ColumnTypeNumber},
+			{"int8", reflect.TypeFor[int8](), jsonldbv1.ColumnTypeNumber},
+			{"int16", reflect.TypeFor[int16](), jsonldbv1.ColumnTypeNumber},
+			{"int32", reflect.TypeFor[int32](), jsonldbv1.ColumnTypeNumber},
+			{"int64", reflect.TypeFor[int64](), jsonldbv1.ColumnTypeNumber},
+			{"uint", reflect.TypeFor[uint](), jsonldbv1.ColumnTypeNumber},
+			{"uint8", reflect.TypeFor[uint8](), jsonldbv1.ColumnTypeNumber},
+			{"uint16", reflect.TypeFor[uint16](), jsonldbv1.ColumnTypeNumber},
+			{"uint32", reflect.TypeFor[uint32](), jsonldbv1.ColumnTypeNumber},
+			{"uint64", reflect.TypeFor[uint64](), jsonldbv1.ColumnTypeNumber},
+			{"float32", reflect.TypeFor[float32](), jsonldbv1.ColumnTypeNumber},
+			{"float64", reflect.TypeFor[float64](), jsonldbv1.ColumnTypeNumber},
 
 			// Special types
-			{"time.Time", reflect.TypeFor[time.Time](), columnTypeDate},
-			{"[]byte", reflect.TypeFor[[]byte](), columnTypeBlob},
+			{"time.Time", reflect.TypeFor[time.Time](), jsonldbv1.ColumnTypeDate},
+			{"[]byte", reflect.TypeFor[[]byte](), jsonldbv1.ColumnTypeBlob},
 
 			// Complex types -> JSONB
-			{"struct", reflect.TypeFor[struct{}](), columnTypeJSONB},
-			{"slice", reflect.TypeFor[[]string](), columnTypeJSONB},
-			{"array", reflect.TypeFor[[5]int](), columnTypeJSONB},
-			{"map", reflect.TypeFor[map[string]int](), columnTypeJSONB},
-			{"complex64", reflect.TypeFor[complex64](), columnTypeJSONB},
-			{"complex128", reflect.TypeFor[complex128](), columnTypeJSONB},
+			{"struct", reflect.TypeFor[struct{}](), jsonldbv1.ColumnTypeJSONB},
+			{"slice", reflect.TypeFor[[]string](), jsonldbv1.ColumnTypeJSONB},
+			{"array", reflect.TypeFor[[5]int](), jsonldbv1.ColumnTypeJSONB},
+			{"map", reflect.TypeFor[map[string]int](), jsonldbv1.ColumnTypeJSONB},
+			{"complex64", reflect.TypeFor[complex64](), jsonldbv1.ColumnTypeJSONB},
+			{"complex128", reflect.TypeFor[complex128](), jsonldbv1.ColumnTypeJSONB},
 
 			// Pointer types (should dereference)
-			{"*string", reflect.TypeFor[*string](), columnTypeText},
-			{"*int", reflect.TypeFor[*int](), columnTypeNumber},
-			{"*bool", reflect.TypeFor[*bool](), columnTypeBool},
-			{"*time.Time", reflect.TypeFor[*time.Time](), columnTypeDate},
+			{"*string", reflect.TypeFor[*string](), jsonldbv1.ColumnTypeText},
+			{"*int", reflect.TypeFor[*int](), jsonldbv1.ColumnTypeNumber},
+			{"*bool", reflect.TypeFor[*bool](), jsonldbv1.ColumnTypeBool},
+			{"*time.Time", reflect.TypeFor[*time.Time](), jsonldbv1.ColumnTypeDate},
 
 			// Unsupported types -> text fallback
-			{"chan", reflect.TypeFor[chan int](), columnTypeText},
-			{"func", reflect.TypeFor[func()](), columnTypeText},
-			{"interface", reflect.TypeFor[any](), columnTypeText},
+			{"chan", reflect.TypeFor[chan int](), jsonldbv1.ColumnTypeText},
+			{"func", reflect.TypeFor[func()](), jsonldbv1.ColumnTypeText},
+			{"interface", reflect.TypeFor[any](), jsonldbv1.ColumnTypeText},
 		}
 
 		for _, tt := range tests {

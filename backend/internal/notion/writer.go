@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 	"sync"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
+	notionv1 "github.com/maruel/mddb/backend/internal/notion/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -24,7 +28,7 @@ type Writer struct {
 	writeTx func(context.Context, func() error) error
 
 	mu     sync.Mutex
-	tables map[ksid.ID]*jsonldb.Table[*content.DataRecord]
+	tables map[ksid.ID]*jsonldb.Table[*contentv1.DataRecord]
 }
 
 // NewWriter creates an import writer. App hosts supply their workspace import
@@ -34,7 +38,7 @@ func NewWriter(outputDir, workspaceID string, writeTx func(context.Context, func
 		OutputDir:   outputDir,
 		WorkspaceID: workspaceID,
 		writeTx:     writeTx,
-		tables:      make(map[ksid.ID]*jsonldb.Table[*content.DataRecord]),
+		tables:      make(map[ksid.ID]*jsonldb.Table[*contentv1.DataRecord]),
 	}
 }
 
@@ -105,7 +109,7 @@ func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
 	}
 
 	path := filepath.Join(nodeDir, "metadata.json")
-	meta := TableMetadata{
+	meta := notionv1.TableMetadata{
 		Views: node.Views,
 	}
 
@@ -115,23 +119,6 @@ func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
 	}
 
 	return storage.WriteFile(path, data)
-}
-
-// TableMetadata is the structure stored in metadata.json.
-type TableMetadata struct {
-	Views []content.View `json:"views,omitempty"`
-}
-
-// NodeEntry is a manifest entry for a node (stored in nodes.jsonl).
-type NodeEntry struct {
-	ID       ksid.ID      `json:"id"`
-	ParentID ksid.ID      `json:"parent_id,omitempty"`
-	Title    string       `json:"title"`
-	Type     string       `json:"type"`
-	Icon     string       `json:"icon,omitempty"`
-	Cover    string       `json:"cover,omitempty"`
-	Created  storage.Time `json:"created"`
-	Modified storage.Time `json:"modified"`
 }
 
 // ClearNodesManifest removes the nodes.jsonl file to prepare for a fresh import.
@@ -160,7 +147,7 @@ func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
 		}
 	}()
 
-	entry := NodeEntry{
+	entry := notionv1.NodeEntry{
 		ID:       node.ID,
 		ParentID: node.ParentID,
 		Title:    node.Title,
@@ -200,7 +187,7 @@ func (w *Writer) ClearNodeData(nodeID ksid.ID) error {
 }
 
 // getTable returns the jsonldb.Table for a node, creating it if needed.
-func (w *Writer) getTable(nodeID ksid.ID) (*jsonldb.Table[*content.DataRecord], error) {
+func (w *Writer) getTable(nodeID ksid.ID) (*jsonldb.Table[*contentv1.DataRecord], error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -211,7 +198,7 @@ func (w *Writer) getTable(nodeID ksid.ID) (*jsonldb.Table[*content.DataRecord], 
 	nodeDir := w.nodePath(nodeID)
 	path := filepath.Join(nodeDir, "data.jsonl")
 
-	table, err := jsonldb.NewTable[*content.DataRecord](path)
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
@@ -222,7 +209,7 @@ func (w *Writer) getTable(nodeID ksid.ID) (*jsonldb.Table[*content.DataRecord], 
 
 // WriteRecords writes records to a table's data.jsonl file using jsonldb.Table.
 // Properties are stored in the table header for schema-aware deserialization.
-func (w *Writer) WriteRecords(nodeID ksid.ID, properties []content.Property, records []*content.DataRecord) error {
+func (w *Writer) WriteRecords(nodeID ksid.ID, properties []contentv1.Property, records []*contentv1.DataRecord) error {
 	table, err := w.getTable(nodeID)
 	if err != nil {
 		return err
@@ -249,7 +236,7 @@ func (w *Writer) WriteRecords(nodeID ksid.ID, properties []content.Property, rec
 }
 
 // AppendRecord appends a single record to a table's data.jsonl file.
-func (w *Writer) AppendRecord(nodeID ksid.ID, record *content.DataRecord) error {
+func (w *Writer) AppendRecord(nodeID ksid.ID, record *contentv1.DataRecord) error {
 	table, err := w.getTable(nodeID)
 	if err != nil {
 		return err
@@ -260,15 +247,6 @@ func (w *Writer) AppendRecord(nodeID ksid.ID, record *content.DataRecord) error 
 	}
 
 	return nil
-}
-
-// IDMapping stores the Notion ID to mddb ID mapping for incremental imports.
-// It lives in notion_id_mapping.json in the workspace directory. A rerun
-// reuses the mapped IDs, so references between nodes stay valid, and rewrites
-// nodes.jsonl and each table's data.jsonl.
-type IDMapping struct {
-	Version int                `json:"version"`
-	IDs     map[string]ksid.ID `json:"ids"` // Notion ID -> mddb ID
 }
 
 // idMappingPath returns the path to the ID mapping file.
@@ -288,9 +266,12 @@ func (w *Writer) LoadIDMapping() (map[string]ksid.ID, error) {
 		return nil, fmt.Errorf("failed to read ID mapping: %w", err)
 	}
 
-	var mapping IDMapping
+	var mapping notionv1.IDMapping
 	if err := json.Unmarshal(data, &mapping); err != nil {
 		return nil, fmt.Errorf("failed to parse ID mapping: %w", err)
+	}
+	if mapping.Version != notionv1.IDMappingVersion {
+		return nil, fmt.Errorf("unsupported ID mapping version %d", mapping.Version)
 	}
 
 	return mapping.IDs, nil
@@ -298,8 +279,8 @@ func (w *Writer) LoadIDMapping() (map[string]ksid.ID, error) {
 
 // SaveIDMapping saves the ID mapping to disk.
 func (w *Writer) SaveIDMapping(ids map[string]ksid.ID) error {
-	mapping := IDMapping{
-		Version: 1,
+	mapping := notionv1.IDMapping{
+		Version: notionv1.IDMappingVersion,
 		IDs:     ids,
 	}
 

@@ -6,108 +6,33 @@ import (
 	"errors"
 	"iter"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
-
-// OrganizationRole defines the role of a user within an organization.
-type OrganizationRole string
-
-// IsValid returns true if the role is a valid organization role.
-func (r OrganizationRole) IsValid() bool {
-	switch r {
-	case OrgRoleOwner, OrgRoleAdmin, OrgRoleMember:
-		return true
-	}
-	return false
-}
-
-// CanManageMembers returns true if the role can invite/remove members.
-func (r OrganizationRole) CanManageMembers() bool {
-	return r == OrgRoleOwner || r == OrgRoleAdmin
-}
-
-// CanManageWorkspaces returns true if the role can create/delete workspaces.
-func (r OrganizationRole) CanManageWorkspaces() bool {
-	return r == OrgRoleOwner || r == OrgRoleAdmin
-}
-
-// CanManageBilling returns true if the role can manage billing.
-func (r OrganizationRole) CanManageBilling() bool {
-	return r == OrgRoleOwner
-}
-
-// CanDeleteOrg returns true if the role can delete the organization.
-func (r OrganizationRole) CanDeleteOrg() bool {
-	return r == OrgRoleOwner
-}
-
-const (
-	// OrgRoleOwner has full control including billing.
-	OrgRoleOwner OrganizationRole = "org:owner"
-	// OrgRoleAdmin can manage workspaces and members.
-	OrgRoleAdmin OrganizationRole = "org:admin"
-	// OrgRoleMember can only access granted workspaces.
-	OrgRoleMember OrganizationRole = "org:member"
-)
-
-// OrganizationMembership represents a user's relationship with an organization.
-type OrganizationMembership struct {
-	ID             ksid.ID          `json:"id" jsonschema:"description=Unique membership identifier"`
-	UserID         ksid.ID          `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
-	OrganizationID ksid.ID          `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
-	Role           OrganizationRole `json:"role" jsonschema:"description=User role within the organization (owner/admin/member)"`
-	Created        storage.Time     `json:"created" jsonschema:"description=Membership creation timestamp"`
-}
-
-// Clone returns a copy of the OrganizationMembership.
-func (m *OrganizationMembership) Clone() *OrganizationMembership {
-	c := *m
-	return &c
-}
-
-// GetID returns the OrganizationMembership's ID.
-func (m *OrganizationMembership) GetID() ksid.ID {
-	return m.ID
-}
-
-// Validate checks that the OrganizationMembership is valid.
-func (m *OrganizationMembership) Validate() error {
-	if m.ID.IsZero() {
-		return errIDRequired
-	}
-	if m.UserID.IsZero() {
-		return errUserIDEmpty
-	}
-	if m.OrganizationID.IsZero() {
-		return errOrgIDEmpty
-	}
-	if !m.Role.IsValid() {
-		return errInvalidOrgRole
-	}
-	return nil
-}
 
 // OrganizationMembershipService handles user-organization relationships.
 type OrganizationMembershipService struct {
-	table       *jsonldb.Table[*OrganizationMembership]
-	byUserID    *jsonldb.Index[ksid.ID, *OrganizationMembership]
-	byOrgID     *jsonldb.Index[ksid.ID, *OrganizationMembership]
-	byUserOrg   *jsonldb.UniqueIndex[userOrgKey, *OrganizationMembership]
+	table       *jsonldb.Table[*identityv1.OrganizationMembership]
+	byUserID    *jsonldb.Index[ksid.ID, *identityv1.OrganizationMembership]
+	byOrgID     *jsonldb.Index[ksid.ID, *identityv1.OrganizationMembership]
+	byUserOrg   *jsonldb.UniqueIndex[userOrgKey, *identityv1.OrganizationMembership]
 	userService *UserService
 	orgService  *OrganizationService
 }
 
 // NewOrganizationMembershipService creates a new organization membership service.
 func NewOrganizationMembershipService(tablePath string, userService *UserService, orgService *OrganizationService) (*OrganizationMembershipService, error) {
-	table, err := jsonldb.NewTable[*OrganizationMembership](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.OrganizationMembership](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(m *OrganizationMembership) ksid.ID { return m.UserID })
-	byOrgID := jsonldb.NewIndex(table, func(m *OrganizationMembership) ksid.ID { return m.OrganizationID })
-	byUserOrg := jsonldb.NewUniqueIndex(table, func(m *OrganizationMembership) userOrgKey {
+	byUserID := jsonldb.NewIndex(table, func(m *identityv1.OrganizationMembership) ksid.ID { return m.UserID })
+	byOrgID := jsonldb.NewIndex(table, func(m *identityv1.OrganizationMembership) ksid.ID { return m.OrganizationID })
+	byUserOrg := jsonldb.NewUniqueIndex(table, func(m *identityv1.OrganizationMembership) userOrgKey {
 		return userOrgKey{UserID: m.UserID, OrgID: m.OrganizationID}
 	})
 	return &OrganizationMembershipService{
@@ -121,20 +46,20 @@ func NewOrganizationMembershipService(tablePath string, userService *UserService
 }
 
 // findByUserAndOrg finds a membership by user and organization IDs. O(1) via index.
-func (s *OrganizationMembershipService) findByUserAndOrg(userID, orgID ksid.ID) *OrganizationMembership {
+func (s *OrganizationMembershipService) findByUserAndOrg(userID, orgID ksid.ID) *identityv1.OrganizationMembership {
 	return s.byUserOrg.Get(userOrgKey{UserID: userID, OrgID: orgID})
 }
 
 // Create adds a user to an organization.
-func (s *OrganizationMembershipService) Create(userID, orgID ksid.ID, role OrganizationRole) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Create(userID, orgID ksid.ID, role identityv1.OrganizationRole) (*identityv1.OrganizationMembership, error) {
 	if userID.IsZero() {
-		return nil, errUserIDEmpty
+		return nil, identityv1.ErrUserIDEmpty
 	}
 	if orgID.IsZero() {
-		return nil, errOrgIDEmpty
+		return nil, identityv1.ErrOrgIDEmpty
 	}
 	if !role.IsValid() {
-		return nil, errInvalidOrgRole
+		return nil, identityv1.ErrInvalidOrgRole
 	}
 	if s.findByUserAndOrg(userID, orgID) != nil {
 		return nil, errOrgMembershipExists
@@ -158,12 +83,12 @@ func (s *OrganizationMembershipService) Create(userID, orgID ksid.ID, role Organ
 		return nil, errQuotaExceeded
 	}
 
-	membership := &OrganizationMembership{
+	membership := &identityv1.OrganizationMembership{
 		ID:             ksid.NewID(),
 		UserID:         userID,
 		OrganizationID: orgID,
 		Role:           role,
-		Created:        storage.Now(),
+		Created:        storagev1.Now(),
 	}
 	if err := s.table.Append(membership); err != nil {
 		return nil, err
@@ -172,7 +97,7 @@ func (s *OrganizationMembershipService) Create(userID, orgID ksid.ID, role Organ
 }
 
 // Get retrieves a specific user-org relationship.
-func (s *OrganizationMembershipService) Get(userID, orgID ksid.ID) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Get(userID, orgID ksid.ID) (*identityv1.OrganizationMembership, error) {
 	m := s.findByUserAndOrg(userID, orgID)
 	if m == nil {
 		return nil, errOrgMembershipNotFound
@@ -181,7 +106,7 @@ func (s *OrganizationMembershipService) Get(userID, orgID ksid.ID) (*Organizatio
 }
 
 // GetByID retrieves a membership by its ID.
-func (s *OrganizationMembershipService) GetByID(id ksid.ID) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) GetByID(id ksid.ID) (*identityv1.OrganizationMembership, error) {
 	m := s.table.Get(id)
 	if m == nil {
 		return nil, errOrgMembershipNotFound
@@ -190,12 +115,12 @@ func (s *OrganizationMembershipService) GetByID(id ksid.ID) (*OrganizationMember
 }
 
 // IterByUser iterates over all org memberships for a user. O(1) via index.
-func (s *OrganizationMembershipService) IterByUser(userID ksid.ID) iter.Seq[*OrganizationMembership] {
+func (s *OrganizationMembershipService) IterByUser(userID ksid.ID) iter.Seq[*identityv1.OrganizationMembership] {
 	return s.byUserID.Iter(userID)
 }
 
 // IterByOrg iterates over all memberships in an organization. O(1) via index.
-func (s *OrganizationMembershipService) IterByOrg(orgID ksid.ID) iter.Seq[*OrganizationMembership] {
+func (s *OrganizationMembershipService) IterByOrg(orgID ksid.ID) iter.Seq[*identityv1.OrganizationMembership] {
 	return s.byOrgID.Iter(orgID)
 }
 
@@ -218,7 +143,7 @@ func (s *OrganizationMembershipService) CountOrgMemberships(orgID ksid.ID) int {
 }
 
 // Modify atomically modifies a membership.
-func (s *OrganizationMembershipService) Modify(id ksid.ID, fn func(m *OrganizationMembership) error) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Modify(id ksid.ID, fn func(m *identityv1.OrganizationMembership) error) (*identityv1.OrganizationMembership, error) {
 	if id.IsZero() {
 		return nil, errOrgMembershipNotFound
 	}
@@ -242,7 +167,7 @@ func (s *OrganizationMembershipService) Delete(id ksid.ID) error {
 // HasOwner checks if an organization has at least one owner.
 func (s *OrganizationMembershipService) HasOwner(orgID ksid.ID) bool {
 	for m := range s.byOrgID.Iter(orgID) {
-		if m.Role == OrgRoleOwner {
+		if m.Role == identityv1.OrgRoleOwner {
 			return true
 		}
 	}
@@ -254,5 +179,4 @@ func (s *OrganizationMembershipService) HasOwner(orgID ksid.ID) bool {
 var (
 	errOrgMembershipExists   = errors.New("organization membership already exists")
 	errOrgMembershipNotFound = errors.New("organization membership not found")
-	errInvalidOrgRole        = errors.New("invalid organization role")
 )

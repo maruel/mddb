@@ -14,12 +14,15 @@ import (
 	"sync"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	serverv1 "github.com/maruel/mddb/backend/internal/server/data/v1"
+
 	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 type deviceLoginHost struct {
@@ -87,7 +90,7 @@ func (h *deviceLoginHost) Audit(_ context.Context, event *devicelogin.AuditEvent
 	// Go Mode audits decisions and creation before exposing credentials.
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	data, err := json.Marshal(deviceLoginAuditRecord{
+	data, err := json.Marshal(serverv1.DeviceLoginAudit{
 		RequestID: event.RequestID, SessionID: event.SessionID, Kind: event.Kind,
 		Subject: id.String(), Approved: event.Approved, IP: event.IP,
 		UserAgent: event.UserAgent, RequestedAt: event.CreatedAt, DecidedAt: time.Now().UTC(),
@@ -106,24 +109,12 @@ func (h *deviceLoginHost) Audit(_ context.Context, event *devicelogin.AuditEvent
 	return errors.Join(err, f.Sync(), f.Close())
 }
 
-type deviceLoginAuditRecord struct {
-	RequestID   string                `json:"request_id"`
-	SessionID   string                `json:"session_id,omitempty"`
-	Kind        devicelogin.AuditKind `json:"kind"`
-	Subject     string                `json:"subject"`
-	Approved    bool                  `json:"approved"`
-	IP          string                `json:"ip"`
-	UserAgent   string                `json:"user_agent"`
-	RequestedAt time.Time             `json:"requested_at"`
-	DecidedAt   time.Time             `json:"decided_at"`
-}
-
 type deviceSession struct {
 	response *dto.AuthResponse
 	id       ksid.ID
 	services *handlers.Services
 	request  *http.Request
-	user     *identity.User
+	user     *identityv1.User
 	config   *handlers.Config
 }
 

@@ -11,9 +11,12 @@ import (
 	"sync"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/githubapp"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -180,7 +183,7 @@ func (s *Service) Pull(ctx context.Context, wsID ksid.ID) error {
 }
 
 // getAuthURL returns the remote URL with authentication injected.
-func (s *Service) getAuthURL(ctx context.Context, ws *identity.Workspace) (string, error) {
+func (s *Service) getAuthURL(ctx context.Context, ws *identityv1.Workspace) (string, error) {
 	remote := &ws.GitRemote
 
 	if remote.AuthType == "github_app" && s.githubApp != nil {
@@ -216,7 +219,7 @@ func (s *Service) release(wsID ksid.ID) {
 }
 
 func (s *Service) setSyncStatus(wsID ksid.ID, status, lastError string) {
-	if _, err := s.wsSvc.Modify(wsID, func(ws *identity.Workspace) error {
+	if _, err := s.wsSvc.Modify(wsID, func(ws *identityv1.Workspace) error {
 		ws.GitRemote.SyncStatus = status
 		ws.GitRemote.LastSyncError = lastError
 		return nil
@@ -226,10 +229,10 @@ func (s *Service) setSyncStatus(wsID ksid.ID, status, lastError string) {
 }
 
 func (s *Service) updateLastSync(wsID ksid.ID) {
-	if _, err := s.wsSvc.Modify(wsID, func(ws *identity.Workspace) error {
+	if _, err := s.wsSvc.Modify(wsID, func(ws *identityv1.Workspace) error {
 		ws.GitRemote.SyncStatus = "idle"
 		ws.GitRemote.LastSyncError = ""
-		ws.GitRemote.LastSync = storage.Now()
+		ws.GitRemote.LastSync = storagev1.Now()
 		return nil
 	}); err != nil {
 		slog.Error("Failed to update last sync", "wsID", wsID, "err", err)

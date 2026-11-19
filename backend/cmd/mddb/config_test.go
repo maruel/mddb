@@ -15,6 +15,10 @@ import (
 	"testing"
 	"time"
 
+	voicegatewayv1 "github.com/gomodedev/gomode/voicegateway/data/v1"
+
+	mddbv1 "github.com/maruel/mddb/backend/cmd/mddb/data/v1"
+
 	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/gomodedev/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
@@ -52,7 +56,7 @@ func TestContribConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s documents a key mddb rejects, or a malformed default: %v", contribPath, err)
 	}
-	if got.VoiceGateway.Mode != voiceGatewayDisabled {
+	if got.VoiceGateway.Mode != mddbv1.VoiceGatewayDisabled {
 		t.Fatal("shipped example enables voice")
 	}
 	want := defaultConfig()
@@ -164,9 +168,9 @@ log_level = "debug"
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := tomlConfig{
+		want := mddbv1.File{
 			AutoUpdate: "0 3 * * 6",
-			Server: tomlServer{
+			Server: mddbv1.Server{
 				HTTP:         ":9090",
 				DataDir:      "/srv/mddb",
 				BaseURL:      "https://mddb.example.com",
@@ -175,18 +179,18 @@ log_level = "debug"
 
 				TrustedProxies: []string{"127.0.0.1/32", "::1/128"},
 			},
-			OAuth: tomlOAuth{
-				Google:    tomlOAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"},
-				Microsoft: tomlOAuthProvider{ClientID: "microsoft-id", ClientSecret: "microsoft-secret"},
-				GitHub:    tomlOAuthProvider{ClientID: "github-id", ClientSecret: "github-secret"},
+			OAuth: mddbv1.OAuth{
+				Google:    mddbv1.OAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"},
+				Microsoft: mddbv1.OAuthProvider{ClientID: "microsoft-id", ClientSecret: "microsoft-secret"},
+				GitHub:    mddbv1.OAuthProvider{ClientID: "github-id", ClientSecret: "github-secret"},
 			},
-			GitHub: tomlGitHub{App: tomlGitHubApp{
+			GitHub: mddbv1.GitHub{App: mddbv1.GitHubApp{
 				ID:             42,
 				PrivateKeyFile: "github-app.pem",
 				WebhookSecret:  "webhook-secret",
 			}},
-			VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayEmbedded, TokenMode: server.VoiceTokenModeScoped, WebRTCConfig: voicegateway.WebRTCConfig{STUNServers: []string{}}},
-			Debug:        tomlDebug{LogLevel: "debug"},
+			VoiceGateway: mddbv1.VoiceGateway{Mode: mddbv1.VoiceGatewayEmbedded, TokenMode: string(server.VoiceTokenModeScoped), WebRTC: voicegatewayv1.WebRTC{STUNServers: []string{}}},
+			Debug:        mddbv1.Debug{LogLevel: "debug"},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %+v, want %+v", got, want)
@@ -298,7 +302,7 @@ func TestResolveConfig(t *testing.T) {
 		if got.ConfigDir != cfgDir || got.DataDir != "data" || got.HTTP != "localhost:8080" || got.BaseURL != "http://localhost" {
 			t.Errorf("got %+v", got)
 		}
-		if got.GeoIP.DB != "" || got.VoiceMode != voiceGatewayDisabled {
+		if got.GeoIP.DB != "" || got.VoiceMode != mddbv1.VoiceGatewayDisabled {
 			t.Errorf("expected geo_db and voice to be off: %+v", got)
 		}
 		if got.GitHubApp != (githubAppSettings{}) {
@@ -392,9 +396,9 @@ func TestResolveConfig(t *testing.T) {
 
 	t.Run("oauth credentials", func(t *testing.T) {
 		tc := defaultConfig()
-		tc.OAuth.Google = tomlOAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"}
-		tc.OAuth.Microsoft = tomlOAuthProvider{ClientID: "microsoft-id", ClientSecret: "microsoft-secret"}
-		tc.OAuth.GitHub = tomlOAuthProvider{ClientID: "github-id", ClientSecret: "github-secret"}
+		tc.OAuth.Google = mddbv1.OAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"}
+		tc.OAuth.Microsoft = mddbv1.OAuthProvider{ClientID: "microsoft-id", ClientSecret: "microsoft-secret"}
+		tc.OAuth.GitHub = mddbv1.OAuthProvider{ClientID: "github-id", ClientSecret: "github-secret"}
 		got, err := resolveConfig(&tc, cfgDir)
 		if err != nil {
 			t.Fatal(err)
@@ -412,17 +416,17 @@ func TestResolveConfig(t *testing.T) {
 	t.Run("incomplete oauth pair fails with the section path", func(t *testing.T) {
 		for _, tc := range []struct {
 			name    string
-			mutate  func(*tomlConfig)
+			mutate  func(*mddbv1.File)
 			wantErr string
 		}{
-			{"client id without secret", func(tc *tomlConfig) {
-				tc.OAuth.Google = tomlOAuthProvider{ClientID: "google-id"}
+			{"client id without secret", func(tc *mddbv1.File) {
+				tc.OAuth.Google = mddbv1.OAuthProvider{ClientID: "google-id"}
 			}, "oauth.google"},
-			{"secret without client id", func(tc *tomlConfig) {
-				tc.OAuth.Microsoft = tomlOAuthProvider{ClientSecret: "microsoft-secret"}
+			{"secret without client id", func(tc *mddbv1.File) {
+				tc.OAuth.Microsoft = mddbv1.OAuthProvider{ClientSecret: "microsoft-secret"}
 			}, "oauth.microsoft"},
-			{"github incomplete", func(tc *tomlConfig) {
-				tc.OAuth.GitHub = tomlOAuthProvider{ClientID: "github-id"}
+			{"github incomplete", func(tc *mddbv1.File) {
+				tc.OAuth.GitHub = mddbv1.OAuthProvider{ClientID: "github-id"}
 			}, "oauth.github"},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -455,7 +459,7 @@ func TestResolveConfig(t *testing.T) {
 		tc := defaultConfig()
 		tc.Server.DataDir = "./content"
 		tc.Server.GeoDB = "GeoLite2-Country.mmdb"
-		tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "github-app.pem", WebhookSecret: "secret"}
+		tc.GitHub.App = mddbv1.GitHubApp{ID: 42, PrivateKeyFile: "github-app.pem", WebhookSecret: "secret"}
 		got, err := resolveConfig(&tc, cfgDir)
 		if err != nil {
 			t.Fatal(err)
@@ -480,7 +484,7 @@ func TestResolveConfig(t *testing.T) {
 		tc := defaultConfig()
 		tc.Server.DataDir = "~/content"
 		tc.Server.GeoDB = "~/GeoLite2-Country.mmdb"
-		tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "~/github-app.pem"}
+		tc.GitHub.App = mddbv1.GitHubApp{ID: 42, PrivateKeyFile: "~/github-app.pem"}
 		got, err := resolveConfig(&tc, "~/custom-cfg")
 		if err != nil {
 			t.Fatal(err)
@@ -504,13 +508,13 @@ func TestResolveConfig(t *testing.T) {
 
 		for _, tc := range []struct {
 			name    string
-			mutate  func(*tomlConfig)
+			mutate  func(*mddbv1.File)
 			cfgDir  string
 			wantErr string
 		}{
 			{
 				name: "data_dir with tilde",
-				mutate: func(tc *tomlConfig) {
+				mutate: func(tc *mddbv1.File) {
 					tc.Server.DataDir = "~/data"
 				},
 				cfgDir:  cfgDir,
@@ -518,7 +522,7 @@ func TestResolveConfig(t *testing.T) {
 			},
 			{
 				name: "geo_db with tilde",
-				mutate: func(tc *tomlConfig) {
+				mutate: func(tc *mddbv1.File) {
 					tc.Server.GeoDB = "~/geo.mmdb"
 				},
 				cfgDir:  cfgDir,
@@ -526,15 +530,15 @@ func TestResolveConfig(t *testing.T) {
 			},
 			{
 				name: "github app private key with tilde",
-				mutate: func(tc *tomlConfig) {
-					tc.GitHub.App = tomlGitHubApp{ID: 42, PrivateKeyFile: "~/key.pem"}
+				mutate: func(tc *mddbv1.File) {
+					tc.GitHub.App = mddbv1.GitHubApp{ID: 42, PrivateKeyFile: "~/key.pem"}
 				},
 				cfgDir:  cfgDir,
 				wantErr: "github.app.private_key_file",
 			},
 			{
 				name:    "cfgDir with tilde",
-				mutate:  func(tc *tomlConfig) {},
+				mutate:  func(tc *mddbv1.File) {},
 				cfgDir:  "~/config",
 				wantErr: "config_dir",
 			},
@@ -556,12 +560,12 @@ func TestResolveConfig(t *testing.T) {
 	t.Run("github app needs both id and private key file", func(t *testing.T) {
 		for _, tc := range []struct {
 			name    string
-			app     tomlGitHubApp
+			app     mddbv1.GitHubApp
 			wantErr bool
 		}{
-			{"id without private key file", tomlGitHubApp{ID: 42}, true},
-			{"private key file without id", tomlGitHubApp{PrivateKeyFile: "github-app.pem"}, true},
-			{"disabled", tomlGitHubApp{}, false},
+			{"id without private key file", mddbv1.GitHubApp{ID: 42}, true},
+			{"private key file without id", mddbv1.GitHubApp{PrivateKeyFile: "github-app.pem"}, true},
+			{"disabled", mddbv1.GitHubApp{}, false},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				cfg := defaultConfig()
@@ -696,7 +700,7 @@ token_mode = "oauth"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.ExternalVoice == nil || cfg.VoiceMode != voiceGatewayExternal || cfg.ExternalVoice.InstanceID != "mddb-main" {
+		if cfg.ExternalVoice == nil || cfg.VoiceMode != mddbv1.VoiceGatewayExternal || cfg.ExternalVoice.InstanceID != "mddb-main" {
 			t.Fatalf("config: %+v", cfg)
 		}
 		first, err := os.ReadFile(filepath.Join(dir, "voice-oauth-key.pem")) //nolint:gosec // Test-owned temporary signing key.
@@ -738,7 +742,7 @@ token_mode = "oauth"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.VoiceMode != voiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceWebRTC.UDPPort != 3478 || !slices.Equal(cfg.VoiceWebRTC.STUNServers, []string{"stun:stun.example:3478"}) {
+		if cfg.VoiceMode != mddbv1.VoiceGatewayEmbedded || cfg.ExternalVoice != nil || cfg.VoiceWebRTC.UDPPort != 3478 || !slices.Equal(cfg.VoiceWebRTC.STUNServers, []string{"stun:stun.example:3478"}) {
 			t.Fatalf("voice settings: mode %q, WebRTC %+v", cfg.VoiceMode, cfg.VoiceWebRTC)
 		}
 		if len(cfg.VoiceConfig.Realtime) != 1 || cfg.VoiceConfig.Realtime[0].Model != "gemini-live-test" || len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
@@ -761,10 +765,10 @@ token_mode = "oauth"
 			t.Run(tc.name, func(t *testing.T) {
 				c := defaultConfig()
 				c.Server.BaseURL = tc.issuer
-				c.VoiceGateway.Mode = voiceGatewayExternal
+				c.VoiceGateway.Mode = mddbv1.VoiceGatewayExternal
 				c.VoiceGateway.URL = tc.url
 				c.VoiceGateway.InstanceID = tc.id
-				c.VoiceGateway.TokenMode = server.VoiceTokenMode(tc.mode)
+				c.VoiceGateway.TokenMode = tc.mode
 				c.VoiceGateway.SigningPrivateKeyPEM = tc.key
 				if _, err := resolveConfig(&c, t.TempDir()); err == nil {
 					t.Fatal("invalid config accepted")
@@ -783,7 +787,7 @@ token_mode = "oauth"
 					t.Fatal(err)
 				}
 				c := defaultConfig()
-				c.VoiceGateway.Mode = voiceGatewayEmbedded
+				c.VoiceGateway.Mode = mddbv1.VoiceGatewayEmbedded
 				if _, err := resolveConfig(&c, dir); err == nil {
 					t.Fatal("invalid config accepted")
 				}
@@ -793,7 +797,7 @@ token_mode = "oauth"
 	t.Run("embedded UDP port range", func(t *testing.T) {
 		for _, port := range []int{-1, 65536} {
 			c := defaultConfig()
-			c.VoiceGateway.Mode = voiceGatewayEmbedded
+			c.VoiceGateway.Mode = mddbv1.VoiceGatewayEmbedded
 			c.VoiceGateway.UDPPort = port
 			if _, err := resolveConfig(&c, t.TempDir()); err == nil {
 				t.Fatalf("invalid UDP port %d accepted", port)
@@ -817,7 +821,7 @@ token_mode = "oauth"
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil {
+		if cfg.VoiceMode != mddbv1.VoiceGatewayDisabled || cfg.ExternalVoice != nil {
 			t.Fatal("configured pipeline enabled disabled gateway")
 		}
 	})
@@ -831,7 +835,7 @@ func TestVoiceGatewayEnvironmentIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.VoiceMode != voiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
+	if cfg.VoiceMode != mddbv1.VoiceGatewayDisabled || cfg.ExternalVoice != nil || len(cfg.VoiceConfig.Realtime)+len(cfg.VoiceConfig.LLM)+len(cfg.VoiceConfig.Pipelines) != 0 {
 		t.Fatal("provider credentials enabled voice or supplied implicit pipelines")
 	}
 }

@@ -17,15 +17,6 @@ type PaginatedResponse[T any] struct {
 	HasMore    bool    `json:"has_more"`
 }
 
-// SearchResponse is the response from the search endpoint.
-type SearchResponse = PaginatedResponse[SearchResult]
-
-// QueryResponse is the response from database query endpoint.
-type QueryResponse = PaginatedResponse[Page]
-
-// BlocksResponse is the response from block children endpoint.
-type BlocksResponse = PaginatedResponse[Block]
-
 // SearchResult represents an item in search results.
 // Note: Notion API returns different structures for pages vs databases.
 // Use the Object field to determine which fields are populated.

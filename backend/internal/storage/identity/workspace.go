@@ -7,71 +7,18 @@ import (
 	"errors"
 	"iter"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
-
-// Workspace represents an isolated content container within an organization.
-// Each workspace has its own pages, tables, assets, and git remote.
-type Workspace struct {
-	ID             ksid.ID           `json:"id" jsonschema:"description=Unique workspace identifier"`
-	OrganizationID ksid.ID           `json:"organization_id" jsonschema:"description=Parent organization ID"`
-	Name           string            `json:"name" jsonschema:"description=Display name of the workspace"`
-	Quotas         WorkspaceQuotas   `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
-	Settings       WorkspaceSettings `json:"settings" jsonschema:"description=Workspace-wide configuration"`
-	GitRemote      GitRemote         `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
-	Created        storage.Time      `json:"created" jsonschema:"description=Workspace creation timestamp"`
-}
-
-// Clone returns a deep copy of the Workspace.
-func (w *Workspace) Clone() *Workspace {
-	c := *w
-	if w.Settings.AllowedDomains != nil {
-		c.Settings.AllowedDomains = make([]string, len(w.Settings.AllowedDomains))
-		copy(c.Settings.AllowedDomains, w.Settings.AllowedDomains)
-	}
-	return &c
-}
-
-// GetID returns the Workspace's ID.
-func (w *Workspace) GetID() ksid.ID {
-	return w.ID
-}
-
-// Validate checks that the Workspace is valid.
-// Quota fields of -1 mean "inherit from server/org layer".
-func (w *Workspace) Validate() error {
-	if w.ID.IsZero() {
-		return errIDRequired
-	}
-	if w.OrganizationID.IsZero() {
-		return errOrgIDEmpty
-	}
-	if w.Name == "" {
-		return errNameRequired
-	}
-	if err := w.Quotas.Validate(); err != nil {
-		return errInvalidWorkspaceQuota
-	}
-	return nil
-}
-
-// WorkspaceSettings represents workspace-wide settings.
-type WorkspaceSettings struct {
-	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Additional email domain restrictions (inherits org)"`
-	PublicAccess   bool     `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
-	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
-}
-
-// WorkspaceQuotas is a type alias for storage.ResourceQuotas.
-// Zero values mean "inherit from server/org layer".
-type WorkspaceQuotas = storage.ResourceQuotas
 
 // DefaultWorkspaceQuotas returns the default quotas for a new workspace.
 // All fields default to -1 (inherit from server/org layer).
-func DefaultWorkspaceQuotas() WorkspaceQuotas {
-	return WorkspaceQuotas{
+func DefaultWorkspaceQuotas() storagev1.ResourceQuotas {
+	return storagev1.ResourceQuotas{
 		MaxPages:              -1,
 		MaxStorageBytes:       -1,
 		MaxRecordsPerTable:    -1,
@@ -83,17 +30,17 @@ func DefaultWorkspaceQuotas() WorkspaceQuotas {
 
 // WorkspaceService handles workspace management.
 type WorkspaceService struct {
-	table *jsonldb.Table[*Workspace]
-	byOrg *jsonldb.Index[ksid.ID, *Workspace]
+	table *jsonldb.Table[*identityv1.Workspace]
+	byOrg *jsonldb.Index[ksid.ID, *identityv1.Workspace]
 }
 
 // NewWorkspaceService creates a new workspace service.
 func NewWorkspaceService(tablePath string) (*WorkspaceService, error) {
-	table, err := jsonldb.NewTable[*Workspace](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.Workspace](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byOrg := jsonldb.NewIndex(table, func(w *Workspace) ksid.ID { return w.OrganizationID })
+	byOrg := jsonldb.NewIndex(table, func(w *identityv1.Workspace) ksid.ID { return w.OrganizationID })
 	return &WorkspaceService{
 		table: table,
 		byOrg: byOrg,
@@ -101,20 +48,20 @@ func NewWorkspaceService(tablePath string) (*WorkspaceService, error) {
 }
 
 // Create creates a new workspace in an organization.
-func (s *WorkspaceService) Create(_ context.Context, orgID ksid.ID, name string) (*Workspace, error) {
+func (s *WorkspaceService) Create(_ context.Context, orgID ksid.ID, name string) (*identityv1.Workspace, error) {
 	if orgID.IsZero() {
-		return nil, errOrgIDEmpty
+		return nil, identityv1.ErrOrgIDEmpty
 	}
 	if name == "" {
 		return nil, errWorkspaceNameRequired
 	}
 
-	ws := &Workspace{
+	ws := &identityv1.Workspace{
 		ID:             ksid.NewID(),
 		OrganizationID: orgID,
 		Name:           name,
 		Quotas:         DefaultWorkspaceQuotas(),
-		Created:        storage.Now(),
+		Created:        storagev1.Now(),
 	}
 	if err := s.table.Append(ws); err != nil {
 		return nil, err
@@ -123,7 +70,7 @@ func (s *WorkspaceService) Create(_ context.Context, orgID ksid.ID, name string)
 }
 
 // Get retrieves a workspace by ID.
-func (s *WorkspaceService) Get(id ksid.ID) (*Workspace, error) {
+func (s *WorkspaceService) Get(id ksid.ID) (*identityv1.Workspace, error) {
 	ws := s.table.Get(id)
 	if ws == nil {
 		return nil, errWorkspaceNotFound
@@ -132,7 +79,7 @@ func (s *WorkspaceService) Get(id ksid.ID) (*Workspace, error) {
 }
 
 // Modify atomically modifies a workspace.
-func (s *WorkspaceService) Modify(id ksid.ID, fn func(ws *Workspace) error) (*Workspace, error) {
+func (s *WorkspaceService) Modify(id ksid.ID, fn func(ws *identityv1.Workspace) error) (*identityv1.Workspace, error) {
 	if id.IsZero() {
 		return nil, errWorkspaceNotFound
 	}
@@ -140,12 +87,12 @@ func (s *WorkspaceService) Modify(id ksid.ID, fn func(ws *Workspace) error) (*Wo
 }
 
 // IterByOrg iterates over workspaces in an organization. O(1) via index.
-func (s *WorkspaceService) IterByOrg(orgID ksid.ID) iter.Seq[*Workspace] {
+func (s *WorkspaceService) IterByOrg(orgID ksid.ID) iter.Seq[*identityv1.Workspace] {
 	return s.byOrg.Iter(orgID)
 }
 
 // Iter iterates over all workspaces with ID greater than startID.
-func (s *WorkspaceService) Iter(startID ksid.ID) iter.Seq[*Workspace] {
+func (s *WorkspaceService) Iter(startID ksid.ID) iter.Seq[*identityv1.Workspace] {
 	return s.table.Iter(startID)
 }
 
@@ -182,5 +129,4 @@ func (s *WorkspaceService) Delete(id ksid.ID) error {
 var (
 	errWorkspaceNameRequired = errors.New("workspace name is required")
 	errWorkspaceNotFound     = errors.New("workspace not found")
-	errInvalidWorkspaceQuota = errors.New("invalid workspace quota")
 )

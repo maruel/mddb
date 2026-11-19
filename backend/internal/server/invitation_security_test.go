@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -28,14 +30,14 @@ func TestInvitationEmailOwnership(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := e.orgMemService.Create(owner.User.ID, org.ID, identity.OrgRoleOwner); err != nil {
+			if _, err := e.orgMemService.Create(owner.User.ID, org.ID, identityv1.OrgRoleOwner); err != nil {
 				t.Fatal(err)
 			}
 			ws, err := e.wsService.Create(t.Context(), org.ID, "Workspace")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := e.wsMemService.Create(owner.User.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+			if _, err := e.wsMemService.Create(owner.User.ID, ws.ID, identityv1.WSRoleAdmin); err != nil {
 				t.Fatal(err)
 			}
 			notifications, err := identity.NewNotificationService(filepath.Join(t.TempDir(), "notifications.jsonl"))
@@ -91,14 +93,14 @@ func TestInvitationEmailOwnership(t *testing.T) {
 					}
 				})
 			}
-			if _, err := e.userService.Modify(owner.User.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+			if _, err := e.userService.Modify(owner.User.ID, func(u *identityv1.User) error { u.EmailVerified = true; return nil }); err != nil {
 				t.Fatal(err)
 			}
 			if got := e.doJSON(t, http.MethodPost, path, body, nil, owner.Token); got != http.StatusForbidden {
 				t.Fatalf("verified wrong recipient: %d", got)
 			}
 			// Independent email/provider proof is modeled at the user service boundary.
-			if _, err := e.userService.Modify(recipient.User.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+			if _, err := e.userService.Modify(recipient.User.ID, func(u *identityv1.User) error { u.EmailVerified = true; return nil }); err != nil {
 				t.Fatal(err)
 			}
 			var out map[string]any

@@ -12,11 +12,13 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -38,7 +40,7 @@ func TestValidateJWTAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &handlers.Config{ServerConfig: storage.ServerConfig{JWTSecret: testJWTSecret}}
+	cfg := &handlers.Config{ServerConfig: storagev1.ServerConfig{JWTSecret: testJWTSecret}}
 	request := func(token string) *http.Request {
 		r := httptest.NewRequestWithContext(t.Context(), "GET", "/", http.NoBody)
 		r.Header.Set("Authorization", "Bearer "+token)
@@ -77,14 +79,14 @@ func TestValidateJWTAndSession(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Backdate the persisted use beyond the recording resolution.
-		stale := storage.ToTime(time.Now().Add(-2 * time.Hour))
+		stale := storagev1.ToTime(time.Now().Add(-2 * time.Hour))
 		data, err := os.ReadFile(path) //nolint:gosec // G304: fixture path comes from t.TempDir
 		if err != nil {
 			t.Fatal(err)
 		}
 		lines := bytes.Split(data, []byte("\n"))
 		for i, line := range lines {
-			var s identity.Session
+			var s identityv1.Session
 			if json.Unmarshal(line, &s) != nil || s.ID != sid {
 				continue
 			}
@@ -173,7 +175,7 @@ func TestValidateJWTAndSession(t *testing.T) {
 					hash = utils.HashToken(token)
 				}
 				if name != "missing session" {
-					if _, err := sessions.CreateWithID(sid, uid, hash, "Browser", "", "", storage.ToTime(storedExp), 0); err != nil {
+					if _, err := sessions.CreateWithID(sid, uid, hash, "Browser", "", "", storagev1.ToTime(storedExp), 0); err != nil {
 						t.Fatal(err)
 					}
 				}

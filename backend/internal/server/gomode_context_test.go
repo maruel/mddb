@@ -14,15 +14,16 @@ import (
 	"sync"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/mcp"
 
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestVoiceContext(t *testing.T) {
@@ -33,7 +34,7 @@ func TestVoiceContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var login *identity.Session
+	var login *identityv1.Session
 	for value := range env.services.Session.GetActiveByUserID(user.ID) {
 		login = value
 		break
@@ -49,7 +50,7 @@ func TestVoiceContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg := &workspaceRegistry{svc: env.services, nodeH: &handlers.NodeHandler{Svc: env.services}, user: user, wsID: ws, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+	reg := &workspaceRegistry{svc: env.services, nodeH: &handlers.NodeHandler{Svc: env.services}, user: user, wsID: ws, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}
 	ctx := reqctx.WithSession(reqctx.WithSessionID(t.Context(), login.ID), login)
 	ctx = context.WithValue(ctx, voiceSessionKey{}, "conversation")
 	uri := reg.nodeURI(page.ID)

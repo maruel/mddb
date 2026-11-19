@@ -1,8 +1,10 @@
-// Defines view types for saved table configurations.
+// Persisted saved table views stored in metadata.json.
 
-package content
+package v1
 
-import "github.com/maruel/ksid"
+import (
+	"github.com/maruel/ksid"
+)
 
 // View represents a saved table view configuration.
 type View struct {
@@ -28,10 +30,10 @@ func (v *View) GetID() ksid.ID {
 // Validate checks that the View is valid.
 func (v *View) Validate() error {
 	if v.ID.IsZero() {
-		return errIDRequired
+		return ErrIDRequired
 	}
 	if v.Name == "" {
-		return errNameRequired
+		return ErrNameRequired
 	}
 	return nil
 }

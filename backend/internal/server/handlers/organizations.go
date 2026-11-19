@@ -8,10 +8,12 @@ import (
 	"log/slog"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // OrganizationHandler handles organization management requests.
@@ -21,7 +23,7 @@ type OrganizationHandler struct {
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID, _ *identityv1.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.Svc.Organization.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -32,8 +34,8 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings and quotas.
-func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ksid.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.Svc.Organization.Modify(orgID, func(org *identity.Organization) error {
+func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ksid.ID, _ *identityv1.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
+	org, err := h.Svc.Organization.Modify(orgID, func(org *identityv1.Organization) error {
 		if req.Settings != nil {
 			org.Settings = organizationSettingsToEntity(*req.Settings)
 		}
@@ -59,8 +61,8 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ks
 }
 
 // UpdateOrganization updates organization details (name).
-func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid.ID, _ *identity.User, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.Svc.Organization.Modify(orgID, func(org *identity.Organization) error {
+func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid.ID, _ *identityv1.User, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
+	org, err := h.Svc.Organization.Modify(orgID, func(org *identityv1.Organization) error {
 		org.Name = req.Name
 		return nil
 	})
@@ -73,7 +75,7 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid
 }
 
 // CreateWorkspace creates a new workspace within an organization.
-func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID, user *identityv1.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
@@ -123,7 +125,7 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	}
 
 	// Publish membership only after the workspace can be opened by the user.
-	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identityv1.WSRoleAdmin); err != nil {
 		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
@@ -142,7 +144,7 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 }
 
 // GetWorkspace retrieves workspace details.
-func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -157,8 +159,8 @@ func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID ksid.ID, _ *i
 }
 
 // UpdateWorkspace updates workspace details (name, quotas, and/or settings).
-func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
-	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identityv1.Workspace) error {
 		if req.Name != "" {
 			ws.Name = req.Name
 		}
@@ -192,6 +194,6 @@ func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _
 // workspaceParentLimits computes the effective resource quota upper bounds
 // imposed by the server and organization layers (ignoring the workspace layer).
 // This is the ceiling that a workspace's resource quotas cannot exceed.
-func (h *OrganizationHandler) workspaceParentLimits(org *identity.Organization) storage.ResourceQuotas {
+func (h *OrganizationHandler) workspaceParentLimits(org *identityv1.Organization) storagev1.ResourceQuotas {
 	return storage.EffectiveQuotas(h.Cfg.Quotas.ResourceQuotas, org.Quotas.ResourceQuotas, storage.AllInheritResourceQuotas())
 }

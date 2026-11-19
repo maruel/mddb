@@ -15,14 +15,15 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestTableRevisionPreventsStaleSchemaReplacement(t *testing.T) {
@@ -327,7 +328,7 @@ func TestWatchedResourceEffects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg := &workspaceRegistry{svc: env.services, user: user, wsID: wsID, role: identity.WSRoleAdmin, focus: newVoiceFocusState(), nodeH: &handlers.NodeHandler{Svc: env.services}}
+	reg := &workspaceRegistry{svc: env.services, user: user, wsID: wsID, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState(), nodeH: &handlers.NodeHandler{Svc: env.services}}
 
 	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
 	var parent, child dto.CreatePageResponse

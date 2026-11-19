@@ -8,11 +8,14 @@ import (
 	"errors"
 	"slices"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // NodeHandler handles hierarchical node requests.
@@ -22,7 +25,7 @@ type NodeHandler struct {
 }
 
 // GetNode retrieves a single node's metadata.
-func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
+func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -63,7 +66,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID ksid.ID, _ *identity.Use
 
 // ListNodeChildren returns the children of a node.
 // Use id=0 to list top-level nodes in the workspace.
-func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.ListNodeChildrenRequest) (*dto.ListNodeChildrenResponse, error) {
+func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.ListNodeChildrenRequest) (*dto.ListNodeChildrenResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -83,7 +86,7 @@ func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID ksid.ID, _ *ide
 
 // GetNodeTitles returns a map of node IDs to their titles.
 // The IDs are passed as a comma-separated query parameter.
-func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetNodeTitlesRequest) (*dto.GetNodeTitlesResponse, error) {
+func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetNodeTitlesRequest) (*dto.GetNodeTitlesResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -98,7 +101,7 @@ func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID ksid.ID, _ *identi
 }
 
 // MoveNode moves a node to a new parent.
-func (h *NodeHandler) MoveNode(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.MoveNodeRequest) (*dto.MoveNodeResponse, error) {
+func (h *NodeHandler) MoveNode(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.MoveNodeRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -109,11 +112,11 @@ func (h *NodeHandler) MoveNode(ctx context.Context, wsID ksid.ID, user *identity
 		return nil, dto.InternalWithError("Failed to move node", err)
 	}
 	h.Svc.PublishNodeMove(ctx, wsID, req.ID, move, user.ID)
-	return &dto.MoveNodeResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // DeleteNode deletes a node.
-func (h *NodeHandler) DeleteNode(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteNodeRequest) (*dto.DeleteNodeResponse, error) {
+func (h *NodeHandler) DeleteNode(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeleteNodeRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -124,11 +127,11 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.NotFound("node")
 	}
 	h.Svc.PublishNodeDeletion(ctx, wsID, deleted, user.ID)
-	return &dto.DeleteNodeResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // ListNodeVersions returns the version history of a node.
-func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.ListNodeVersionsRequest) (*dto.ListNodeVersionsResponse, error) {
+func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.ListNodeVersionsRequest) (*dto.ListNodeVersionsResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -141,7 +144,7 @@ func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID ksid.ID, _ *ide
 }
 
 // GetNodeVersion returns a specific version of a node's content.
-func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetNodeVersionRequest) (*dto.GetNodeVersionResponse, error) {
+func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetNodeVersionRequest) (*dto.GetNodeVersionResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -157,7 +160,7 @@ func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID ksid.ID, _ *ident
 }
 
 // ListNodeAssets returns a list of assets associated with a node.
-func (h *NodeHandler) ListNodeAssets(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.ListNodeAssetsRequest) (*dto.ListNodeAssetsResponse, error) {
+func (h *NodeHandler) ListNodeAssets(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.ListNodeAssetsRequest) (*dto.ListNodeAssetsResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -187,7 +190,7 @@ func (h *NodeHandler) assetsToSummaries(ctx context.Context, assets []*content.A
 }
 
 // DeleteNodeAsset deletes an asset from a node.
-func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteNodeAssetRequest) (*dto.DeleteNodeAssetResponse, error) {
+func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeleteNodeAssetRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -196,14 +199,14 @@ func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID ksid.ID, user *i
 	if err := ws.DeleteAsset(ctx, req.NodeID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
-	return &dto.DeleteNodeAssetResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // --- Page-specific handlers ---
 
 // CreatePage creates a new page under a parent node.
 // The parent ID is in req.ParentID; use 0 for root.
-func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
+func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.ParentID.IsZero() {
 		defer h.Svc.rootPageCreationLocks.lock(wsID)()
 	}
@@ -231,7 +234,7 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identi
 }
 
 // GetPage retrieves a page's content.
-func (h *NodeHandler) GetPage(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
+func (h *NodeHandler) GetPage(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -253,7 +256,7 @@ func (h *NodeHandler) GetPage(ctx context.Context, wsID ksid.ID, _ *identity.Use
 }
 
 // UpdatePage handles conditional HTTP page replacement.
-func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	node, err := h.ReplacePage(ctx, wsID, user, req)
 	if err != nil {
 		return nil, err
@@ -262,7 +265,7 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identi
 }
 
 // AppendPage handles conditional HTTP page append.
-func (h *NodeHandler) AppendPage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.AppendPageRequest) (*dto.UpdatePageResponse, error) {
+func (h *NodeHandler) AppendPage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.AppendPageRequest) (*dto.UpdatePageResponse, error) {
 	node, err := h.AppendToPage(ctx, wsID, user, req)
 	if err != nil {
 		return nil, err
@@ -271,7 +274,7 @@ func (h *NodeHandler) AppendPage(ctx context.Context, wsID ksid.ID, user *identi
 }
 
 // ReplacePage conditionally replaces content and publishes its transaction snapshot.
-func (h *NodeHandler) ReplacePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageRequest) (*content.Node, error) {
+func (h *NodeHandler) ReplacePage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdatePageRequest) (*content.Node, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -286,7 +289,7 @@ func (h *NodeHandler) ReplacePage(ctx context.Context, wsID ksid.ID, user *ident
 }
 
 // AppendToPage conditionally appends content and publishes its transaction snapshot.
-func (h *NodeHandler) AppendToPage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.AppendPageRequest) (*content.Node, error) {
+func (h *NodeHandler) AppendToPage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.AppendPageRequest) (*content.Node, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -315,7 +318,7 @@ func pageMutationError(err error) error {
 }
 
 // UpdatePageFrontmatter updates the icon and cover of a page.
-func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageFrontmatterRequest) (*dto.UpdatePageFrontmatterResponse, error) {
+func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdatePageFrontmatterRequest) (*dto.UpdatePageFrontmatterResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -331,7 +334,7 @@ func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, u
 
 // DeletePage removes the page content from a node.
 // The node directory is kept if table content exists.
-func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
+func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeletePageRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -346,14 +349,14 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identi
 	} else {
 		h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, remaining, user.ID)
 	}
-	return &dto.DeletePageResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // --- Table-specific handlers ---
 
 // CreateTable creates a new table under a parent node.
 // The parent ID is in req.ParentID; use 0 for root.
-func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableUnderParentResponse, error) {
+func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.CreateTableRequest) (*dto.CreateTableUnderParentResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -384,7 +387,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *ident
 }
 
 // GetTable retrieves a table's schema.
-func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableSchemaResponse, error) {
+func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetTableRequest) (*dto.GetTableSchemaResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -407,7 +410,7 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID ksid.ID, _ *identity.Us
 }
 
 // UpdateTable updates a table's schema.
-func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
+func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -425,7 +428,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 		}
 		node.Title = req.Title
 		node.Properties = propertiesToEntity(req.Properties)
-		node.Modified = storage.Now()
+		node.Modified = storagev1.Now()
 		return nil
 	})
 	if err != nil {
@@ -443,7 +446,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 
 // DeleteTable removes the table content from a node.
 // The node directory is kept if page content exists.
-func (h *NodeHandler) DeleteTable(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
+func (h *NodeHandler) DeleteTable(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeleteTableRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -458,13 +461,13 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID ksid.ID, user *ident
 	} else {
 		h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, remaining, user.ID)
 	}
-	return &dto.DeleteTableResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // --- Record handlers (moved from databases.go) ---
 
 // ListRecords returns all records in a table.
-func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
+func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -493,8 +496,8 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity
 		return nil, dto.NotFound("table")
 	}
 
-	var filters []content.Filter
-	var sorts []content.Sort
+	var filters []contentv1.Filter
+	var sorts []contentv1.Sort
 
 	// Apply View configuration
 	if !req.ViewID.IsZero() {
@@ -539,7 +542,7 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read records", err)
 	}
-	var records []*content.DataRecord
+	var records []*contentv1.DataRecord
 	for r := range it {
 		records = append(records, r)
 	}
@@ -577,7 +580,7 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID ksid.ID, _ *identity
 }
 
 // CreateRecord creates a new record in a table.
-func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
+func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -596,8 +599,8 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 	}
 
 	id := ksid.NewID()
-	now := storage.Now()
-	record := &content.DataRecord{
+	now := storagev1.Now()
+	record := &contentv1.DataRecord{
 		ID:       id,
 		Data:     coercedData,
 		Created:  now,
@@ -621,7 +624,7 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID ksid.ID, user *iden
 }
 
 // UpdateRecord updates an existing record in a table.
-func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
+func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -655,7 +658,7 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID ksid.ID, user *iden
 }
 
 // GetRecord retrieves a single record from a table.
-func (h *NodeHandler) GetRecord(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
+func (h *NodeHandler) GetRecord(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -683,7 +686,7 @@ func (h *NodeHandler) GetRecord(ctx context.Context, wsID ksid.ID, _ *identity.U
 }
 
 // DeleteRecord deletes a record from a table.
-func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
+func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeleteRecordRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -702,5 +705,5 @@ func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID ksid.ID, user *iden
 		return nil, dto.InternalWithError("Failed to delete record", err)
 	}
 	h.Svc.PublishRecordEvent(ctx, wsID, req.ID, req.RID, user.ID)
-	return &dto.DeleteRecordResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }

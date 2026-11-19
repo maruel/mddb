@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -13,11 +15,11 @@ import (
 func TestOrganizationMembership(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &OrganizationMembership{
+			valid := &identityv1.OrganizationMembership{
 				ID:             ksid.ID(1),
 				UserID:         ksid.ID(100),
 				OrganizationID: ksid.ID(200),
-				Role:           OrgRoleAdmin,
+				Role:           identityv1.OrgRoleAdmin,
 			}
 			if err := valid.Validate(); err != nil {
 				t.Errorf("Expected valid membership, got error: %v", err)
@@ -25,11 +27,11 @@ func TestOrganizationMembership(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &OrganizationMembership{
+			zeroID := &identityv1.OrganizationMembership{
 				ID:             ksid.ID(0),
 				UserID:         ksid.ID(100),
 				OrganizationID: ksid.ID(200),
-				Role:           OrgRoleAdmin,
+				Role:           identityv1.OrgRoleAdmin,
 			}
 			if err := zeroID.Validate(); err == nil {
 				t.Error("Expected error for zero ID")
@@ -37,11 +39,11 @@ func TestOrganizationMembership(t *testing.T) {
 		})
 
 		t.Run("zero UserID", func(t *testing.T) {
-			zeroUser := &OrganizationMembership{
+			zeroUser := &identityv1.OrganizationMembership{
 				ID:             ksid.ID(1),
 				UserID:         ksid.ID(0),
 				OrganizationID: ksid.ID(200),
-				Role:           OrgRoleAdmin,
+				Role:           identityv1.OrgRoleAdmin,
 			}
 			if err := zeroUser.Validate(); err == nil {
 				t.Error("Expected error for zero UserID")
@@ -49,11 +51,11 @@ func TestOrganizationMembership(t *testing.T) {
 		})
 
 		t.Run("zero OrganizationID", func(t *testing.T) {
-			zeroOrg := &OrganizationMembership{
+			zeroOrg := &identityv1.OrganizationMembership{
 				ID:             ksid.ID(1),
 				UserID:         ksid.ID(100),
 				OrganizationID: ksid.ID(0),
-				Role:           OrgRoleAdmin,
+				Role:           identityv1.OrgRoleAdmin,
 			}
 			if err := zeroOrg.Validate(); err == nil {
 				t.Error("Expected error for zero OrganizationID")
@@ -61,7 +63,7 @@ func TestOrganizationMembership(t *testing.T) {
 		})
 
 		t.Run("invalid role", func(t *testing.T) {
-			invalidRole := &OrganizationMembership{
+			invalidRole := &identityv1.OrganizationMembership{
 				ID:             ksid.ID(1),
 				UserID:         ksid.ID(100),
 				OrganizationID: ksid.ID(200),
@@ -74,11 +76,11 @@ func TestOrganizationMembership(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &OrganizationMembership{
+		original := &identityv1.OrganizationMembership{
 			ID:             ksid.ID(1),
 			UserID:         ksid.ID(100),
 			OrganizationID: ksid.ID(200),
-			Role:           OrgRoleOwner,
+			Role:           identityv1.OrgRoleOwner,
 		}
 
 		clone := original.Clone()
@@ -90,14 +92,14 @@ func TestOrganizationMembership(t *testing.T) {
 			t.Error("Clone UserID should match")
 		}
 
-		clone.Role = OrgRoleMember
-		if original.Role == OrgRoleMember {
+		clone.Role = identityv1.OrgRoleMember
+		if original.Role == identityv1.OrgRoleMember {
 			t.Error("Clone should be independent of original")
 		}
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		m := &OrganizationMembership{ID: ksid.ID(42)}
+		m := &identityv1.OrganizationMembership{ID: ksid.ID(42)}
 		if m.GetID() != ksid.ID(42) {
 			t.Errorf("GetID() = %v, want %v", m.GetID(), ksid.ID(42))
 		}
@@ -106,52 +108,52 @@ func TestOrganizationMembership(t *testing.T) {
 
 func TestOrganizationRole(t *testing.T) {
 	t.Run("IsValid", func(t *testing.T) {
-		if !OrgRoleOwner.IsValid() {
+		if !identityv1.OrgRoleOwner.IsValid() {
 			t.Error("OrgRoleOwner should be valid")
 		}
-		if !OrgRoleAdmin.IsValid() {
+		if !identityv1.OrgRoleAdmin.IsValid() {
 			t.Error("OrgRoleAdmin should be valid")
 		}
-		if !OrgRoleMember.IsValid() {
+		if !identityv1.OrgRoleMember.IsValid() {
 			t.Error("OrgRoleMember should be valid")
 		}
-		if OrganizationRole("invalid").IsValid() {
+		if identityv1.OrganizationRole("invalid").IsValid() {
 			t.Error("invalid role should not be valid")
 		}
 	})
 
 	t.Run("CanManageMembers", func(t *testing.T) {
-		if !OrgRoleOwner.CanManageMembers() {
+		if !identityv1.OrgRoleOwner.CanManageMembers() {
 			t.Error("Owner should be able to manage members")
 		}
-		if !OrgRoleAdmin.CanManageMembers() {
+		if !identityv1.OrgRoleAdmin.CanManageMembers() {
 			t.Error("Admin should be able to manage members")
 		}
-		if OrgRoleMember.CanManageMembers() {
+		if identityv1.OrgRoleMember.CanManageMembers() {
 			t.Error("Member should not be able to manage members")
 		}
 	})
 
 	t.Run("CanManageWorkspaces", func(t *testing.T) {
-		if !OrgRoleOwner.CanManageWorkspaces() {
+		if !identityv1.OrgRoleOwner.CanManageWorkspaces() {
 			t.Error("Owner should be able to manage workspaces")
 		}
-		if !OrgRoleAdmin.CanManageWorkspaces() {
+		if !identityv1.OrgRoleAdmin.CanManageWorkspaces() {
 			t.Error("Admin should be able to manage workspaces")
 		}
-		if OrgRoleMember.CanManageWorkspaces() {
+		if identityv1.OrgRoleMember.CanManageWorkspaces() {
 			t.Error("Member should not be able to manage workspaces")
 		}
 	})
 
 	t.Run("CanManageBilling", func(t *testing.T) {
-		if !OrgRoleOwner.CanManageBilling() {
+		if !identityv1.OrgRoleOwner.CanManageBilling() {
 			t.Error("Owner should be able to manage billing")
 		}
-		if OrgRoleAdmin.CanManageBilling() {
+		if identityv1.OrgRoleAdmin.CanManageBilling() {
 			t.Error("Admin should not be able to manage billing")
 		}
-		if OrgRoleMember.CanManageBilling() {
+		if identityv1.OrgRoleMember.CanManageBilling() {
 			t.Error("Member should not be able to manage billing")
 		}
 	})
@@ -160,11 +162,11 @@ func TestOrganizationRole(t *testing.T) {
 func TestWorkspaceMembership(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &WorkspaceMembership{
+			valid := &identityv1.WorkspaceMembership{
 				ID:          ksid.ID(1),
 				UserID:      ksid.ID(100),
 				WorkspaceID: ksid.ID(200),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 			}
 			if err := valid.Validate(); err != nil {
 				t.Errorf("Expected valid membership, got error: %v", err)
@@ -172,11 +174,11 @@ func TestWorkspaceMembership(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &WorkspaceMembership{
+			zeroID := &identityv1.WorkspaceMembership{
 				ID:          ksid.ID(0),
 				UserID:      ksid.ID(100),
 				WorkspaceID: ksid.ID(200),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 			}
 			if err := zeroID.Validate(); err == nil {
 				t.Error("Expected error for zero ID")
@@ -184,11 +186,11 @@ func TestWorkspaceMembership(t *testing.T) {
 		})
 
 		t.Run("zero UserID", func(t *testing.T) {
-			zeroUser := &WorkspaceMembership{
+			zeroUser := &identityv1.WorkspaceMembership{
 				ID:          ksid.ID(1),
 				UserID:      ksid.ID(0),
 				WorkspaceID: ksid.ID(200),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 			}
 			if err := zeroUser.Validate(); err == nil {
 				t.Error("Expected error for zero UserID")
@@ -196,11 +198,11 @@ func TestWorkspaceMembership(t *testing.T) {
 		})
 
 		t.Run("zero WorkspaceID", func(t *testing.T) {
-			zeroWS := &WorkspaceMembership{
+			zeroWS := &identityv1.WorkspaceMembership{
 				ID:          ksid.ID(1),
 				UserID:      ksid.ID(100),
 				WorkspaceID: ksid.ID(0),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 			}
 			if err := zeroWS.Validate(); err == nil {
 				t.Error("Expected error for zero WorkspaceID")
@@ -208,7 +210,7 @@ func TestWorkspaceMembership(t *testing.T) {
 		})
 
 		t.Run("invalid role", func(t *testing.T) {
-			invalidRole := &WorkspaceMembership{
+			invalidRole := &identityv1.WorkspaceMembership{
 				ID:          ksid.ID(1),
 				UserID:      ksid.ID(100),
 				WorkspaceID: ksid.ID(200),
@@ -221,11 +223,11 @@ func TestWorkspaceMembership(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &WorkspaceMembership{
+		original := &identityv1.WorkspaceMembership{
 			ID:          ksid.ID(1),
 			UserID:      ksid.ID(100),
 			WorkspaceID: ksid.ID(200),
-			Role:        WSRoleAdmin,
+			Role:        identityv1.WSRoleAdmin,
 		}
 
 		clone := original.Clone()
@@ -237,14 +239,14 @@ func TestWorkspaceMembership(t *testing.T) {
 			t.Error("Clone UserID should match")
 		}
 
-		clone.Role = WSRoleViewer
-		if original.Role == WSRoleViewer {
+		clone.Role = identityv1.WSRoleViewer
+		if original.Role == identityv1.WSRoleViewer {
 			t.Error("Clone should be independent of original")
 		}
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		m := &WorkspaceMembership{ID: ksid.ID(42)}
+		m := &identityv1.WorkspaceMembership{ID: ksid.ID(42)}
 		if m.GetID() != ksid.ID(42) {
 			t.Errorf("GetID() = %v, want %v", m.GetID(), ksid.ID(42))
 		}
@@ -253,40 +255,40 @@ func TestWorkspaceMembership(t *testing.T) {
 
 func TestWorkspaceRole(t *testing.T) {
 	t.Run("IsValid", func(t *testing.T) {
-		if !WSRoleAdmin.IsValid() {
+		if !identityv1.WSRoleAdmin.IsValid() {
 			t.Error("WSRoleAdmin should be valid")
 		}
-		if !WSRoleEditor.IsValid() {
+		if !identityv1.WSRoleEditor.IsValid() {
 			t.Error("WSRoleEditor should be valid")
 		}
-		if !WSRoleViewer.IsValid() {
+		if !identityv1.WSRoleViewer.IsValid() {
 			t.Error("WSRoleViewer should be valid")
 		}
-		if WorkspaceRole("invalid").IsValid() {
+		if identityv1.WorkspaceRole("invalid").IsValid() {
 			t.Error("invalid role should not be valid")
 		}
 	})
 
 	t.Run("CanEdit", func(t *testing.T) {
-		if !WSRoleAdmin.CanEdit() {
+		if !identityv1.WSRoleAdmin.CanEdit() {
 			t.Error("Admin should be able to edit")
 		}
-		if !WSRoleEditor.CanEdit() {
+		if !identityv1.WSRoleEditor.CanEdit() {
 			t.Error("Editor should be able to edit")
 		}
-		if WSRoleViewer.CanEdit() {
+		if identityv1.WSRoleViewer.CanEdit() {
 			t.Error("Viewer should not be able to edit")
 		}
 	})
 
 	t.Run("CanManageMembers", func(t *testing.T) {
-		if !WSRoleAdmin.CanManageMembers() {
+		if !identityv1.WSRoleAdmin.CanManageMembers() {
 			t.Error("Admin should be able to manage members")
 		}
-		if WSRoleEditor.CanManageMembers() {
+		if identityv1.WSRoleEditor.CanManageMembers() {
 			t.Error("Editor should not be able to manage members")
 		}
-		if WSRoleViewer.CanManageMembers() {
+		if identityv1.WSRoleViewer.CanManageMembers() {
 			t.Error("Viewer should not be able to manage members")
 		}
 	})
@@ -319,12 +321,12 @@ func TestOrganizationMembershipService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var mem *OrganizationMembership
+	var mem *identityv1.OrganizationMembership
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			var createErr error
-			mem, createErr = service.Create(user.ID, org.ID, OrgRoleOwner)
+			mem, createErr = service.Create(user.ID, org.ID, identityv1.OrgRoleOwner)
 			if createErr != nil {
 				t.Fatalf("Failed to create membership: %v", createErr)
 			}
@@ -335,27 +337,27 @@ func TestOrganizationMembershipService(t *testing.T) {
 			if mem.OrganizationID != org.ID {
 				t.Errorf("Expected OrganizationID %v, got %v", org.ID, mem.OrganizationID)
 			}
-			if mem.Role != OrgRoleOwner {
-				t.Errorf("Expected role %s, got %s", OrgRoleOwner, mem.Role)
+			if mem.Role != identityv1.OrgRoleOwner {
+				t.Errorf("Expected role %s, got %s", identityv1.OrgRoleOwner, mem.Role)
 			}
 		})
 
 		t.Run("duplicate", func(t *testing.T) {
-			_, createErr := service.Create(user.ID, org.ID, OrgRoleAdmin)
+			_, createErr := service.Create(user.ID, org.ID, identityv1.OrgRoleAdmin)
 			if createErr == nil {
 				t.Error("Expected error for duplicate membership")
 			}
 		})
 
 		t.Run("empty userID", func(t *testing.T) {
-			_, createErr := service.Create(ksid.ID(0), org.ID, OrgRoleAdmin)
+			_, createErr := service.Create(ksid.ID(0), org.ID, identityv1.OrgRoleAdmin)
 			if createErr == nil {
 				t.Error("Expected error for empty userID")
 			}
 		})
 
 		t.Run("empty orgID", func(t *testing.T) {
-			_, createErr := service.Create(user.ID, ksid.ID(0), OrgRoleAdmin)
+			_, createErr := service.Create(user.ID, ksid.ID(0), identityv1.OrgRoleAdmin)
 			if createErr == nil {
 				t.Error("Expected error for empty orgID")
 			}
@@ -422,15 +424,15 @@ func TestOrganizationMembershipService(t *testing.T) {
 	})
 
 	t.Run("Modify", func(t *testing.T) {
-		modified, modErr := service.Modify(mem.ID, func(m *OrganizationMembership) error {
-			m.Role = OrgRoleAdmin
+		modified, modErr := service.Modify(mem.ID, func(m *identityv1.OrganizationMembership) error {
+			m.Role = identityv1.OrgRoleAdmin
 			return nil
 		})
 		if modErr != nil {
 			t.Fatalf("Failed to modify membership: %v", modErr)
 		}
-		if modified.Role != OrgRoleAdmin {
-			t.Errorf("Expected role %s, got %s", OrgRoleAdmin, modified.Role)
+		if modified.Role != identityv1.OrgRoleAdmin {
+			t.Errorf("Expected role %s, got %s", identityv1.OrgRoleAdmin, modified.Role)
 		}
 	})
 
@@ -502,15 +504,15 @@ func TestWorkspaceMembershipService(t *testing.T) {
 
 	t.Run("DeleteByUserInOrg", func(t *testing.T) {
 		// Create memberships for user in all workspaces
-		mem1, err := service.Create(user.ID, ws1.ID, WSRoleEditor)
+		mem1, err := service.Create(user.ID, ws1.ID, identityv1.WSRoleEditor)
 		if err != nil {
 			t.Fatalf("Failed to create membership 1: %v", err)
 		}
-		mem2, err := service.Create(user.ID, ws2.ID, WSRoleViewer)
+		mem2, err := service.Create(user.ID, ws2.ID, identityv1.WSRoleViewer)
 		if err != nil {
 			t.Fatalf("Failed to create membership 2: %v", err)
 		}
-		mem3, err := service.Create(user.ID, ws3.ID, WSRoleAdmin)
+		mem3, err := service.Create(user.ID, ws3.ID, identityv1.WSRoleAdmin)
 		if err != nil {
 			t.Fatalf("Failed to create membership 3: %v", err)
 		}

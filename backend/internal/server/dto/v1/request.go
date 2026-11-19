@@ -1105,7 +1105,7 @@ func (r *GetWorkspaceRequest) Validate() error {
 type UpdateWorkspaceRequest struct {
 	WsID     ksid.ID            `path:"wsID" json:"-"`
 	Name     string             `json:"name,omitempty"`
-	Quotas   *WorkspaceQuotas   `json:"quotas,omitempty"`
+	Quotas   *ResourceQuotas    `json:"quotas,omitempty"`
 	Settings *WorkspaceSettings `json:"settings,omitempty"`
 }
 

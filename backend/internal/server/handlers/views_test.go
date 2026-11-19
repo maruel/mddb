@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -102,7 +104,7 @@ func TestViewHandler(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			svc, wsID := setupTestServices(t)
 			ctx := t.Context()
-			user := &identity.User{Name: "Test User", Email: "test@example.com"}
+			user := &identityv1.User{Name: "Test User", Email: "test@example.com"}
 			nodeID := createTestTable(t, svc, wsID)
 			vh := &ViewHandler{Svc: svc}
 
@@ -140,7 +142,7 @@ func TestViewHandler(t *testing.T) {
 	t.Run("UpdateView", func(t *testing.T) {
 		svc, wsID := setupTestServices(t)
 		ctx := t.Context()
-		user := &identity.User{Name: "Test User", Email: "test@example.com"}
+		user := &identityv1.User{Name: "Test User", Email: "test@example.com"}
 		nodeID := createTestTable(t, svc, wsID)
 		vh := &ViewHandler{Svc: svc}
 
@@ -187,7 +189,7 @@ func TestViewHandler(t *testing.T) {
 	t.Run("DeleteView", func(t *testing.T) {
 		svc, wsID := setupTestServices(t)
 		ctx := t.Context()
-		user := &identity.User{Name: "Test User", Email: "test@example.com"}
+		user := &identityv1.User{Name: "Test User", Email: "test@example.com"}
 		nodeID := createTestTable(t, svc, wsID)
 		vh := &ViewHandler{Svc: svc}
 
@@ -226,7 +228,7 @@ func TestViewHandler(t *testing.T) {
 	t.Run("RevisionConflict", func(t *testing.T) {
 		svc, wsID := setupTestServices(t)
 		ctx := t.Context()
-		user := &identity.User{Name: "Test User", Email: "test@example.com"}
+		user := &identityv1.User{Name: "Test User", Email: "test@example.com"}
 		nodeID := createTestTable(t, svc, wsID)
 		h := &ViewHandler{Svc: svc}
 		first, err := h.CreateView(ctx, wsID, user, &dto.CreateViewRequest{WsID: wsID, NodeID: nodeID, Name: "First", Type: dto.ViewTypeTable})

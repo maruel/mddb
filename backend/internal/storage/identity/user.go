@@ -14,35 +14,19 @@ import (
 	"fmt"
 	"iter"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// User represents a system user (persistent fields only).
-type User struct {
-	ID              ksid.ID         `json:"id" jsonschema:"description=Unique user identifier"`
-	Email           string          `json:"email" jsonschema:"description=User email address"`
-	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`
-	Name            string          `json:"name" jsonschema:"description=User display name"`
-	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
-	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
-	Quotas          UserQuota       `json:"quotas" jsonschema:"description=Resource limits for the user"`
-	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
-	Created         storage.Time    `json:"created" jsonschema:"description=Account creation timestamp"`
-	Modified        storage.Time    `json:"modified" jsonschema:"description=Last modification timestamp"`
-}
-
-// GetID returns the User's ID.
-func (u *User) GetID() ksid.ID {
-	return u.ID
-}
 
 // PreferredEmail returns the best email for external attribution
 // (e.g. git commits). Priority: GitHub > Google > Microsoft > raw email.
 // Identities without an email are skipped.
-func (u *User) PreferredEmail() string {
+func PreferredEmail(u *identityv1.User) string {
 	best := u.Email
 	bestRank := 4
 	for i := range u.OAuthIdentities {
@@ -51,11 +35,11 @@ func (u *User) PreferredEmail() string {
 		}
 		var rank int
 		switch u.OAuthIdentities[i].Provider {
-		case OAuthProviderGitHub:
+		case identityv1.OAuthProviderGitHub:
 			rank = 1
-		case OAuthProviderGoogle:
+		case identityv1.OAuthProviderGoogle:
 			rank = 2
-		case OAuthProviderMicrosoft:
+		case identityv1.OAuthProviderMicrosoft:
 			rank = 3
 		default:
 			continue
@@ -68,64 +52,21 @@ func (u *User) PreferredEmail() string {
 	return best
 }
 
-// UserSettings represents global user preferences.
-type UserSettings struct {
-	Theme                string                  `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
-	Language             string                  `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
-	LastActiveWorkspaces []ksid.ID               `json:"last_active_workspaces,omitempty" jsonschema:"description=Recently used workspace IDs in LRU order (most recent first)"`
-	NotificationPrefs    NotificationPreferences `json:"notification_prefs,omitzero" jsonschema:"description=Per-type notification channel preferences"`
-}
-
-// UserQuota defines limits for a user.
-type UserQuota struct {
-	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`
-}
-
-// OAuthProvider represents a supported OAuth2 provider.
-type OAuthProvider string
-
-// IsValid checks if the provider is a known valid value.
-func (p OAuthProvider) IsValid() bool {
-	switch p {
-	case OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub:
-		return true
-	}
-	return false
-}
-
-const (
-	// OAuthProviderGoogle represents Google OAuth.
-	OAuthProviderGoogle OAuthProvider = "google"
-	// OAuthProviderMicrosoft represents Microsoft OAuth.
-	OAuthProviderMicrosoft OAuthProvider = "microsoft"
-	// OAuthProviderGitHub represents GitHub OAuth.
-	OAuthProviderGitHub OAuthProvider = "github"
-)
-
-// OAuthIdentity represents a link between a local user and an OAuth2 provider.
-type OAuthIdentity struct {
-	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft/github)"`
-	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
-	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
-	AvatarURL  string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
-	LastLogin  storage.Time  `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
-}
-
 // UserService handles user management and authentication.
 type UserService struct {
-	table      *jsonldb.Table[*userStorage]
-	byEmail    *jsonldb.UniqueIndex[string, *userStorage]
+	table      *jsonldb.Table[*identityv1.StoredUser]
+	byEmail    *jsonldb.UniqueIndex[string, *identityv1.StoredUser]
 	byOAuth    *oauthIndex
 	bcryptCost int
 }
 
 // NewUserService creates a new user service.
 func NewUserService(tablePath string) (*UserService, error) {
-	table, err := jsonldb.NewTable[*userStorage](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.StoredUser](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byEmail := jsonldb.NewUniqueIndex(table, func(u *userStorage) string { return u.Email })
+	byEmail := jsonldb.NewUniqueIndex(table, func(u *identityv1.StoredUser) string { return u.Email })
 	byOAuth := newOAuthIndex(table)
 	return &UserService{table: table, byEmail: byEmail, byOAuth: byOAuth}, nil
 }
@@ -144,7 +85,7 @@ func (s *UserService) cost() int {
 
 // Create creates a new user.
 // The first user created becomes a global admin.
-func (s *UserService) Create(email, password, name string) (*User, error) {
+func (s *UserService) Create(email, password, name string) (*identityv1.User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
@@ -159,14 +100,14 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	// First user becomes global admin
 	isFirstUser := s.table.Len() == 0
 	id := ksid.NewID()
-	now := storage.Now()
-	stored := &userStorage{
-		User: User{
+	now := storagev1.Now()
+	stored := &identityv1.StoredUser{
+		User: identityv1.User{
 			ID:            id,
 			Email:         email,
 			Name:          name,
 			IsGlobalAdmin: isFirstUser,
-			Quotas: UserQuota{
+			Quotas: identityv1.UserQuota{
 				MaxOrganizations: 3,
 			},
 			Created:  now,
@@ -182,9 +123,9 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 }
 
 // Get retrieves a user by ID.
-func (s *UserService) Get(id ksid.ID) (*User, error) {
+func (s *UserService) Get(id ksid.ID) (*identityv1.User, error) {
 	if id.IsZero() {
-		return nil, errUserIDEmpty
+		return nil, identityv1.ErrUserIDEmpty
 	}
 	stored := s.table.Get(id)
 	if stored == nil {
@@ -200,7 +141,7 @@ func (s *UserService) Count() int {
 }
 
 // GetByEmail retrieves a user by email. O(1) via index.
-func (s *UserService) GetByEmail(email string) (*User, error) {
+func (s *UserService) GetByEmail(email string) (*identityv1.User, error) {
 	stored := s.byEmail.Get(email)
 	if stored == nil {
 		return nil, errUserNotFound
@@ -210,7 +151,7 @@ func (s *UserService) GetByEmail(email string) (*User, error) {
 }
 
 // Authenticate verifies user credentials. O(1) lookup via index.
-func (s *UserService) Authenticate(email, password string) (*User, error) {
+func (s *UserService) Authenticate(email, password string) (*identityv1.User, error) {
 	stored := s.byEmail.Get(email)
 	if stored == nil {
 		return nil, errInvalidCreds
@@ -223,7 +164,7 @@ func (s *UserService) Authenticate(email, password string) (*User, error) {
 }
 
 // GetByOAuth retrieves a user by their OAuth identity. O(1) via index.
-func (s *UserService) GetByOAuth(provider OAuthProvider, providerID string) (*User, error) {
+func (s *UserService) GetByOAuth(provider identityv1.OAuthProvider, providerID string) (*identityv1.User, error) {
 	stored := s.byOAuth.Get(provider, providerID)
 	if stored == nil {
 		return nil, errUserNotFound
@@ -233,11 +174,11 @@ func (s *UserService) GetByOAuth(provider OAuthProvider, providerID string) (*Us
 }
 
 // Modify atomically modifies a user.
-func (s *UserService) Modify(id ksid.ID, fn func(user *User) error) (*User, error) {
+func (s *UserService) Modify(id ksid.ID, fn func(user *identityv1.User) error) (*identityv1.User, error) {
 	if id.IsZero() {
-		return nil, errUserIDEmpty
+		return nil, identityv1.ErrUserIDEmpty
 	}
-	stored, err := s.table.Modify(id, func(row *userStorage) error {
+	stored, err := s.table.Modify(id, func(row *identityv1.StoredUser) error {
 		return fn(&row.User)
 	})
 	if err != nil {
@@ -248,8 +189,8 @@ func (s *UserService) Modify(id ksid.ID, fn func(user *User) error) (*User, erro
 }
 
 // Iter iterates over users with ID greater than startID. Pass 0 to iterate from the beginning.
-func (s *UserService) Iter(startID ksid.ID) iter.Seq[*User] {
-	return func(yield func(*User) bool) {
+func (s *UserService) Iter(startID ksid.ID) iter.Seq[*identityv1.User] {
+	return func(yield func(*identityv1.User) bool) {
 		for stored := range s.table.Iter(startID) {
 			user := stored.User
 			if !yield(&user) {
@@ -288,7 +229,7 @@ func (s *UserService) VerifyPassword(id ksid.ID, password string) bool {
 // If the user is OAuth-only (no password), currentPassword is ignored.
 func (s *UserService) SetPassword(id ksid.ID, currentPassword, newPassword string) error {
 	if id.IsZero() {
-		return errUserIDEmpty
+		return identityv1.ErrUserIDEmpty
 	}
 	if newPassword == "" {
 		return errPasswordRequired
@@ -313,9 +254,9 @@ func (s *UserService) SetPassword(id ksid.ID, currentPassword, newPassword strin
 	}
 
 	// Update password in storage
-	_, err = s.table.Modify(id, func(row *userStorage) error {
+	_, err = s.table.Modify(id, func(row *identityv1.StoredUser) error {
 		row.PasswordHash = string(hash)
-		row.Modified = storage.Now()
+		row.Modified = storagev1.Now()
 		return nil
 	})
 	return err
@@ -324,33 +265,31 @@ func (s *UserService) SetPassword(id ksid.ID, currentPassword, newPassword strin
 //
 
 var (
-	errUserIDRequired   = errors.New("id is required")
 	errEmailPwdRequired = errors.New("email and password are required")
 	errUserExists       = errors.New("user already exists")
 	errInvalidCreds     = errors.New("invalid credentials")
-	errInvalidUserQuota = errors.New("invalid user quota")
 	errPasswordRequired = errors.New("new password is required")
 )
 
 // oauthKey is a composite key for OAuth identity lookups.
 type oauthKey struct {
-	Provider   OAuthProvider
+	Provider   identityv1.OAuthProvider
 	ProviderID string
 }
 
 // oauthIndex indexes users by their OAuth identities (multi-valued).
 type oauthIndex struct {
-	table *jsonldb.Table[*userStorage]
+	table *jsonldb.Table[*identityv1.StoredUser]
 	byKey map[oauthKey]ksid.ID
 }
 
-func newOAuthIndex(table *jsonldb.Table[*userStorage]) *oauthIndex {
+func newOAuthIndex(table *jsonldb.Table[*identityv1.StoredUser]) *oauthIndex {
 	idx := &oauthIndex{table: table, byKey: make(map[oauthKey]ksid.ID)}
 	table.AddObserver(idx)
 	return idx
 }
 
-func (idx *oauthIndex) Get(provider OAuthProvider, providerID string) *userStorage {
+func (idx *oauthIndex) Get(provider identityv1.OAuthProvider, providerID string) *identityv1.StoredUser {
 	id, ok := idx.byKey[oauthKey{Provider: provider, ProviderID: providerID}]
 	if !ok {
 		return nil
@@ -358,13 +297,13 @@ func (idx *oauthIndex) Get(provider OAuthProvider, providerID string) *userStora
 	return idx.table.Get(id)
 }
 
-func (idx *oauthIndex) OnAppend(row *userStorage) {
+func (idx *oauthIndex) OnAppend(row *identityv1.StoredUser) {
 	for _, ident := range row.OAuthIdentities {
 		idx.byKey[oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID}] = row.ID
 	}
 }
 
-func (idx *oauthIndex) OnUpdate(prev, curr *userStorage) {
+func (idx *oauthIndex) OnUpdate(prev, curr *identityv1.StoredUser) {
 	// Remove old keys
 	for _, ident := range prev.OAuthIdentities {
 		delete(idx.byKey, oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID})
@@ -375,42 +314,8 @@ func (idx *oauthIndex) OnUpdate(prev, curr *userStorage) {
 	}
 }
 
-func (idx *oauthIndex) OnDelete(row *userStorage) {
+func (idx *oauthIndex) OnDelete(row *identityv1.StoredUser) {
 	for _, ident := range row.OAuthIdentities {
 		delete(idx.byKey, oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID})
 	}
-}
-
-type userStorage struct {
-	User
-
-	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
-}
-
-func (u *userStorage) Clone() *userStorage {
-	c := *u
-	if u.OAuthIdentities != nil {
-		c.OAuthIdentities = make([]OAuthIdentity, len(u.OAuthIdentities))
-		copy(c.OAuthIdentities, u.OAuthIdentities)
-	}
-	return &c
-}
-
-// GetID returns the userStorage's ID.
-func (u *userStorage) GetID() ksid.ID {
-	return u.ID
-}
-
-// Validate checks that the userStorage is valid.
-func (u *userStorage) Validate() error {
-	if u.ID.IsZero() {
-		return errUserIDRequired
-	}
-	if u.Email == "" {
-		return errEmailEmpty
-	}
-	if u.Quotas.MaxOrganizations <= 0 {
-		return errInvalidUserQuota
-	}
-	return nil
 }

@@ -5,10 +5,11 @@ package handlers
 import (
 	"context"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // SearchHandler handles search-related HTTP requests.
@@ -17,7 +18,7 @@ type SearchHandler struct {
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
+func (h *SearchHandler) Search(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
 	results, err := h.Svc.Search.Search(ctx, wsID, content.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,

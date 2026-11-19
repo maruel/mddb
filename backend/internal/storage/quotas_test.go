@@ -2,7 +2,11 @@
 
 package storage
 
-import "testing"
+import (
+	"testing"
+
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+)
 
 func TestMinEffective(t *testing.T) {
 	tests := []struct {
@@ -53,59 +57,59 @@ func TestMinEffectiveInt64(t *testing.T) {
 func TestEffectiveQuotas(t *testing.T) {
 	tests := []struct {
 		name   string
-		server ResourceQuotas
-		org    ResourceQuotas
-		ws     ResourceQuotas
-		want   ResourceQuotas
+		server storagev1.ResourceQuotas
+		org    storagev1.ResourceQuotas
+		ws     storagev1.ResourceQuotas
+		want   storagev1.ResourceQuotas
 	}{
 		{
 			name:   "server only, org and ws inherit",
-			server: ResourceQuotas{MaxPages: 1000, MaxStorageBytes: 1024, MaxRecordsPerTable: 10000},
-			org:    ResourceQuotas{MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1},
-			ws:     ResourceQuotas{MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1},
-			want:   ResourceQuotas{MaxPages: 1000, MaxStorageBytes: 1024, MaxRecordsPerTable: 10000},
+			server: storagev1.ResourceQuotas{MaxPages: 1000, MaxStorageBytes: 1024, MaxRecordsPerTable: 10000},
+			org:    storagev1.ResourceQuotas{MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1},
+			ws:     storagev1.ResourceQuotas{MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1},
+			want:   storagev1.ResourceQuotas{MaxPages: 1000, MaxStorageBytes: 1024, MaxRecordsPerTable: 10000},
 		},
 		{
 			name:   "ws overrides server with lower value",
-			server: ResourceQuotas{MaxPages: 1000, MaxAssetSizeBytes: 50},
-			org:    ResourceQuotas{MaxPages: -1, MaxAssetSizeBytes: -1},
-			ws:     ResourceQuotas{MaxPages: 100, MaxAssetSizeBytes: 10},
-			want:   ResourceQuotas{MaxPages: 100, MaxAssetSizeBytes: 10},
+			server: storagev1.ResourceQuotas{MaxPages: 1000, MaxAssetSizeBytes: 50},
+			org:    storagev1.ResourceQuotas{MaxPages: -1, MaxAssetSizeBytes: -1},
+			ws:     storagev1.ResourceQuotas{MaxPages: 100, MaxAssetSizeBytes: 10},
+			want:   storagev1.ResourceQuotas{MaxPages: 100, MaxAssetSizeBytes: 10},
 		},
 		{
 			name:   "org restricts further",
-			server: ResourceQuotas{MaxPages: 1000, MaxTablesPerWorkspace: 100},
-			org:    ResourceQuotas{MaxPages: 500, MaxTablesPerWorkspace: 50},
-			ws:     ResourceQuotas{MaxPages: 800, MaxTablesPerWorkspace: -1},
-			want:   ResourceQuotas{MaxPages: 500, MaxTablesPerWorkspace: 50},
+			server: storagev1.ResourceQuotas{MaxPages: 1000, MaxTablesPerWorkspace: 100},
+			org:    storagev1.ResourceQuotas{MaxPages: 500, MaxTablesPerWorkspace: 50},
+			ws:     storagev1.ResourceQuotas{MaxPages: 800, MaxTablesPerWorkspace: -1},
+			want:   storagev1.ResourceQuotas{MaxPages: 500, MaxTablesPerWorkspace: 50},
 		},
 		{
 			name:   "all layers set - min wins",
-			server: ResourceQuotas{MaxColumnsPerTable: 50},
-			org:    ResourceQuotas{MaxColumnsPerTable: 30},
-			ws:     ResourceQuotas{MaxColumnsPerTable: 20},
-			want:   ResourceQuotas{MaxColumnsPerTable: 20},
+			server: storagev1.ResourceQuotas{MaxColumnsPerTable: 50},
+			org:    storagev1.ResourceQuotas{MaxColumnsPerTable: 30},
+			ws:     storagev1.ResourceQuotas{MaxColumnsPerTable: 20},
+			want:   storagev1.ResourceQuotas{MaxColumnsPerTable: 20},
 		},
 		{
 			name:   "ws inherits (-1) uses server",
-			server: ResourceQuotas{MaxRecordsPerTable: 5000},
-			org:    ResourceQuotas{MaxRecordsPerTable: -1},
-			ws:     ResourceQuotas{MaxRecordsPerTable: -1},
-			want:   ResourceQuotas{MaxRecordsPerTable: 5000},
+			server: storagev1.ResourceQuotas{MaxRecordsPerTable: 5000},
+			org:    storagev1.ResourceQuotas{MaxRecordsPerTable: -1},
+			ws:     storagev1.ResourceQuotas{MaxRecordsPerTable: -1},
+			want:   storagev1.ResourceQuotas{MaxRecordsPerTable: 5000},
 		},
 		{
 			name:   "org disabled (0) propagates",
-			server: ResourceQuotas{MaxPages: 1000},
-			org:    ResourceQuotas{MaxPages: 0},
-			ws:     ResourceQuotas{MaxPages: -1},
-			want:   ResourceQuotas{MaxPages: 0},
+			server: storagev1.ResourceQuotas{MaxPages: 1000},
+			org:    storagev1.ResourceQuotas{MaxPages: 0},
+			ws:     storagev1.ResourceQuotas{MaxPages: -1},
+			want:   storagev1.ResourceQuotas{MaxPages: 0},
 		},
 		{
 			name:   "ws disabled (0) propagates",
-			server: ResourceQuotas{MaxPages: 1000},
-			org:    ResourceQuotas{MaxPages: -1},
-			ws:     ResourceQuotas{MaxPages: 0},
-			want:   ResourceQuotas{MaxPages: 0},
+			server: storagev1.ResourceQuotas{MaxPages: 1000},
+			org:    storagev1.ResourceQuotas{MaxPages: -1},
+			ws:     storagev1.ResourceQuotas{MaxPages: 0},
+			want:   storagev1.ResourceQuotas{MaxPages: 0},
 		},
 	}
 
@@ -128,8 +132,8 @@ func TestEffectiveParentLimits(t *testing.T) {
 	server := DefaultResourceQuotas() // all positive defaults
 	tests := []struct {
 		name string
-		org  ResourceQuotas
-		want ResourceQuotas
+		org  storagev1.ResourceQuotas
+		want storagev1.ResourceQuotas
 	}{
 		{
 			name: "org inherits – server values flow through",
@@ -138,8 +142,8 @@ func TestEffectiveParentLimits(t *testing.T) {
 		},
 		{
 			name: "org restricts pages – lower value wins",
-			org:  ResourceQuotas{MaxPages: 100, MaxStorageBytes: -1, MaxRecordsPerTable: -1, MaxAssetSizeBytes: -1, MaxTablesPerWorkspace: -1, MaxColumnsPerTable: -1},
-			want: ResourceQuotas{MaxPages: 100, MaxStorageBytes: server.MaxStorageBytes, MaxRecordsPerTable: server.MaxRecordsPerTable, MaxAssetSizeBytes: server.MaxAssetSizeBytes, MaxTablesPerWorkspace: server.MaxTablesPerWorkspace, MaxColumnsPerTable: server.MaxColumnsPerTable},
+			org:  storagev1.ResourceQuotas{MaxPages: 100, MaxStorageBytes: -1, MaxRecordsPerTable: -1, MaxAssetSizeBytes: -1, MaxTablesPerWorkspace: -1, MaxColumnsPerTable: -1},
+			want: storagev1.ResourceQuotas{MaxPages: 100, MaxStorageBytes: server.MaxStorageBytes, MaxRecordsPerTable: server.MaxRecordsPerTable, MaxAssetSizeBytes: server.MaxAssetSizeBytes, MaxTablesPerWorkspace: server.MaxTablesPerWorkspace, MaxColumnsPerTable: server.MaxColumnsPerTable},
 		},
 	}
 	for _, tt := range tests {
@@ -155,7 +159,7 @@ func TestEffectiveParentLimits(t *testing.T) {
 func TestResourceQuotas(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("inherit (-1) valid", func(t *testing.T) {
-			q := ResourceQuotas{
+			q := storagev1.ResourceQuotas{
 				MaxPages: -1, MaxStorageBytes: -1, MaxRecordsPerTable: -1,
 				MaxAssetSizeBytes: -1, MaxTablesPerWorkspace: -1, MaxColumnsPerTable: -1,
 			}
@@ -164,7 +168,7 @@ func TestResourceQuotas(t *testing.T) {
 			}
 		})
 		t.Run("disabled (0) valid", func(t *testing.T) {
-			q := ResourceQuotas{}
+			q := storagev1.ResourceQuotas{}
 			if err := q.Validate(); err != nil {
 				t.Errorf("expected no error, got %v", err)
 			}
@@ -176,13 +180,13 @@ func TestResourceQuotas(t *testing.T) {
 			}
 		})
 		t.Run("below -1 pages invalid", func(t *testing.T) {
-			q := ResourceQuotas{MaxPages: -2}
+			q := storagev1.ResourceQuotas{MaxPages: -2}
 			if err := q.Validate(); err == nil {
 				t.Error("expected error for MaxPages < -1")
 			}
 		})
 		t.Run("below -1 storage invalid", func(t *testing.T) {
-			q := ResourceQuotas{MaxStorageBytes: -2}
+			q := storagev1.ResourceQuotas{MaxStorageBytes: -2}
 			if err := q.Validate(); err == nil {
 				t.Error("expected error for MaxStorageBytes < -1")
 			}

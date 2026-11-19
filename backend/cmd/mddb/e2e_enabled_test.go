@@ -7,6 +7,8 @@ package main
 import (
 	"testing"
 
+	mddbv1 "github.com/maruel/mddb/backend/cmd/mddb/data/v1"
+
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -42,7 +44,7 @@ func TestResolveConfigFakeOAuth(t *testing.T) {
 
 	t.Run("configured credentials win", func(t *testing.T) {
 		tc := defaultConfig()
-		tc.OAuth.Google = tomlOAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"}
+		tc.OAuth.Google = mddbv1.OAuthProvider{ClientID: "google-id", ClientSecret: "google-secret"}
 		got, err := resolveConfig(&tc, t.TempDir())
 		if err != nil {
 			t.Fatal(err)

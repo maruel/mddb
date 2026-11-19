@@ -14,8 +14,11 @@ import (
 	"testing/synctest"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestSessionService(t *testing.T) {
@@ -24,7 +27,7 @@ func TestSessionService(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0)
+		session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -55,7 +58,7 @@ func TestSessionService(t *testing.T) {
 			t.Fatal(err)
 		}
 		for range 32 {
-			session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0)
+			session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -97,7 +100,7 @@ func TestSessionService(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(2*time.Hour)), 0)
+					session, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(2*time.Hour)), 0)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -135,7 +138,7 @@ func TestSessionService(t *testing.T) {
 							t.Fatal(err)
 						}
 					case "replace-credential":
-						if _, err := s.table.Modify(session.ID, func(row *Session) error { row.TokenHash = "replacement"; return nil }); err != nil {
+						if _, err := s.table.Modify(session.ID, func(row *identityv1.Session) error { row.TokenHash = "replacement"; return nil }); err != nil {
 							t.Fatal(err)
 						}
 					}
@@ -165,10 +168,10 @@ func TestSessionService(t *testing.T) {
 			t.Fatal(err)
 		}
 		id := ksid.NewID()
-		if _, err := s.CreateWithID(id, ksid.NewID(), "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0); err != nil {
+		if _, err := s.CreateWithID(id, ksid.NewID(), "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0); err != nil {
 			t.Fatal(err)
 		}
-		if created, err := s.CreateWithID(id, ksid.NewID(), "other-hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0); created != nil || err == nil {
+		if created, err := s.CreateWithID(id, ksid.NewID(), "other-hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0); created != nil || err == nil {
 			t.Fatalf("duplicate handle=%v error=%v", created, err)
 		}
 	})
@@ -184,7 +187,7 @@ func TestSessionService(t *testing.T) {
 		observer := &closeAppendFile{t: t, path: path}
 		s.table.AddObserver(observer)
 		id := ksid.NewID()
-		created, err := s.CreateWithID(id, ksid.NewID(), "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0)
+		created, err := s.CreateWithID(id, ksid.NewID(), "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0)
 		if !observer.injected || err == nil || created == nil || created.ID != id {
 			t.Fatalf("partial creation handle=%v error=%v injected=%v", created, err, observer.injected)
 		}
@@ -211,7 +214,7 @@ func TestSessionService(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			created, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(24*time.Hour)), 0)
+			created, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(24*time.Hour)), 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -260,7 +263,7 @@ func TestSessionService(t *testing.T) {
 		for range 16 {
 			wg.Go(func() {
 				<-start
-				if _, err := s.Create(userID, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 1); err != nil {
+				if _, err := s.Create(userID, "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 1); err != nil {
 					t.Error(err)
 				}
 			})
@@ -283,8 +286,8 @@ func TestSessionService(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			expires := storage.ToTime(time.Now().Add(24 * time.Hour))
-			create := func(user ksid.ID, maxSessions int) *Session {
+			expires := storagev1.ToTime(time.Now().Add(24 * time.Hour))
+			create := func(user ksid.ID, maxSessions int) *identityv1.Session {
 				session, err := s.CreateWithID(<-ids, user, "hash", "Browser", "", "", expires, maxSessions)
 				if err != nil {
 					t.Fatal(err)
@@ -304,7 +307,7 @@ func TestSessionService(t *testing.T) {
 			// was created after first's recorded use.
 			fifth := create(userID, 2)
 			for _, want := range []struct {
-				session *Session
+				session *identityv1.Session
 				active  bool
 			}{{first, false}, {second, false}, {third, false}, {fourth, true}, {fifth, true}, {otherSession, true}} {
 				got, err := s.Get(want.session.ID)
@@ -324,14 +327,14 @@ type gatedSessionUpdate struct {
 	release <-chan struct{}
 }
 
-func (*gatedSessionUpdate) OnAppend(*Session) {}
+func (*gatedSessionUpdate) OnAppend(*identityv1.Session) {}
 
-func (g *gatedSessionUpdate) OnUpdate(_, _ *Session) {
+func (g *gatedSessionUpdate) OnUpdate(_, _ *identityv1.Session) {
 	close(g.entered)
 	<-g.release
 }
 
-func (*gatedSessionUpdate) OnDelete(*Session) {}
+func (*gatedSessionUpdate) OnDelete(*identityv1.Session) {}
 
 // closeAppendFile uses the existing observer boundary to reproduce an OS Close
 // error after a session row and its indexes have been installed. No storage seam
@@ -342,7 +345,7 @@ type closeAppendFile struct {
 	injected bool
 }
 
-func (o *closeAppendFile) OnAppend(_ *Session) {
+func (o *closeAppendFile) OnAppend(_ *identityv1.Session) {
 	entries, err := os.ReadDir("/proc/self/fd")
 	if err != nil {
 		o.t.Fatal(err)
@@ -366,8 +369,8 @@ func (o *closeAppendFile) OnAppend(_ *Session) {
 	}
 	o.t.Fatal("append descriptor not found")
 }
-func (o *closeAppendFile) OnUpdate(_, _ *Session) {}
-func (o *closeAppendFile) OnDelete(_ *Session)    {}
+func (o *closeAppendFile) OnUpdate(_, _ *identityv1.Session) {}
+func (o *closeAppendFile) OnDelete(_ *identityv1.Session)    {}
 
 // BenchmarkSessionContext measures the one-time binding cost for long-lived streams.
 // Ordinary MCP reads do not create this binding or its deadline/cleanup callback.
@@ -376,7 +379,7 @@ func BenchmarkSessionContext(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storage.ToTime(time.Now().Add(time.Hour)), 0)
+	session, err := s.Create(ksid.NewID(), "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(time.Hour)), 0)
 	if err != nil {
 		b.Fatal(err)
 	}

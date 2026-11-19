@@ -19,12 +19,14 @@ import (
 	"testing/synctest"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -47,7 +49,7 @@ func TestDeviceLogin(t *testing.T) {
 		if status := env.doJSON(t, "POST", "/api/v1/auth/register", dto.RegisterRequest{Email: "pair@example.com", Password: "Password123", Name: "Pair"}, &auth, ""); status != 200 {
 			t.Fatalf("register = %d", status)
 		}
-		cfg := &Config{ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir, BaseURL: "https://mddb.example", FastRateLimits: true, VoiceBridge: &testVoiceBridge{}, OAuth: OAuthConfig{GoogleClientID: "client", GoogleClientSecret: "secret"}}
+		cfg := &Config{ServerConfig: &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir, BaseURL: "https://mddb.example", FastRateLimits: true, VoiceBridge: &testVoiceBridge{}, OAuth: OAuthConfig{GoogleClientID: "client", GoogleClientSecret: "secret"}}
 		h := NewRouter(env.services, cfg)
 		t.Cleanup(h.Close)
 		return env, h, dir, auth
@@ -67,7 +69,7 @@ func TestDeviceLogin(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				cfg := &handlers.Config{ServerConfig: storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false)}}
+				cfg := &handlers.Config{ServerConfig: storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false)}}
 				_, sid, err := cfg.IssueToken(env.services.Session, user, "192.0.2.123", tc.in, "")
 				if err != nil {
 					t.Fatal(err)
@@ -124,7 +126,7 @@ func TestDeviceLogin(t *testing.T) {
 			t.Run(failure, func(t *testing.T) {
 				t.Parallel()
 				env, _, dir, auth := setup(t)
-				hostcfg := &Config{ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret}, ConfigDir: dir, BaseURL: "https://mddb.example"}
+				hostcfg := &Config{ServerConfig: &storagev1.ServerConfig{JWTSecret: testJWTSecret}, ConfigDir: dir, BaseURL: "https://mddb.example"}
 				hcfg := &handlers.Config{JWTSecret: testJWTSecret}
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -424,7 +426,7 @@ func TestDeviceLogin(t *testing.T) {
 	})
 	t.Run("feature off", func(t *testing.T) {
 		env, _, _, _ := setup(t)
-		cfg := &Config{ServerConfig: &storage.ServerConfig{Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: t.TempDir()}
+		cfg := &Config{ServerConfig: &storagev1.ServerConfig{Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: t.TempDir()}
 		for _, variant := range []string{"no secret", "no audit directory"} {
 			t.Run(variant, func(t *testing.T) {
 				if variant == "no audit directory" {
@@ -443,7 +445,7 @@ func TestDeviceLogin(t *testing.T) {
 	})
 	t.Run("host rate tiers", func(t *testing.T) {
 		env, _, dir, _ := setup(t)
-		cfg := &Config{ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir}
+		cfg := &Config{ServerConfig: &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}, ConfigDir: dir}
 		h := NewRouter(env.services, cfg)
 		t.Cleanup(h.Close)
 		for range 5 {

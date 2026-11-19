@@ -8,8 +8,11 @@ import (
 	"strings"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -78,7 +81,7 @@ func parseDateValue(s string) any {
 func (m *Mapper) ResolveRelations(node *content.Node) {
 	for i := range node.Properties {
 		prop := &node.Properties[i]
-		if prop.Type == content.PropertyTypeRelation && prop.RelationConfig != nil {
+		if prop.Type == contentv1.PropertyTypeRelation && prop.RelationConfig != nil {
 			if notionDBID, ok := m.PendingRelations[prop.Name]; ok {
 				// Try exact match first
 				if mddbID, ok := m.NotionToMddb[notionDBID]; ok {
@@ -134,8 +137,8 @@ func (m *Mapper) MapDatabase(db *Database) (*content.Node, error) {
 		ParentID: m.resolveParentID(db.Parent),
 		Title:    richTextToPlain(db.Title),
 		Type:     content.NodeTypeTable,
-		Created:  storage.ToTime(db.CreatedTime),
-		Modified: storage.ToTime(db.LastEditedTime),
+		Created:  storagev1.ToTime(db.CreatedTime),
+		Modified: storagev1.ToTime(db.LastEditedTime),
 	}
 
 	// Convert properties to mddb schema
@@ -173,24 +176,24 @@ func (m *Mapper) MapDatabaseIconCover(node *content.Node, db *Database, assets *
 }
 
 // mapDBProperty converts a Notion database property definition to mddb Property.
-func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property {
-	mddbProp := &content.Property{
+func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *contentv1.Property {
+	mddbProp := &contentv1.Property{
 		Name: name,
 	}
 
 	switch prop.Type {
 	case "title":
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = contentv1.PropertyTypeText
 	case "rich_text":
-		mddbProp.Type = content.PropertyTypeMarkdown
+		mddbProp.Type = contentv1.PropertyTypeMarkdown
 	case "number":
-		mddbProp.Type = content.PropertyTypeNumber
+		mddbProp.Type = contentv1.PropertyTypeNumber
 	case "checkbox":
-		mddbProp.Type = content.PropertyTypeCheckbox
+		mddbProp.Type = contentv1.PropertyTypeCheckbox
 	case "date", "created_time", "last_edited_time":
-		mddbProp.Type = content.PropertyTypeDate
+		mddbProp.Type = contentv1.PropertyTypeDate
 	case "select", "status":
-		mddbProp.Type = content.PropertyTypeSelect
+		mddbProp.Type = contentv1.PropertyTypeSelect
 		if prop.Select != nil {
 			mddbProp.Options = mapSelectOptions(prop.Select.Options)
 		}
@@ -198,34 +201,34 @@ func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property 
 			mddbProp.Options = mapStatusOptions(prop.Status.Options)
 		}
 	case "multi_select":
-		mddbProp.Type = content.PropertyTypeMultiSelect
+		mddbProp.Type = contentv1.PropertyTypeMultiSelect
 		if prop.MultiSelect != nil {
 			mddbProp.Options = mapSelectOptions(prop.MultiSelect.Options)
 		}
 	case "url":
-		mddbProp.Type = content.PropertyTypeURL
+		mddbProp.Type = contentv1.PropertyTypeURL
 	case "email":
-		mddbProp.Type = content.PropertyTypeEmail
+		mddbProp.Type = contentv1.PropertyTypeEmail
 	case "phone_number":
-		mddbProp.Type = content.PropertyTypePhone
+		mddbProp.Type = contentv1.PropertyTypePhone
 	case "people", "created_by", "last_edited_by":
 		// Map to text for now (names)
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = contentv1.PropertyTypeText
 	case "files":
 		// Files will be handled separately as assets
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = contentv1.PropertyTypeText
 	case "formula":
-		mddbProp.Type = content.PropertyTypeFormula
+		mddbProp.Type = contentv1.PropertyTypeFormula
 		if prop.Formula != nil {
-			mddbProp.FormulaConfig = &content.FormulaConfig{
+			mddbProp.FormulaConfig = &contentv1.FormulaConfig{
 				Expression: prop.Formula.Expression,
 			}
 		}
 	case "relation":
-		mddbProp.Type = content.PropertyTypeRelation
+		mddbProp.Type = contentv1.PropertyTypeRelation
 		if prop.Relation != nil {
 			// Store the Notion database ID; will be resolved to mddb ID after all DBs are mapped
-			mddbProp.RelationConfig = &content.RelationConfig{
+			mddbProp.RelationConfig = &contentv1.RelationConfig{
 				// TargetNodeID will be resolved later via ResolveRelations()
 				IsDualLink: prop.Relation.Type == "dual_property",
 			}
@@ -236,9 +239,9 @@ func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property 
 			m.PendingRelations[name] = prop.Relation.DatabaseID
 		}
 	case "rollup":
-		mddbProp.Type = content.PropertyTypeRollup
+		mddbProp.Type = contentv1.PropertyTypeRollup
 		if prop.Rollup != nil {
-			mddbProp.RollupConfig = &content.RollupConfig{
+			mddbProp.RollupConfig = &contentv1.RollupConfig{
 				RelationProperty: prop.Rollup.RelationPropertyName,
 				TargetProperty:   prop.Rollup.RollupPropertyName,
 				Aggregation:      mapRollupAggregation(prop.Rollup.Function),
@@ -246,20 +249,20 @@ func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property 
 		}
 	case "unique_id":
 		// Unique IDs map to text
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = contentv1.PropertyTypeText
 	default:
 		// Unknown type, use text as fallback
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = contentv1.PropertyTypeText
 	}
 
 	return mddbProp
 }
 
 // mapSelectOptions converts Notion select options to mddb SelectOptions.
-func mapSelectOptions(opts []SelectOption) []content.SelectOption {
-	result := make([]content.SelectOption, 0, len(opts))
+func mapSelectOptions(opts []SelectOption) []contentv1.SelectOption {
+	result := make([]contentv1.SelectOption, 0, len(opts))
 	for i := range opts {
-		result = append(result, content.SelectOption{
+		result = append(result, contentv1.SelectOption{
 			ID:    opts[i].ID,
 			Name:  opts[i].Name,
 			Color: opts[i].Color,
@@ -269,10 +272,10 @@ func mapSelectOptions(opts []SelectOption) []content.SelectOption {
 }
 
 // mapStatusOptions converts Notion status options to mddb SelectOptions.
-func mapStatusOptions(opts []StatusOption) []content.SelectOption {
-	result := make([]content.SelectOption, 0, len(opts))
+func mapStatusOptions(opts []StatusOption) []contentv1.SelectOption {
+	result := make([]contentv1.SelectOption, 0, len(opts))
 	for i := range opts {
-		result = append(result, content.SelectOption{
+		result = append(result, contentv1.SelectOption{
 			ID:    opts[i].ID,
 			Name:  opts[i].Name,
 			Color: opts[i].Color,
@@ -297,8 +300,8 @@ func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
 		ParentID: m.resolveParentID(page.Parent),
 		Title:    title,
 		Type:     content.NodeTypeDocument,
-		Created:  storage.ToTime(page.CreatedTime),
-		Modified: storage.ToTime(page.LastEditedTime),
+		Created:  storagev1.ToTime(page.CreatedTime),
+		Modified: storagev1.ToTime(page.LastEditedTime),
 	}
 
 	return node, nil
@@ -365,7 +368,7 @@ func (m *Mapper) resolveParentID(parent Parent) ksid.ID {
 }
 
 // MapDatabasePage converts a Notion page (database row) to an mddb DataRecord.
-func (m *Mapper) MapDatabasePage(page *Page, schema map[string]DBProperty) (*content.DataRecord, error) {
+func (m *Mapper) MapDatabasePage(page *Page, schema map[string]DBProperty) (*contentv1.DataRecord, error) {
 	// Use pre-assigned ID if available (from AssignRecordID), otherwise create new
 	recordID, ok := m.NotionToMddb[page.ID]
 	if !ok {
@@ -373,11 +376,11 @@ func (m *Mapper) MapDatabasePage(page *Page, schema map[string]DBProperty) (*con
 		m.NotionToMddb[page.ID] = recordID
 	}
 
-	record := &content.DataRecord{
+	record := &contentv1.DataRecord{
 		ID:       recordID,
 		Data:     make(map[string]any),
-		Created:  storage.ToTime(page.CreatedTime),
-		Modified: storage.ToTime(page.LastEditedTime),
+		Created:  storagev1.ToTime(page.CreatedTime),
+		Modified: storagev1.ToTime(page.LastEditedTime),
 	}
 
 	// Map each property value
@@ -599,24 +602,24 @@ func mapRollupArrayItem(pv *PropertyValue) any {
 }
 
 // mapRollupAggregation converts a Notion rollup function to mddb RollupAggregation.
-func mapRollupAggregation(notionFunc string) content.RollupAggregation {
+func mapRollupAggregation(notionFunc string) contentv1.RollupAggregation {
 	switch notionFunc {
 	case "count":
-		return content.RollupCount
+		return contentv1.RollupCount
 	case "count_values":
-		return content.RollupCountValues
+		return contentv1.RollupCountValues
 	case "sum":
-		return content.RollupSum
+		return contentv1.RollupSum
 	case "average":
-		return content.RollupAverage
+		return contentv1.RollupAverage
 	case "min":
-		return content.RollupMin
+		return contentv1.RollupMin
 	case "max":
-		return content.RollupMax
+		return contentv1.RollupMax
 	case "show_original":
-		return content.RollupShowAll
+		return contentv1.RollupShowAll
 	default:
-		return content.RollupShowAll
+		return contentv1.RollupShowAll
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 func TestSDKRoutesMatchRouter(t *testing.T) {

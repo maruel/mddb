@@ -9,7 +9,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 )
 

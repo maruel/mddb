@@ -9,10 +9,11 @@ import (
 	"sync"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/notion"
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 // importState tracks the state of a running or completed import.
@@ -51,7 +52,7 @@ func NewNotionImportHandler(svc *Services, cfg *Config) *NotionImportHandler {
 }
 
 // StartImport creates a new workspace and starts an async Notion import.
-func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.NotionImportRequest) (*dto.NotionImportResponse, error) {
+func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, user *identityv1.User, req *dto.NotionImportRequest) (*dto.NotionImportResponse, error) {
 	// Check server-wide workspace quota
 	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
 		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
@@ -102,7 +103,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
-	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identityv1.WSRoleAdmin); err != nil {
 		err = errors.Join(err, h.Svc.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
@@ -129,7 +130,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 }
 
 // GetStatus returns the current status of an import.
-func (h *NotionImportHandler) GetStatus(_ context.Context, orgID ksid.ID, _ *identity.User, req *dto.NotionImportStatusRequest) (*dto.NotionImportStatusResponse, error) {
+func (h *NotionImportHandler) GetStatus(_ context.Context, orgID ksid.ID, _ *identityv1.User, req *dto.NotionImportStatusRequest) (*dto.NotionImportStatusResponse, error) {
 	// Verify workspace belongs to org
 	ws, err := h.Svc.Workspace.Get(req.ImportWsID)
 	if err != nil {
@@ -175,7 +176,7 @@ func (h *NotionImportHandler) GetStatus(_ context.Context, orgID ksid.ID, _ *ide
 }
 
 // CancelImport cancels a running import.
-func (h *NotionImportHandler) CancelImport(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.NotionImportCancelRequest) (*dto.NotionImportCancelResponse, error) {
+func (h *NotionImportHandler) CancelImport(_ context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.NotionImportCancelRequest) (*dto.OkResponse, error) {
 	h.mu.Lock()
 	state := h.states[wsID]
 	h.mu.Unlock()
@@ -198,7 +199,7 @@ func (h *NotionImportHandler) CancelImport(_ context.Context, wsID ksid.ID, _ *i
 		state.cancel()
 	}
 
-	return &dto.NotionImportCancelResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // runImport performs the actual Notion import in the background.

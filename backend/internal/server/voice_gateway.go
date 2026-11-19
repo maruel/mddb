@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/storage/identity"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/gomodedev/gomode/voicegateway"
 	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
@@ -155,7 +155,7 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveTextTicket binds a single-use browser ticket to the authenticated owner.
-func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u *identity.User) {
+func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u *identityv1.User) {
 	var in voicev2.VoiceTextTicketReq
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&in); err != nil {
 		writeVoiceError(w, http.StatusBadRequest, "invalid text ticket request")
@@ -235,7 +235,7 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 		writeVoiceError(w, http.StatusUnauthorized, "invalid or expired voice ticket")
 		return
 	}
-	ctx := reqctx.WithUser(r.Context(), &identity.User{ID: entry.owner})
+	ctx := reqctx.WithUser(r.Context(), &identityv1.User{ID: entry.owner})
 	if entry.session != nil {
 		ctx = reqctx.WithSession(ctx, entry.session)
 		ctx = reqctx.WithSessionID(ctx, entry.session.ID)
@@ -250,11 +250,16 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 	g.handler.ServeHTTP(w, r)
 }
 
-func voiceProtocol(r *http.Request) voiceapi.ProtocolVersion {
-	if strings.HasPrefix(r.URL.Path, "/api/voicegateway/v1/") {
-		return voiceapi.ProtocolV1
+// withVoiceProtocol binds the gateway contract that a route serves to its requests.
+func withVoiceProtocol(version voiceapi.ProtocolVersion, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h(w, r.WithContext(voiceapi.WithSessionProtocol(r.Context(), voiceapi.SessionProtocol{Version: version})))
 	}
-	return voiceapi.ProtocolV2
+}
+
+// voiceProtocol returns the gateway contract bound by withVoiceProtocol.
+func voiceProtocol(r *http.Request) voiceapi.ProtocolVersion {
+	return voiceapi.SessionProtocolFromContext(r.Context()).Version
 }
 
 func writeVoiceError(w http.ResponseWriter, status int, message string) {
@@ -475,7 +480,7 @@ var _ voicegateway.MediaBridge = (*voiceGateway)(nil)
 var _ voicegateway.DiagnosticMediaBridge = (*voiceGateway)(nil)
 
 type voiceTextTicket struct {
-	session  *identity.Session
+	session  *identityv1.Session
 	owner    ksid.ID
 	origin   string
 	choice   string

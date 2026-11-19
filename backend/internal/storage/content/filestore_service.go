@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -26,7 +28,7 @@ type FileStoreService struct {
 	git          *git.Manager
 	wsSvc        *identity.WorkspaceService
 	orgSvc       *identity.OrganizationService
-	serverQuotas *storage.ResourceQuotas
+	serverQuotas *storagev1.ResourceQuotas
 	mu           sync.RWMutex
 	stores       map[ksid.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
 }
@@ -36,7 +38,7 @@ type FileStoreService struct {
 // wsSvc provides quota limits for workspaces.
 // orgSvc provides quota limits for organizations.
 // serverQuotas provides server-level resource quotas for effective quota computation.
-func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService, serverQuotas *storage.ResourceQuotas) (*FileStoreService, error) {
+func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService, serverQuotas *storagev1.ResourceQuotas) (*FileStoreService, error) {
 	if gitMgr == nil {
 		return nil, errors.New("git manager is required")
 	}
@@ -296,8 +298,8 @@ func (svc *FileStoreService) CheckServerStorageQuota(additionalBytes, maxBytes i
 type page struct {
 	title    string
 	content  string
-	created  storage.Time
-	modified storage.Time
+	created  storagev1.Time
+	modified storagev1.Time
 	tags     []string
 	icon     string // emoji character or MDI icon name
 	cover    string // asset filename used as cover image

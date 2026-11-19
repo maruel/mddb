@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/notion"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -49,7 +51,7 @@ func TestNotionImportHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 		node.Type, node.Title = content.NodeTypeHybrid, "Partial"
-		node.Views = []content.View{{Name: "View"}}
+		node.Views = []contentv1.View{{Name: "View"}}
 		if err := writer.WriteNode(t.Context(), node, "partial body"); err == nil {
 			t.Fatal("expected metadata destination failure")
 		}

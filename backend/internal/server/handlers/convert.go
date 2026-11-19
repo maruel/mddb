@@ -4,21 +4,23 @@ package handlers
 
 import (
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 )
 
 // GitAuthor returns the git.Author for a user.
-func GitAuthor(u *identity.User) git.Author {
-	return git.Author{Name: u.Name, Email: u.PreferredEmail()}
+func GitAuthor(u *identityv1.User) git.Author {
+	return git.Author{Name: u.Name, Email: identity.PreferredEmail(u)}
 }
 
 // --- Entity to DTO conversions ---
 
-func userToResponse(u *identity.User) *dto.UserResponse {
+func userToResponse(u *identityv1.User) *dto.UserResponse {
 	identities := make([]dto.OAuthIdentity, len(u.OAuthIdentities))
 	for i := range u.OAuthIdentities {
 		identities[i] = oauthIdentityToDTO(&u.OAuthIdentities[i])
@@ -37,7 +39,7 @@ func userToResponse(u *identity.User) *dto.UserResponse {
 }
 
 //nolint:unused // Reserved for future use
-func orgMembershipToResponse(m *identity.OrganizationMembership) *dto.OrgMembershipResponse {
+func orgMembershipToResponse(m *identityv1.OrganizationMembership) *dto.OrgMembershipResponse {
 	return &dto.OrgMembershipResponse{
 		ID:             m.ID,
 		UserID:         m.UserID,
@@ -47,7 +49,7 @@ func orgMembershipToResponse(m *identity.OrganizationMembership) *dto.OrgMembers
 	}
 }
 
-func wsMembershipToResponse(m *identity.WorkspaceMembership) *dto.WSMembershipResponse {
+func wsMembershipToResponse(m *identityv1.WorkspaceMembership) *dto.WSMembershipResponse {
 	return &dto.WSMembershipResponse{
 		ID:          m.ID,
 		UserID:      m.UserID,
@@ -58,7 +60,7 @@ func wsMembershipToResponse(m *identity.WorkspaceMembership) *dto.WSMembershipRe
 	}
 }
 
-func orgInvitationToResponse(i *identity.OrganizationInvitation) *dto.OrgInvitationResponse {
+func orgInvitationToResponse(i *identityv1.OrganizationInvitation) *dto.OrgInvitationResponse {
 	return &dto.OrgInvitationResponse{
 		ID:             i.ID,
 		Email:          i.Email,
@@ -70,7 +72,7 @@ func orgInvitationToResponse(i *identity.OrganizationInvitation) *dto.OrgInvitat
 	}
 }
 
-func wsInvitationToResponse(i *identity.WorkspaceInvitation) *dto.WSInvitationResponse {
+func wsInvitationToResponse(i *identityv1.WorkspaceInvitation) *dto.WSInvitationResponse {
 	return &dto.WSInvitationResponse{
 		ID:          i.ID,
 		Email:       i.Email,
@@ -82,7 +84,7 @@ func wsInvitationToResponse(i *identity.WorkspaceInvitation) *dto.WSInvitationRe
 	}
 }
 
-func organizationToResponse(o *identity.Organization, memberCount, workspaceCount int, serverLimits storage.ResourceQuotas) *dto.OrganizationResponse {
+func organizationToResponse(o *identityv1.Organization, memberCount, workspaceCount int, serverLimits storagev1.ResourceQuotas) *dto.OrganizationResponse {
 	return &dto.OrganizationResponse{
 		ID:                   o.ID,
 		Name:                 o.Name,
@@ -96,7 +98,7 @@ func organizationToResponse(o *identity.Organization, memberCount, workspaceCoun
 	}
 }
 
-func workspaceToResponse(w *identity.Workspace, memberCount int, parentLimits storage.ResourceQuotas) *dto.WorkspaceResponse {
+func workspaceToResponse(w *identityv1.Workspace, memberCount int, parentLimits storagev1.ResourceQuotas) *dto.WorkspaceResponse {
 	resp := &dto.WorkspaceResponse{
 		ID:                   w.ID,
 		OrganizationID:       w.OrganizationID,
@@ -113,7 +115,7 @@ func workspaceToResponse(w *identity.Workspace, memberCount int, parentLimits st
 	return resp
 }
 
-func gitRemoteToResponse(wsID ksid.ID, g *identity.GitRemote) *dto.GitRemoteResponse {
+func gitRemoteToResponse(wsID ksid.ID, g *identityv1.GitRemote) *dto.GitRemoteResponse {
 	return &dto.GitRemoteResponse{
 		WorkspaceID:    wsID,
 		URL:            g.URL,
@@ -165,7 +167,7 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	return resp
 }
 
-func dataRecordToResponse(r *content.DataRecord) (*dto.DataRecordResponse, error) {
+func dataRecordToResponse(r *contentv1.DataRecord) (*dto.DataRecordResponse, error) {
 	revision, err := content.RecordRevision(r)
 	if err != nil {
 		return nil, err
@@ -188,7 +190,7 @@ func commitToDTO(c *git.Commit) *dto.Commit {
 		Message:     c.Message,
 		AuthorName:  c.Author,
 		AuthorEmail: c.AuthorEmail,
-		Timestamp:   storage.ToTime(c.CommitDate),
+		Timestamp:   storagev1.ToTime(c.CommitDate),
 	}
 }
 
@@ -223,7 +225,7 @@ func searchResultsToDTO(results []content.SearchResult) []dto.SearchResult {
 
 // --- Nested type conversions (entity -> dto) ---
 
-func propertyToDTO(p *content.Property) dto.Property {
+func propertyToDTO(p *contentv1.Property) dto.Property {
 	options := make([]dto.SelectOption, len(p.Options))
 	for i, o := range p.Options {
 		options[i] = dto.SelectOption{
@@ -240,7 +242,7 @@ func propertyToDTO(p *content.Property) dto.Property {
 	}
 }
 
-func propertiesToDTO(props []content.Property) []dto.Property {
+func propertiesToDTO(props []contentv1.Property) []dto.Property {
 	if props == nil {
 		return nil
 	}
@@ -251,7 +253,7 @@ func propertiesToDTO(props []content.Property) []dto.Property {
 	return result
 }
 
-func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
+func userSettingsToDTO(s identityv1.UserSettings) dto.UserSettings {
 	wsIDs := make([]string, len(s.LastActiveWorkspaces))
 	for i, id := range s.LastActiveWorkspaces {
 		wsIDs[i] = id.String()
@@ -263,7 +265,7 @@ func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
 	}
 }
 
-func oauthIdentityToDTO(o *identity.OAuthIdentity) dto.OAuthIdentity {
+func oauthIdentityToDTO(o *identityv1.OAuthIdentity) dto.OAuthIdentity {
 	return dto.OAuthIdentity{
 		Provider:   dto.OAuthProvider(o.Provider),
 		ProviderID: o.ProviderID,
@@ -273,13 +275,13 @@ func oauthIdentityToDTO(o *identity.OAuthIdentity) dto.OAuthIdentity {
 	}
 }
 
-func wsMembershipSettingsToDTO(s identity.WorkspaceMembershipSettings) dto.WorkspaceMembershipSettings {
+func wsMembershipSettingsToDTO(s identityv1.WorkspaceMembershipSettings) dto.WorkspaceMembershipSettings {
 	return dto.WorkspaceMembershipSettings{
 		Notifications: s.Notifications,
 	}
 }
 
-func resourceQuotasToDTO(q storage.ResourceQuotas) dto.ResourceQuotas {
+func resourceQuotasToDTO(q storagev1.ResourceQuotas) dto.ResourceQuotas {
 	return dto.ResourceQuotas{
 		MaxPages:              q.MaxPages,
 		MaxStorageBytes:       q.MaxStorageBytes,
@@ -290,7 +292,7 @@ func resourceQuotasToDTO(q storage.ResourceQuotas) dto.ResourceQuotas {
 	}
 }
 
-func organizationQuotasToDTO(q *identity.OrganizationQuotas) dto.OrganizationQuotas {
+func organizationQuotasToDTO(q *identityv1.OrganizationQuotas) dto.OrganizationQuotas {
 	return dto.OrganizationQuotas{
 		ResourceQuotas:         resourceQuotasToDTO(q.ResourceQuotas),
 		MaxWorkspacesPerOrg:    q.MaxWorkspacesPerOrg,
@@ -300,17 +302,17 @@ func organizationQuotasToDTO(q *identity.OrganizationQuotas) dto.OrganizationQuo
 	}
 }
 
-func workspaceQuotasToDTO(q identity.WorkspaceQuotas) dto.WorkspaceQuotas {
+func workspaceQuotasToDTO(q storagev1.ResourceQuotas) dto.ResourceQuotas {
 	return resourceQuotasToDTO(q)
 }
 
-func organizationSettingsToDTO(s identity.OrganizationSettings) dto.OrganizationSettings {
+func organizationSettingsToDTO(s identityv1.OrganizationSettings) dto.OrganizationSettings {
 	return dto.OrganizationSettings{
 		DefaultWorkspaceQuotas: workspaceQuotasToDTO(s.DefaultWorkspaceQuotas),
 	}
 }
 
-func workspaceSettingsToDTO(s identity.WorkspaceSettings) dto.WorkspaceSettings {
+func workspaceSettingsToDTO(s identityv1.WorkspaceSettings) dto.WorkspaceSettings {
 	return dto.WorkspaceSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
@@ -320,58 +322,58 @@ func workspaceSettingsToDTO(s identity.WorkspaceSettings) dto.WorkspaceSettings 
 
 // --- DTO to Entity conversions (for requests) ---
 
-func propertyToEntity(p dto.Property) content.Property {
-	options := make([]content.SelectOption, len(p.Options))
+func propertyToEntity(p dto.Property) contentv1.Property {
+	options := make([]contentv1.SelectOption, len(p.Options))
 	for i, o := range p.Options {
-		options[i] = content.SelectOption{
+		options[i] = contentv1.SelectOption{
 			ID:    o.ID,
 			Name:  o.Name,
 			Color: o.Color,
 		}
 	}
-	return content.Property{
+	return contentv1.Property{
 		Name:     p.Name,
-		Type:     content.PropertyType(p.Type),
+		Type:     contentv1.PropertyType(p.Type),
 		Required: p.Required,
 		Options:  options,
 	}
 }
 
-func propertiesToEntity(props []dto.Property) []content.Property {
+func propertiesToEntity(props []dto.Property) []contentv1.Property {
 	if props == nil {
 		return nil
 	}
-	result := make([]content.Property, len(props))
+	result := make([]contentv1.Property, len(props))
 	for i, p := range props {
 		result[i] = propertyToEntity(p)
 	}
 	return result
 }
 
-func orgRoleToEntity(r dto.OrganizationRole) identity.OrganizationRole {
-	return identity.OrganizationRole(r)
+func orgRoleToEntity(r dto.OrganizationRole) identityv1.OrganizationRole {
+	return identityv1.OrganizationRole(r)
 }
 
-func wsRoleToEntity(r dto.WorkspaceRole) identity.WorkspaceRole {
-	return identity.WorkspaceRole(r)
+func wsRoleToEntity(r dto.WorkspaceRole) identityv1.WorkspaceRole {
+	return identityv1.WorkspaceRole(r)
 }
 
-func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identity.WorkspaceMembershipSettings {
-	return identity.WorkspaceMembershipSettings{
+func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identityv1.WorkspaceMembershipSettings {
+	return identityv1.WorkspaceMembershipSettings{
 		Notifications: s.Notifications,
 	}
 }
 
 // userSettingsToEntity converts DTO user settings to entity.
 // prev is used to preserve fields not exposed in the DTO (e.g. NotificationPrefs).
-func userSettingsToEntity(s dto.UserSettings, prev identity.UserSettings) identity.UserSettings {
+func userSettingsToEntity(s dto.UserSettings, prev identityv1.UserSettings) identityv1.UserSettings {
 	wsIDs := make([]ksid.ID, 0, len(s.LastActiveWorkspaces))
 	for _, idStr := range s.LastActiveWorkspaces {
 		if id, err := ksid.Parse(idStr); err == nil && !id.IsZero() {
 			wsIDs = append(wsIDs, id)
 		}
 	}
-	return identity.UserSettings{
+	return identityv1.UserSettings{
 		Theme:                s.Theme,
 		Language:             s.Language,
 		LastActiveWorkspaces: wsIDs,
@@ -379,14 +381,14 @@ func userSettingsToEntity(s dto.UserSettings, prev identity.UserSettings) identi
 	}
 }
 
-func organizationSettingsToEntity(s dto.OrganizationSettings) identity.OrganizationSettings {
-	return identity.OrganizationSettings{
+func organizationSettingsToEntity(s dto.OrganizationSettings) identityv1.OrganizationSettings {
+	return identityv1.OrganizationSettings{
 		DefaultWorkspaceQuotas: workspaceQuotasToEntity(s.DefaultWorkspaceQuotas),
 	}
 }
 
-func resourceQuotasToEntity(q dto.ResourceQuotas) storage.ResourceQuotas {
-	return storage.ResourceQuotas{
+func resourceQuotasToEntity(q dto.ResourceQuotas) storagev1.ResourceQuotas {
+	return storagev1.ResourceQuotas{
 		MaxPages:              q.MaxPages,
 		MaxStorageBytes:       q.MaxStorageBytes,
 		MaxRecordsPerTable:    q.MaxRecordsPerTable,
@@ -396,8 +398,8 @@ func resourceQuotasToEntity(q dto.ResourceQuotas) storage.ResourceQuotas {
 	}
 }
 
-func organizationQuotasToEntity(q *dto.OrganizationQuotas) identity.OrganizationQuotas {
-	return identity.OrganizationQuotas{
+func organizationQuotasToEntity(q *dto.OrganizationQuotas) identityv1.OrganizationQuotas {
+	return identityv1.OrganizationQuotas{
 		ResourceQuotas:         resourceQuotasToEntity(q.ResourceQuotas),
 		MaxWorkspacesPerOrg:    q.MaxWorkspacesPerOrg,
 		MaxMembersPerOrg:       q.MaxMembersPerOrg,
@@ -406,12 +408,12 @@ func organizationQuotasToEntity(q *dto.OrganizationQuotas) identity.Organization
 	}
 }
 
-func workspaceQuotasToEntity(q dto.WorkspaceQuotas) identity.WorkspaceQuotas {
+func workspaceQuotasToEntity(q dto.ResourceQuotas) storagev1.ResourceQuotas {
 	return resourceQuotasToEntity(q)
 }
 
-func workspaceSettingsToEntity(s dto.WorkspaceSettings) identity.WorkspaceSettings {
-	return identity.WorkspaceSettings{
+func workspaceSettingsToEntity(s dto.WorkspaceSettings) identityv1.WorkspaceSettings {
+	return identityv1.WorkspaceSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
 		GitAutoPush:    s.GitAutoPush,
@@ -422,14 +424,14 @@ func workspaceSettingsToEntity(s dto.WorkspaceSettings) identity.WorkspaceSettin
 
 // orgMembershipWithName wraps an organization membership with the org name.
 type orgMembershipWithName struct {
-	*identity.OrganizationMembership
+	*identityv1.OrganizationMembership
 
 	OrganizationName string
 }
 
 // wsMembershipWithName wraps a workspace membership with the workspace name and org ID.
 type wsMembershipWithName struct {
-	*identity.WorkspaceMembership
+	*identityv1.WorkspaceMembership
 
 	WorkspaceName  string
 	OrganizationID ksid.ID
@@ -437,14 +439,14 @@ type wsMembershipWithName struct {
 
 // userWithMemberships wraps a user with their org and workspace memberships.
 type userWithMemberships struct {
-	User           *identity.User
+	User           *identityv1.User
 	HasPassword    bool
 	OrgMemberships []orgMembershipWithName
 	WSMemberships  []wsMembershipWithName
 	CurrentOrgID   ksid.ID
-	CurrentOrgRole identity.OrganizationRole
+	CurrentOrgRole identityv1.OrganizationRole
 	CurrentWSID    ksid.ID
-	CurrentWSRole  identity.WorkspaceRole
+	CurrentWSRole  identityv1.WorkspaceRole
 }
 
 // getUserWithMemberships fetches a user and their org/workspace memberships with names.

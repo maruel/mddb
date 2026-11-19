@@ -7,13 +7,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
 // preferredEmailCase is a set of OAuth identities and the email to prefer.
 type preferredEmailCase struct {
 	name       string
-	identities []OAuthIdentity
+	identities []identityv1.OAuthIdentity
 	want       string
 }
 
@@ -21,19 +23,19 @@ func TestUser(t *testing.T) {
 	t.Run("PreferredEmail", func(t *testing.T) {
 		for _, tc := range []preferredEmailCase{
 			{"no identity", nil, "user@example.com"},
-			{"GitHub over Microsoft", []OAuthIdentity{
-				{Provider: OAuthProviderMicrosoft, Email: "ms@example.com"},
-				{Provider: OAuthProviderGitHub, Email: "gh@example.com"},
+			{"GitHub over Microsoft", []identityv1.OAuthIdentity{
+				{Provider: identityv1.OAuthProviderMicrosoft, Email: "ms@example.com"},
+				{Provider: identityv1.OAuthProviderGitHub, Email: "gh@example.com"},
 			}, "gh@example.com"},
-			{"identity without email", []OAuthIdentity{
-				{Provider: OAuthProviderGitHub},
-				{Provider: OAuthProviderMicrosoft, Email: "ms@example.com"},
+			{"identity without email", []identityv1.OAuthIdentity{
+				{Provider: identityv1.OAuthProviderGitHub},
+				{Provider: identityv1.OAuthProviderMicrosoft, Email: "ms@example.com"},
 			}, "ms@example.com"},
-			{"only identities without email", []OAuthIdentity{{Provider: OAuthProviderMicrosoft}}, "user@example.com"},
+			{"only identities without email", []identityv1.OAuthIdentity{{Provider: identityv1.OAuthProviderMicrosoft}}, "user@example.com"},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
-				u := User{Email: "user@example.com", OAuthIdentities: tc.identities}
-				if got := u.PreferredEmail(); got != tc.want {
+				u := identityv1.User{Email: "user@example.com", OAuthIdentities: tc.identities}
+				if got := PreferredEmail(&u); got != tc.want {
 					t.Errorf("PreferredEmail() = %q, want %q", got, tc.want)
 				}
 			})
@@ -44,8 +46,8 @@ func TestUser(t *testing.T) {
 func TestUserStorage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &userStorage{
-				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+			valid := &identityv1.StoredUser{
+				User:         identityv1.User{ID: ksid.ID(1), Email: "test@example.com", Quotas: identityv1.UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := valid.Validate(); err != nil {
@@ -54,8 +56,8 @@ func TestUserStorage(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &userStorage{
-				User:         User{ID: ksid.ID(0), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+			zeroID := &identityv1.StoredUser{
+				User:         identityv1.User{ID: ksid.ID(0), Email: "test@example.com", Quotas: identityv1.UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -64,8 +66,8 @@ func TestUserStorage(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			emptyEmail := &userStorage{
-				User:         User{ID: ksid.ID(1), Email: "", Quotas: UserQuota{MaxOrganizations: 3}},
+			emptyEmail := &identityv1.StoredUser{
+				User:         identityv1.User{ID: ksid.ID(1), Email: "", Quotas: identityv1.UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := emptyEmail.Validate(); err == nil {
@@ -73,8 +75,8 @@ func TestUserStorage(t *testing.T) {
 			}
 		})
 		t.Run("invalid quota", func(t *testing.T) {
-			invalidQuota := &userStorage{
-				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 0}},
+			invalidQuota := &identityv1.StoredUser{
+				User:         identityv1.User{ID: ksid.ID(1), Email: "test@example.com", Quotas: identityv1.UserQuota{MaxOrganizations: 0}},
 				PasswordHash: "hash",
 			}
 			if err := invalidQuota.Validate(); err == nil {
@@ -85,12 +87,12 @@ func TestUserStorage(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		t.Run("with OAuthIdentities", func(t *testing.T) {
-			original := &userStorage{
-				User: User{
+			original := &identityv1.StoredUser{
+				User: identityv1.User{
 					ID:    ksid.ID(1),
 					Email: "test@example.com",
-					OAuthIdentities: []OAuthIdentity{
-						{Provider: OAuthProviderGoogle, ProviderID: "123"},
+					OAuthIdentities: []identityv1.OAuthIdentity{
+						{Provider: identityv1.OAuthProviderGoogle, ProviderID: "123"},
 					},
 				},
 				PasswordHash: "hash",
@@ -105,8 +107,8 @@ func TestUserStorage(t *testing.T) {
 		})
 
 		t.Run("nil OAuthIdentities", func(t *testing.T) {
-			noOAuth := &userStorage{
-				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+			noOAuth := &identityv1.StoredUser{
+				User:         identityv1.User{ID: ksid.ID(1), Email: "test@example.com", Quotas: identityv1.UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			cloneNoOAuth := noOAuth.Clone()
@@ -123,7 +125,7 @@ func TestUserService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var user, user2 *User
+	var user, user2 *identityv1.User
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
@@ -235,7 +237,7 @@ func TestUserService(t *testing.T) {
 
 	t.Run("Modify", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			modified, modErr := service.Modify(user.ID, func(u *User) error {
+			modified, modErr := service.Modify(user.ID, func(u *identityv1.User) error {
 				u.Name = "Modified Name"
 				return nil
 			})
@@ -248,7 +250,7 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			_, modErr := service.Modify(ksid.ID(0), func(u *User) error {
+			_, modErr := service.Modify(ksid.ID(0), func(u *identityv1.User) error {
 				return nil
 			})
 			if modErr == nil {
@@ -257,7 +259,7 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, modErr := service.Modify(ksid.ID(99999), func(u *User) error {
+			_, modErr := service.Modify(ksid.ID(99999), func(u *identityv1.User) error {
 				return nil
 			})
 			if modErr == nil {
@@ -318,9 +320,9 @@ func TestUserService(t *testing.T) {
 			t.Fatal(oauthErr)
 		}
 
-		_, oauthErr = oauthService.Modify(oauthUser.ID, func(u *User) error {
-			u.OAuthIdentities = append(u.OAuthIdentities, OAuthIdentity{
-				Provider:   OAuthProviderGoogle,
+		_, oauthErr = oauthService.Modify(oauthUser.ID, func(u *identityv1.User) error {
+			u.OAuthIdentities = append(u.OAuthIdentities, identityv1.OAuthIdentity{
+				Provider:   identityv1.OAuthProviderGoogle,
 				ProviderID: "google-123",
 				Email:      "oauth@gmail.com",
 			})
@@ -355,9 +357,9 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("update OAuth identity", func(t *testing.T) {
-			_, updateErr := oauthService.Modify(oauthUser.ID, func(u *User) error {
-				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: OAuthProviderMicrosoft, ProviderID: "ms-456", Email: "oauth@outlook.com"},
+			_, updateErr := oauthService.Modify(oauthUser.ID, func(u *identityv1.User) error {
+				u.OAuthIdentities = []identityv1.OAuthIdentity{
+					{Provider: identityv1.OAuthProviderMicrosoft, ProviderID: "ms-456", Email: "oauth@outlook.com"},
 				}
 				return nil
 			})
@@ -392,10 +394,10 @@ func TestUserService(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = service.Modify(user.ID, func(u *User) error {
-				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: OAuthProviderGoogle, ProviderID: "google-123", Email: "user@gmail.com"},
-					{Provider: OAuthProviderGitHub, ProviderID: "github-456", Email: "user@github.com"},
+			_, err = service.Modify(user.ID, func(u *identityv1.User) error {
+				u.OAuthIdentities = []identityv1.OAuthIdentity{
+					{Provider: identityv1.OAuthProviderGoogle, ProviderID: "google-123", Email: "user@gmail.com"},
+					{Provider: identityv1.OAuthProviderGitHub, ProviderID: "github-456", Email: "user@github.com"},
 				}
 				return nil
 			})
@@ -434,9 +436,9 @@ func TestUserService(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = service.Modify(user.ID, func(u *User) error {
-				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: OAuthProviderGoogle, ProviderID: "google-123"},
+			_, err = service.Modify(user.ID, func(u *identityv1.User) error {
+				u.OAuthIdentities = []identityv1.OAuthIdentity{
+					{Provider: identityv1.OAuthProviderGoogle, ProviderID: "google-123"},
 				}
 				return nil
 			})
@@ -449,7 +451,7 @@ func TestUserService(t *testing.T) {
 				t.Fatalf("Failed to find user by OAuth before removal: %v", err)
 			}
 
-			_, err = service.Modify(user.ID, func(u *User) error {
+			_, err = service.Modify(user.ID, func(u *identityv1.User) error {
 				u.OAuthIdentities = nil
 				return nil
 			})
@@ -477,10 +479,10 @@ func TestUserService(t *testing.T) {
 			t.Fatal(createErr)
 		}
 
-		_, modErr := service1.Modify(persistUser.ID, func(u *User) error {
-			u.OAuthIdentities = []OAuthIdentity{
-				{Provider: OAuthProviderGoogle, ProviderID: "google-persist-123"},
-				{Provider: OAuthProviderGitHub, ProviderID: "github-persist-456"},
+		_, modErr := service1.Modify(persistUser.ID, func(u *identityv1.User) error {
+			u.OAuthIdentities = []identityv1.OAuthIdentity{
+				{Provider: identityv1.OAuthProviderGoogle, ProviderID: "google-persist-123"},
+				{Provider: identityv1.OAuthProviderGitHub, ProviderID: "github-persist-456"},
 			}
 			return nil
 		})

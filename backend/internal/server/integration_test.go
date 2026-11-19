@@ -18,8 +18,11 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -129,7 +132,7 @@ func setupTestEnv(t testing.TB) *testEnv {
 			t.Errorf("stop background work: %v", err)
 		}
 	})
-	serverCfg := &storage.ServerConfig{
+	serverCfg := &storagev1.ServerConfig{
 		JWTSecret:  testJWTSecret,
 		Quotas:     storage.DefaultServerQuotas(false),
 		RateLimits: storage.DefaultRateLimits(),
@@ -879,7 +882,7 @@ func TestIntegration(t *testing.T) {
 		}
 
 		// Independently verified ownership is required before accepting the grant.
-		if _, err := env.userService.Modify(memberLogin.User.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+		if _, err := env.userService.Modify(memberLogin.User.ID, func(u *identityv1.User) error { u.EmailVerified = true; return nil }); err != nil {
 			t.Fatal(err)
 		}
 		acceptBody := dto.AcceptInvitationRequest{Token: inviteToken}

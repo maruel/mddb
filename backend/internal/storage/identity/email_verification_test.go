@@ -7,8 +7,11 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestEmailVerificationService(t *testing.T) {
@@ -121,12 +124,12 @@ func TestEmailVerificationService(t *testing.T) {
 		}
 
 		// Manually create an expired verification
-		expired := &EmailVerification{
+		expired := &identityv1.EmailVerification{
 			ID:        verification.ID,
 			UserID:    userID,
 			Email:     email,
 			Token:     verification.Token,
-			ExpiresAt: storage.ToTime(time.Now().Add(-1 * time.Hour)),
+			ExpiresAt: storagev1.ToTime(time.Now().Add(-1 * time.Hour)),
 			Created:   verification.Created,
 		}
 
@@ -137,7 +140,7 @@ func TestEmailVerificationService(t *testing.T) {
 
 	t.Run("Validate", func(t *testing.T) {
 		// Test valid verification
-		v := &EmailVerification{
+		v := &identityv1.EmailVerification{
 			ID:     ksid.NewID(),
 			UserID: ksid.NewID(),
 			Email:  "test@example.com",

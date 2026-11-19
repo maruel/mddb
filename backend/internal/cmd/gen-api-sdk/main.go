@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/maruel/apisdkgen"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func generate() error {
 	check := flag.Bool("check", false, "verify generated SDKs without writing them")
 	flag.Parse()
 	api := apisdkgen.NewAPI("../../../sdk/mddb", "MDDBSDK",
-		apisdkgen.NewVersion("v1", "dto", dto.SDKAPI))
+		apisdkgen.NewVersion("v1", "dto/v1", dto.SDKAPI))
 	api.Languages = []apisdkgen.Language{apisdkgen.TypeScript}
 	if *check {
 		return api.Verify()

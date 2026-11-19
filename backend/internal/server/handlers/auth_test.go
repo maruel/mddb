@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -102,7 +104,7 @@ func TestAuthHandler(t *testing.T) {
 		}
 
 		cfg := &Config{
-			ServerConfig: storage.ServerConfig{
+			ServerConfig: storagev1.ServerConfig{
 				JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
 			},
 			BaseURL: "http://localhost:8080",

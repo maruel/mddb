@@ -17,6 +17,9 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/coder/websocket"
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/mcp"
@@ -24,12 +27,11 @@ import (
 	voicev1 "github.com/gomodedev/gomode/voicegateway/api/v1"
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 type testVoiceBridge struct {
@@ -104,7 +106,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	}, &auth, ""); status != http.StatusOK {
 		t.Fatalf("register status = %d", status)
 	}
-	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
+	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	bridge := &testVoiceChoiceBridge{testVoiceBridge: testVoiceBridge{rtcErrors: map[string]string{"session-1": "provider disconnected"}}}
 	router := NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge})
 	t.Cleanup(router.Close)
@@ -341,7 +343,7 @@ func TestGoModeMCPUsesDefaultWorkspaceAfterLRUClear(t *testing.T) {
 	}
 
 	// An account that never switched a workspace has no recorded recent one.
-	if _, err := env.services.User.Modify(auth.User.ID, func(u *identity.User) error {
+	if _, err := env.services.User.Modify(auth.User.ID, func(u *identityv1.User) error {
 		u.Settings.LastActiveWorkspaces = nil
 		return nil
 	}); err != nil {
@@ -724,7 +726,7 @@ func TestGoModeMCPWriteToolsRequireEditor(t *testing.T) {
 	env := setupTestEnv(t)
 	_, wsID := setupGoModeWorkspace(t, env, "gomode-viewer@example.com")
 
-	viewer := &workspaceRegistry{svc: env.services, wsID: wsID, role: identity.WSRoleViewer}
+	viewer := &workspaceRegistry{svc: env.services, wsID: wsID, role: identityv1.WSRoleViewer}
 	tools, err := viewer.Tools(t.Context())
 	if err != nil {
 		t.Fatalf("Tools() error: %v", err)
@@ -742,7 +744,7 @@ func TestGoModeMCPWriteToolsRequireEditor(t *testing.T) {
 		}
 	}
 
-	editor := &workspaceRegistry{svc: env.services, wsID: wsID, role: identity.WSRoleEditor}
+	editor := &workspaceRegistry{svc: env.services, wsID: wsID, role: identityv1.WSRoleEditor}
 	tools, err = editor.Tools(t.Context())
 	if err != nil {
 		t.Fatalf("Tools() error: %v", err)
@@ -857,7 +859,7 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "browser-voice@example.com", Password: "Pass1234", Name: "Browser voice"}, &auth, ""); status != http.StatusOK {
 		t.Fatalf("register: %d", status)
 	}
-	cfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
+	cfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	router := NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", VoiceBridge: &websocketVoiceBridge{}})
 	t.Cleanup(router.Close)
 	ts := httptest.NewServer(router)

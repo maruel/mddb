@@ -15,9 +15,10 @@ import (
 	"testing/synctest"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/gomodedev/gomode/autoupdate"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -134,7 +135,7 @@ func TestRunSessionMaintenance(t *testing.T) {
 			t.Fatal(err)
 		}
 		create := func(id ksid.ID, expires time.Duration) {
-			if _, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storage.ToTime(time.Now().Add(expires)), 0); err != nil {
+			if _, err := s.CreateWithID(id, user, "hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(expires)), 0); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -148,7 +149,7 @@ func TestRunSessionMaintenance(t *testing.T) {
 			_, err := s.Get(id)
 			return err == nil
 		}
-		lastUsed := func() storage.Time {
+		lastUsed := func() storagev1.Time {
 			got, err := s.Get(current)
 			if err != nil {
 				t.Fatal(err)

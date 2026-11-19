@@ -5,8 +5,8 @@
 - This git repository represents a workspace.
 - Each directory in this workspace is a node.
 - A page is a index.md file.
-- A table is a data.jsonl file, which contains columns and rows. It's a JSONL table.
-- Each node must contain either a page (index.md), a table (data.jsonl) or both.
+- A table is a metadata.json file with its rows in a data.jsonl file.
+- Each node must contain either a page (index.md), a table (metadata.json and data.jsonl) or both.
 - Each node name must be unique across all the workspace.
 - Each change is stored as a git commit.
 
@@ -17,27 +17,33 @@ workspace/
 ├── AGENTS.md
 └── <node-id>/
     ├── index.md
+    ├── metadata.json
     ├── data.jsonl
     └── data.blobs/
         └── SE/
             └── OC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024
 ```
 
-## JSONL Tables
+## Tables
 
-Each `.jsonl` file is a table:
-- Line 1: Schema header (JSON object with `version` and `columns` array)
-- Lines 2+: Data rows (one JSON object per line)
+`metadata.json` holds the table title, its properties, and its views. Its `version` is `"1.0"`; readers accept any
+`1.x` and treat a missing version as `1.0`. Times are Unix seconds.
 
-The schema header row describes the columns of the table. The remaining rows are the data.
+```
+{"title":"People","version":"1.0","properties":[{"name":"name","type":"text"}],"created":1795114562.856,"modified":1795114562.856}
+```
+
+`data.jsonl` holds the rows:
+- Line 1: Schema header (JSON object with `version` and `columns` array). `version` must start with `1.`.
+- Lines 2+: Data rows (one JSON object per line). `data` maps each property name to its value.
 
 This file format is meant to be trivial to process with python, nodejs or whatever tool at your disposal.
 
 Example `data.jsonl`:
 ```
-{"version":"1","columns":[{"name":"id","type":"id"},{"name":"name","type":"string"}]}
-{"id":"01JWAB","name":"Alice"}
-{"id":"01JWAC","name":"Bob"}
+{"version":"1.0","columns":[{"name":"id","type":"number","required":true},{"name":"data","type":"jsonb","required":true},{"name":"created","type":"number","required":true},{"name":"modified","type":"number","required":true}]}
+{"id":"52AN5GIVI000","data":{"name":"Alice"},"created":1795114562.856,"modified":1795114562.856}
+{"id":"52AN5GIVJ000","data":{"name":"Bob"},"created":1795114563.104,"modified":1795114563.104}
 ```
 
 ## Blob Storage

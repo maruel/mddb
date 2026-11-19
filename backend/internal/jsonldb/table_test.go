@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	jsonldbv1 "github.com/maruel/mddb/backend/internal/jsonldb/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
@@ -969,7 +971,7 @@ not valid json
 					path:   path,
 					rows:   nil,
 					byID:   make(map[ksid.ID]int),
-					schema: schemaHeader{Version: "1.0"},
+					schema: jsonldbv1.SchemaHeader{Version: "1.0"},
 				}
 
 				err := table.Append(&testRow{ID: 1, Name: "test"})
@@ -1672,14 +1674,14 @@ not valid json
 			}
 
 			// Parse schema header (first line)
-			var header schemaHeader
+			var header jsonldbv1.SchemaHeader
 			if err := json.Unmarshal(lines[0], &header); err != nil {
 				t.Fatalf("failed to parse schema header: %v", err)
 			}
 
 			// Verify version
-			if header.Version != currentVersion {
-				t.Errorf("schema version = %q, want %q", header.Version, currentVersion)
+			if header.Version != jsonldbv1.CurrentVersion {
+				t.Errorf("schema version = %q, want %q", header.Version, jsonldbv1.CurrentVersion)
 			}
 
 			// Verify columns are populated
@@ -1688,7 +1690,7 @@ not valid json
 			}
 
 			// Verify expected columns exist
-			columnNames := make(map[string]columnType)
+			columnNames := make(map[string]jsonldbv1.ColumnType)
 			for _, col := range header.Columns {
 				columnNames[col.Name] = col.Type
 			}
@@ -1702,11 +1704,11 @@ not valid json
 			}
 
 			// Verify column types
-			if colType, ok := columnNames["id"]; ok && colType != columnTypeNumber {
-				t.Errorf("column 'id' type = %q, want %q", colType, columnTypeNumber)
+			if colType, ok := columnNames["id"]; ok && colType != jsonldbv1.ColumnTypeNumber {
+				t.Errorf("column 'id' type = %q, want %q", colType, jsonldbv1.ColumnTypeNumber)
 			}
-			if colType, ok := columnNames["name"]; ok && colType != columnTypeText {
-				t.Errorf("column 'name' type = %q, want %q", colType, columnTypeText)
+			if colType, ok := columnNames["name"]; ok && colType != jsonldbv1.ColumnTypeText {
+				t.Errorf("column 'name' type = %q, want %q", colType, jsonldbv1.ColumnTypeText)
 			}
 		})
 	})

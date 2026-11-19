@@ -7,20 +7,21 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 // FakeOAuthHandler bypasses real OAuth providers and logs in with fake accounts.
 type FakeOAuthHandler struct {
 	svc       *Services
 	cfg       *Config
-	providers map[identity.OAuthProvider]bool
+	providers map[identityv1.OAuthProvider]bool
 }
 
 // NewFakeOAuthHandler creates a handler that fakes OAuth login for testing.
-func NewFakeOAuthHandler(svc *Services, cfg *Config, providers []identity.OAuthProvider) *FakeOAuthHandler {
-	m := make(map[identity.OAuthProvider]bool, len(providers))
+func NewFakeOAuthHandler(svc *Services, cfg *Config, providers []identityv1.OAuthProvider) *FakeOAuthHandler {
+	m := make(map[identityv1.OAuthProvider]bool, len(providers))
 	for _, p := range providers {
 		m[p] = true
 	}
@@ -29,7 +30,7 @@ func NewFakeOAuthHandler(svc *Services, cfg *Config, providers []identity.OAuthP
 
 // LoginRedirect bypasses real OAuth and immediately logs in with a fake account.
 func (h *FakeOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
-	provider := identity.OAuthProvider(r.PathValue("provider"))
+	provider := identityv1.OAuthProvider(r.PathValue("provider"))
 	if !h.providers[provider] {
 		redirectOAuthError(w, r, loginPath, dto.InvalidProvider())
 		return
@@ -51,13 +52,13 @@ func (h *FakeOAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request)
 //
 // Every fake account has a provider-verified email, as a Microsoft app
 // registration with the email and xms_edov optional claims provides.
-func testUserInfo(provider identity.OAuthProvider) oauthUserInfo {
+func testUserInfo(provider identityv1.OAuthProvider) oauthUserInfo {
 	switch provider {
-	case identity.OAuthProviderGoogle:
+	case identityv1.OAuthProviderGoogle:
 		return oauthUserInfo{ID: "test-google-id", VerifiedEmail: knownEmail("test-google@example.com"), Name: "Google Test User"}
-	case identity.OAuthProviderMicrosoft:
+	case identityv1.OAuthProviderMicrosoft:
 		return oauthUserInfo{ID: "test-ms-id", VerifiedEmail: knownEmail("test-microsoft@example.com"), Name: "Microsoft Test User"}
-	case identity.OAuthProviderGitHub:
+	case identityv1.OAuthProviderGitHub:
 		return oauthUserInfo{ID: "test-github-id", VerifiedEmail: knownEmail("test-github@example.com"), Name: "GitHub Test User"}
 	default:
 		return oauthUserInfo{VerifiedEmail: knownEmail("")}

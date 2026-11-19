@@ -5,6 +5,8 @@ package content
 import (
 	"math"
 	"testing"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
 )
 
 func TestCoerceValue(t *testing.T) {
@@ -169,19 +171,19 @@ func TestCoerceValue(t *testing.T) {
 
 func TestPropertyAffinity(t *testing.T) {
 	tests := []struct {
-		propType PropertyType
+		propType contentv1.PropertyType
 		want     affinity
 	}{
-		{PropertyTypeText, affinityTEXT},
-		{PropertyTypeNumber, affinityNUMERIC},
-		{PropertyTypeCheckbox, affinityINTEGER},
-		{PropertyTypeDate, affinityTEXT},
-		{PropertyTypeSelect, affinityTEXT},
-		{PropertyTypeMultiSelect, affinityBLOB},
-		{PropertyTypeURL, affinityTEXT},
-		{PropertyTypeEmail, affinityTEXT},
-		{PropertyTypePhone, affinityTEXT},
-		{PropertyType("unknown"), affinityBLOB},
+		{contentv1.PropertyTypeText, affinityTEXT},
+		{contentv1.PropertyTypeNumber, affinityNUMERIC},
+		{contentv1.PropertyTypeCheckbox, affinityINTEGER},
+		{contentv1.PropertyTypeDate, affinityTEXT},
+		{contentv1.PropertyTypeSelect, affinityTEXT},
+		{contentv1.PropertyTypeMultiSelect, affinityBLOB},
+		{contentv1.PropertyTypeURL, affinityTEXT},
+		{contentv1.PropertyTypeEmail, affinityTEXT},
+		{contentv1.PropertyTypePhone, affinityTEXT},
+		{contentv1.PropertyType("unknown"), affinityBLOB},
 	}
 
 	for _, tt := range tests {
@@ -196,10 +198,10 @@ func TestPropertyAffinity(t *testing.T) {
 
 func TestCoerceRecordData(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
-		properties := []Property{
-			{Name: "name", Type: PropertyTypeText},
-			{Name: "age", Type: PropertyTypeNumber},
-			{Name: "active", Type: PropertyTypeCheckbox},
+		properties := []contentv1.Property{
+			{Name: "name", Type: contentv1.PropertyTypeText},
+			{Name: "age", Type: contentv1.PropertyTypeNumber},
+			{Name: "active", Type: contentv1.PropertyTypeCheckbox},
 		}
 
 		data := map[string]any{
@@ -226,7 +228,7 @@ func TestCoerceRecordData(t *testing.T) {
 	})
 
 	t.Run("Nil", func(t *testing.T) {
-		properties := []Property{{Name: "col", Type: PropertyTypeText}}
+		properties := []contentv1.Property{{Name: "col", Type: contentv1.PropertyTypeText}}
 		result := CoerceRecordData(nil, properties)
 		if result != nil {
 			t.Errorf("CoerceRecordData(nil, properties) = %v, want nil", result)

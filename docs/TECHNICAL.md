@@ -50,9 +50,9 @@ mddb is distributed as a single self-contained binary. This is achieved using Go
 
 ### Type Generation
 
-To maintain type safety between the Go backend and SolidJS frontend, mddb uses **apisdkgen** for DTO types, its TypeScript client, and the API reference. Routes are declared in `backend/internal/server/dto/sdk.go` and checked against router registrations by a backend test.
+To maintain type safety between the Go backend and SolidJS frontend, mddb uses **apisdkgen** for DTO types, its TypeScript client, and the API reference. Routes are declared in `backend/internal/server/dto/v1/sdk.go` and checked against router registrations by a backend test.
 
-1. **Source**: Go API structs in `backend/internal/server/dto/`.
+1. **Source**: Go API structs in `backend/internal/server/dto/v1/`.
 2. **Process**: `apisdkgen` follows the route specification and generates TypeScript interfaces and client methods.
 3. **Artifact**: The versioned TypeScript SDK in `sdk/mddb/ts/v1/` and API reference in `sdk/mddb/API.v1.md`.
 4. **Execution**: Triggered by `make fix` and `make build`.
@@ -107,7 +107,8 @@ Node content type is inferred from file existence, exposed via `has_page` and `h
 | `metadata.json` only | false    | true      | Table with schema and records       |
 | Both files           | true     | true      | Hybrid node with both content types |
 
-Storage types defined in `backend/internal/storage/content/types.go`.
+Runtime node types are defined in `backend/internal/storage/content/types.go`; the persisted records, properties,
+and views are defined in `backend/internal/storage/content/data/v1`.
 
 ### Storage Layout
 

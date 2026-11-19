@@ -7,8 +7,11 @@ import (
 	"slices"
 	"testing"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -35,7 +38,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
+	_, err = orgService.Modify(org.ID, func(o *identityv1.Organization) error {
 		o.Quotas.MaxWorkspacesPerOrg = 1_000
 		o.Quotas.MaxMembersPerOrg = 10_000
 		o.Quotas.MaxMembersPerWorkspace = 10_000
@@ -51,7 +54,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	_, err = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
+	_, err = wsService.Modify(ws.ID, func(w *identityv1.Workspace) error {
 		w.Quotas.MaxPages = 1_000_000
 		w.Quotas.MaxStorageBytes = 1_000_000_000_000 // 1TB
 		w.Quotas.MaxRecordsPerTable = 1_000_000
@@ -62,7 +65,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	serverQuotas := storage.ResourceQuotas{
+	serverQuotas := storagev1.ResourceQuotas{
 		MaxPages:              1_000_000,
 		MaxStorageBytes:       1_000_000_000_000, // 1TB
 		MaxRecordsPerTable:    1_000_000,
@@ -93,9 +96,9 @@ func BenchmarkTableOperations(b *testing.B) {
 		ID:       dbID,
 		Title:    "Benchmark Table",
 		Type:     NodeTypeTable,
-		Created:  storage.Now(),
-		Modified: storage.Now(),
-		Properties: []Property{
+		Created:  storagev1.Now(),
+		Modified: storagev1.Now(),
+		Properties: []contentv1.Property{
 			{Name: "Title", Type: "text"},
 			{Name: "Value", Type: "number"},
 		},
@@ -108,10 +111,10 @@ func BenchmarkTableOperations(b *testing.B) {
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := range b.N {
-			record := &DataRecord{
+			record := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 				Data: map[string]any{
 					"c1": "Item",
 					"c2": i,
@@ -129,16 +132,16 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a table with 1000 records
 		readDBID := ksid.NewID()
-		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storagev1.Now(), Modified: storagev1.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
-			record := &DataRecord{
+			record := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"c1": "test"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
 				b.Fatal(err)
@@ -161,17 +164,17 @@ func BenchmarkTableOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := ksid.ID(100)
-		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storagev1.Now(), Modified: storagev1.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
 		for range 10000 {
-			record := &DataRecord{
+			record := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"c1": "test"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
 				b.Fatal(err)

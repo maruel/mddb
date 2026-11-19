@@ -8,8 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -38,7 +41,7 @@ func testServices(t *testing.T) (*Services, ksid.ID) {
 		t.Fatalf("failed to create test organization: %v", err)
 	}
 	// Use Modify to set quotas, ignoring error as we control inputs
-	_, _ = orgService.Modify(org.ID, func(o *identity.Organization) error {
+	_, _ = orgService.Modify(org.ID, func(o *identityv1.Organization) error {
 		o.Quotas.MaxTotalStorageBytes = 1e18
 		return nil
 	})
@@ -47,7 +50,7 @@ func testServices(t *testing.T) (*Services, ksid.ID) {
 	if err != nil {
 		t.Fatalf("failed to create test workspace: %v", err)
 	}
-	_, _ = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
+	_, _ = wsService.Modify(ws.ID, func(w *identityv1.Workspace) error {
 		w.Quotas.MaxStorageBytes = 1e12
 		w.Quotas.MaxPages = 1000
 		return nil
@@ -70,9 +73,9 @@ func createTestTable(t *testing.T, svc *Services, wsID ksid.ID) ksid.ID {
 	}
 
 	author := git.Author{Name: "Test User", Email: "test@example.com"}
-	props := []content.Property{
-		{Name: "Name", Type: content.PropertyTypeText},
-		{Name: "Age", Type: content.PropertyTypeNumber},
+	props := []contentv1.Property{
+		{Name: "Name", Type: contentv1.PropertyTypeText},
+		{Name: "Age", Type: contentv1.PropertyTypeNumber},
 	}
 
 	node, err := ws.CreateTableUnderParent(ctx, 0, "Test Table", props, author)
@@ -160,7 +163,7 @@ func TestNodeHandler(t *testing.T) {
 			if err := svc.FileStore.InitWorkspace(ctx, wsID); err != nil {
 				t.Fatal(err)
 			}
-			user := &identity.User{Name: "Test User", Email: "test@example.com"}
+			user := &identityv1.User{Name: "Test User", Email: "test@example.com"}
 			nodeID := createTestTable(t, svc, wsID)
 			nh := &NodeHandler{Svc: svc}
 

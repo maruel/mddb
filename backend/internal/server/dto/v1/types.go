@@ -5,12 +5,10 @@ package dto
 import (
 	"errors"
 
-	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
-)
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 
-// Time is the Unix timestamp type used by API DTOs.
-type Time = storage.Time
+	"github.com/maruel/ksid"
+)
 
 // PropertyType represents the type of a table property.
 type PropertyType string
@@ -112,11 +110,11 @@ const (
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft/github)"`
-	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
-	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
-	AvatarURL  string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
-	LastLogin  Time          `json:"last_login" jsonschema:"description=Last login Unix timestamp via this provider"`
+	Provider   OAuthProvider  `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft/github)"`
+	ProviderID string         `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string         `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	AvatarURL  string         `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+	LastLogin  storagev1.Time `json:"last_login" jsonschema:"description=Last login Unix timestamp via this provider"`
 }
 
 // WorkspaceMembershipSettings represents user preferences within a specific workspace.
@@ -174,10 +172,6 @@ type OrganizationQuotas struct {
 	MaxTotalStorageBytes   int64 `json:"max_total_storage_bytes" jsonschema:"description=Total storage across all workspaces in bytes"`
 }
 
-// WorkspaceQuotas is a type alias for ResourceQuotas.
-// -1 means "inherit from parent", 0 means "disabled", positive means a limit.
-type WorkspaceQuotas = ResourceQuotas
-
 // UserQuota defines limits for a user.
 type UserQuota struct {
 	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`
@@ -185,7 +179,7 @@ type UserQuota struct {
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	DefaultWorkspaceQuotas WorkspaceQuotas `json:"default_workspace_quotas" jsonschema:"description=Default quotas for new workspaces"`
+	DefaultWorkspaceQuotas ResourceQuotas `json:"default_workspace_quotas" jsonschema:"description=Default quotas for new workspaces"`
 }
 
 // WorkspaceSettings represents workspace-wide settings.
@@ -197,11 +191,11 @@ type WorkspaceSettings struct {
 
 // Commit represents a commit in git history.
 type Commit struct {
-	Hash        string `json:"hash"`
-	Message     string `json:"message"`
-	AuthorName  string `json:"author_name"`
-	AuthorEmail string `json:"author_email"`
-	Timestamp   Time   `json:"timestamp"`
+	Hash        string         `json:"hash"`
+	Message     string         `json:"message"`
+	AuthorName  string         `json:"author_name"`
+	AuthorEmail string         `json:"author_email"`
+	Timestamp   storagev1.Time `json:"timestamp"`
 }
 
 // SearchResult represents a single search result.
@@ -213,7 +207,7 @@ type SearchResult struct {
 	Snippet  string            `json:"snippet"`
 	Score    float64           `json:"score"`
 	Matches  map[string]string `json:"matches"`
-	Modified Time              `json:"modified"`
+	Modified storagev1.Time    `json:"modified"`
 }
 
 // --- View Types ---
@@ -382,16 +376,16 @@ type WorkspaceEvent struct {
 	Revision string `json:"revision,omitempty"`
 	// ChangeID is an opaque process-epoch invalidation watermark, not a read
 	// snapshot revision. Reconnection or a delivery gap requires resynchronization.
-	ChangeID    string        `json:"change_id,omitempty"`
-	Aspects     []EventAspect `json:"aspects,omitempty"`
-	ParentID    ksid.ID       `json:"parent_id,omitempty"`
-	AffectedIDs []ksid.ID     `json:"affected_ids,omitempty"`
-	OldParentID ksid.ID       `json:"old_parent_id,omitempty"`
-	Type        EventType     `json:"type"`
-	NodeID      ksid.ID       `json:"node_id"`
-	RecordID    ksid.ID       `json:"record_id,omitempty"`
-	ActorID     ksid.ID       `json:"actor_id"`
-	Modified    Time          `json:"modified"`
+	ChangeID    string         `json:"change_id,omitempty"`
+	Aspects     []EventAspect  `json:"aspects,omitempty"`
+	ParentID    ksid.ID        `json:"parent_id,omitempty"`
+	AffectedIDs []ksid.ID      `json:"affected_ids,omitempty"`
+	OldParentID ksid.ID        `json:"old_parent_id,omitempty"`
+	Type        EventType      `json:"type"`
+	NodeID      ksid.ID        `json:"node_id"`
+	RecordID    ksid.ID        `json:"record_id,omitempty"`
+	ActorID     ksid.ID        `json:"actor_id"`
+	Modified    storagev1.Time `json:"modified"`
 	// RequestID correlates a change with an individual HTTP write, not authorization.
 	RequestID string `json:"request_id,omitempty"`
 }
@@ -400,15 +394,15 @@ type WorkspaceEvent struct {
 
 // NotificationDTO is the API representation of a notification.
 type NotificationDTO struct {
-	ID         ksid.ID `json:"id" jsonschema:"description=Unique notification identifier"`
-	Type       string  `json:"type" jsonschema:"description=Notification type (org_invite, ws_invite, member_joined, member_removed, page_mention, page_edited)"`
-	Title      string  `json:"title" jsonschema:"description=Human-readable summary"`
-	Body       string  `json:"body,omitempty" jsonschema:"description=Optional detail text"`
-	ResourceID string  `json:"resource_id,omitempty" jsonschema:"description=Related resource identifier"`
-	ActorID    ksid.ID `json:"actor_id,omitempty" jsonschema:"description=User who triggered the notification"`
-	ActorName  string  `json:"actor_name,omitempty" jsonschema:"description=Display name of actor"`
-	Read       bool    `json:"read" jsonschema:"description=Whether the notification has been read"`
-	CreatedAt  Time    `json:"created_at" jsonschema:"description=Creation timestamp"`
+	ID         ksid.ID        `json:"id" jsonschema:"description=Unique notification identifier"`
+	Type       string         `json:"type" jsonschema:"description=Notification type (org_invite, ws_invite, member_joined, member_removed, page_mention, page_edited)"`
+	Title      string         `json:"title" jsonschema:"description=Human-readable summary"`
+	Body       string         `json:"body,omitempty" jsonschema:"description=Optional detail text"`
+	ResourceID string         `json:"resource_id,omitempty" jsonschema:"description=Related resource identifier"`
+	ActorID    ksid.ID        `json:"actor_id,omitempty" jsonschema:"description=User who triggered the notification"`
+	ActorName  string         `json:"actor_name,omitempty" jsonschema:"description=Display name of actor"`
+	Read       bool           `json:"read" jsonschema:"description=Whether the notification has been read"`
+	CreatedAt  storagev1.Time `json:"created_at" jsonschema:"description=Creation timestamp"`
 }
 
 // ChannelSetDTO indicates which delivery channels are enabled.

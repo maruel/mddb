@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -62,7 +64,7 @@ func nodeDetailFrom(n *content.Node) mcpschema.NodeDetail {
 	return out
 }
 
-func snapshotFilters(filters []content.Filter) []mcpschema.Filter {
+func snapshotFilters(filters []contentv1.Filter) []mcpschema.Filter {
 	out := make([]mcpschema.Filter, 0, len(filters))
 	for i := range filters {
 		f := &filters[i]

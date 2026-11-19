@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 
+	jsonldbv1 "github.com/maruel/mddb/backend/internal/jsonldb/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
@@ -65,7 +67,7 @@ type TableObserver[T Row[T]] interface {
 type Table[T Row[T]] struct {
 	path         string
 	mu           sync.RWMutex
-	schema       schemaHeader
+	schema       jsonldbv1.SchemaHeader
 	rows         []T
 	byID         map[ksid.ID]int // maps ID to index in rows
 	blobRefCount map[BlobRef]int
@@ -89,8 +91,8 @@ func NewTable[T Row[T]](path string) (*Table[T], error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to discover schema from type: %w", err)
 		}
-		table.schema = schemaHeader{
-			Version: currentVersion,
+		table.schema = jsonldbv1.SchemaHeader{
+			Version: jsonldbv1.CurrentVersion,
 			Columns: columns,
 		}
 	}

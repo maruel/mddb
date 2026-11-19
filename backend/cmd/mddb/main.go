@@ -29,6 +29,9 @@ import (
 	"syscall"
 	"time"
 
+	mddbv1 "github.com/maruel/mddb/backend/cmd/mddb/data/v1"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/gomodedev/gomode/autoupdate"
 	"github.com/gomodedev/gomode/voicegateway"
@@ -351,7 +354,7 @@ Flags:
 			slog.InfoContext(ctx, "voice gateway trusted issuer", "service", "mddb", "issuer", cfg.ExternalVoice.Issuer, "public_key", key)
 		}
 	}
-	if cfg.VoiceMode == voiceGatewayEmbedded {
+	if cfg.VoiceMode == mddbv1.VoiceGatewayEmbedded {
 		voiceCfg = voiceCfg.Available(ctx)
 		if ctx.Err() != nil {
 			return context.Cause(ctx)
@@ -582,7 +585,7 @@ func promptCredentials(reader *bufio.Reader, provider string) (oauthCredentials,
 // cfgDir/config.toml. The file holds client secrets, so it is created with mode
 // 0600. defaults supplies the base URL default and the port shown in the
 // callback URLs.
-func runOnboarding(cfgDir string, defaults *tomlServer) error {
+func runOnboarding(cfgDir string, defaults *mddbv1.Server) error {
 	fmt.Println("Welcome to mddb! Let's set up your configuration.")
 	fmt.Println("This wizard writes " + configPath(cfgDir) + ", which holds client secrets.")
 	fmt.Println("")
@@ -672,7 +675,7 @@ func runOnboarding(cfgDir string, defaults *tomlServer) error {
 }
 
 // runNotificationCleanup periodically deletes old notifications and caps per-user counts.
-func runNotificationCleanup(ctx context.Context, notifSvc *identity.NotificationService, rootRepo *git.RootRepo, quotas *storage.ServerQuotas) {
+func runNotificationCleanup(ctx context.Context, notifSvc *identity.NotificationService, rootRepo *git.RootRepo, quotas *storagev1.ServerQuotas) {
 	cleanup := func() {
 		retentionDays := quotas.NotificationRetentionDays
 		if retentionDays <= 0 {
@@ -683,7 +686,7 @@ func runNotificationCleanup(ctx context.Context, notifSvc *identity.Notification
 			maxPerUser = 500
 		}
 
-		cutoff := storage.ToTime(time.Now().AddDate(0, 0, -retentionDays))
+		cutoff := storagev1.ToTime(time.Now().AddDate(0, 0, -retentionDays))
 		var totalDeleted int
 
 		if count, err := notifSvc.DeleteOlderThan(cutoff); err != nil {

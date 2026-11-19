@@ -15,10 +15,11 @@ import (
 	"testing"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode/mcp"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/sse"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestGoModeMCPSessions(t *testing.T) {
@@ -223,14 +224,14 @@ func TestGoModeMCPSessions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); err != nil {
+			if _, err := env.orgMemService.Modify(membership.ID, func(m *identityv1.OrganizationMembership) error { m.Role = identityv1.OrgRoleMember; return nil }); err != nil {
 				t.Fatal(err)
 			}
 			wm, err := env.wsMemService.Get(u.ID, ws)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); err != nil {
+			if _, err := env.wsMemService.Modify(wm.ID, func(m *identityv1.WorkspaceMembership) error { m.Role = identityv1.WSRoleViewer; return nil }); err != nil {
 				t.Fatal(err)
 			}
 			env.services.Broker.Publish(ws, &dto.WorkspaceEvent{Type: dto.EventNodeUpdated})
@@ -345,14 +346,14 @@ func TestGoModeMCPStreamLifetime(t *testing.T) {
 						t.Fatal(err)
 					}
 				} else {
-					if _, err := env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); err != nil {
+					if _, err := env.orgMemService.Modify(membership.ID, func(m *identityv1.OrganizationMembership) error { m.Role = identityv1.OrgRoleMember; return nil }); err != nil {
 						t.Fatal(err)
 					}
 					wm, err := env.wsMemService.Get(u.ID, wsID)
 					if err != nil {
 						t.Fatal(err)
 					}
-					if _, err := env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); err != nil {
+					if _, err := env.wsMemService.Modify(wm.ID, func(m *identityv1.WorkspaceMembership) error { m.Role = identityv1.WSRoleViewer; return nil }); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -507,14 +508,14 @@ func TestGoModeMCPStreamSetupAuthority(t *testing.T) {
 					if e != nil {
 						t.Fatal(e)
 					}
-					if _, e = env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); e != nil {
+					if _, e = env.orgMemService.Modify(membership.ID, func(m *identityv1.OrganizationMembership) error { m.Role = identityv1.OrgRoleMember; return nil }); e != nil {
 						t.Fatal(e)
 					}
 					wm, e := env.wsMemService.Get(u.ID, wsID)
 					if e != nil {
 						t.Fatal(e)
 					}
-					if _, e = env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); e != nil {
+					if _, e = env.wsMemService.Modify(wm.ID, func(m *identityv1.WorkspaceMembership) error { m.Role = identityv1.WSRoleViewer; return nil }); e != nil {
 						t.Fatal(e)
 					}
 					// This invalidation is deliberately published before registry registration.

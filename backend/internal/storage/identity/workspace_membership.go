@@ -6,109 +6,33 @@ import (
 	"errors"
 	"iter"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
-
-// WorkspaceRole defines the permissions for a user within a workspace.
-type WorkspaceRole string
-
-// IsValid returns true if the role is a valid workspace role.
-func (r WorkspaceRole) IsValid() bool {
-	switch r {
-	case WSRoleAdmin, WSRoleEditor, WSRoleViewer:
-		return true
-	}
-	return false
-}
-
-// CanEdit returns true if the role can create/modify content.
-func (r WorkspaceRole) CanEdit() bool {
-	return r == WSRoleAdmin || r == WSRoleEditor
-}
-
-// CanManageMembers returns true if the role can invite/remove workspace members.
-func (r WorkspaceRole) CanManageMembers() bool {
-	return r == WSRoleAdmin
-}
-
-// CanManageSettings returns true if the role can configure workspace settings.
-func (r WorkspaceRole) CanManageSettings() bool {
-	return r == WSRoleAdmin
-}
-
-const (
-	// WSRoleAdmin has full workspace control.
-	WSRoleAdmin WorkspaceRole = "ws:admin"
-	// WSRoleEditor can create and modify content.
-	WSRoleEditor WorkspaceRole = "ws:editor"
-	// WSRoleViewer can only read content.
-	WSRoleViewer WorkspaceRole = "ws:viewer"
-)
-
-// WorkspaceMembership represents a user's relationship with a workspace.
-type WorkspaceMembership struct {
-	ID          ksid.ID                     `json:"id" jsonschema:"description=Unique membership identifier"`
-	UserID      ksid.ID                     `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
-	WorkspaceID ksid.ID                     `json:"workspace_id" jsonschema:"description=Workspace ID the user is a member of"`
-	Role        WorkspaceRole               `json:"role" jsonschema:"description=User role within the workspace (admin/editor/viewer)"`
-	Settings    WorkspaceMembershipSettings `json:"settings" jsonschema:"description=User preferences within this workspace"`
-	Created     storage.Time                `json:"created" jsonschema:"description=Membership creation timestamp"`
-}
-
-// Clone returns a copy of the WorkspaceMembership.
-func (m *WorkspaceMembership) Clone() *WorkspaceMembership {
-	c := *m
-	return &c
-}
-
-// GetID returns the WorkspaceMembership's ID.
-func (m *WorkspaceMembership) GetID() ksid.ID {
-	return m.ID
-}
-
-// Validate checks that the WorkspaceMembership is valid.
-func (m *WorkspaceMembership) Validate() error {
-	if m.ID.IsZero() {
-		return errIDRequired
-	}
-	if m.UserID.IsZero() {
-		return errUserIDEmpty
-	}
-	if m.WorkspaceID.IsZero() {
-		return errWSIDEmpty
-	}
-	if !m.Role.IsValid() {
-		return errInvalidWSRole
-	}
-	return nil
-}
-
-// WorkspaceMembershipSettings represents user preferences within a specific workspace.
-type WorkspaceMembershipSettings struct {
-	Notifications bool `json:"notifications" jsonschema:"description=Whether notifications are enabled"`
-}
 
 // WorkspaceMembershipService handles user-workspace relationships.
 type WorkspaceMembershipService struct {
-	table      *jsonldb.Table[*WorkspaceMembership]
-	byUserID   *jsonldb.Index[ksid.ID, *WorkspaceMembership]
-	byWSID     *jsonldb.Index[ksid.ID, *WorkspaceMembership]
-	byUserWS   *jsonldb.UniqueIndex[userWSKey, *WorkspaceMembership]
+	table      *jsonldb.Table[*identityv1.WorkspaceMembership]
+	byUserID   *jsonldb.Index[ksid.ID, *identityv1.WorkspaceMembership]
+	byWSID     *jsonldb.Index[ksid.ID, *identityv1.WorkspaceMembership]
+	byUserWS   *jsonldb.UniqueIndex[userWSKey, *identityv1.WorkspaceMembership]
 	wsService  *WorkspaceService
 	orgService *OrganizationService
 }
 
 // NewWorkspaceMembershipService creates a new workspace membership service.
 func NewWorkspaceMembershipService(tablePath string, wsService *WorkspaceService, orgService *OrganizationService) (*WorkspaceMembershipService, error) {
-	table, err := jsonldb.NewTable[*WorkspaceMembership](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.WorkspaceMembership](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) ksid.ID { return m.UserID })
-	byWSID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) ksid.ID { return m.WorkspaceID })
-	byUserWS := jsonldb.NewUniqueIndex(table, func(m *WorkspaceMembership) userWSKey {
+	byUserID := jsonldb.NewIndex(table, func(m *identityv1.WorkspaceMembership) ksid.ID { return m.UserID })
+	byWSID := jsonldb.NewIndex(table, func(m *identityv1.WorkspaceMembership) ksid.ID { return m.WorkspaceID })
+	byUserWS := jsonldb.NewUniqueIndex(table, func(m *identityv1.WorkspaceMembership) userWSKey {
 		return userWSKey{UserID: m.UserID, WSID: m.WorkspaceID}
 	})
 	return &WorkspaceMembershipService{
@@ -122,20 +46,20 @@ func NewWorkspaceMembershipService(tablePath string, wsService *WorkspaceService
 }
 
 // findByUserAndWorkspace finds a membership by user and workspace IDs. O(1) via index.
-func (s *WorkspaceMembershipService) findByUserAndWorkspace(userID, wsID ksid.ID) *WorkspaceMembership {
+func (s *WorkspaceMembershipService) findByUserAndWorkspace(userID, wsID ksid.ID) *identityv1.WorkspaceMembership {
 	return s.byUserWS.Get(userWSKey{UserID: userID, WSID: wsID})
 }
 
 // Create adds a user to a workspace.
-func (s *WorkspaceMembershipService) Create(userID, wsID ksid.ID, role WorkspaceRole) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Create(userID, wsID ksid.ID, role identityv1.WorkspaceRole) (*identityv1.WorkspaceMembership, error) {
 	if userID.IsZero() {
-		return nil, errUserIDEmpty
+		return nil, identityv1.ErrUserIDEmpty
 	}
 	if wsID.IsZero() {
-		return nil, errWSIDEmpty
+		return nil, identityv1.ErrWSIDEmpty
 	}
 	if !role.IsValid() {
-		return nil, errInvalidWSRole
+		return nil, identityv1.ErrInvalidWSRole
 	}
 	if s.findByUserAndWorkspace(userID, wsID) != nil {
 		return nil, errWSMembershipExists
@@ -154,12 +78,12 @@ func (s *WorkspaceMembershipService) Create(userID, wsID ksid.ID, role Workspace
 		return nil, errQuotaExceeded
 	}
 
-	membership := &WorkspaceMembership{
+	membership := &identityv1.WorkspaceMembership{
 		ID:          ksid.NewID(),
 		UserID:      userID,
 		WorkspaceID: wsID,
 		Role:        role,
-		Created:     storage.Now(),
+		Created:     storagev1.Now(),
 	}
 	if err := s.table.Append(membership); err != nil {
 		return nil, err
@@ -168,7 +92,7 @@ func (s *WorkspaceMembershipService) Create(userID, wsID ksid.ID, role Workspace
 }
 
 // Get retrieves a specific user-workspace relationship.
-func (s *WorkspaceMembershipService) Get(userID, wsID ksid.ID) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Get(userID, wsID ksid.ID) (*identityv1.WorkspaceMembership, error) {
 	m := s.findByUserAndWorkspace(userID, wsID)
 	if m == nil {
 		return nil, errWSMembershipNotFound
@@ -177,7 +101,7 @@ func (s *WorkspaceMembershipService) Get(userID, wsID ksid.ID) (*WorkspaceMember
 }
 
 // GetByID retrieves a membership by its ID.
-func (s *WorkspaceMembershipService) GetByID(id ksid.ID) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) GetByID(id ksid.ID) (*identityv1.WorkspaceMembership, error) {
 	m := s.table.Get(id)
 	if m == nil {
 		return nil, errWSMembershipNotFound
@@ -186,12 +110,12 @@ func (s *WorkspaceMembershipService) GetByID(id ksid.ID) (*WorkspaceMembership, 
 }
 
 // IterByUser iterates over all workspace memberships for a user. O(1) via index.
-func (s *WorkspaceMembershipService) IterByUser(userID ksid.ID) iter.Seq[*WorkspaceMembership] {
+func (s *WorkspaceMembershipService) IterByUser(userID ksid.ID) iter.Seq[*identityv1.WorkspaceMembership] {
 	return s.byUserID.Iter(userID)
 }
 
 // IterByWorkspace iterates over all memberships in a workspace. O(1) via index.
-func (s *WorkspaceMembershipService) IterByWorkspace(wsID ksid.ID) iter.Seq[*WorkspaceMembership] {
+func (s *WorkspaceMembershipService) IterByWorkspace(wsID ksid.ID) iter.Seq[*identityv1.WorkspaceMembership] {
 	return s.byWSID.Iter(wsID)
 }
 
@@ -205,7 +129,7 @@ func (s *WorkspaceMembershipService) CountWSMemberships(wsID ksid.ID) int {
 }
 
 // Modify atomically modifies a membership.
-func (s *WorkspaceMembershipService) Modify(id ksid.ID, fn func(m *WorkspaceMembership) error) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Modify(id ksid.ID, fn func(m *identityv1.WorkspaceMembership) error) (*identityv1.WorkspaceMembership, error) {
 	if id.IsZero() {
 		return nil, errWSMembershipNotFound
 	}
@@ -268,8 +192,6 @@ func (s *WorkspaceMembershipService) DeleteByUserInOrg(userID, orgID ksid.ID) er
 var (
 	errWSMembershipExists   = errors.New("workspace membership already exists")
 	errWSMembershipNotFound = errors.New("workspace membership not found")
-	errInvalidWSRole        = errors.New("invalid workspace role")
-	errWSIDEmpty            = errors.New("workspace id cannot be empty")
 )
 
 // userWSKey is a composite key for user+workspace lookups.

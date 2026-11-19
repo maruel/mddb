@@ -17,6 +17,11 @@ import (
 	"strings"
 	"time"
 
+	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
+
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/gomodedev/gomode/httpserver/geoip"
@@ -26,13 +31,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
-	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Config holds configuration for the router.
 type Config struct {
-	*storage.ServerConfig
+	*storagev1.ServerConfig
 
 	ConfigDir      string
 	BaseURL        string
@@ -118,7 +121,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mountDeviceLogin(mux, svc, cfg, hcfg, authh, limiters)
 	if cfg.ExternalVoice != nil {
 		// The Go Mode Android shell uses GET; browser clients use POST.
-		token := WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identity.WSRoleViewer, limiters)
+		token := WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identityv1.WSRoleViewer, limiters)
 		mux.Handle("GET "+voiceTokenEndpoint, token)
 		mux.Handle("POST "+voiceTokenEndpoint, token)
 		if cfg.ExternalVoice.tokens != nil {
@@ -127,9 +130,9 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 		}
 	} else if cfg.VoiceBridge != nil {
 		voice := newVoiceGateway(cfg.VoiceBridge)
-		for _, version := range []string{"v1", "v2"} {
-			prefix := "/api/voicegateway/" + version + "/voice"
-			mux.HandleFunc("GET "+prefix+"/text/browser", voice.serveBrowserText)
+		for _, version := range voiceapi.ProtocolVersions() {
+			prefix := "/api/voicegateway/" + version.String() + "/voice"
+			mux.HandleFunc("GET "+prefix+"/text/browser", withVoiceProtocol(version, voice.serveBrowserText))
 			for _, path := range []string{
 				"GET " + prefix + "/choices",
 				"GET " + prefix + "/text",
@@ -138,7 +141,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 				"POST " + prefix + "/rtc/{sessionID}/diagnostics",
 				"POST " + prefix + "/rtc/{sessionID}",
 			} {
-				mux.Handle(path, WrapAuthReadRaw(voice.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters))
+				mux.Handle(path, WrapAuthReadRaw(withVoiceProtocol(version, voice.ServeHTTP), svc, hcfg, identityv1.WSRoleViewer, limiters))
 			}
 		}
 	}
@@ -150,11 +153,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 
 	// Go Mode MCP: workspace-scoped reads for every member, writes for editors.
 	focus := newVoiceFocusState()
-	mux.Handle("POST /api/v1/workspaces/{wsID}/gomode/focus", WrapAuthReadRaw(goModeFocus(svc, hcfg, focus), svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/gomode/focus", WrapAuthReadRaw(goModeFocus(svc, hcfg, focus), svc, hcfg, identityv1.WSRoleViewer, limiters))
 	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
 		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
 	} else {
-		mcpHandler := WrapAuthReadRaw(goModeMCP(svc, hcfg, nh, focus), svc, hcfg, identity.WSRoleViewer, limiters)
+		mcpHandler := WrapAuthReadRaw(goModeMCP(svc, hcfg, nh, focus), svc, hcfg, identityv1.WSRoleViewer, limiters)
 		mux.Handle("POST "+goModeMCPEndpoint, mcpHandler)
 		mux.Handle("GET "+goModeMCPEndpoint, mcpHandler)
 		mux.Handle("DELETE "+goModeMCPEndpoint, mcpHandler)
@@ -188,18 +191,18 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	// OAuth handler setup (needed before auth routes)
 	oh := handlers.NewOAuthHandler(svc, hcfg)
 	base := strings.TrimRight(cfg.BaseURL, "/")
-	var providers []identity.OAuthProvider
+	var providers []identityv1.OAuthProvider
 	if cfg.OAuth.GoogleClientID != "" && cfg.OAuth.GoogleClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderGoogle, cfg.OAuth.GoogleClientID, cfg.OAuth.GoogleClientSecret, base+"/api/v1/auth/oauth/google/callback")
-		providers = append(providers, identity.OAuthProviderGoogle)
+		oh.AddProvider(identityv1.OAuthProviderGoogle, cfg.OAuth.GoogleClientID, cfg.OAuth.GoogleClientSecret, base+"/api/v1/auth/oauth/google/callback")
+		providers = append(providers, identityv1.OAuthProviderGoogle)
 	}
 	if cfg.OAuth.MSClientID != "" && cfg.OAuth.MSClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderMicrosoft, cfg.OAuth.MSClientID, cfg.OAuth.MSClientSecret, base+"/api/v1/auth/oauth/microsoft/callback")
-		providers = append(providers, identity.OAuthProviderMicrosoft)
+		oh.AddProvider(identityv1.OAuthProviderMicrosoft, cfg.OAuth.MSClientID, cfg.OAuth.MSClientSecret, base+"/api/v1/auth/oauth/microsoft/callback")
+		providers = append(providers, identityv1.OAuthProviderMicrosoft)
 	}
 	if cfg.OAuth.GitHubClientID != "" && cfg.OAuth.GitHubClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderGitHub, cfg.OAuth.GitHubClientID, cfg.OAuth.GitHubClientSecret, base+"/api/v1/auth/oauth/github/callback")
-		providers = append(providers, identity.OAuthProviderGitHub)
+		oh.AddProvider(identityv1.OAuthProviderGitHub, cfg.OAuth.GitHubClientID, cfg.OAuth.GitHubClientSecret, base+"/api/v1/auth/oauth/github/callback")
+		providers = append(providers, identityv1.OAuthProviderGitHub)
 	}
 	if len(providers) > 0 {
 		slog.Info("OAuth providers initialized", "providers", providers)
@@ -239,96 +242,96 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("POST /api/v1/auth/switch-workspace", WrapAuth(mh.SwitchWorkspace, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/settings", WrapAuth(uh.UpdateUserSettings, svc, hcfg, limiters))
 	// Raw: the response also sets the OAuth state cookie.
-	mux.Handle("POST /api/v1/auth/oauth/link", WrapAuthReadRaw(oh.LinkOAuth, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/auth/oauth/link", WrapAuthReadRaw(oh.LinkOAuth, svc, hcfg, identityv1.WSRoleViewer, limiters))
 	mux.Handle("POST /api/v1/auth/oauth/unlink", WrapAuth(oh.UnlinkOAuth, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/password", WrapAuth(authh.SetPassword, svc, hcfg, limiters))
 
 	// Organization endpoints - /api/v1/organizations/*
 	mux.Handle("POST /api/v1/organizations", WrapAuth(authh.CreateOrganization, svc, hcfg, limiters))
-	mux.Handle("GET /api/v1/organizations/{orgID}", WrapOrgAuth(orgh.GetOrganization, svc, hcfg, identity.OrgRoleMember, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}", WrapOrgAuth(orgh.UpdateOrganization, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}/settings", WrapOrgAuth(orgh.UpdateOrgPreferences, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("GET /api/v1/organizations/{orgID}/users", WrapOrgAuth(uh.ListUsers, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}/users/role", WrapOrgAuth(uh.UpdateOrgMemberRole, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}/users/remove", WrapOrgAuth(uh.RemoveOrgMember, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("GET /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.ListOrgInvitations, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/organizations/{orgID}", WrapOrgAuth(orgh.GetOrganization, svc, hcfg, identityv1.OrgRoleMember, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}", WrapOrgAuth(orgh.UpdateOrganization, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/settings", WrapOrgAuth(orgh.UpdateOrgPreferences, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/organizations/{orgID}/users", WrapOrgAuth(uh.ListUsers, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/users/role", WrapOrgAuth(uh.UpdateOrgMemberRole, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/users/remove", WrapOrgAuth(uh.RemoveOrgMember, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.ListOrgInvitations, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
 
 	// Notion import endpoints
 	nih := handlers.NewNotionImportHandler(svc, hcfg)
-	mux.Handle("POST /api/v1/organizations/{orgID}/notion/import", WrapOrgAuth(nih.StartImport, svc, hcfg, identity.OrgRoleAdmin, limiters))
-	mux.Handle("GET /api/v1/organizations/{orgID}/notion/import/{importWsID}/status", WrapOrgAuth(nih.GetStatus, svc, hcfg, identity.OrgRoleMember, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/notion/import", WrapOrgAuth(nih.StartImport, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/organizations/{orgID}/notion/import/{importWsID}/status", WrapOrgAuth(nih.GetStatus, svc, hcfg, identityv1.OrgRoleMember, limiters))
 
 	// Workspace endpoints - /api/v1/workspaces/*
 	// Details and settings
-	mux.Handle("GET /api/v1/workspaces/{wsID}", WrapWSAuth(orgh.GetWorkspace, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}", WrapWSAuth(orgh.UpdateWorkspace, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/membership", WrapWSAuth(mh.UpdateWSMembershipSettings, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.GetGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.UpdateGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/push", WrapWSAuth(grh.PushGit, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/pull", WrapWSAuth(grh.PullGit, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git/status", WrapWSAuth(grh.GetSyncStatus, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/github-app", WrapWSAuth(grh.SetupGitHubAppRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/delete", WrapWSAuth(grh.DeleteGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}", WrapWSAuth(orgh.GetWorkspace, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}", WrapWSAuth(orgh.UpdateWorkspace, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/membership", WrapWSAuth(mh.UpdateWSMembershipSettings, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.GetGitRemote, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.UpdateGitRemote, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/push", WrapWSAuth(grh.PushGit, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/pull", WrapWSAuth(grh.PullGit, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git/status", WrapWSAuth(grh.GetSyncStatus, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/github-app", WrapWSAuth(grh.SetupGitHubAppRemote, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/delete", WrapWSAuth(grh.DeleteGitRemote, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 
 	// GitHub App routes
 	mux.Handle("POST /api/v1/github-app/repos", WrapAuth(grh.ListGitHubAppRepos, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/github-app/installations", WrapAuth(grh.ListGitHubAppInstallations, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/github-app/available", Wrap(grh.IsGitHubAppAvailable, hcfg, limiters))
 	// Notion import cancel
-	mux.Handle("POST /api/v1/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 	// Users and invitations
-	mux.Handle("GET /api/v1/workspaces/{wsID}/members", WrapWSAuth(uh.ListWorkspaceMembers, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/users/resolve", WrapWSAuth(uh.ResolveUsers, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identity.WSRoleAdmin, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.CreateWSInvitation, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/members", WrapWSAuth(uh.ListWorkspaceMembers, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/users/resolve", WrapWSAuth(uh.ResolveUsers, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.CreateWSInvitation, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 	// Nodes (id=0 is valid for root node)
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/titles", WrapWSAuth(nh.GetNodeTitles, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}", WrapWSAuth(nh.GetNode, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/children", WrapWSAuth(nh.ListNodeChildren, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/move", WrapWSAuth(nh.MoveNode, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/delete", WrapWSAuth(nh.DeleteNode, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/titles", WrapWSAuth(nh.GetNodeTitles, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}", WrapWSAuth(nh.GetNode, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/children", WrapWSAuth(nh.ListNodeChildren, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/move", WrapWSAuth(nh.MoveNode, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/delete", WrapWSAuth(nh.DeleteNode, svc, hcfg, identityv1.WSRoleEditor, limiters))
 	// Pages (under nodes)
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/create", WrapWSAuth(nh.CreatePage, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.GetPage, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.UpdatePage, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/append", WrapWSAuth(nh.AppendPage, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(nh.DeletePage, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter", WrapWSAuth(nh.UpdatePageFrontmatter, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/create", WrapWSAuth(nh.CreatePage, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.GetPage, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.UpdatePage, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/append", WrapWSAuth(nh.AppendPage, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(nh.DeletePage, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter", WrapWSAuth(nh.UpdatePageFrontmatter, svc, hcfg, identityv1.WSRoleEditor, limiters))
 	// Tables (under nodes)
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/create", WrapWSAuth(nh.CreateTable, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.GetTable, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.UpdateTable, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/delete", WrapWSAuth(nh.DeleteTable, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/create", WrapWSAuth(nh.CreateTable, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.GetTable, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.UpdateTable, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/delete", WrapWSAuth(nh.DeleteTable, svc, hcfg, identityv1.WSRoleEditor, limiters))
 
 	// Views (under nodes/table)
 	vh := &handlers.ViewHandler{Svc: svc, Cfg: hcfg}
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/create", WrapWSAuth(vh.CreateView, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}", WrapWSAuth(vh.UpdateView, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete", WrapWSAuth(vh.DeleteView, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/create", WrapWSAuth(vh.CreateView, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}", WrapWSAuth(vh.UpdateView, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete", WrapWSAuth(vh.DeleteView, svc, hcfg, identityv1.WSRoleEditor, limiters))
 
 	// Records (under nodes/table)
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table/records", WrapWSAuth(nh.ListRecords, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.GetRecord, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/create", WrapWSAuth(nh.CreateRecord, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.UpdateRecord, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete", WrapWSAuth(nh.DeleteRecord, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table/records", WrapWSAuth(nh.ListRecords, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.GetRecord, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/create", WrapWSAuth(nh.CreateRecord, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.UpdateRecord, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete", WrapWSAuth(nh.DeleteRecord, svc, hcfg, identityv1.WSRoleEditor, limiters))
 	// History (under nodes)
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/history", WrapWSAuth(nh.ListNodeVersions, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}", WrapWSAuth(nh.GetNodeVersion, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/history", WrapWSAuth(nh.ListNodeVersions, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}", WrapWSAuth(nh.GetNodeVersion, svc, hcfg, identityv1.WSRoleViewer, limiters))
 	// Assets (under nodes)
-	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/assets", WrapWSAuth(nh.ListNodeAssets, svc, hcfg, identity.WSRoleViewer, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/assets", WrapAuthRaw(ah.UploadNodeAssetHandler, svc, hcfg, identity.WSRoleEditor, limiters))
-	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete", WrapWSAuth(nh.DeleteNodeAsset, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/assets", WrapWSAuth(nh.ListNodeAssets, svc, hcfg, identityv1.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/assets", WrapAuthRaw(ah.UploadNodeAssetHandler, svc, hcfg, identityv1.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete", WrapWSAuth(nh.DeleteNodeAsset, svc, hcfg, identityv1.WSRoleEditor, limiters))
 	// Search
-	mux.Handle("POST /api/v1/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identityv1.WSRoleViewer, limiters))
 
 	// SSE events (EventSource can't set headers; token accepted as query param)
 	sseH := &handlers.SSEHandler{Svc: svc, Cfg: hcfg}
-	sseAuth := WrapAuthRaw(sseH.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters)
+	sseAuth := WrapAuthRaw(sseH.ServeHTTP, svc, hcfg, identityv1.WSRoleViewer, limiters)
 	mux.HandleFunc("GET /api/v1/workspaces/{wsID}/events", sseAuth.ServeHTTP)
 
 	// Notification endpoints - /api/v1/notifications/*

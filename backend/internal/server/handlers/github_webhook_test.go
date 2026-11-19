@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -173,7 +175,7 @@ func TestGitHubWebhookHandler(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := h.WsSvc.Modify(ws.ID, func(ws *identity.Workspace) error {
+			if _, err := h.WsSvc.Modify(ws.ID, func(ws *identityv1.Workspace) error {
 				ws.GitRemote.RepoOwner = "org"
 				ws.GitRemote.RepoName = "repo"
 				return nil

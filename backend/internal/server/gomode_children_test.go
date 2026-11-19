@@ -14,14 +14,15 @@ import (
 	"testing"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestChildrenResources(t *testing.T) {
@@ -32,7 +33,7 @@ func TestChildrenResources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var login *identity.Session
+	var login *identityv1.Session
 	for value := range env.services.Session.GetActiveByUserID(user.ID) {
 		login = value
 		break
@@ -172,7 +173,7 @@ func TestChildrenResources(t *testing.T) {
 
 	for _, retirement := range []string{"Release", "Eviction"} {
 		t.Run("SuccessfulReadSurvives"+retirement, func(t *testing.T) {
-			reg := &workspaceRegistry{svc: env.services, user: user, wsID: ws, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+			reg := &workspaceRegistry{svc: env.services, user: user, wsID: ws, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}
 			key := voiceFocusKey{user: user.ID, login: login.ID, session: conversationSession(ctx)}
 			changes, unsubscribe := reg.focus.subscribe(ctx, key)
 			t.Cleanup(unsubscribe)
@@ -247,7 +248,7 @@ func TestChildrenResources(t *testing.T) {
 	}
 
 	t.Run("CanceledRegistrationCannotComplete", func(t *testing.T) {
-		reg := &workspaceRegistry{svc: env.services, user: user, wsID: ws, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+		reg := &workspaceRegistry{svc: env.services, user: user, wsID: ws, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}
 		query := childrenResource{workspace: ws, parent: parent}
 		read, err := reg.beginResourceRead(ctx, query.uri(), parent, 0, watchChildren)
 		if err != nil {
@@ -285,7 +286,7 @@ func TestChildrenResources(t *testing.T) {
 	})
 
 	t.Run("PreReadReconciliation", func(t *testing.T) {
-		reg := &workspaceRegistry{svc: env.services, nodeH: &handlers.NodeHandler{Svc: env.services}, user: user, wsID: ws, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+		reg := &workspaceRegistry{svc: env.services, nodeH: &handlers.NodeHandler{Svc: env.services}, user: user, wsID: ws, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}
 		query := childrenResource{workspace: ws, parent: parent}
 		ticket, err := reg.beginResourceRead(ctx, query.uri(), parent, 0, watchChildren)
 		if err != nil {

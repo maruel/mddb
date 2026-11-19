@@ -21,18 +21,19 @@ import (
 	"sync"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"slices"
 
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // goModeMCPEndpoint serves the workspace MCP tool group that discovery
@@ -90,7 +91,7 @@ func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.Nod
 			return
 		}
 		var wsID ksid.ID
-		var role identity.WorkspaceRole
+		var role identityv1.WorkspaceRole
 		if raw := r.URL.Query().Get("workspaceId"); raw != "" {
 			var err error
 			wsID, err = ksid.Parse(raw)
@@ -171,9 +172,9 @@ func writeMCPError(w http.ResponseWriter, status int, message string) {
 type workspaceRegistry struct {
 	svc   *handlers.Services
 	nodeH *handlers.NodeHandler
-	user  *identity.User
+	user  *identityv1.User
 	wsID  ksid.ID
-	role  identity.WorkspaceRole
+	role  identityv1.WorkspaceRole
 	focus *voiceFocusState
 	// Released GET carries no per-POST conversation metadata.
 	released bool
@@ -240,7 +241,7 @@ func (m *workspaceRegistry) visibleSpecs() []mcp.ToolSpec {
 	canEdit := m.role.CanEdit()
 	if m.wsID == 0 && m.user != nil {
 		for _, ws := range m.accessibleWorkspaces() {
-			if ws.Role == string(identity.WSRoleEditor) || ws.Role == string(identity.WSRoleAdmin) {
+			if ws.Role == string(identityv1.WSRoleEditor) || ws.Role == string(identityv1.WSRoleAdmin) {
 				canEdit = true
 			}
 		}

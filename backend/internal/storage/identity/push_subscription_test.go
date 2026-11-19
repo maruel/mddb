@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
@@ -130,27 +132,27 @@ func TestPushSubscriptionService(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		tests := []struct {
 			name    string
-			sub     *PushSubscription
+			sub     *identityv1.PushSubscription
 			wantErr bool
 		}{
 			{
 				name:    "valid",
-				sub:     &PushSubscription{ID: ksid.NewID(), UserID: ksid.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &identityv1.PushSubscription{ID: ksid.NewID(), UserID: ksid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: false,
 			},
 			{
 				name:    "missing_id",
-				sub:     &PushSubscription{UserID: ksid.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &identityv1.PushSubscription{UserID: ksid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_user_id",
-				sub:     &PushSubscription{ID: ksid.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &identityv1.PushSubscription{ID: ksid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_endpoint",
-				sub:     &PushSubscription{ID: ksid.NewID(), UserID: ksid.NewID()},
+				sub:     &identityv1.PushSubscription{ID: ksid.NewID(), UserID: ksid.NewID()},
 				wantErr: true,
 			},
 		}

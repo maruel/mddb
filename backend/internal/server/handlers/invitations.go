@@ -6,12 +6,14 @@ import (
 	"context"
 	"log/slog"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // InvitationHandler handles invitation requests.
@@ -21,7 +23,7 @@ type InvitationHandler struct {
 }
 
 // CreateOrgInvitation creates a new organization invitation.
-func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.CreateOrgInvitationRequest) (*dto.OrgInvitationResponse, error) {
+func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.ID, user *identityv1.User, req *dto.CreateOrgInvitationRequest) (*dto.OrgInvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -57,7 +59,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.
 		if org != nil {
 			orgName = org.Name
 		}
-		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identity.NotifOrgInvite,
+		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identityv1.NotifOrgInvite,
 			user.Name+" invited you to "+orgName, "", orgID.String(), user.ID)
 	}
 
@@ -65,7 +67,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.
 }
 
 // ListOrgInvitations returns all pending invitations for an organization.
-func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
+func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID ksid.ID, _ *identityv1.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
 	var responses []dto.OrgInvitationResponse
 	for inv := range h.Svc.OrgInvitation.IterByOrg(orgID) {
 		responses = append(responses, *orgInvitationToResponse(inv))
@@ -74,7 +76,7 @@ func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID ksid.I
 }
 
 // CreateWSInvitation creates a new workspace invitation.
-func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreateWSInvitationRequest) (*dto.WSInvitationResponse, error) {
+func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.CreateWSInvitationRequest) (*dto.WSInvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -115,7 +117,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID
 		if wsObj != nil {
 			wsName = wsObj.Name
 		}
-		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identity.NotifWSInvite,
+		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identityv1.NotifWSInvite,
 			user.Name+" invited you to "+wsName, "", wsID.String(), user.ID)
 	}
 
@@ -123,7 +125,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID
 }
 
 // ListWSInvitations returns all pending invitations for a workspace.
-func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
+func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
 	var responses []dto.WSInvitationResponse
 	for inv := range h.Svc.WSInvitation.IterByWorkspace(wsID) {
 		responses = append(responses, *wsInvitationToResponse(inv))
@@ -133,7 +135,7 @@ func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID ksid.ID,
 
 // AcceptOrgInvitation handles a user accepting an organization invitation.
 // The invitation token selects a grant; it is not an authentication or email proof.
-func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *identity.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
+func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *identityv1.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}
@@ -143,7 +145,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *ident
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
 
-	if storage.Now().After(inv.ExpiresAt) {
+	if storagev1.Now().After(inv.ExpiresAt) {
 		return nil, dto.Expired("invitation")
 	}
 
@@ -185,8 +187,8 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *ident
 		orgName = org.Name
 	}
 	for m := range h.Svc.OrgMembership.IterByOrg(inv.OrganizationID) {
-		if m.UserID != user.ID && (m.Role == identity.OrgRoleAdmin || m.Role == identity.OrgRoleOwner) {
-			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identity.NotifMemberJoined,
+		if m.UserID != user.ID && (m.Role == identityv1.OrgRoleAdmin || m.Role == identityv1.OrgRoleOwner) {
+			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identityv1.NotifMemberJoined,
 				user.Name+" joined "+orgName, "", inv.OrganizationID.String(), user.ID)
 		}
 	}
@@ -196,7 +198,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, user *ident
 
 // AcceptWSInvitation handles a user accepting a workspace invitation.
 // The invitation token selects a grant; it is not an authentication or email proof.
-func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identity.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
+func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identityv1.User, req *dto.AcceptInvitationRequest) (*dto.UserResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}
@@ -206,7 +208,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identi
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
 
-	if storage.Now().After(inv.ExpiresAt) {
+	if storagev1.Now().After(inv.ExpiresAt) {
 		return nil, dto.Expired("invitation")
 	}
 
@@ -228,7 +230,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identi
 
 	// Ensure user has org membership (as member if not already)
 	if _, err := h.Svc.OrgMembership.Get(user.ID, ws.OrganizationID); err != nil {
-		if _, err = h.Svc.OrgMembership.Create(user.ID, ws.OrganizationID, identity.OrgRoleMember); err != nil {
+		if _, err = h.Svc.OrgMembership.Create(user.ID, ws.OrganizationID, identityv1.OrgRoleMember); err != nil {
 			return nil, dto.InternalWithError("Failed to create organization membership", err)
 		}
 	}
@@ -256,8 +258,8 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, user *identi
 
 	// Notify workspace admins that a new member joined.
 	for m := range h.Svc.WSMembership.IterByWorkspace(inv.WorkspaceID) {
-		if m.UserID != user.ID && m.Role == identity.WSRoleAdmin {
-			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identity.NotifMemberJoined,
+		if m.UserID != user.ID && m.Role == identityv1.WSRoleAdmin {
+			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identityv1.NotifMemberJoined,
 				user.Name+" joined "+ws.Name, "", inv.WorkspaceID.String(), user.ID)
 		}
 	}

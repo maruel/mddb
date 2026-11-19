@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
@@ -173,18 +175,18 @@ func testMapDBProperty(t *testing.T) {
 	tests := []struct {
 		name     string
 		prop     DBProperty
-		wantType content.PropertyType
+		wantType contentv1.PropertyType
 	}{
-		{"title", DBProperty{Type: "title"}, content.PropertyTypeText},
-		{"rich_text", DBProperty{Type: "rich_text"}, content.PropertyTypeMarkdown},
-		{"number", DBProperty{Type: "number"}, content.PropertyTypeNumber},
-		{"checkbox", DBProperty{Type: "checkbox"}, content.PropertyTypeCheckbox},
-		{"date", DBProperty{Type: "date"}, content.PropertyTypeDate},
-		{"select", DBProperty{Type: "select"}, content.PropertyTypeSelect},
-		{"multi_select", DBProperty{Type: "multi_select"}, content.PropertyTypeMultiSelect},
-		{"url", DBProperty{Type: "url"}, content.PropertyTypeURL},
-		{"email", DBProperty{Type: "email"}, content.PropertyTypeEmail},
-		{"phone_number", DBProperty{Type: "phone_number"}, content.PropertyTypePhone},
+		{"title", DBProperty{Type: "title"}, contentv1.PropertyTypeText},
+		{"rich_text", DBProperty{Type: "rich_text"}, contentv1.PropertyTypeMarkdown},
+		{"number", DBProperty{Type: "number"}, contentv1.PropertyTypeNumber},
+		{"checkbox", DBProperty{Type: "checkbox"}, contentv1.PropertyTypeCheckbox},
+		{"date", DBProperty{Type: "date"}, contentv1.PropertyTypeDate},
+		{"select", DBProperty{Type: "select"}, contentv1.PropertyTypeSelect},
+		{"multi_select", DBProperty{Type: "multi_select"}, contentv1.PropertyTypeMultiSelect},
+		{"url", DBProperty{Type: "url"}, contentv1.PropertyTypeURL},
+		{"email", DBProperty{Type: "email"}, contentv1.PropertyTypeEmail},
+		{"phone_number", DBProperty{Type: "phone_number"}, contentv1.PropertyTypePhone},
 	}
 
 	for i := range tests {
@@ -223,16 +225,16 @@ func TestRichTextToPlain(t *testing.T) {
 func TestMapRollupAggregation(t *testing.T) {
 	tests := []struct {
 		notionFunc string
-		want       content.RollupAggregation
+		want       contentv1.RollupAggregation
 	}{
-		{"count", content.RollupCount},
-		{"count_values", content.RollupCountValues},
-		{"sum", content.RollupSum},
-		{"average", content.RollupAverage},
-		{"min", content.RollupMin},
-		{"max", content.RollupMax},
-		{"show_original", content.RollupShowAll},
-		{"unknown", content.RollupShowAll},
+		{"count", contentv1.RollupCount},
+		{"count_values", contentv1.RollupCountValues},
+		{"sum", contentv1.RollupSum},
+		{"average", contentv1.RollupAverage},
+		{"min", contentv1.RollupMin},
+		{"max", contentv1.RollupMax},
+		{"show_original", contentv1.RollupShowAll},
+		{"unknown", contentv1.RollupShowAll},
 	}
 
 	for _, tt := range tests {
@@ -261,8 +263,8 @@ func testMapDBPropertyRelational(t *testing.T) {
 		}
 		result := m.mapDBProperty("Related Items", &prop)
 
-		if result.Type != content.PropertyTypeRelation {
-			t.Errorf("expected type %q, got %q", content.PropertyTypeRelation, result.Type)
+		if result.Type != contentv1.PropertyTypeRelation {
+			t.Errorf("expected type %q, got %q", contentv1.PropertyTypeRelation, result.Type)
 		}
 		if result.RelationConfig == nil {
 			t.Fatal("expected RelationConfig to be set")
@@ -290,8 +292,8 @@ func testMapDBPropertyRelational(t *testing.T) {
 		}
 		result := m.mapDBProperty("Total", &prop)
 
-		if result.Type != content.PropertyTypeRollup {
-			t.Errorf("expected type %q, got %q", content.PropertyTypeRollup, result.Type)
+		if result.Type != contentv1.PropertyTypeRollup {
+			t.Errorf("expected type %q, got %q", contentv1.PropertyTypeRollup, result.Type)
 		}
 		if result.RollupConfig == nil {
 			t.Fatal("expected RollupConfig to be set")
@@ -302,8 +304,8 @@ func testMapDBPropertyRelational(t *testing.T) {
 		if result.RollupConfig.TargetProperty != "Price" {
 			t.Errorf("expected TargetProperty %q, got %q", "Price", result.RollupConfig.TargetProperty)
 		}
-		if result.RollupConfig.Aggregation != content.RollupSum {
-			t.Errorf("expected Aggregation %q, got %q", content.RollupSum, result.RollupConfig.Aggregation)
+		if result.RollupConfig.Aggregation != contentv1.RollupSum {
+			t.Errorf("expected Aggregation %q, got %q", contentv1.RollupSum, result.RollupConfig.Aggregation)
 		}
 	})
 
@@ -316,8 +318,8 @@ func testMapDBPropertyRelational(t *testing.T) {
 		}
 		result := m.mapDBProperty("Total", &prop)
 
-		if result.Type != content.PropertyTypeFormula {
-			t.Errorf("expected type %q, got %q", content.PropertyTypeFormula, result.Type)
+		if result.Type != contentv1.PropertyTypeFormula {
+			t.Errorf("expected type %q, got %q", contentv1.PropertyTypeFormula, result.Type)
 		}
 		if result.FormulaConfig == nil {
 			t.Fatal("expected FormulaConfig to be set")
@@ -342,18 +344,18 @@ func testResolveRelations(t *testing.T) {
 
 	// Create a node with a relation property
 	node := &content.Node{
-		Properties: []content.Property{
+		Properties: []contentv1.Property{
 			{
 				Name: "Tasks",
-				Type: content.PropertyTypeRelation,
-				RelationConfig: &content.RelationConfig{
+				Type: contentv1.PropertyTypeRelation,
+				RelationConfig: &contentv1.RelationConfig{
 					// TargetNodeID not set yet
 					IsDualLink: true,
 				},
 			},
 			{
 				Name: "Name",
-				Type: content.PropertyTypeText,
+				Type: contentv1.PropertyTypeText,
 			},
 		},
 	}
@@ -361,7 +363,7 @@ func testResolveRelations(t *testing.T) {
 	m.ResolveRelations(node)
 
 	// Check that the relation was resolved
-	var tasksProp *content.Property
+	var tasksProp *contentv1.Property
 	for i := range node.Properties {
 		if node.Properties[i].Name == "Tasks" {
 			tasksProp = &node.Properties[i]

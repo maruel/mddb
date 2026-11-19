@@ -18,6 +18,10 @@ import (
 	"testing/synctest"
 	"unicode/utf8"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -38,7 +42,7 @@ func TestMutateTableConcurrentViews(t *testing.T) {
 	for _, id := range ids {
 		workers.Go(func() {
 			_, err := ws.MutateTable(t.Context(), table.ID, author, func(node *Node) error {
-				node.Views = append(node.Views, View{ID: id, Name: id.String()})
+				node.Views = append(node.Views, contentv1.View{ID: id, Name: id.String()})
 				return nil
 			})
 			errCh <- err
@@ -56,13 +60,13 @@ func TestMutateTableConcurrentViews(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, id := range ids {
-		if !slices.ContainsFunc(got.Views, func(view View) bool { return view.ID == id }) {
+		if !slices.ContainsFunc(got.Views, func(view contentv1.View) bool { return view.ID == id }) {
 			t.Fatalf("view %s missing from %v", id, got.Views)
 		}
 	}
 }
 
-func replaceTestRecord(t *testing.T, ctx context.Context, ws *WorkspaceFileStore, tableID ksid.ID, original *DataRecord, data map[string]any, author git.Author) error {
+func replaceTestRecord(t *testing.T, ctx context.Context, ws *WorkspaceFileStore, tableID ksid.ID, original *contentv1.DataRecord, data map[string]any, author git.Author) error {
 	t.Helper()
 	table, err := ws.ReadTable(tableID)
 	if err != nil {
@@ -98,7 +102,7 @@ func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 	if err != nil {
 		t.Fatalf("failed to create test organization: %v", err)
 	}
-	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
+	_, err = orgService.Modify(org.ID, func(o *identityv1.Organization) error {
 		o.Quotas.MaxWorkspacesPerOrg = 1_000
 		o.Quotas.MaxMembersPerOrg = 10_000
 		o.Quotas.MaxMembersPerWorkspace = 10_000
@@ -114,7 +118,7 @@ func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 	if err != nil {
 		t.Fatalf("failed to create test workspace: %v", err)
 	}
-	_, err = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
+	_, err = wsService.Modify(ws.ID, func(w *identityv1.Workspace) error {
 		w.Quotas.MaxPages = 1_000_000
 		w.Quotas.MaxStorageBytes = 1_000_000_000_000 // 1TB
 		w.Quotas.MaxRecordsPerTable = 1_000_000
@@ -125,7 +129,7 @@ func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 		t.Fatalf("failed to set unlimited workspace quotas: %v", err)
 	}
 
-	serverQuotas := storage.ResourceQuotas{
+	serverQuotas := storagev1.ResourceQuotas{
 		MaxPages:              1_000_000,
 		MaxStorageBytes:       1_000_000_000_000, // 1TB
 		MaxRecordsPerTable:    1_000_000,
@@ -705,6 +709,32 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("TableMetadataVersion", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		leaf, err := ws.CreatePageUnderParent(t.Context(), 0, "Leaf", "", git.Author{Name: "Test", Email: "test@example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tc := range []struct {
+			metadata string
+			ok       bool
+		}{
+			{`{"title":"Imported"}`, true},
+			{`{"title":"Current","version":"1.0"}`, true},
+			{`{"title":"Future","version":"2.0"}`, false},
+			{`{"title":"Numeric","version":1}`, false},
+		} {
+			if err := os.WriteFile(ws.tableMetadataFile(leaf.ID, 0), []byte(tc.metadata), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := ws.ReadTable(leaf.ID)
+			_, snapshotErr := ws.ReadPageSnapshot(t.Context(), leaf.ID, 0, 4096)
+			if (err == nil) != tc.ok || (snapshotErr == nil) != tc.ok {
+				t.Errorf("%s: ReadTable error = %v, snapshot error = %v, want ok=%v", tc.metadata, err, snapshotErr, tc.ok)
+			}
+		}
+	})
+
 	t.Run("RetainedContainerDiscovery", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			fs, ws, wsID := initWS(t)
@@ -926,11 +956,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 			ID:       tableID,
 			Title:    "Test Table",
 			Type:     NodeTypeTable,
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-			Properties: []Property{
-				{Name: "name", Type: PropertyTypeText, Required: true},
-				{Name: "value", Type: PropertyTypeText},
+			Created:  storagev1.Now(),
+			Modified: storagev1.Now(),
+			Properties: []contentv1.Property{
+				{Name: "name", Type: contentv1.PropertyTypeText, Required: true},
+				{Name: "value", Type: contentv1.PropertyTypeText},
 			},
 		}
 
@@ -958,11 +988,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:    selectID,
 				Title: "Select Table",
 				Type:  NodeTypeTable,
-				Properties: []Property{
+				Properties: []contentv1.Property{
 					{
 						Name: "Status",
-						Type: PropertyTypeSelect,
-						Options: []SelectOption{
+						Type: contentv1.PropertyTypeSelect,
+						Options: []contentv1.SelectOption{
 							{ID: "opt1", Name: "Alpha", Color: "#e03e3e"},
 							{ID: "opt2", Name: "Beta"},
 						},
@@ -983,7 +1013,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if prop.Name != "Status" {
 				t.Errorf("expected property name 'Status', got %q", prop.Name)
 			}
-			if prop.Type != PropertyTypeSelect {
+			if prop.Type != contentv1.PropertyTypeSelect {
 				t.Errorf("expected property type 'select', got %q", prop.Type)
 			}
 			if len(prop.Options) != 2 {
@@ -998,11 +1028,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("RecordOperations", func(t *testing.T) {
-			record := &DataRecord{
+			record := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "test", "value": "data"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 
 			t.Run("AppendRecord", func(t *testing.T) {
@@ -1029,11 +1059,11 @@ func TestWorkspaceFileStore(t *testing.T) {
 			})
 
 			t.Run("UpdateRecord", func(t *testing.T) {
-				updated := &DataRecord{
+				updated := &contentv1.DataRecord{
 					ID:       record.ID,
 					Data:     map[string]any{"name": "updated", "value": "new data"},
 					Created:  record.Created,
-					Modified: storage.Now(),
+					Modified: storagev1.Now(),
 				}
 				if err := replaceTestRecord(t, ctx, ws, tableID, record, updated.Data, author); err != nil {
 					t.Fatalf("failed to update record: %v", err)
@@ -1099,32 +1129,32 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:       testTableID,
 				Title:    "Test Table",
 				Type:     NodeTypeTable,
-				Created:  storage.Now(),
-				Modified: storage.Now(),
-				Properties: []Property{
-					{Name: "name", Type: PropertyTypeText},
-					{Name: "value", Type: PropertyTypeText},
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
+				Properties: []contentv1.Property{
+					{Name: "name", Type: contentv1.PropertyTypeText},
+					{Name: "value", Type: contentv1.PropertyTypeText},
 				},
 			}
 			if err := ws.WriteTable(ctx, testTable, true, author); err != nil {
 				t.Fatalf("failed to write table: %v", err)
 			}
 
-			initialRecord := &DataRecord{
+			initialRecord := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "original", "value": "data"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.AppendRecord(ctx, testTableID, initialRecord, author); err != nil {
 				t.Fatalf("failed to append record: %v", err)
 			}
 
-			updatedRecord := &DataRecord{
+			updatedRecord := &contentv1.DataRecord{
 				ID:       initialRecord.ID,
 				Data:     map[string]any{"name": "updated", "value": "new data"},
 				Created:  initialRecord.Created,
-				Modified: storage.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := replaceTestRecord(t, ctx, ws, testTableID, initialRecord, updatedRecord.Data, author); err != nil {
 				t.Fatalf("failed to update record: %v", err)
@@ -1162,31 +1192,31 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:       testTableID,
 				Title:    "Test Table",
 				Type:     NodeTypeTable,
-				Created:  storage.Now(),
-				Modified: storage.Now(),
-				Properties: []Property{
-					{Name: "name", Type: PropertyTypeText},
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
+				Properties: []contentv1.Property{
+					{Name: "name", Type: contentv1.PropertyTypeText},
 				},
 			}
 			if err := ws.WriteTable(ctx, testTable, true, author); err != nil {
 				t.Fatalf("failed to write table: %v", err)
 			}
 
-			initialRecord := &DataRecord{
+			initialRecord := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "test"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.AppendRecord(ctx, testTableID, initialRecord, author); err != nil {
 				t.Fatalf("failed to append record: %v", err)
 			}
 
-			updatedRecord := &DataRecord{
+			updatedRecord := &contentv1.DataRecord{
 				ID:       initialRecord.ID,
 				Data:     nil, // Explicitly nil
 				Created:  initialRecord.Created,
-				Modified: storage.Now(),
+				Modified: storagev1.Now(),
 			}
 
 			if err := replaceTestRecord(t, ctx, ws, testTableID, initialRecord, updatedRecord.Data, author); err != nil {
@@ -1941,7 +1971,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			fs, _, wsID := initWS(t)
 			ctx := t.Context()
 
-			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error {
 				w.Quotas.MaxPages = 2
 				return nil
 			}); err != nil {
@@ -1976,7 +2006,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			fs, _, wsID := initWS(t)
 			ctx := t.Context()
 
-			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error {
 				w.Quotas.MaxStorageBytes = 1024 * 1024 // 1 MB
 				return nil
 			}); err != nil {
@@ -1986,7 +2016,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			org, err := fs.wsSvc.Get(wsID)
 			var zeroOrgID ksid.ID
 			if err == nil && org.OrganizationID != zeroOrgID {
-				_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identity.Organization) error {
+				_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identityv1.Organization) error {
 					o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
 					return nil
 				})
@@ -2016,7 +2046,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			fs, _, wsID := initWS(t)
 			ctx := t.Context()
 
-			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error {
 				w.Quotas.MaxRecordsPerTable = 5
 				return nil
 			}); err != nil {
@@ -2034,30 +2064,30 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:       tableID,
 				Title:    "Test",
 				Type:     NodeTypeTable,
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
 				t.Fatalf("failed to create table: %v", err)
 			}
 
 			for i := range 5 {
-				rec := &DataRecord{
+				rec := &contentv1.DataRecord{
 					ID:       ksid.NewID(),
 					Data:     map[string]any{"name": "Record"},
-					Created:  storage.Now(),
-					Modified: storage.Now(),
+					Created:  storagev1.Now(),
+					Modified: storagev1.Now(),
 				}
 				if err := ws.AppendRecord(ctx, tableID, rec, author); err != nil {
 					t.Fatalf("failed to create record %d: %v", i, err)
 				}
 			}
 
-			rec := &DataRecord{
+			rec := &contentv1.DataRecord{
 				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "Extra"},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.AppendRecord(ctx, tableID, rec, author); err == nil {
 				t.Error("expected record quota exceeded error")
@@ -2068,7 +2098,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			fs, _, wsID := initWS(t)
 			ctx := t.Context()
 
-			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error {
 				w.Quotas.MaxStorageBytes = 1024 * 1024 // 1MB
 				return nil
 			}); err != nil {
@@ -2086,33 +2116,33 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:       tableID,
 				Title:    "Test",
 				Type:     NodeTypeTable,
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
 				t.Fatalf("failed to create table: %v", err)
 			}
 
 			recordID := ksid.NewID()
-			record := &DataRecord{
+			record := &contentv1.DataRecord{
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("a", 100)},
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.AppendRecord(ctx, tableID, record, author); err != nil {
 				t.Fatalf("failed to create record: %v", err)
 			}
 
 			_, storageUsage, _ := ws.GetWorkspaceUsage()
-			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error {
 				w.Quotas.MaxStorageBytes = storageUsage
 				return nil
 			}); err != nil {
 				t.Fatalf("failed to reduce quota: %v", err)
 			}
 
-			updatedRecord := &DataRecord{
+			updatedRecord := &contentv1.DataRecord{
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("b", 100)},
 				Created:  record.Created,
@@ -2381,8 +2411,8 @@ func TestWorkspaceFileStore(t *testing.T) {
 				ID:       nodeID,
 				Title:    "Hybrid",
 				Type:     NodeTypeTable,
-				Created:  storage.Now(),
-				Modified: storage.Now(),
+				Created:  storagev1.Now(),
+				Modified: storagev1.Now(),
 			}
 			if err := ws.WriteTable(ctx, hybridNode, false, author); err != nil {
 				t.Fatalf("failed to add table metadata: %v", err)
@@ -2515,7 +2545,7 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 		quotas := storage.DefaultResourceQuotas()
 		ws := newWorkspaceFileStore(dir, repo, &quotas)
 		author := git.Author{Name: "Bench", Email: "bench@example.com"}
-		table, err := ws.CreateTableUnderParent(b.Context(), 0, "Table", []Property{{Name: "body", Type: PropertyTypeText}}, author)
+		table, err := ws.CreateTableUnderParent(b.Context(), 0, "Table", []contentv1.Property{{Name: "body", Type: contentv1.PropertyTypeText}}, author)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -2524,8 +2554,8 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 			b.Fatal(err)
 		}
 		body := strings.Repeat("x", 256<<10)
-		now := storage.Now()
-		record := &DataRecord{ID: ksid.NewID(), Data: map[string]any{"body": body}, Created: now, Modified: now}
+		now := storagev1.Now()
+		record := &contentv1.DataRecord{ID: ksid.NewID(), Data: map[string]any{"body": body}, Created: now, Modified: now}
 		if err := ws.AppendRecord(b.Context(), table.ID, record, author); err != nil {
 			b.Fatal(err)
 		}

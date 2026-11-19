@@ -17,10 +17,12 @@ import (
 	"testing"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/oauth/oauthserver"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -42,16 +44,16 @@ const (
 const fakeTenant = "11111111-2222-3333-4444-555555555555"
 
 // fakeIDs holds the provider account ID that fakeProviders signs in.
-var fakeIDs = map[identity.OAuthProvider]string{
-	identity.OAuthProviderGitHub:    "4242",
-	identity.OAuthProviderGoogle:    "g4242",
-	identity.OAuthProviderMicrosoft: "m4242",
+var fakeIDs = map[identityv1.OAuthProvider]string{
+	identityv1.OAuthProviderGitHub:    "4242",
+	identityv1.OAuthProviderGoogle:    "g4242",
+	identityv1.OAuthProviderMicrosoft: "m4242",
 }
 
-var providers = []identity.OAuthProvider{
-	identity.OAuthProviderGitHub,
-	identity.OAuthProviderGoogle,
-	identity.OAuthProviderMicrosoft,
+var providers = []identityv1.OAuthProvider{
+	identityv1.OAuthProviderGitHub,
+	identityv1.OAuthProviderGoogle,
+	identityv1.OAuthProviderMicrosoft,
 }
 
 // fakeProviders answers the token endpoint of every provider and the user
@@ -137,10 +139,10 @@ type oauthTestEnv struct {
 	svc  *Services
 	fake *fakeProviders
 	// caller holds the session that makes the requests.
-	caller *identity.User
+	caller *identityv1.User
 	// victim is another account the caller must not reach. It holds
 	// victim@example.com, which it never verified.
-	victim *identity.User
+	victim *identityv1.User
 }
 
 func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
@@ -184,7 +186,7 @@ func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
 
 // loginRedirect starts a login with provider and returns the state sent to
 // the provider and the state cookie.
-func (e *oauthTestEnv) loginRedirect(t *testing.T, p identity.OAuthProvider) (string, *http.Cookie) {
+func (e *oauthTestEnv) loginRedirect(t *testing.T, p identityv1.OAuthProvider) (string, *http.Cookie) {
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p), http.NoBody)
 	r.SetPathValue("provider", string(p))
 	w := httptest.NewRecorder()
@@ -196,7 +198,7 @@ func (e *oauthTestEnv) loginRedirect(t *testing.T, p identity.OAuthProvider) (st
 }
 
 // login runs a complete login with provider.
-func (e *oauthTestEnv) login(t *testing.T, p identity.OAuthProvider) *httptest.ResponseRecorder {
+func (e *oauthTestEnv) login(t *testing.T, p identityv1.OAuthProvider) *httptest.ResponseRecorder {
 	state, c := e.loginRedirect(t, p)
 	return e.callback(t, p, state, c)
 }
@@ -212,7 +214,7 @@ func (e *oauthTestEnv) linkOAuth(t *testing.T, body string) *httptest.ResponseRe
 
 // startLink links provider to the caller's account and returns the state
 // sent to the provider and the state cookie.
-func (e *oauthTestEnv) startLink(t *testing.T, p identity.OAuthProvider) (string, *http.Cookie) {
+func (e *oauthTestEnv) startLink(t *testing.T, p identityv1.OAuthProvider) (string, *http.Cookie) {
 	w := e.linkOAuth(t, `{"provider":"`+string(p)+`"}`)
 	if w.Code != http.StatusOK {
 		t.Fatalf("LinkOAuth status = %d; body %s", w.Code, w.Body)
@@ -225,12 +227,12 @@ func (e *oauthTestEnv) startLink(t *testing.T, p identity.OAuthProvider) (string
 }
 
 // callback runs the provider callback with the given state and cookies.
-func (e *oauthTestEnv) callback(t *testing.T, p identity.OAuthProvider, state string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+func (e *oauthTestEnv) callback(t *testing.T, p identityv1.OAuthProvider, state string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
 	return e.callbackQuery(t, p, url.Values{"code": {"c"}, "state": {state}}, cookies...)
 }
 
 // callbackQuery runs the provider callback with the query the provider sends.
-func (e *oauthTestEnv) callbackQuery(t *testing.T, p identity.OAuthProvider, q url.Values, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+func (e *oauthTestEnv) callbackQuery(t *testing.T, p identityv1.OAuthProvider, q url.Values, cookies ...*http.Cookie) *httptest.ResponseRecorder {
 	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, &http.Client{Transport: e.fake})
 	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"/callback?"+q.Encode(), http.NoBody)
 	r.SetPathValue("provider", string(p))
@@ -243,7 +245,7 @@ func (e *oauthTestEnv) callbackQuery(t *testing.T, p identity.OAuthProvider, q u
 }
 
 // get returns the stored copy of u.
-func (e *oauthTestEnv) get(t *testing.T, u *identity.User) *identity.User {
+func (e *oauthTestEnv) get(t *testing.T, u *identityv1.User) *identityv1.User {
 	got, err := e.svc.User.Get(u.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -252,7 +254,7 @@ func (e *oauthTestEnv) get(t *testing.T, u *identity.User) *identity.User {
 }
 
 // providerIDs returns the identities linked to u as "provider:id".
-func (e *oauthTestEnv) providerIDs(t *testing.T, u *identity.User) []string {
+func (e *oauthTestEnv) providerIDs(t *testing.T, u *identityv1.User) []string {
 	got := e.get(t, u)
 	ids := make([]string, 0, len(got.OAuthIdentities))
 	for _, ident := range got.OAuthIdentities {
@@ -262,7 +264,7 @@ func (e *oauthTestEnv) providerIDs(t *testing.T, u *identity.User) []string {
 }
 
 // sessions returns the number of active sessions of u.
-func (e *oauthTestEnv) sessions(u *identity.User) int {
+func (e *oauthTestEnv) sessions(u *identityv1.User) int {
 	n := 0
 	for range e.svc.Session.GetActiveByUserID(u.ID) {
 		n++
@@ -271,9 +273,9 @@ func (e *oauthTestEnv) sessions(u *identity.User) int {
 }
 
 // linkIdentity attaches the fake provider identity to u.
-func (e *oauthTestEnv) linkIdentity(t *testing.T, u *identity.User, p identity.OAuthProvider) {
-	if _, err := e.svc.User.Modify(u.ID, func(u *identity.User) error {
-		u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{Provider: p, ProviderID: fakeIDs[p]})
+func (e *oauthTestEnv) linkIdentity(t *testing.T, u *identityv1.User, p identityv1.OAuthProvider) {
+	if _, err := e.svc.User.Modify(u.ID, func(u *identityv1.User) error {
+		u.OAuthIdentities = append(u.OAuthIdentities, identityv1.OAuthIdentity{Provider: p, ProviderID: fakeIDs[p]})
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -282,7 +284,7 @@ func (e *oauthTestEnv) linkIdentity(t *testing.T, u *identity.User, p identity.O
 
 // wantLoggedIn checks that the login succeeded and returns the account that
 // holds the provider identity.
-func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identity.OAuthProvider, w *httptest.ResponseRecorder) *identity.User {
+func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identityv1.OAuthProvider, w *httptest.ResponseRecorder) *identityv1.User {
 	wantRedirect(t, w, "/")
 	wantCleared(t, w)
 	u, err := e.svc.User.GetByOAuth(p, fakeIDs[p])
@@ -358,7 +360,7 @@ func (e *oauthTestEnv) wantRejected(t *testing.T, w *httptest.ResponseRecorder) 
 	if n := e.fake.exchanges.Load(); n != 0 {
 		t.Errorf("token exchanges = %d, want 0", n)
 	}
-	for _, u := range []*identity.User{e.caller, e.victim} {
+	for _, u := range []*identityv1.User{e.caller, e.victim} {
 		if ids := e.providerIDs(t, u); len(ids) != 0 {
 			t.Errorf("%s identities = %v, want none", u.Email, ids)
 		}
@@ -418,20 +420,20 @@ type linkErrorCase struct {
 
 // providerAPIsCase overrides fake provider API responses.
 type providerAPIsCase struct {
-	p    identity.OAuthProvider
+	p    identityv1.OAuthProvider
 	apis map[string]string
 }
 
 // providerEditCase changes the fake provider before a login.
 type providerEditCase struct {
-	p    identity.OAuthProvider
+	p    identityv1.OAuthProvider
 	edit func(f *fakeProviders)
 }
 
 // unverifiedEmailCase is a login whose provider email is not verified.
 type unverifiedEmailCase struct {
 	name  string
-	p     identity.OAuthProvider
+	p     identityv1.OAuthProvider
 	email string
 	edit  func(f *fakeProviders)
 }
@@ -451,7 +453,7 @@ func TestOAuthHandler(t *testing.T) {
 			} {
 				t.Run(tc.baseURL, func(t *testing.T) {
 					e := newOAuthTestEnv(t, tc.baseURL)
-					state, c := e.loginRedirect(t, identity.OAuthProviderGitHub)
+					state, c := e.loginRedirect(t, identityv1.OAuthProviderGitHub)
 					if got, ok := oauthserver.ValidateState(c.Value, e.h.stateKey); !ok || got != state {
 						t.Errorf("cookie state = %q, %t; want %q", got, ok, state)
 					}
@@ -495,7 +497,7 @@ func TestOAuthHandler(t *testing.T) {
 					// Even signed state must pass validation before exchanging credentials.
 					state := loginStatePrefix + base64.RawURLEncoding.EncodeToString([]byte(path)) + ":nonce"
 					cookie := e.h.stateCookie(oauthserver.SignState(state, e.h.stateKey), oauthStateMaxAge)
-					wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, cookie), "/login?oauth_error=VALIDATION_FAILED")
+					wantRedirect(t, e.callback(t, identityv1.OAuthProviderGoogle, state, cookie), "/login?oauth_error=VALIDATION_FAILED")
 					if n := e.fake.exchanges.Load(); n != 0 {
 						t.Fatalf("unsafe signed destination exchanges = %d", n)
 					}
@@ -506,11 +508,11 @@ func TestOAuthHandler(t *testing.T) {
 	t.Run("LinkOAuth", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			e := newOAuthTestEnv(t, "http://localhost:8080")
-			state, c := e.startLink(t, identity.OAuthProviderGitHub)
+			state, c := e.startLink(t, identityv1.OAuthProviderGitHub)
 			if got, ok := oauthserver.ValidateState(c.Value, e.h.stateKey); !ok || got != state {
 				t.Errorf("cookie state = %q, %t; want %q", got, ok, state)
 			}
-			if id, p := parseLinkingState(state); id != e.caller.ID || p != identity.OAuthProviderGitHub {
+			if id, p := parseLinkingState(state); id != e.caller.ID || p != identityv1.OAuthProviderGitHub {
 				t.Errorf("linking state names %v %q, want %v github", id, p, e.caller.ID)
 			}
 		})
@@ -523,7 +525,7 @@ func TestOAuthHandler(t *testing.T) {
 			} {
 				t.Run(tc.name, func(t *testing.T) {
 					e := newOAuthTestEnv(t, "http://localhost:8080")
-					delete(e.h.providers, identity.OAuthProviderGoogle)
+					delete(e.h.providers, identityv1.OAuthProviderGoogle)
 					w := e.linkOAuth(t, tc.body)
 					if w.Code != tc.want {
 						t.Errorf("status = %d, want %d; body %s", w.Code, tc.want, w.Body)
@@ -541,19 +543,19 @@ func TestOAuthHandler(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			u := e.wantLoggedIn(t, identity.OAuthProviderGoogle, e.login(t, identity.OAuthProviderGoogle))
+			u := e.wantLoggedIn(t, identityv1.OAuthProviderGoogle, e.login(t, identityv1.OAuthProviderGoogle))
 			if e.svc.User.Count() != 3 || e.sessions(u) != 1 {
 				t.Fatal("login did not persist exactly one account and session")
 			}
 		})
 		t.Run("history failure preserves completed link", func(t *testing.T) {
 			e := newOAuthTestEnv(t, "http://localhost:8080")
-			state, c := e.startLink(t, identity.OAuthProviderGoogle)
+			state, c := e.startLink(t, identityv1.OAuthProviderGoogle)
 			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, c), "/settings/user?oauth_linked=true")
-			if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != "google:"+fakeIDs[identity.OAuthProviderGoogle] {
+			wantRedirect(t, e.callback(t, identityv1.OAuthProviderGoogle, state, c), "/settings/user?oauth_linked=true")
+			if ids := e.providerIDs(t, e.caller); len(ids) != 1 || ids[0] != "google:"+fakeIDs[identityv1.OAuthProviderGoogle] {
 				t.Fatalf("persisted identities: %v", ids)
 			}
 		})
@@ -561,15 +563,15 @@ func TestOAuthHandler(t *testing.T) {
 			t.Run("sign-in at the session quota succeeds", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				limit := e.h.cfg.Quotas.MaxSessionsPerUser
-				var u *identity.User
+				var u *identityv1.User
 				for i := range limit + 1 {
-					w := e.login(t, identity.OAuthProviderGoogle)
+					w := e.login(t, identityv1.OAuthProviderGoogle)
 					if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/" {
 						t.Fatalf("sign-in %d: %d %q", i+1, w.Code, w.Header().Get("Location"))
 					}
 					if u == nil {
 						var err error
-						if u, err = e.svc.User.GetByOAuth(identity.OAuthProviderGoogle, fakeIDs[identity.OAuthProviderGoogle]); err != nil {
+						if u, err = e.svc.User.GetByOAuth(identityv1.OAuthProviderGoogle, fakeIDs[identityv1.OAuthProviderGoogle]); err != nil {
 							t.Fatal(err)
 						}
 					}
@@ -594,17 +596,17 @@ func TestOAuthHandler(t *testing.T) {
 			})
 			t.Run("verified email attaches to the matching account", func(t *testing.T) {
 				for _, tc := range []providerAPIsCase{
-					{identity.OAuthProviderGitHub, map[string]string{
+					{identityv1.OAuthProviderGitHub, map[string]string{
 						githubEmailsAPI: `[{"email":"other@example.com","primary":true,"verified":false},{"email":"victim@example.com","primary":false,"verified":true}]`,
 					}},
-					{identity.OAuthProviderGoogle, map[string]string{
+					{identityv1.OAuthProviderGoogle, map[string]string{
 						googleUserAPI: `{"id":"g4242","email":"victim@example.com","verified_email":true}`,
 					}},
-					{identity.OAuthProviderMicrosoft, nil},
+					{identityv1.OAuthProviderMicrosoft, nil},
 				} {
 					t.Run(string(tc.p), func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
-						if _, err := e.svc.User.Modify(e.victim.ID, func(u *identity.User) error { u.EmailVerified = true; return nil }); err != nil {
+						if _, err := e.svc.User.Modify(e.victim.ID, func(u *identityv1.User) error { u.EmailVerified = true; return nil }); err != nil {
 							t.Fatal(err)
 						}
 						e.fake.idClaims["email"] = "victim@example.com"
@@ -637,7 +639,7 @@ func TestOAuthHandler(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				e.fake.apis[githubUserAPI] = `{"id":4242,"login":"octocat","email":"victim@example.com"}`
 				e.fake.apis[githubEmailsAPI] = `[{"email":"victim@example.com","primary":true,"verified":false},{"email":"person@example.com","primary":false,"verified":true}]`
-				u := e.wantLoggedIn(t, identity.OAuthProviderGitHub, e.login(t, identity.OAuthProviderGitHub))
+				u := e.wantLoggedIn(t, identityv1.OAuthProviderGitHub, e.login(t, identityv1.OAuthProviderGitHub))
 				if u.Email != "person@example.com" {
 					t.Errorf("account %s, want person@example.com", u.Email)
 				}
@@ -657,8 +659,8 @@ func TestOAuthHandler(t *testing.T) {
 			})
 			t.Run("returning user signs in when the email source fails", func(t *testing.T) {
 				for _, tc := range []providerEditCase{
-					{identity.OAuthProviderGitHub, func(f *fakeProviders) { delete(f.apis, githubEmailsAPI) }},
-					{identity.OAuthProviderMicrosoft, func(f *fakeProviders) { f.idClaims = nil }},
+					{identityv1.OAuthProviderGitHub, func(f *fakeProviders) { delete(f.apis, githubEmailsAPI) }},
+					{identityv1.OAuthProviderMicrosoft, func(f *fakeProviders) { f.idClaims = nil }},
 				} {
 					t.Run(string(tc.p), func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
@@ -672,8 +674,8 @@ func TestOAuthHandler(t *testing.T) {
 			})
 			t.Run("link when the email source fails", func(t *testing.T) {
 				for _, tc := range []providerEditCase{
-					{identity.OAuthProviderGitHub, func(f *fakeProviders) { delete(f.apis, githubEmailsAPI) }},
-					{identity.OAuthProviderMicrosoft, func(f *fakeProviders) { f.idClaims = nil }},
+					{identityv1.OAuthProviderGitHub, func(f *fakeProviders) { delete(f.apis, githubEmailsAPI) }},
+					{identityv1.OAuthProviderMicrosoft, func(f *fakeProviders) { f.idClaims = nil }},
 				} {
 					t.Run(string(tc.p), func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
@@ -714,28 +716,28 @@ func TestOAuthHandler(t *testing.T) {
 		t.Run("error", func(t *testing.T) {
 			t.Run("unverified email", func(t *testing.T) {
 				for _, tc := range []unverifiedEmailCase{
-					{"GitHub", identity.OAuthProviderGitHub, "victim@example.com", func(f *fakeProviders) {
+					{"GitHub", identityv1.OAuthProviderGitHub, "victim@example.com", func(f *fakeProviders) {
 						f.apis[githubUserAPI] = `{"id":4242,"login":"octocat","email":"victim@example.com"}`
 					}},
-					{"GitHub without email", identity.OAuthProviderGitHub, "victim@example.com", func(f *fakeProviders) {
+					{"GitHub without email", identityv1.OAuthProviderGitHub, "victim@example.com", func(f *fakeProviders) {
 						f.apis[githubEmailsAPI] = `[]`
 					}},
-					{"Google", identity.OAuthProviderGoogle, "victim@example.com", nil},
-					{"Google new address", identity.OAuthProviderGoogle, "new@example.com", nil},
-					{"Microsoft", identity.OAuthProviderMicrosoft, "victim@example.com", nil},
-					{"Microsoft new address", identity.OAuthProviderMicrosoft, "new@example.com", nil},
-					{"Microsoft without xms_edov", identity.OAuthProviderMicrosoft, "new@example.com", func(f *fakeProviders) {
+					{"Google", identityv1.OAuthProviderGoogle, "victim@example.com", nil},
+					{"Google new address", identityv1.OAuthProviderGoogle, "new@example.com", nil},
+					{"Microsoft", identityv1.OAuthProviderMicrosoft, "victim@example.com", nil},
+					{"Microsoft new address", identityv1.OAuthProviderMicrosoft, "new@example.com", nil},
+					{"Microsoft without xms_edov", identityv1.OAuthProviderMicrosoft, "new@example.com", func(f *fakeProviders) {
 						delete(f.idClaims, "xms_edov")
 					}},
-					{"Microsoft xms_edov not a boolean", identity.OAuthProviderMicrosoft, "new@example.com", func(f *fakeProviders) {
+					{"Microsoft xms_edov not a boolean", identityv1.OAuthProviderMicrosoft, "new@example.com", func(f *fakeProviders) {
 						f.idClaims["xms_edov"] = "true"
 					}},
-					{"Microsoft Graph mail", identity.OAuthProviderMicrosoft, "", func(f *fakeProviders) {
+					{"Microsoft Graph mail", identityv1.OAuthProviderMicrosoft, "", func(f *fakeProviders) {
 						delete(f.idClaims, "email")
 						delete(f.idClaims, "xms_edov")
 						f.apis[graphMeAPI] = `{"id":"m4242","mail":"victim@example.com"}`
 					}},
-					{"Microsoft Graph userPrincipalName", identity.OAuthProviderMicrosoft, "", func(f *fakeProviders) {
+					{"Microsoft Graph userPrincipalName", identityv1.OAuthProviderMicrosoft, "", func(f *fakeProviders) {
 						delete(f.idClaims, "email")
 						delete(f.idClaims, "xms_edov")
 						f.apis[graphMeAPI] = `{"id":"m4242","userPrincipalName":"victim@example.com"}`
@@ -773,14 +775,14 @@ func TestOAuthHandler(t *testing.T) {
 						} else {
 							tc.edit(e.fake.idClaims)
 						}
-						e.wantRefused(t, e.login(t, identity.OAuthProviderMicrosoft), dto.ErrorCodeOAuthError)
+						e.wantRefused(t, e.login(t, identityv1.OAuthProviderMicrosoft), dto.ErrorCodeOAuthError)
 					})
 				}
 			})
 			t.Run("GitHub emails unavailable", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				delete(e.fake.apis, githubEmailsAPI)
-				e.wantRefused(t, e.login(t, identity.OAuthProviderGitHub), dto.ErrorCodeOAuthError)
+				e.wantRefused(t, e.login(t, identityv1.OAuthProviderGitHub), dto.ErrorCodeOAuthError)
 			})
 			t.Run("provider response", func(t *testing.T) {
 				for _, tc := range []struct {
@@ -794,9 +796,9 @@ func TestOAuthHandler(t *testing.T) {
 				} {
 					t.Run(tc.name, func(t *testing.T) {
 						e := newOAuthTestEnv(t, "http://localhost:8080")
-						state, c := e.loginRedirect(t, identity.OAuthProviderGoogle)
+						state, c := e.loginRedirect(t, identityv1.OAuthProviderGoogle)
 						tc.query.Set("state", state)
-						w := e.callbackQuery(t, identity.OAuthProviderGoogle, tc.query, c)
+						w := e.callbackQuery(t, identityv1.OAuthProviderGoogle, tc.query, c)
 						wantRedirect(t, w, tc.want)
 						wantCleared(t, w)
 						if n := e.fake.exchanges.Load(); n != 0 {
@@ -813,48 +815,48 @@ func TestOAuthHandler(t *testing.T) {
 				w := httptest.NewRecorder()
 				e.h.LoginRedirect(w, r)
 				state, c := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
-				wantRedirect(t, e.callback(t, identity.OAuthProviderGoogle, state, c), "/device?oauth_error=EMAIL_NOT_VERIFIED&user_code=ABCD")
+				wantRedirect(t, e.callback(t, identityv1.OAuthProviderGoogle, state, c), "/device?oauth_error=EMAIL_NOT_VERIFIED&user_code=ABCD")
 			})
 			t.Run("link of an identity another account holds", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				e.linkIdentity(t, e.victim, identity.OAuthProviderGitHub)
-				state, c := e.startLink(t, identity.OAuthProviderGitHub)
-				wantRedirect(t, e.callback(t, identity.OAuthProviderGitHub, state, c), "/settings/user?oauth_error=CONFLICT")
+				e.linkIdentity(t, e.victim, identityv1.OAuthProviderGitHub)
+				state, c := e.startLink(t, identityv1.OAuthProviderGitHub)
+				wantRedirect(t, e.callback(t, identityv1.OAuthProviderGitHub, state, c), "/settings/user?oauth_error=CONFLICT")
 				if ids := e.providerIDs(t, e.caller); len(ids) != 0 {
 					t.Errorf("caller identities = %v, want none", ids)
 				}
 			})
 			t.Run("unknown provider", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				state, c := e.loginRedirect(t, identity.OAuthProviderGoogle)
+				state, c := e.loginRedirect(t, identityv1.OAuthProviderGoogle)
 				wantRedirect(t, e.callback(t, "other", state, c), "/login?oauth_error=INVALID_PROVIDER")
 			})
 			t.Run("missing cookie", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				state, _ := e.loginRedirect(t, identity.OAuthProviderGitHub)
-				e.wantRejected(t, e.callback(t, identity.OAuthProviderGitHub, state))
+				state, _ := e.loginRedirect(t, identityv1.OAuthProviderGitHub)
+				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, state))
 			})
 			t.Run("mismatched state", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				_, c := e.loginRedirect(t, identity.OAuthProviderGitHub)
-				other, _ := e.loginRedirect(t, identity.OAuthProviderGitHub)
-				e.wantRejected(t, e.callback(t, identity.OAuthProviderGitHub, other, c))
+				_, c := e.loginRedirect(t, identityv1.OAuthProviderGitHub)
+				other, _ := e.loginRedirect(t, identityv1.OAuthProviderGitHub)
+				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, other, c))
 			})
 			t.Run("linking state naming another user", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				state, c := e.startLink(t, identity.OAuthProviderGitHub)
+				state, c := e.startLink(t, identityv1.OAuthProviderGitHub)
 				forged := strings.Replace(state, e.caller.ID.String(), e.victim.ID.String(), 1)
-				e.wantRejected(t, e.callback(t, identity.OAuthProviderGitHub, forged, c))
+				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, forged, c))
 			})
 			t.Run("forged linking state without cookie", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				e.wantRejected(t, e.callback(t, identity.OAuthProviderGitHub, linkingStatePrefix+e.victim.ID.String()+":github:x"))
+				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, linkingStatePrefix+e.victim.ID.String()+":github:x"))
 			})
 			t.Run("linking state signed with the JWT secret", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				forged := linkingStatePrefix + e.victim.ID.String() + ":github:x"
 				c := e.h.stateCookie(oauthserver.SignState(forged, e.h.cfg.JWTSecret), oauthStateMaxAge)
-				e.wantRejected(t, e.callback(t, identity.OAuthProviderGitHub, forged, c))
+				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, forged, c))
 			})
 		})
 	})

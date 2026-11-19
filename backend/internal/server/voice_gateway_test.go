@@ -14,10 +14,11 @@ import (
 	"testing"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 type blockingVoiceBridge struct {
@@ -363,7 +364,7 @@ func TestVoiceGateway(t *testing.T) {
 		t.Parallel()
 		b := &testTextVoiceBridge{started: make(chan ksid.ID, 2)}
 		g := newVoiceGateway(b)
-		owner := &identity.User{ID: ksid.NewID()}
+		owner := &identityv1.User{ID: ksid.NewID()}
 		ticket := func() string {
 			r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), owner), http.MethodPost, "/api/voicegateway/v2/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
 			r.Header.Set("Origin", "https://mddb.example.com")
@@ -439,7 +440,7 @@ func TestVoiceGateway(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Fatal("ticket replay accepted")
 		}
-		stranger := &identity.User{ID: ksid.NewID()}
+		stranger := &identityv1.User{ID: ksid.NewID()}
 		r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), stranger), http.MethodPost, "/api/voicegateway/v2/voice/rtc/"+id, http.NoBody)
 		r.SetPathValue("sessionID", id)
 		w = httptest.NewRecorder()

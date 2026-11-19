@@ -7,10 +7,11 @@ import (
 	"crypto/subtle"
 	"net/http"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 const browserDevicePoll = "/api/v1/auth/browser/device/poll"
@@ -35,7 +36,7 @@ func wrapBrowserLogin[In any, PtrIn interface {
 
 func wrapBrowserLogout(authh *handlers.AuthHandler, svc *handlers.Services, cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		WrapAuth(func(ctx context.Context, u *identity.User, req *dto.LogoutRequest) (*dto.LogoutResponse, error) {
+		WrapAuth(func(ctx context.Context, u *identityv1.User, req *dto.LogoutRequest) (*dto.OkResponse, error) {
 			out, err := authh.Logout(ctx, u, req)
 			if err == nil {
 				handlers.ClearSessionCookie(w)

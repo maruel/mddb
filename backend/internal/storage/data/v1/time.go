@@ -1,6 +1,8 @@
-// Provides a JSON-friendly Time type with millisecond precision.
+// Encodes persisted timestamps as JSON seconds with millisecond precision.
 
-package storage
+// Package v1 defines version 1 of the server settings, resource quotas, and timestamp
+// encoding that mddb persists.
+package v1
 
 import (
 	"encoding/json"

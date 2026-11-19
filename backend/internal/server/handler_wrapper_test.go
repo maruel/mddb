@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 func TestReadAndDecodeBody(t *testing.T) {

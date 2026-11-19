@@ -18,15 +18,17 @@ import (
 	"sync"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -156,7 +158,7 @@ func (s *Services) publishWorkspaceEvent(ctx context.Context, wsID, actorID ksid
 	if event.Type != dto.EventResync {
 		event.ActorID, event.RequestID = actorID, reqctx.RequestID(ctx)
 		if event.Modified == 0 {
-			event.Modified = storage.Now()
+			event.Modified = storagev1.Now()
 		}
 	}
 	if slices.Contains(event.Aspects, dto.EventAspectHierarchy) {
@@ -241,14 +243,14 @@ func (s *Services) PublishRecordEvent(ctx context.Context, wsID, nodeID, recordI
 		NodeID:    nodeID,
 		RecordID:  recordID,
 		ActorID:   actorID,
-		Modified:  storage.Now(),
+		Modified:  storagev1.Now(),
 		RequestID: reqctx.RequestID(ctx),
 	})
 }
 
 // Emit creates a notification and asynchronously dispatches it via enabled channels.
 // It never blocks or returns errors — delivery failures are logged and ignored.
-func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID, notifType identity.NotificationType, title, body, resourceID string, actorID ksid.ID) {
+func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID, notifType identityv1.NotificationType, title, body, resourceID string, actorID ksid.ID) {
 	if svc.Notification == nil {
 		return
 	}
@@ -266,7 +268,7 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 		slog.ErrorContext(ctx, "Failed to get user for notification dispatch", "err", err, "user_id", userID)
 		return
 	}
-	channels := user.Settings.NotificationPrefs.EffectiveChannels(notifType)
+	channels := identity.EffectiveChannels(&user.Settings.NotificationPrefs, notifType)
 
 	// Web Push (async, fire-and-forget).
 	if channels.Web && vapid != nil && svc.PushSubscription != nil {
@@ -310,7 +312,7 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 // non-HTTP surfaces such as the Go Mode MCP endpoint agree with the workspace
 // the UI shows instead of failing when nothing was recorded yet. Returns the
 // zero ID when the user has no accessible workspace.
-func (s *Services) ActiveWorkspaceID(user *identity.User) ksid.ID {
+func (s *Services) ActiveWorkspaceID(user *identityv1.User) ksid.ID {
 	if user == nil {
 		return 0
 	}
@@ -325,7 +327,7 @@ func (s *Services) ActiveWorkspaceID(user *identity.User) ksid.ID {
 
 // EffectiveWorkspaceRole applies current workspace membership and the organization owner/admin override.
 // It returns NOT_FOUND for an unknown workspace and FORBIDDEN without membership.
-func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (identity.WorkspaceRole, *dto.APIError) {
+func (svc *Services) EffectiveWorkspaceRole(user *identityv1.User, wsID ksid.ID) (identityv1.WorkspaceRole, *dto.APIError) {
 	ws, err := svc.Workspace.Get(wsID)
 	if err != nil {
 		return "", dto.NewAPIError(http.StatusNotFound, dto.ErrorCodeNotFound, "Workspace not found")
@@ -335,8 +337,8 @@ func (svc *Services) EffectiveWorkspaceRole(user *identity.User, wsID ksid.ID) (
 	if err != nil {
 		return "", dto.NewAPIError(http.StatusForbidden, dto.ErrorCodeForbidden, "Forbidden: not a member of this organization")
 	}
-	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-		return identity.WSRoleAdmin, nil
+	if orgMem.Role == identityv1.OrgRoleOwner || orgMem.Role == identityv1.OrgRoleAdmin {
+		return identityv1.WSRoleAdmin, nil
 	}
 
 	wsMem, err := svc.WSMembership.Get(user.ID, wsID)
@@ -362,7 +364,7 @@ type RateLimitsUpdater interface {
 
 // Config holds configuration values needed by handlers.
 type Config struct {
-	storage.ServerConfig
+	storagev1.ServerConfig
 
 	BaseURL   string
 	Version   string
@@ -416,7 +418,7 @@ type SessionClaims struct {
 // IssueToken persists a session and returns its signed credential and non-secret ID.
 // A nonzero ID on error identifies partial creation that the caller must revoke.
 // Errors are dto API errors, so callers return them unchanged.
-func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent, countryCode string) (credential string, id ksid.ID, err error) {
+func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identityv1.User, clientIP, userAgent, countryCode string) (credential string, id ksid.ID, err error) {
 	now := time.Now().Truncate(time.Second)
 	expiresAt := now.Add(tokenExpiration)
 	sessionID := ksid.NewID()
@@ -439,7 +441,7 @@ func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identity.
 
 	// Create session with the pre-generated ID and token hash
 	deviceInfo := devicelogin.UserAgent(userAgent)
-	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
+	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storagev1.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
 		err = dto.InternalWithError("session_creation", err)
 		if created != nil {
 			return tokenString, sessionID, err

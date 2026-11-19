@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/git"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // AuthHandler handles authentication requests.
@@ -58,7 +59,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 
 // IssueSession builds the account response, then issues its tracked credential and session ID.
 // A nonzero ID on error must be revoked; no account response is returned in that case.
-func (h *AuthHandler) IssueSession(ctx context.Context, user *identity.User) (*dto.AuthResponse, ksid.ID, error) {
+func (h *AuthHandler) IssueSession(ctx context.Context, user *identityv1.User) (*dto.AuthResponse, ksid.ID, error) {
 	// Build user response
 	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
@@ -122,7 +123,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 // GetSession returns the signed-in account, or a null user for a nil user.
 // Unlike GetMe, a signed-out request is not an error, so a page that only
 // discovers its session never answers 401.
-func (h *AuthHandler) GetSession(ctx context.Context, user *identity.User, _ *dto.GetSessionRequest) (*dto.SessionUserResponse, error) {
+func (h *AuthHandler) GetSession(ctx context.Context, user *identityv1.User, _ *dto.GetSessionRequest) (*dto.SessionUserResponse, error) {
 	if user == nil {
 		return &dto.SessionUserResponse{}, nil
 	}
@@ -134,7 +135,7 @@ func (h *AuthHandler) GetSession(ctx context.Context, user *identity.User, _ *dt
 }
 
 // GetMe returns the current user info.
-func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
+func (h *AuthHandler) GetMe(ctx context.Context, user *identityv1.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
 	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
@@ -150,7 +151,7 @@ func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.G
 }
 
 // CreateOrganization creates a new organization for the authenticated user.
-func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identityv1.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
@@ -179,7 +180,7 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 	}
 
 	// Create org membership (user becomes owner of new org)
-	if _, err := h.svc.OrgMembership.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
+	if _, err := h.svc.OrgMembership.Create(user.ID, org.ID, identityv1.OrgRoleOwner); err != nil {
 		if cleanupErr := h.svc.Organization.Delete(org.ID); cleanupErr != nil {
 			err = errors.Join(err, cleanupErr)
 		}
@@ -192,18 +193,18 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 }
 
 // Logout revokes the current session.
-func (h *AuthHandler) Logout(ctx context.Context, _ *identity.User, _ *dto.LogoutRequest) (*dto.LogoutResponse, error) {
+func (h *AuthHandler) Logout(ctx context.Context, _ *identityv1.User, _ *dto.LogoutRequest) (*dto.OkResponse, error) {
 	sessionID := reqctx.SessionID(ctx)
 	if err := h.svc.Session.Revoke(sessionID); err != nil {
 		slog.ErrorContext(ctx, "Failed to revoke session", "error", err, "session_id", sessionID)
 		return nil, dto.InternalWithError("Failed to logout", err)
 	}
 
-	return &dto.LogoutResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // ListSessions returns all active sessions for the current user.
-func (h *AuthHandler) ListSessions(ctx context.Context, user *identity.User, _ *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
+func (h *AuthHandler) ListSessions(ctx context.Context, user *identityv1.User, _ *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
 	sessions := make([]dto.SessionResponse, 0, 8)
@@ -215,7 +216,7 @@ func (h *AuthHandler) ListSessions(ctx context.Context, user *identity.User, _ *
 }
 
 // RevokeSession revokes a specific session.
-func (h *AuthHandler) RevokeSession(ctx context.Context, user *identity.User, req *dto.RevokeSessionRequest) (*dto.RevokeSessionResponse, error) {
+func (h *AuthHandler) RevokeSession(ctx context.Context, user *identityv1.User, req *dto.RevokeSessionRequest) (*dto.OkResponse, error) {
 	// Verify the session belongs to the user
 	session, err := h.svc.Session.Get(req.SessionID)
 	if err != nil {
@@ -229,11 +230,11 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, user *identity.User, re
 		return nil, dto.InternalWithError("Failed to revoke session", err)
 	}
 
-	return &dto.RevokeSessionResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // RevokeAllSessions revokes all sessions for the current user except the current one.
-func (h *AuthHandler) RevokeAllSessions(ctx context.Context, user *identity.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
+func (h *AuthHandler) RevokeAllSessions(ctx context.Context, user *identityv1.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
 	var toRevoke []ksid.ID
@@ -256,7 +257,7 @@ func (h *AuthHandler) RevokeAllSessions(ctx context.Context, user *identity.User
 }
 
 // ChangeEmail changes the user's email address after password verification.
-func (h *AuthHandler) ChangeEmail(ctx context.Context, user *identity.User, req *dto.ChangeEmailRequest) (*dto.ChangeEmailResponse, error) {
+func (h *AuthHandler) ChangeEmail(ctx context.Context, user *identityv1.User, req *dto.ChangeEmailRequest) (*dto.ChangeEmailResponse, error) {
 	// Verify password
 	if !h.svc.User.VerifyPassword(user.ID, req.Password) {
 		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid password")
@@ -278,7 +279,7 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, user *identity.User, req 
 	}
 
 	// Update email and reset EmailVerified
-	if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
+	if _, err := h.svc.User.Modify(user.ID, func(u *identityv1.User) error {
 		u.Email = req.NewEmail
 		u.EmailVerified = false
 		return nil
@@ -300,7 +301,7 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, user *identity.User, req 
 }
 
 // SendVerificationEmail sends a verification email to the current user.
-func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identity.User, _ *dto.SendVerificationEmailRequest) (*dto.SendVerificationEmailResponse, error) {
+func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identityv1.User, _ *dto.SendVerificationEmailRequest) (*dto.SendVerificationEmailResponse, error) {
 	// Check if SMTP is configured
 	if h.svc.Email == nil {
 		return nil, dto.NewAPIError(501, dto.ErrorCodeNotImplemented, "Email service not configured")
@@ -372,7 +373,7 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 	}
 
 	// Update user's EmailVerified status
-	_, err = h.svc.User.Modify(verification.UserID, func(u *identity.User) error {
+	_, err = h.svc.User.Modify(verification.UserID, func(u *identityv1.User) error {
 		// Only verify if the email matches (user might have changed email since token was created)
 		if u.Email != verification.Email {
 			return dto.NewAPIError(400, dto.ErrorCodeValidationFailed, "Email address has changed since verification was requested")
@@ -425,7 +426,7 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID ksi
 }
 
 // SetPassword sets or changes the user's password.
-func (h *AuthHandler) SetPassword(_ context.Context, user *identity.User, req *dto.SetPasswordRequest) (*dto.OkResponse, error) {
+func (h *AuthHandler) SetPassword(_ context.Context, user *identityv1.User, req *dto.SetPasswordRequest) (*dto.OkResponse, error) {
 	if err := h.svc.User.SetPassword(user.ID, req.CurrentPassword, req.NewPassword); err != nil {
 		// Check for invalid credentials error (wrong current password)
 		if err.Error() == "invalid credentials" {

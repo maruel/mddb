@@ -19,6 +19,28 @@ data as Markdown, JSONL, and assets in git repositories. Read [backend/AGENTS.md
 - User and integration guides live at docs.mddb.app (the `docs.mddb.app` repository). Keep durable contracts in
   comments beside the owning source, not in Markdown.
 
+## Versioned Contracts
+
+Every wire API and serialized format has a version. Wire APIs are HTTP routes, SSE events, MCP tools, resources
+and cursors, and SDK types. Serialized formats are the workspace files, JSONL tables, configuration, caches,
+cookies, and browser storage that mddb writes. A route path, file path, or `version` field holds the version; a
+format without one is version 1.
+
+A breaking change ships as version N+1 beside version N:
+
+- Breaking: remove or rename a field, route, or enum value; change a type, unit, default, or meaning; make an
+  optional field required; reject input that version N accepts. Adding an optional field or a route is not
+  breaking.
+- Copy the vN package to vN+1 and change the copy. API DTOs live in `backend/internal/server/dto/vN`; persisted
+  schemas live in `data/vN` beneath their owner, such as `backend/internal/storage/identity/data/v1`.
+- Use the vN types directly. Do not declare type, constant, or variable aliases or forwarding wrappers for them;
+  saving churn does not justify an alias.
+- Move clients and writers to vN+1. Serve and read vN through an adapter over the current implementation.
+- Mark each vN declaration and adapter with
+  `TODO(YYYY-MM-DD): delete vN once this date has passed and two release tags contain vN+1.` The date is the commit
+  date plus 7 days. Count tags with `git fetch --tags origin && git tag --contains <commit that added vN+1>`.
+- When both conditions hold, delete vN with its adapter, tests, and generated SDK.
+
 ## Roll Go Mode
 
 Pick a Git commit and roll both the `github.com/gomodedev/gomode` Go module and the `@gomodedev/gomode` package in

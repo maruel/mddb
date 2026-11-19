@@ -12,12 +12,14 @@ import (
 	"testing/synctest"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
-	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestSSEHandler(t *testing.T) {
@@ -38,7 +40,7 @@ func TestSSEHandler(t *testing.T) {
 			h := &SSEHandler{
 				Svc: &Services{Broker: sse.NewBroker()},
 			}
-			user := &identity.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
+			user := &identityv1.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
 			r := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/!/events", http.NoBody)
 			r.SetPathValue("wsID", "!")
 			r = r.WithContext(reqctx.WithUser(r.Context(), user))
@@ -57,7 +59,7 @@ func TestSSEHandler(t *testing.T) {
 			}
 
 			wsID := ksid.NewID()
-			user := &identity.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
+			user := &identityv1.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
 
 			ctx, cancel := context.WithCancel(t.Context())
 			t.Cleanup(cancel)
@@ -87,7 +89,7 @@ func TestSSEHandler(t *testing.T) {
 				Type:     dto.EventNodeUpdated,
 				NodeID:   ksid.NewID(),
 				ActorID:  ksid.NewID(),
-				Modified: storage.Now(),
+				Modified: storagev1.Now(),
 			})
 
 			select {
@@ -128,7 +130,7 @@ func TestSSEHandler(t *testing.T) {
 				broker := sse.NewBroker()
 				h := &SSEHandler{Svc: &Services{Broker: broker}, Cfg: &Config{Revision: "heartbeat-test"}}
 				wsID := ksid.NewID()
-				user := &identity.User{ID: ksid.NewID()}
+				user := &identityv1.User{ID: ksid.NewID()}
 				ctx, cancel := context.WithCancel(t.Context())
 				r := httptest.NewRequest(http.MethodGet, "/events", http.NoBody)
 				r.SetPathValue("wsID", wsID.String())
@@ -165,7 +167,7 @@ func TestSSEHandler(t *testing.T) {
 				Cfg: &Config{Revision: "test-revision"},
 			}
 			wsID := ksid.NewID()
-			user := &identity.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
+			user := &identityv1.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
 
 			ctx, cancel := context.WithCancel(t.Context())
 			t.Cleanup(cancel)

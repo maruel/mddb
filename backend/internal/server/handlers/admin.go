@@ -6,8 +6,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
 
 // AdminHandler handles global admin endpoints.
@@ -18,7 +19,7 @@ type AdminHandler struct {
 }
 
 // GetServerDetail returns detailed server-wide dashboard data.
-func (h *AdminHandler) GetServerDetail(ctx context.Context, _ *identity.User, _ *dto.AdminServerDetailRequest) (*dto.AdminServerDetail, error) {
+func (h *AdminHandler) GetServerDetail(ctx context.Context, _ *identityv1.User, _ *dto.AdminServerDetailRequest) (*dto.AdminServerDetail, error) {
 	var userCount, orgCount, wsCount int
 	for range h.Svc.User.Iter(0) {
 		userCount++

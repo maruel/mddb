@@ -17,10 +17,12 @@ import (
 	"strconv"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -58,7 +60,7 @@ func commitDBIfMutating(ctx context.Context, r *http.Request, rootRepo *git.Root
 
 // authResult holds the result of JWT/session validation.
 type authResult struct {
-	user        *identity.User
+	user        *identityv1.User
 	sessionID   ksid.ID
 	tokenString string
 }
@@ -142,7 +144,7 @@ func writeJSONResponse[Out any](ctx context.Context, w http.ResponseWriter, outp
 }
 
 // getRateLimitIdentifier returns the appropriate identifier for rate limiting based on scope.
-func getRateLimitIdentifier(tier *ratelimit.Tier, user *identity.User, r *http.Request) string {
+func getRateLimitIdentifier(tier *ratelimit.Tier, user *identityv1.User, r *http.Request) string {
 	if tier.Scope == ratelimit.ScopeUser && user != nil {
 		return user.ID.String()
 	}
@@ -168,10 +170,10 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 // checkWSMembership returns an error unless the user holds requiredRole in
 // the workspace.
 func checkWSMembership(
-	user *identity.User,
+	user *identityv1.User,
 	wsID ksid.ID,
 	svc *handlers.Services,
-	requiredRole identity.WorkspaceRole,
+	requiredRole identityv1.WorkspaceRole,
 ) *dto.APIError {
 	role, err := svc.EffectiveWorkspaceRole(user, wsID)
 	if err != nil {
@@ -283,7 +285,7 @@ func WrapAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	limiters *ratelimit.Limiters,
@@ -333,14 +335,14 @@ func WrapOptionalAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
-		var user *identity.User
+		var user *identityv1.User
 		tier, limitKey := limiters.MatchUnauth(r.Method, r.URL.Path), httpserver.ClientIP(ctx)
 		if auth, authCtx, err := validateAuthWithContext(ctx, r, svc, cfg); err == nil {
 			user, ctx = auth.user, authCtx
@@ -380,10 +382,10 @@ func WrapOrgAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, ksid.ID, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, ksid.ID, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	requiredRole identity.OrganizationRole,
+	requiredRole identityv1.OrganizationRole,
 	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -457,10 +459,10 @@ func WrapWSAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, ksid.ID, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, ksid.ID, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	requiredRole identity.WorkspaceRole,
+	requiredRole identityv1.WorkspaceRole,
 	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -533,7 +535,7 @@ func WrapAuthRaw(
 	fn http.HandlerFunc,
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	requiredRole identity.WorkspaceRole,
+	requiredRole identityv1.WorkspaceRole,
 	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, true)
@@ -545,7 +547,7 @@ func WrapAuthReadRaw(
 	fn http.HandlerFunc,
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	requiredRole identity.WorkspaceRole,
+	requiredRole identityv1.WorkspaceRole,
 	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, false)
@@ -555,14 +557,14 @@ func wrapAuthRaw(
 	fn http.HandlerFunc,
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	requiredRole identity.WorkspaceRole,
+	requiredRole identityv1.WorkspaceRole,
 	limiters *ratelimit.Limiters,
 	mutating bool,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session (don't need context for raw handlers)
 		auth, ctx, err := validateAuthWithContext(r.Context(), r, svc, cfg)
-		var user *identity.User
+		var user *identityv1.User
 		if auth != nil {
 			user = auth.user
 		}
@@ -625,7 +627,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	limiters *ratelimit.Limiters,
@@ -634,7 +636,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
-		var user *identity.User
+		var user *identityv1.User
 		if auth != nil {
 			user = auth.user
 		}
@@ -690,7 +692,7 @@ var (
 // Returns the user, session ID, token string, and any error.
 // Every credential must exactly match a live, persisted session owned by its subject.
 // A valid credential records the session's use for least-recently-used eviction.
-func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, ksid.ID, string, error) {
+func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (authUser *identityv1.User, authSessionID ksid.ID, authToken string, authErr error) {
 	tokenString, err := requestCredential(r)
 	if err != nil {
 		return nil, 0, "", err
@@ -746,22 +748,22 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 
 // hasOrgPermission checks if the user's org role meets the required level.
 // Role hierarchy: owner > admin > member.
-func hasOrgPermission(userRole, requiredRole identity.OrganizationRole) bool {
-	roleLevel := map[identity.OrganizationRole]int{
-		identity.OrgRoleMember: 0,
-		identity.OrgRoleAdmin:  1,
-		identity.OrgRoleOwner:  2,
+func hasOrgPermission(userRole, requiredRole identityv1.OrganizationRole) bool {
+	roleLevel := map[identityv1.OrganizationRole]int{
+		identityv1.OrgRoleMember: 0,
+		identityv1.OrgRoleAdmin:  1,
+		identityv1.OrgRoleOwner:  2,
 	}
 	return roleLevel[userRole] >= roleLevel[requiredRole]
 }
 
 // hasWSPermission checks if the user's workspace role meets the required level.
 // Role hierarchy: admin > editor > viewer.
-func hasWSPermission(userRole, requiredRole identity.WorkspaceRole) bool {
-	roleLevel := map[identity.WorkspaceRole]int{
-		identity.WSRoleViewer: 0,
-		identity.WSRoleEditor: 1,
-		identity.WSRoleAdmin:  2,
+func hasWSPermission(userRole, requiredRole identityv1.WorkspaceRole) bool {
+	roleLevel := map[identityv1.WorkspaceRole]int{
+		identityv1.WSRoleViewer: 0,
+		identityv1.WSRoleEditor: 1,
+		identityv1.WSRoleAdmin:  2,
 	}
 	return roleLevel[userRole] >= roleLevel[requiredRole]
 }

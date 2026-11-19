@@ -9,11 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // ViewHandler handles view requests.
@@ -23,22 +26,22 @@ type ViewHandler struct {
 }
 
 // CreateView creates a new view for a table.
-func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreateViewRequest) (*dto.CreateViewResponse, error) {
+func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.CreateViewRequest) (*dto.CreateViewResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	viewID := ksid.NewID()
-	view := content.View{
+	view := contentv1.View{
 		ID:   viewID,
 		Name: req.Name,
-		Type: content.ViewType(req.Type),
+		Type: contentv1.ViewType(req.Type),
 	}
 
 	node, err := ws.MutateTable(ctx, req.NodeID, GitAuthor(user), func(node *content.Node) error {
 		node.Views = append(node.Views, view)
-		node.Modified = storage.Now()
+		node.Modified = storagev1.Now()
 		return nil
 	})
 	if err != nil {
@@ -52,7 +55,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 }
 
 // UpdateView updates an existing view.
-func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateViewRequest) (*dto.UpdateViewResponse, error) {
+func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdateViewRequest) (*dto.UpdateViewResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -71,7 +74,7 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 				node.Views[i].Name = req.Name
 			}
 			if req.Type != "" {
-				node.Views[i].Type = content.ViewType(req.Type)
+				node.Views[i].Type = contentv1.ViewType(req.Type)
 			}
 			// For slices, we assume the client sends the full new state if they are non-nil
 			if req.Columns != nil {
@@ -86,7 +89,7 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 			if req.Groups != nil {
 				node.Views[i].Groups = groupsToEntity(req.Groups)
 			}
-			node.Modified = storage.Now()
+			node.Modified = storagev1.Now()
 			return nil
 		}
 		return dto.NotFound("view")
@@ -110,14 +113,14 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 }
 
 // DeleteView deletes a view.
-func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteViewRequest) (*dto.DeleteViewResponse, error) {
+func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.DeleteViewRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	node, err := ws.MutateTable(ctx, req.NodeID, GitAuthor(user), func(node *content.Node) error {
-		newViews := make([]content.View, 0, len(node.Views))
+		newViews := make([]contentv1.View, 0, len(node.Views))
 		found := false
 		for i := range node.Views {
 			if node.Views[i].ID == req.ViewID {
@@ -135,7 +138,7 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 		}
 
 		node.Views = newViews
-		node.Modified = storage.Now()
+		node.Modified = storagev1.Now()
 
 		return nil
 	})
@@ -149,12 +152,12 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 		return nil, dto.InternalWithError("Failed to delete view", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventTableUpdated, node, user.ID)
-	return &dto.DeleteViewResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // --- DTO Conversions ---
 
-func viewsToDTO(views []content.View) []dto.View {
+func viewsToDTO(views []contentv1.View) []dto.View {
 	if views == nil {
 		return nil
 	}
@@ -165,7 +168,7 @@ func viewsToDTO(views []content.View) []dto.View {
 	return result
 }
 
-func viewToDTO(v *content.View) dto.View {
+func viewToDTO(v *contentv1.View) dto.View {
 	return dto.View{
 		Revision: viewRevision(v),
 		ID:       v.ID,
@@ -180,7 +183,7 @@ func viewToDTO(v *content.View) dto.View {
 }
 
 // viewRevision hashes the JSON representation read from table metadata.
-func viewRevision(v *content.View) string {
+func viewRevision(v *contentv1.View) string {
 	data, err := json.Marshal(v)
 	if err != nil {
 		panic(err)
@@ -189,7 +192,7 @@ func viewRevision(v *content.View) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func checkViewRevision(v *content.View, expected string) error {
+func checkViewRevision(v *contentv1.View, expected string) error {
 	current := viewRevision(v)
 	if expected == "" || expected != current {
 		return dto.NewAPIError(409, dto.ErrorCodeConflict, "View changed; read the current view before writing again").WithDetail("recovery", "read_current").WithDetail("current_revision", current)
@@ -197,7 +200,7 @@ func checkViewRevision(v *content.View, expected string) error {
 	return nil
 }
 
-func viewColumnsToDTO(cols []content.ViewColumn) []dto.ViewColumn {
+func viewColumnsToDTO(cols []contentv1.ViewColumn) []dto.ViewColumn {
 	if cols == nil {
 		return nil
 	}
@@ -212,7 +215,7 @@ func viewColumnsToDTO(cols []content.ViewColumn) []dto.ViewColumn {
 	return result
 }
 
-func filtersToDTO(filters []content.Filter) []dto.Filter {
+func filtersToDTO(filters []contentv1.Filter) []dto.Filter {
 	if filters == nil {
 		return nil
 	}
@@ -223,7 +226,7 @@ func filtersToDTO(filters []content.Filter) []dto.Filter {
 	return result
 }
 
-func filterToDTO(f *content.Filter) dto.Filter {
+func filterToDTO(f *contentv1.Filter) dto.Filter {
 	return dto.Filter{
 		Property: f.Property,
 		Operator: dto.FilterOp(f.Operator),
@@ -233,7 +236,7 @@ func filterToDTO(f *content.Filter) dto.Filter {
 	}
 }
 
-func sortsToDTO(sorts []content.Sort) []dto.Sort {
+func sortsToDTO(sorts []contentv1.Sort) []dto.Sort {
 	if sorts == nil {
 		return nil
 	}
@@ -247,7 +250,7 @@ func sortsToDTO(sorts []content.Sort) []dto.Sort {
 	return result
 }
 
-func groupsToDTO(groups []content.Group) []dto.Group {
+func groupsToDTO(groups []contentv1.Group) []dto.Group {
 	if groups == nil {
 		return nil
 	}
@@ -263,13 +266,13 @@ func groupsToDTO(groups []content.Group) []dto.Group {
 
 // --- Entity Conversions ---
 
-func viewColumnsToEntity(cols []dto.ViewColumn) []content.ViewColumn {
+func viewColumnsToEntity(cols []dto.ViewColumn) []contentv1.ViewColumn {
 	if cols == nil {
 		return nil
 	}
-	result := make([]content.ViewColumn, len(cols))
+	result := make([]contentv1.ViewColumn, len(cols))
 	for i, c := range cols {
-		result[i] = content.ViewColumn{
+		result[i] = contentv1.ViewColumn{
 			Property: c.Property,
 			Width:    c.Width,
 			Visible:  c.Visible,
@@ -278,48 +281,48 @@ func viewColumnsToEntity(cols []dto.ViewColumn) []content.ViewColumn {
 	return result
 }
 
-func filtersToEntity(filters []dto.Filter) []content.Filter {
+func filtersToEntity(filters []dto.Filter) []contentv1.Filter {
 	if filters == nil {
 		return nil
 	}
-	result := make([]content.Filter, len(filters))
+	result := make([]contentv1.Filter, len(filters))
 	for i, f := range filters {
 		result[i] = filterToEntity(&f)
 	}
 	return result
 }
 
-func filterToEntity(f *dto.Filter) content.Filter {
-	return content.Filter{
+func filterToEntity(f *dto.Filter) contentv1.Filter {
+	return contentv1.Filter{
 		Property: f.Property,
-		Operator: content.FilterOp(f.Operator),
+		Operator: contentv1.FilterOp(f.Operator),
 		Value:    f.Value,
 		And:      filtersToEntity(f.And),
 		Or:       filtersToEntity(f.Or),
 	}
 }
 
-func sortsToEntity(sorts []dto.Sort) []content.Sort {
+func sortsToEntity(sorts []dto.Sort) []contentv1.Sort {
 	if sorts == nil {
 		return nil
 	}
-	result := make([]content.Sort, len(sorts))
+	result := make([]contentv1.Sort, len(sorts))
 	for i, s := range sorts {
-		result[i] = content.Sort{
+		result[i] = contentv1.Sort{
 			Property:  s.Property,
-			Direction: content.SortDir(s.Direction),
+			Direction: contentv1.SortDir(s.Direction),
 		}
 	}
 	return result
 }
 
-func groupsToEntity(groups []dto.Group) []content.Group {
+func groupsToEntity(groups []dto.Group) []contentv1.Group {
 	if groups == nil {
 		return nil
 	}
-	result := make([]content.Group, len(groups))
+	result := make([]contentv1.Group, len(groups))
 	for i, g := range groups {
-		result[i] = content.Group{
+		result[i] = contentv1.Group{
 			Property: g.Property,
 			Hidden:   g.Hidden,
 		}
@@ -330,7 +333,7 @@ func groupsToEntity(groups []dto.Group) []content.Group {
 // --- Schema Validation ---
 
 // validateFiltersWithSchema validates filters against the table schema.
-func validateFiltersWithSchema(filters []dto.Filter, props []content.Property) error {
+func validateFiltersWithSchema(filters []dto.Filter, props []contentv1.Property) error {
 	propSet := make(map[string]struct{}, len(props))
 	for _, p := range props {
 		propSet[p.Name] = struct{}{}
@@ -393,7 +396,7 @@ func validateSingleFilter(f *dto.Filter, propSet map[string]struct{}) error {
 }
 
 // validateSortsWithSchema validates sorts against the table schema.
-func validateSortsWithSchema(sorts []dto.Sort, props []content.Property) error {
+func validateSortsWithSchema(sorts []dto.Sort, props []contentv1.Property) error {
 	propSet := make(map[string]struct{}, len(props))
 	for _, p := range props {
 		propSet[p.Name] = struct{}{}

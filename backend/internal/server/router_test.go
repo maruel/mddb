@@ -16,9 +16,11 @@ import (
 	"testing/synctest"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -37,7 +39,7 @@ func TestRouter(t *testing.T) {
 				t.Run(tc.name, func(t *testing.T) {
 					env := setupTestEnv(t)
 					cfg := &Config{
-						ServerConfig:   &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
+						ServerConfig:   &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
 						BaseURL:        "https://configured.example.com",
 						TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")},
 					}
@@ -85,7 +87,7 @@ func TestRouter(t *testing.T) {
 				}
 				t.Cleanup(func() { _ = checker.Close() })
 				router := NewRouter(env.services, &Config{
-					ServerConfig:   &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
+					ServerConfig:   &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
 					IPGeo:          checker,
 					TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32")},
 				})
@@ -124,7 +126,7 @@ func TestRouter(t *testing.T) {
 		t.Run("host and cross-origin policies", func(t *testing.T) {
 			env := setupTestEnv(t)
 			cfg := &Config{
-				ServerConfig: &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
+				ServerConfig: &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
 				BaseURL:      "https://configured.example.com",
 			}
 			router := NewRouter(env.services, cfg)
@@ -148,7 +150,7 @@ func TestRouter(t *testing.T) {
 		})
 		t.Run("cancels bandwidth wait", func(t *testing.T) {
 			env := setupTestEnv(t)
-			cfg := &Config{ServerConfig: &storage.ServerConfig{
+			cfg := &Config{ServerConfig: &storagev1.ServerConfig{
 				JWTSecret:  testJWTSecret,
 				Quotas:     storage.DefaultServerQuotas(false),
 				RateLimits: storage.DefaultRateLimits(),
@@ -188,7 +190,7 @@ func TestRouter(t *testing.T) {
 
 	t.Run("Close", func(t *testing.T) {
 		env := setupTestEnv(t)
-		cfg := &Config{ServerConfig: &storage.ServerConfig{
+		cfg := &Config{ServerConfig: &storagev1.ServerConfig{
 			JWTSecret:  testJWTSecret,
 			Quotas:     storage.DefaultServerQuotas(false),
 			RateLimits: storage.DefaultRateLimits(),

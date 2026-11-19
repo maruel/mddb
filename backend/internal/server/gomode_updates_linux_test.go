@@ -18,13 +18,14 @@ import (
 	"testing"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/server/sse"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // BenchmarkWorkspaceInvalidations measures actual committed page/record writes,
@@ -78,7 +79,7 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 					}
 				}
 				nodeH := &handlers.NodeHandler{Svc: env.services}
-				reg := &invalidationMeasuredRegistry{workspaceRegistry: &workspaceRegistry{svc: env.services, nodeH: nodeH, user: user, wsID: wsID, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}}
+				reg := &invalidationMeasuredRegistry{workspaceRegistry: &workspaceRegistry{svc: env.services, nodeH: nodeH, user: user, wsID: wsID, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}}
 				uri := reg.nodeURI(watched.ID)
 				h := &mcp.Handler{Registry: reg, Sessions: mcp.NewSessionStore(func(context.Context) (string, error) { return "benchmark-owner", nil })}
 				ctx, cancel := context.WithCancel(b.Context())

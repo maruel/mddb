@@ -16,15 +16,16 @@ import (
 	"testing"
 	"testing/synctest"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/mcpschema"
 	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestWorkspaceRegistry(t *testing.T) {
@@ -36,7 +37,7 @@ func TestWorkspaceRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg := &workspaceRegistry{svc: env.services, user: user, wsID: wsID, role: identity.WSRoleAdmin, focus: newVoiceFocusState(), nodeH: &handlers.NodeHandler{Svc: env.services}}
+	reg := &workspaceRegistry{svc: env.services, user: user, wsID: wsID, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState(), nodeH: &handlers.NodeHandler{Svc: env.services}}
 	store, err := env.services.FileStore.GetWorkspaceStore(t.Context(), wsID)
 	if err != nil {
 		t.Fatal(err)
@@ -480,7 +481,7 @@ func TestGoModeSubscriptionSetupRoleChange(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			reg := &workspaceRegistry{svc: env.services, user: u, wsID: wsID, role: identity.WSRoleAdmin, focus: newVoiceFocusState()}
+			reg := &workspaceRegistry{svc: env.services, user: u, wsID: wsID, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}
 			ws, err := env.wsService.Get(wsID)
 			if err != nil {
 				t.Fatal(err)
@@ -490,14 +491,14 @@ func TestGoModeSubscriptionSetupRoleChange(t *testing.T) {
 				t.Fatal(err)
 			}
 			changeRole := func() {
-				if _, err := env.orgMemService.Modify(membership.ID, func(m *identity.OrganizationMembership) error { m.Role = identity.OrgRoleMember; return nil }); err != nil {
+				if _, err := env.orgMemService.Modify(membership.ID, func(m *identityv1.OrganizationMembership) error { m.Role = identityv1.OrgRoleMember; return nil }); err != nil {
 					t.Fatal(err)
 				}
 				wm, err := env.wsMemService.Get(u.ID, wsID)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := env.wsMemService.Modify(wm.ID, func(m *identity.WorkspaceMembership) error { m.Role = identity.WSRoleViewer; return nil }); err != nil {
+				if _, err := env.wsMemService.Modify(wm.ID, func(m *identityv1.WorkspaceMembership) error { m.Role = identityv1.WSRoleViewer; return nil }); err != nil {
 					t.Fatal(err)
 				}
 			}

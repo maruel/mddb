@@ -6,7 +6,6 @@ package email
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -14,52 +13,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
-
-// Config holds SMTP configuration.
-type Config struct {
-	Host     string `json:"host"`
-	Port     int32  `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	From     string `json:"from"`
-}
-
-// IsZero returns true if the config is completely empty (SMTP disabled).
-func (c *Config) IsZero() bool {
-	return c.Host == "" && c.Port == 0 && c.Username == "" && c.Password == "" && c.From == ""
-}
-
-// Validate checks that required fields are set and have valid values.
-// An empty config (IsZero) is valid and means SMTP is disabled.
-func (c *Config) Validate() error {
-	if c.IsZero() {
-		return nil
-	}
-	if c.Host == "" {
-		return errors.New("host is required")
-	}
-	if c.Port < 1 || c.Port > 65535 {
-		return fmt.Errorf("port %d is invalid (must be 1-65535)", c.Port)
-	}
-	if c.Username == "" {
-		return errors.New("username is required")
-	}
-	if c.Password == "" {
-		return errors.New("password is required")
-	}
-	if c.From == "" {
-		return errors.New("from is required")
-	}
-	if !strings.Contains(c.From, "@") {
-		return fmt.Errorf("from %q is not a valid email address", c.From)
-	}
-	return nil
-}
 
 // Service provides email sending functionality.
 type Service struct {
-	Config Config
+	Config storagev1.SMTPConfig
 }
 
 // Send sends an email.

@@ -16,10 +16,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	voicegatewayv1 "github.com/gomodedev/gomode/voicegateway/data/v1"
+
 	"github.com/gomodedev/gomode/autoupdate"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/gomodedev/gomode/voicegateway"
+	mddbv1 "github.com/maruel/mddb/backend/cmd/mddb/data/v1"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/pelletier/go-toml/v2"
 )
@@ -43,82 +46,12 @@ func configPath(cfgDir string) string {
 	return filepath.Join(cfgDir, "config.toml")
 }
 
-// tomlConfig mirrors the config.toml file layout. Zero values mean "not set in
-// the file"; defaultConfig pre-populates every default so decoding only
-// overwrites the keys the file names.
-//
-// IMPORTANT: When adding or modifying configuration fields, update
-// contrib/config.toml accordingly. Document all default values in the example.
-type tomlConfig struct {
-	AutoUpdate   string           `toml:"auto_update"`
-	Server       tomlServer       `toml:"server"`
-	OAuth        tomlOAuth        `toml:"oauth"`
-	GitHub       tomlGitHub       `toml:"github"`
-	VoiceGateway tomlVoiceGateway `toml:"voice-gateway"`
-	Debug        tomlDebug        `toml:"debug"`
-}
-
-type tomlServer struct {
-	HTTP         string   `toml:"http"`
-	DataDir      string   `toml:"data_dir"`
-	BaseURL      string   `toml:"base_url"`
-	GeoDB        string   `toml:"geo_db"`
-	AllowOrigins []string `toml:"allow_origins"`
-
-	TrustedProxies []string `toml:"trusted_proxies"`
-}
-
-type tomlOAuth struct {
-	Google    tomlOAuthProvider `toml:"google"`
-	Microsoft tomlOAuthProvider `toml:"microsoft"`
-	GitHub    tomlOAuthProvider `toml:"github"`
-}
-
-// tomlOAuthProvider holds one [oauth.<provider>] block.
-type tomlOAuthProvider struct {
-	ClientID     string `toml:"client_id"`
-	ClientSecret string `toml:"client_secret"`
-}
-
-type tomlGitHub struct {
-	App tomlGitHubApp `toml:"app"`
-}
-
-type tomlGitHubApp struct {
-	ID             int64  `toml:"id"`
-	PrivateKeyFile string `toml:"private_key_file"`
-	WebhookSecret  string `toml:"webhook_secret"`
-}
-
-type tomlVoiceGateway struct {
-	voicegateway.WebRTCConfig
-
-	Mode                 voiceGatewayMode      `toml:"mode"`
-	URL                  string                `toml:"url"`
-	InstanceID           string                `toml:"instance_id"`
-	TokenMode            server.VoiceTokenMode `toml:"token_mode"`
-	SigningPrivateKeyPEM string                `toml:"signing_private_key_pem"`
-}
-
-// voiceGatewayMode selects the host transport without consulting provider credentials.
-type voiceGatewayMode string
-
-const (
-	voiceGatewayDisabled voiceGatewayMode = "disabled"
-	voiceGatewayEmbedded voiceGatewayMode = "embedded"
-	voiceGatewayExternal voiceGatewayMode = "external"
-)
-
-type tomlDebug struct {
-	LogLevel string `toml:"log_level"`
-}
-
 // defaultConfig returns the built-in configuration, which is what an absent or
 // partially written config.toml resolves to.
-func defaultConfig() tomlConfig {
-	return tomlConfig{
+func defaultConfig() mddbv1.File {
+	return mddbv1.File{
 		AutoUpdate: autoupdate.DefaultSchedule,
-		Server: tomlServer{
+		Server: mddbv1.Server{
 			HTTP:    "localhost:8080",
 			DataDir: "data",
 			BaseURL: "http://localhost",
@@ -126,18 +59,18 @@ func defaultConfig() tomlConfig {
 			AllowOrigins:   []string{},
 			TrustedProxies: []string{},
 		},
-		VoiceGateway: tomlVoiceGateway{Mode: voiceGatewayDisabled, TokenMode: server.VoiceTokenModeScoped, WebRTCConfig: voicegateway.NewWebRTCConfig()},
-		Debug:        tomlDebug{LogLevel: "info"},
+		VoiceGateway: mddbv1.VoiceGateway{Mode: mddbv1.VoiceGatewayDisabled, TokenMode: string(server.VoiceTokenModeScoped), WebRTC: voicegateway.NewWebRTCConfig()},
+		Debug:        mddbv1.Debug{LogLevel: "info"},
 	}
 }
 
 // loadTOMLConfig reads cfgDir/config.toml over the defaults. An absent file is
 // not an error; a malformed file or an unknown key fails with the file path.
-func loadTOMLConfig(cfgDir string) (tomlConfig, error) {
+func loadTOMLConfig(cfgDir string) (mddbv1.File, error) {
 	var err error
 	cfgDir, err = expandHome(cfgDir)
 	if err != nil {
-		return tomlConfig{}, fmt.Errorf("config_dir: %w", err)
+		return mddbv1.File{}, fmt.Errorf("config_dir: %w", err)
 	}
 	path := configPath(cfgDir)
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is the operator's config directory
@@ -145,7 +78,7 @@ func loadTOMLConfig(cfgDir string) (tomlConfig, error) {
 		if os.IsNotExist(err) {
 			return defaultConfig(), nil
 		}
-		return tomlConfig{}, fmt.Errorf("read %s: %w", path, err)
+		return mddbv1.File{}, fmt.Errorf("read %s: %w", path, err)
 	}
 	tc := defaultConfig()
 	dec := toml.NewDecoder(strings.NewReader(string(data)))
@@ -153,9 +86,9 @@ func loadTOMLConfig(cfgDir string) (tomlConfig, error) {
 	if err := dec.Decode(&tc); err != nil {
 		var strict *toml.StrictMissingError
 		if errors.As(err, &strict) {
-			return tomlConfig{}, fmt.Errorf("parse %s: unknown keys: %s", path, unknownKeys(strict.Errors))
+			return mddbv1.File{}, fmt.Errorf("parse %s: unknown keys: %s", path, unknownKeys(strict.Errors))
 		}
-		return tomlConfig{}, fmt.Errorf("parse %s: %w", path, err)
+		return mddbv1.File{}, fmt.Errorf("parse %s: %w", path, err)
 	}
 	slog.Info("loaded config", "path", path)
 	return tc, nil
@@ -207,9 +140,9 @@ type resolvedConfig struct {
 	TestOAuth      bool // set only in an e2e build, which fakes the OAuth providers
 	OAuth          oauthCredentialsSet
 	GitHubApp      githubAppSettings
-	VoiceMode      voiceGatewayMode
+	VoiceMode      mddbv1.VoiceGatewayMode
 	VoiceConfig    voicegateway.ResolvedConfig
-	VoiceWebRTC    voicegateway.WebRTCConfig
+	VoiceWebRTC    voicegatewayv1.WebRTC
 	ExternalVoice  *server.ExternalVoiceGateway
 }
 
@@ -221,7 +154,7 @@ type resolvedConfig struct {
 //
 // Path values process ~ as the home directory, accept absolute paths, and
 // process relative paths.
-func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
+func resolveConfig(tc *mddbv1.File, cfgDir string) (*resolvedConfig, error) {
 	var err error
 	cfgDir, err = expandHome(cfgDir)
 	if err != nil {
@@ -274,7 +207,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		return nil, err
 	}
 	var voiceConfig voicegateway.ResolvedConfig
-	if tc.VoiceGateway.Mode == voiceGatewayEmbedded {
+	if tc.VoiceGateway.Mode == mddbv1.VoiceGatewayEmbedded {
 		decl, err := voicegateway.ReadConfig(cfgDir)
 		if err != nil {
 			return nil, err
@@ -305,7 +238,7 @@ func resolveConfig(tc *tomlConfig, cfgDir string) (*resolvedConfig, error) {
 		GitHubApp:      ghApp,
 		VoiceMode:      tc.VoiceGateway.Mode,
 		VoiceConfig:    voiceConfig,
-		VoiceWebRTC:    tc.VoiceGateway.WebRTCConfig,
+		VoiceWebRTC:    tc.VoiceGateway.WebRTC,
 		ExternalVoice:  voice,
 	}, nil
 }
@@ -326,7 +259,7 @@ func (c *resolvedConfig) openGeoIP(ctx context.Context, log *slog.Logger) (*geoi
 
 // resolveOAuthProvider validates one provider's credentials. section names the
 // configuration path for error messages.
-func resolveOAuthProvider(section string, p tomlOAuthProvider) (oauthCredentials, error) {
+func resolveOAuthProvider(section string, p mddbv1.OAuthProvider) (oauthCredentials, error) {
 	if (p.ClientID == "") != (p.ClientSecret == "") {
 		return oauthCredentials{}, fmt.Errorf("%s: client_id and client_secret must both be set or both be empty", section)
 	}
@@ -344,7 +277,7 @@ func fakeOAuthCredentials(creds oauthCredentials, provider, id, secret string) o
 
 // resolveGitHubApp validates the GitHub App block and resolves its private key
 // file against cfgDir.
-func resolveGitHubApp(app tomlGitHubApp, cfgDir string) (githubAppSettings, error) {
+func resolveGitHubApp(app mddbv1.GitHubApp, cfgDir string) (githubAppSettings, error) {
 	if (app.ID == 0) != (app.PrivateKeyFile == "") {
 		return githubAppSettings{}, errors.New("github.app: id and private_key_file must both be set or both be empty")
 	}
@@ -429,24 +362,25 @@ func parseLogLevel(level string) (slog.Level, error) {
 }
 
 // resolveVoiceGateway validates embedded options and loads external signing material.
-func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.ExternalVoiceGateway, error) {
+func resolveVoiceGateway(c *mddbv1.VoiceGateway, issuer, dir string) (*server.ExternalVoiceGateway, error) {
 	switch c.Mode {
-	case voiceGatewayDisabled:
+	case mddbv1.VoiceGatewayDisabled:
 		return nil, nil //nolint:nilnil // Disabled mode has no external gateway.
-	case voiceGatewayEmbedded:
+	case mddbv1.VoiceGatewayEmbedded:
 		if err := c.Validate(); err != nil {
 			return nil, fmt.Errorf("voice-gateway.%w", err)
 		}
 		return nil, nil //nolint:nilnil // Embedded mode has no external gateway.
-	case voiceGatewayExternal:
+	case mddbv1.VoiceGatewayExternal:
 	default:
 		return nil, fmt.Errorf("voice-gateway.mode must be disabled, embedded, or external, got %q", c.Mode)
 	}
-	if err := c.TokenMode.Validate(); err != nil {
+	tokenMode := server.VoiceTokenMode(c.TokenMode)
+	if err := tokenMode.Validate(); err != nil {
 		return nil, err
 	}
 	var key []byte
-	if c.TokenMode == server.VoiceTokenModeScoped {
+	if tokenMode == server.VoiceTokenModeScoped {
 		if c.SigningPrivateKeyPEM == "" {
 			return nil, errors.New("voice-gateway.signing_private_key_pem is required for scoped tokens")
 		}
@@ -468,7 +402,7 @@ func resolveVoiceGateway(c *tomlVoiceGateway, issuer, dir string) (*server.Exter
 			return nil, err
 		}
 	}
-	return server.NewExternalVoiceGateway(c.URL, issuer, c.InstanceID, c.TokenMode, key)
+	return server.NewExternalVoiceGateway(c.URL, issuer, c.InstanceID, tokenMode, key)
 }
 
 // voiceOAuthKey keeps the OAuth signing identity stable across restarts.

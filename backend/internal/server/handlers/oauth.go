@@ -18,14 +18,16 @@ import (
 	"strings"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/gomodedev/gomode/oauth/oauthserver"
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -49,7 +51,7 @@ type OAuthHandler struct {
 	svc       *Services
 	cfg       *Config
 	stateKey  []byte
-	providers map[identity.OAuthProvider]*oauth2.Config
+	providers map[identityv1.OAuthProvider]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
@@ -62,26 +64,26 @@ func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
 		svc:       svc,
 		cfg:       cfg,
 		stateKey:  mac.Sum(nil),
-		providers: make(map[identity.OAuthProvider]*oauth2.Config),
+		providers: make(map[identityv1.OAuthProvider]*oauth2.Config),
 	}
 }
 
 // AddProvider adds an OAuth2 provider configuration.
-func (h *OAuthHandler) AddProvider(name identity.OAuthProvider, clientID, clientSecret, redirectURL string) {
+func (h *OAuthHandler) AddProvider(name identityv1.OAuthProvider, clientID, clientSecret, redirectURL string) {
 	var endpoint oauth2.Endpoint
 	var scopes []string
 
 	switch name {
-	case identity.OAuthProviderGoogle:
+	case identityv1.OAuthProviderGoogle:
 		endpoint = google.Endpoint
 		scopes = []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
 		}
-	case identity.OAuthProviderMicrosoft:
+	case identityv1.OAuthProviderMicrosoft:
 		endpoint = microsoft.AzureADEndpoint("common")
 		scopes = []string{"openid", "profile", "email", "User.Read"}
-	case identity.OAuthProviderGitHub:
+	case identityv1.OAuthProviderGitHub:
 		endpoint = github.Endpoint
 		scopes = []string{"read:user", "user:email"}
 	default:
@@ -125,7 +127,7 @@ func (h *OAuthHandler) LinkOAuth(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, err)
 		return
 	}
-	provider := identity.OAuthProvider(req.Provider)
+	provider := identityv1.OAuthProvider(req.Provider)
 	config, ok := h.providers[provider]
 	if !ok {
 		writeErrorResponse(w, dto.InvalidProvider())
@@ -151,8 +153,8 @@ func (h *OAuthHandler) LinkOAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 // UnlinkOAuth removes an OAuth provider from the user's account.
-func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *dto.UnlinkOAuthAccountRequest) (*dto.UnlinkOAuthAccountResponse, error) {
-	provider := identity.OAuthProvider(req.Provider)
+func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identityv1.User, req *dto.UnlinkOAuthAccountRequest) (*dto.OkResponse, error) {
+	provider := identityv1.OAuthProvider(req.Provider)
 
 	// Check if provider is linked
 	found := false
@@ -175,8 +177,8 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *
 	}
 
 	// Remove the OAuth identity
-	if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
-		newIdentities := make([]identity.OAuthIdentity, 0, len(u.OAuthIdentities)-1)
+	if _, err := h.svc.User.Modify(user.ID, func(u *identityv1.User) error {
+		newIdentities := make([]identityv1.OAuthIdentity, 0, len(u.OAuthIdentities)-1)
 		for _, ident := range u.OAuthIdentities {
 			if ident.Provider != provider {
 				newIdentities = append(newIdentities, ident)
@@ -188,12 +190,12 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *
 		return nil, dto.InternalWithError("Failed to unlink provider", err)
 	}
 
-	return &dto.UnlinkOAuthAccountResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }
 
 // parseLinkingState parses a verified linking state and returns the user ID
 // and provider. Returns zero ID if the state is not a linking state.
-func parseLinkingState(state string) (ksid.ID, identity.OAuthProvider) {
+func parseLinkingState(state string) (userID ksid.ID, provider identityv1.OAuthProvider) {
 	if !strings.HasPrefix(state, linkingStatePrefix) {
 		return 0, ""
 	}
@@ -206,7 +208,7 @@ func parseLinkingState(state string) (ksid.ID, identity.OAuthProvider) {
 	if err != nil {
 		return 0, ""
 	}
-	return userID, identity.OAuthProvider(parts[1])
+	return userID, identityv1.OAuthProvider(parts[1])
 }
 
 // LoginRedirect redirects the user to the OAuth provider.
@@ -214,7 +216,7 @@ func parseLinkingState(state string) (ksid.ID, identity.OAuthProvider) {
 // The browser navigates here, so a failure redirects to the login page with
 // the error code; see redirectOAuthError.
 func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
-	provider := identity.OAuthProvider(r.PathValue("provider"))
+	provider := identityv1.OAuthProvider(r.PathValue("provider"))
 	config, ok := h.providers[provider]
 	if !ok {
 		redirectOAuthError(w, r, loginPath, dto.InvalidProvider())
@@ -243,7 +245,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// The state cookie is single use: clear it whatever the outcome.
 	http.SetCookie(w, h.stateCookie("", -1))
-	provider := identity.OAuthProvider(r.PathValue("provider"))
+	provider := identityv1.OAuthProvider(r.PathValue("provider"))
 	config, ok := h.providers[provider]
 	if !ok {
 		redirectOAuthError(w, r, loginPath, dto.InvalidProvider())
@@ -308,10 +310,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetchUserInfo reads the signed-in account from the provider's API.
-func fetchUserInfo(ctx context.Context, provider identity.OAuthProvider, client *http.Client, token *oauth2.Token, clientID string) (oauthUserInfo, error) {
+func fetchUserInfo(ctx context.Context, provider identityv1.OAuthProvider, client *http.Client, token *oauth2.Token, clientID string) (oauthUserInfo, error) {
 	var info oauthUserInfo
 	switch provider {
-	case identity.OAuthProviderGoogle:
+	case identityv1.OAuthProviderGoogle:
 		var u googleUserInfo
 		if err := getProviderJSON(ctx, client, "https://www.googleapis.com/oauth2/v2/userinfo", &u); err != nil {
 			return info, err
@@ -324,7 +326,7 @@ func fetchUserInfo(ctx context.Context, provider identity.OAuthProvider, client 
 		info.VerifiedEmail = knownEmail(verified)
 		info.Name = u.Name
 		info.AvatarURL = u.Picture
-	case identity.OAuthProviderMicrosoft:
+	case identityv1.OAuthProviderMicrosoft:
 		// A tenant admin sets mail to any address, and Graph does not report
 		// whether anyone verified mail or userPrincipalName; the email comes
 		// from the ID token instead.
@@ -342,7 +344,7 @@ func fetchUserInfo(ctx context.Context, provider identity.OAuthProvider, client 
 			return email, nil
 		}
 		info.AvatarURL = fetchMicrosoftPhoto(ctx, client)
-	case identity.OAuthProviderGitHub:
+	case identityv1.OAuthProviderGitHub:
 		// The profile email is the user's chosen public address, which GitHub
 		// does not document as verified; read the email from /user/emails.
 		var u githubUser
@@ -390,7 +392,7 @@ func getProviderJSON(ctx context.Context, client *http.Client, apiURL string, v 
 
 // link attaches the provider identity to the signed-in user who started the
 // link. Linking an already linked provider succeeds.
-func (h *OAuthHandler) link(ctx context.Context, userID ksid.ID, provider identity.OAuthProvider, info oauthUserInfo) error {
+func (h *OAuthHandler) link(ctx context.Context, userID ksid.ID, provider identityv1.OAuthProvider, info oauthUserInfo) error {
 	if existing, _ := h.svc.User.GetByOAuth(provider, info.ID); existing != nil && existing.ID != userID {
 		slog.WarnContext(ctx, "OAuth linking: identity already claimed", "oauthID", info.ID, "existingUser", existing.ID)
 		return dto.NewAPIError(http.StatusConflict, dto.ErrorCodeConflict, "identity linked to another account")
@@ -410,13 +412,13 @@ func (h *OAuthHandler) link(ctx context.Context, userID ksid.ID, provider identi
 	if err != nil {
 		email = ""
 	}
-	if _, err := h.svc.User.Modify(userID, func(u *identity.User) error {
-		u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
+	if _, err := h.svc.User.Modify(userID, func(u *identityv1.User) error {
+		u.OAuthIdentities = append(u.OAuthIdentities, identityv1.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: info.ID,
 			Email:      email,
 			AvatarURL:  info.AvatarURL,
-			LastLogin:  storage.Now(),
+			LastLogin:  storagev1.Now(),
 		})
 		return nil
 	}); err != nil {
@@ -560,9 +562,9 @@ func (h *OAuthHandler) stateCookie(value string, maxAge int) *http.Cookie {
 }
 
 // authCodeURL returns the provider authorization URL for state.
-func authCodeURL(config *oauth2.Config, provider identity.OAuthProvider, state string) string {
+func authCodeURL(config *oauth2.Config, provider identityv1.OAuthProvider, state string) string {
 	var opts []oauth2.AuthCodeOption
-	if provider == identity.OAuthProviderGoogle {
+	if provider == identityv1.OAuthProviderGoogle {
 		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
 	}
 	return config.AuthCodeURL(state, opts...)
@@ -591,7 +593,7 @@ func knownEmail(email string) func() (string, error) {
 // attaches only to an account that already verified that email, or creates one. Without a
 // verified email the login fails, and the user can link the provider from a
 // signed-in session instead.
-func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identity.OAuthProvider, info oauthUserInfo) error {
+func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identityv1.OAuthProvider, info oauthUserInfo) error {
 	ctx := r.Context()
 	// Try to find user by OAuth ID
 	user, err := svc.User.GetByOAuth(provider, info.ID)
@@ -634,19 +636,19 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 			}
 		}
 
-		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
+		if _, err := svc.User.Modify(user.ID, func(u *identityv1.User) error {
 			// Bind proof and existing-account eligibility at the atomic mutation:
 			// a concurrent email change must not verify a different address.
 			if u.Email != email || (!created && !u.EmailVerified) {
 				return dto.EmailNotVerified()
 			}
 			u.EmailVerified = true
-			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
+			u.OAuthIdentities = append(u.OAuthIdentities, identityv1.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: info.ID,
 				Email:      email,
 				AvatarURL:  info.AvatarURL,
-				LastLogin:  storage.Now(),
+				LastLogin:  storagev1.Now(),
 			})
 			return nil
 		}); err != nil {
@@ -654,11 +656,11 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 		}
 	} else {
 		// Existing OAuth identity - update avatar URL and last login
-		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
+		if _, err := svc.User.Modify(user.ID, func(u *identityv1.User) error {
 			for i := range u.OAuthIdentities {
 				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == info.ID {
 					u.OAuthIdentities[i].AvatarURL = info.AvatarURL
-					u.OAuthIdentities[i].LastLogin = storage.Now()
+					u.OAuthIdentities[i].LastLogin = storagev1.Now()
 					break
 				}
 			}

@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestSessionAssets(t *testing.T) {
@@ -47,7 +48,7 @@ func TestSessionAssets(t *testing.T) {
 	if _, err := store.SaveAsset(t.Context(), page.ID, "photo #1.png", []byte("image data"), handlers.GitAuthor(user)); err != nil {
 		t.Fatal(err)
 	}
-	cfg := &handlers.Config{ServerConfig: storage.ServerConfig{JWTSecret: testJWTSecret}}
+	cfg := &handlers.Config{ServerConfig: storagev1.ServerConfig{JWTSecret: testJWTSecret}}
 	request := func(method, path, body, token string, cookie bool) (int, []byte, http.Header) {
 		r, err := http.NewRequestWithContext(t.Context(), method, env.server.URL+path, strings.NewReader(body))
 		if err != nil {
@@ -112,7 +113,7 @@ func TestSessionAssets(t *testing.T) {
 			t.Fatal("credential survived revoke", status)
 		}
 	}
-	expired, err := env.services.Session.Create(user.ID, "expired-hash", "Browser", "", "", storage.ToTime(time.Now().Add(-time.Hour)), 0)
+	expired, err := env.services.Session.Create(user.ID, "expired-hash", "Browser", "", "", storagev1.ToTime(time.Now().Add(-time.Hour)), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

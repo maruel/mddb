@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
@@ -157,7 +159,7 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 
 		// Map and write records (set asset context for file downloads)
 		e.mapper.SetAssetContext(e.assets, data.node.ID)
-		var records []*content.DataRecord
+		var records []*contentv1.DataRecord
 		for i := range data.rows {
 			record, err := e.mapper.MapDatabasePage(&data.rows[i], data.db.Properties)
 			if err != nil {
@@ -407,7 +409,7 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 
 	// Map and write records (set asset context for file downloads)
 	e.mapper.SetAssetContext(e.assets, node.ID)
-	var records []*content.DataRecord
+	var records []*contentv1.DataRecord
 	for i := range rows {
 		record, err := e.mapper.MapDatabasePage(&rows[i], db.Properties)
 		if err != nil {

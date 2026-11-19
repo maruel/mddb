@@ -7,16 +7,18 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
 func TestOrganization(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &Organization{
+			valid := &identityv1.Organization{
 				ID:   ksid.ID(1),
 				Name: "Test Org",
-				Quotas: OrganizationQuotas{
+				Quotas: identityv1.OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
@@ -29,10 +31,10 @@ func TestOrganization(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &Organization{
+			zeroID := &identityv1.Organization{
 				ID:   ksid.ID(0),
 				Name: "Test Org",
-				Quotas: OrganizationQuotas{
+				Quotas: identityv1.OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
@@ -45,10 +47,10 @@ func TestOrganization(t *testing.T) {
 		})
 
 		t.Run("empty name", func(t *testing.T) {
-			emptyName := &Organization{
+			emptyName := &identityv1.Organization{
 				ID:   ksid.ID(1),
 				Name: "",
-				Quotas: OrganizationQuotas{
+				Quotas: identityv1.OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
@@ -60,10 +62,10 @@ func TestOrganization(t *testing.T) {
 			}
 		})
 		t.Run("invalid quota", func(t *testing.T) {
-			invalidQuota := &Organization{
+			invalidQuota := &identityv1.Organization{
 				ID:   ksid.ID(1),
 				Name: "Test Org",
-				Quotas: OrganizationQuotas{
+				Quotas: identityv1.OrganizationQuotas{
 					MaxWorkspacesPerOrg:    0,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
@@ -77,7 +79,7 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &Organization{
+		original := &identityv1.Organization{
 			ID:   ksid.ID(1),
 			Name: "Test Org",
 		}
@@ -93,7 +95,7 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		org := &Organization{ID: ksid.ID(42)}
+		org := &identityv1.Organization{ID: ksid.ID(42)}
 		if org.GetID() != ksid.ID(42) {
 			t.Errorf("GetID() = %v, want %v", org.GetID(), ksid.ID(42))
 		}
@@ -103,14 +105,14 @@ func TestOrganization(t *testing.T) {
 func TestGitRemote(t *testing.T) {
 	t.Run("IsZero", func(t *testing.T) {
 		t.Run("empty URL", func(t *testing.T) {
-			empty := &GitRemote{}
+			empty := &identityv1.GitRemote{}
 			if !empty.IsZero() {
 				t.Error("Expected IsZero() = true for empty GitRemote")
 			}
 		})
 
 		t.Run("configured URL", func(t *testing.T) {
-			configured := &GitRemote{URL: "https://github.com/example/repo.git"}
+			configured := &identityv1.GitRemote{URL: "https://github.com/example/repo.git"}
 			if configured.IsZero() {
 				t.Error("Expected IsZero() = false for configured GitRemote")
 			}
@@ -126,7 +128,7 @@ func TestOrganizationService(t *testing.T) {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
 
-	var org *Organization
+	var org *identityv1.Organization
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
@@ -176,7 +178,7 @@ func TestOrganizationService(t *testing.T) {
 
 	t.Run("Modify", func(t *testing.T) {
 		t.Run("name", func(t *testing.T) {
-			_, modErr := service.Modify(org.ID, func(o *Organization) error {
+			_, modErr := service.Modify(org.ID, func(o *identityv1.Organization) error {
 				o.Name = "Updated Org Name"
 				return nil
 			})
@@ -191,7 +193,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, modErr := service.Modify(ksid.ID(99999), func(o *Organization) error {
+			_, modErr := service.Modify(ksid.ID(99999), func(o *identityv1.Organization) error {
 				return nil
 			})
 			if modErr == nil {
@@ -200,7 +202,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			_, modErr := service.Modify(ksid.ID(0), func(o *Organization) error {
+			_, modErr := service.Modify(ksid.ID(0), func(o *identityv1.Organization) error {
 				return nil
 			})
 			if modErr == nil {

@@ -2,7 +2,7 @@
 
 package mcpschema
 
-import "github.com/maruel/mddb/backend/internal/server/dto"
+import "github.com/maruel/mddb/backend/internal/server/dto/v1"
 
 // ListNodesInput defines the list nodes input wire contract.
 type ListNodesInput struct {

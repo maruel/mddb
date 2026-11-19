@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -91,8 +93,8 @@ func TestService(t *testing.T) {
 			svc, _ := newTestService(t)
 			ctx := t.Context()
 
-			ws := &identity.Workspace{
-				GitRemote: identity.GitRemote{
+			ws := &identityv1.Workspace{
+				GitRemote: identityv1.GitRemote{
 					URL:      "https://github.com/org/repo.git",
 					Type:     "github",
 					AuthType: "token",
@@ -113,8 +115,8 @@ func TestService(t *testing.T) {
 			svc, _ := newTestService(t)
 			ctx := t.Context()
 
-			ws := &identity.Workspace{
-				GitRemote: identity.GitRemote{
+			ws := &identityv1.Workspace{
+				GitRemote: identityv1.GitRemote{
 					URL:  "https://github.com/org/repo.git",
 					Type: "github",
 				},
@@ -133,8 +135,8 @@ func TestService(t *testing.T) {
 			svc, _ := newTestService(t)
 			ctx := t.Context()
 
-			ws := &identity.Workspace{
-				GitRemote: identity.GitRemote{
+			ws := &identityv1.Workspace{
+				GitRemote: identityv1.GitRemote{
 					URL:            "https://github.com/org/repo.git",
 					AuthType:       "github_app",
 					InstallationID: 42,

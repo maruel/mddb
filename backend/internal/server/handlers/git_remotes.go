@@ -7,12 +7,14 @@ import (
 	"errors"
 	"fmt"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/githubapp"
-	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/git"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 const gitRemoteName = "origin"
@@ -24,7 +26,7 @@ type GitRemoteHandler struct {
 }
 
 // GetGitRemote returns the git remote for a workspace, or null if none exists.
-func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -36,14 +38,14 @@ func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID ksid.ID, _ *id
 }
 
 // UpdateGitRemote creates or updates the git remote for a workspace.
-func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identityv1.Workspace) error {
 		created := ws.GitRemote.Created
 		lastSync := ws.GitRemote.LastSync
 		if ws.GitRemote.IsZero() {
-			created = storage.Now()
+			created = storagev1.Now()
 		}
-		ws.GitRemote = identity.GitRemote{
+		ws.GitRemote = identityv1.GitRemote{
 			URL:      req.URL,
 			Type:     req.Type,
 			AuthType: req.AuthType,
@@ -73,7 +75,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID ksid.ID, _ 
 
 // getAuthURL returns the remote URL with authentication injected.
 // For github_app remotes, it fetches a fresh installation token.
-func (h *GitRemoteHandler) getAuthURL(ctx context.Context, remote *identity.GitRemote) (string, error) {
+func (h *GitRemoteHandler) getAuthURL(ctx context.Context, remote *identityv1.GitRemote) (string, error) {
 	if remote.AuthType == "github_app" && h.GitHubApp != nil {
 		token, _, err := h.GitHubApp.GetInstallationToken(ctx, remote.InstallationID)
 		if err != nil {
@@ -85,7 +87,7 @@ func (h *GitRemoteHandler) getAuthURL(ctx context.Context, remote *identity.GitR
 }
 
 // PushGit pushes changes to the git remote.
-func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -111,8 +113,8 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID ksid.ID, _ *identit
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
-	if _, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
-		ws.GitRemote.LastSync = storage.Now()
+	if _, err := h.Svc.Workspace.Modify(wsID, func(ws *identityv1.Workspace) error {
+		ws.GitRemote.LastSync = storagev1.Now()
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update last sync time: %w", err)
@@ -122,7 +124,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID ksid.ID, _ *identit
 }
 
 // PullGit pulls changes from the git remote.
-func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.PullGitRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.PullGitRequest) (*dto.OkResponse, error) {
 	if h.Svc.SyncService == nil {
 		return nil, errors.New("sync service not available")
 	}
@@ -133,7 +135,7 @@ func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID ksid.ID, _ *identit
 }
 
 // GetSyncStatus returns the current sync status for a workspace.
-func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.GetSyncStatusRequest) (*dto.GitSyncStatusResponse, error) {
+func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.GetSyncStatusRequest) (*dto.GitSyncStatusResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -146,7 +148,7 @@ func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID ksid.ID, _ *i
 }
 
 // SetupGitHubAppRemote configures a workspace to use a GitHub App installation for sync.
-func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.SetupGitHubAppRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.SetupGitHubAppRemoteRequest) (*dto.GitRemoteResponse, error) {
 	if h.GitHubApp == nil {
 		return nil, errors.New("GitHub App not configured")
 	}
@@ -157,12 +159,12 @@ func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID ksid.I
 		return nil, fmt.Errorf("invalid installation: %w", err)
 	}
 
-	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identityv1.Workspace) error {
 		created := ws.GitRemote.Created
 		if ws.GitRemote.IsZero() {
-			created = storage.Now()
+			created = storagev1.Now()
 		}
-		ws.GitRemote = identity.GitRemote{
+		ws.GitRemote = identityv1.GitRemote{
 			URL:            fmt.Sprintf("https://github.com/%s/%s.git", req.RepoOwner, req.RepoName),
 			Type:           "github",
 			AuthType:       "github_app",
@@ -199,7 +201,7 @@ func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID ksid.I
 }
 
 // ListGitHubAppRepos lists repositories accessible to a GitHub App installation.
-func (h *GitRemoteHandler) ListGitHubAppRepos(ctx context.Context, _ *identity.User, req *dto.ListGitHubAppReposRequest) (*dto.ListGitHubAppReposResponse, error) {
+func (h *GitRemoteHandler) ListGitHubAppRepos(ctx context.Context, _ *identityv1.User, req *dto.ListGitHubAppReposRequest) (*dto.ListGitHubAppReposResponse, error) {
 	if h.GitHubApp == nil {
 		return nil, errors.New("GitHub App not configured")
 	}
@@ -223,7 +225,7 @@ func (h *GitRemoteHandler) ListGitHubAppRepos(ctx context.Context, _ *identity.U
 }
 
 // ListGitHubAppInstallations lists all installations of the GitHub App.
-func (h *GitRemoteHandler) ListGitHubAppInstallations(ctx context.Context, _ *identity.User, _ *dto.ListGitHubAppInstallationsRequest) (*dto.ListGitHubAppInstallationsResponse, error) {
+func (h *GitRemoteHandler) ListGitHubAppInstallations(ctx context.Context, _ *identityv1.User, _ *dto.ListGitHubAppInstallationsRequest) (*dto.ListGitHubAppInstallationsResponse, error) {
 	if h.GitHubApp == nil {
 		return nil, errors.New("GitHub App not configured")
 	}
@@ -249,12 +251,12 @@ func (h *GitRemoteHandler) IsGitHubAppAvailable(_ context.Context, _ *dto.GitHub
 }
 
 // DeleteGitRemote deletes the git remote for a workspace.
-func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
-	_, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
+	_, err := h.Svc.Workspace.Modify(wsID, func(ws *identityv1.Workspace) error {
 		if ws.GitRemote.IsZero() {
 			return dto.NotFound("remote")
 		}
-		ws.GitRemote = identity.GitRemote{}
+		ws.GitRemote = identityv1.GitRemote{}
 		return nil
 	})
 	if err != nil {

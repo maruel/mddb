@@ -16,10 +16,12 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/gomodedev/gomode"
 	"github.com/gomodedev/gomode/oauth/oauthverify"
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -65,7 +67,7 @@ func TestExternalVoiceGateway(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				cfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
+				cfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 				h = NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", BaseURL: ts.URL, ExternalVoice: gateway, VoiceBridge: &testVoiceBridge{}})
 				request := func(method, path, token string) *http.Response {
 					r, err := http.NewRequestWithContext(t.Context(), method, ts.URL+path, http.NoBody)

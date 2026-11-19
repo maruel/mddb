@@ -6,17 +6,19 @@ import (
 	"path/filepath"
 	"testing"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
 func TestOrganizationInvitation(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &OrganizationInvitation{
+			valid := &identityv1.OrganizationInvitation{
 				ID:             ksid.ID(1),
 				Email:          "test@example.com",
 				OrganizationID: ksid.ID(100),
-				Role:           OrgRoleMember,
+				Role:           identityv1.OrgRoleMember,
 				Token:          "token123",
 			}
 			if err := valid.Validate(); err != nil {
@@ -25,11 +27,11 @@ func TestOrganizationInvitation(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &OrganizationInvitation{
+			zeroID := &identityv1.OrganizationInvitation{
 				ID:             ksid.ID(0),
 				Email:          "test@example.com",
 				OrganizationID: ksid.ID(100),
-				Role:           OrgRoleMember,
+				Role:           identityv1.OrgRoleMember,
 				Token:          "token123",
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -38,11 +40,11 @@ func TestOrganizationInvitation(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			emptyEmail := &OrganizationInvitation{
+			emptyEmail := &identityv1.OrganizationInvitation{
 				ID:             ksid.ID(1),
 				Email:          "",
 				OrganizationID: ksid.ID(100),
-				Role:           OrgRoleMember,
+				Role:           identityv1.OrgRoleMember,
 				Token:          "token123",
 			}
 			if err := emptyEmail.Validate(); err == nil {
@@ -51,11 +53,11 @@ func TestOrganizationInvitation(t *testing.T) {
 		})
 
 		t.Run("zero org ID", func(t *testing.T) {
-			zeroOrg := &OrganizationInvitation{
+			zeroOrg := &identityv1.OrganizationInvitation{
 				ID:             ksid.ID(1),
 				Email:          "test@example.com",
 				OrganizationID: ksid.ID(0),
-				Role:           OrgRoleMember,
+				Role:           identityv1.OrgRoleMember,
 				Token:          "token123",
 			}
 			if err := zeroOrg.Validate(); err == nil {
@@ -64,11 +66,11 @@ func TestOrganizationInvitation(t *testing.T) {
 		})
 
 		t.Run("empty token", func(t *testing.T) {
-			emptyToken := &OrganizationInvitation{
+			emptyToken := &identityv1.OrganizationInvitation{
 				ID:             ksid.ID(1),
 				Email:          "test@example.com",
 				OrganizationID: ksid.ID(100),
-				Role:           OrgRoleMember,
+				Role:           identityv1.OrgRoleMember,
 				Token:          "",
 			}
 			if err := emptyToken.Validate(); err == nil {
@@ -78,11 +80,11 @@ func TestOrganizationInvitation(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &OrganizationInvitation{
+		original := &identityv1.OrganizationInvitation{
 			ID:             ksid.ID(1),
 			Email:          "test@example.com",
 			OrganizationID: ksid.ID(100),
-			Role:           OrgRoleAdmin,
+			Role:           identityv1.OrgRoleAdmin,
 			Token:          "token123",
 		}
 
@@ -102,7 +104,7 @@ func TestOrganizationInvitation(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		inv := &OrganizationInvitation{ID: ksid.ID(42)}
+		inv := &identityv1.OrganizationInvitation{ID: ksid.ID(42)}
 		if inv.GetID() != ksid.ID(42) {
 			t.Errorf("GetID() = %v, want %v", inv.GetID(), ksid.ID(42))
 		}
@@ -118,8 +120,8 @@ func TestOrganizationInvitationService(t *testing.T) {
 	orgID := ksid.ID(100)
 	inviterID := ksid.ID(1)
 	email := "invitee@example.com"
-	role := OrgRoleMember
-	var inv, inv2 *OrganizationInvitation
+	role := identityv1.OrgRoleMember
+	var inv, inv2 *identityv1.OrganizationInvitation
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
@@ -162,7 +164,7 @@ func TestOrganizationInvitationService(t *testing.T) {
 
 		t.Run("second invitation", func(t *testing.T) {
 			var createErr error
-			inv2, createErr = service.Create("second@example.com", orgID, OrgRoleAdmin, inviterID)
+			inv2, createErr = service.Create("second@example.com", orgID, identityv1.OrgRoleAdmin, inviterID)
 			if createErr != nil {
 				t.Fatalf("Failed to create second invitation: %v", createErr)
 			}
@@ -251,11 +253,11 @@ func TestOrganizationInvitationService(t *testing.T) {
 func TestWorkspaceInvitation(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &WorkspaceInvitation{
+			valid := &identityv1.WorkspaceInvitation{
 				ID:          ksid.ID(1),
 				Email:       "test@example.com",
 				WorkspaceID: ksid.ID(100),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 				Token:       "token123",
 			}
 			if err := valid.Validate(); err != nil {
@@ -264,11 +266,11 @@ func TestWorkspaceInvitation(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &WorkspaceInvitation{
+			zeroID := &identityv1.WorkspaceInvitation{
 				ID:          ksid.ID(0),
 				Email:       "test@example.com",
 				WorkspaceID: ksid.ID(100),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 				Token:       "token123",
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -277,11 +279,11 @@ func TestWorkspaceInvitation(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			emptyEmail := &WorkspaceInvitation{
+			emptyEmail := &identityv1.WorkspaceInvitation{
 				ID:          ksid.ID(1),
 				Email:       "",
 				WorkspaceID: ksid.ID(100),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 				Token:       "token123",
 			}
 			if err := emptyEmail.Validate(); err == nil {
@@ -290,11 +292,11 @@ func TestWorkspaceInvitation(t *testing.T) {
 		})
 
 		t.Run("zero workspace ID", func(t *testing.T) {
-			zeroWS := &WorkspaceInvitation{
+			zeroWS := &identityv1.WorkspaceInvitation{
 				ID:          ksid.ID(1),
 				Email:       "test@example.com",
 				WorkspaceID: ksid.ID(0),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 				Token:       "token123",
 			}
 			if err := zeroWS.Validate(); err == nil {
@@ -303,11 +305,11 @@ func TestWorkspaceInvitation(t *testing.T) {
 		})
 
 		t.Run("empty token", func(t *testing.T) {
-			emptyToken := &WorkspaceInvitation{
+			emptyToken := &identityv1.WorkspaceInvitation{
 				ID:          ksid.ID(1),
 				Email:       "test@example.com",
 				WorkspaceID: ksid.ID(100),
-				Role:        WSRoleEditor,
+				Role:        identityv1.WSRoleEditor,
 				Token:       "",
 			}
 			if err := emptyToken.Validate(); err == nil {
@@ -317,11 +319,11 @@ func TestWorkspaceInvitation(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &WorkspaceInvitation{
+		original := &identityv1.WorkspaceInvitation{
 			ID:          ksid.ID(1),
 			Email:       "test@example.com",
 			WorkspaceID: ksid.ID(100),
-			Role:        WSRoleAdmin,
+			Role:        identityv1.WSRoleAdmin,
 			Token:       "token123",
 		}
 
@@ -341,7 +343,7 @@ func TestWorkspaceInvitation(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		inv := &WorkspaceInvitation{ID: ksid.ID(42)}
+		inv := &identityv1.WorkspaceInvitation{ID: ksid.ID(42)}
 		if inv.GetID() != ksid.ID(42) {
 			t.Errorf("GetID() = %v, want %v", inv.GetID(), ksid.ID(42))
 		}
@@ -357,8 +359,8 @@ func TestWorkspaceInvitationService(t *testing.T) {
 	wsID := ksid.ID(100)
 	inviterID := ksid.ID(1)
 	email := "invitee@example.com"
-	role := WSRoleEditor
-	var inv, inv2 *WorkspaceInvitation
+	role := identityv1.WSRoleEditor
+	var inv, inv2 *identityv1.WorkspaceInvitation
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
@@ -401,7 +403,7 @@ func TestWorkspaceInvitationService(t *testing.T) {
 
 		t.Run("second invitation", func(t *testing.T) {
 			var createErr error
-			inv2, createErr = service.Create("second@example.com", wsID, WSRoleViewer, inviterID)
+			inv2, createErr = service.Create("second@example.com", wsID, identityv1.WSRoleViewer, inviterID)
 			if createErr != nil {
 				t.Fatalf("Failed to create second invitation: %v", createErr)
 			}

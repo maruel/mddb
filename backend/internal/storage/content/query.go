@@ -6,11 +6,13 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
 )
 
 // QueryRecords applies filters and sorts from a view to records.
-func QueryRecords(records []*DataRecord, view *View) []*DataRecord {
-	result := make([]*DataRecord, 0, len(records))
+func QueryRecords(records []*contentv1.DataRecord, view *contentv1.View) []*contentv1.DataRecord {
+	result := make([]*contentv1.DataRecord, 0, len(records))
 
 	// Apply filters
 	for _, r := range records {
@@ -28,12 +30,12 @@ func QueryRecords(records []*DataRecord, view *View) []*DataRecord {
 }
 
 // FilterRecords applies filters to records.
-func FilterRecords(records []*DataRecord, filters []Filter) []*DataRecord {
+func FilterRecords(records []*contentv1.DataRecord, filters []contentv1.Filter) []*contentv1.DataRecord {
 	if len(filters) == 0 {
 		return records
 	}
 
-	result := make([]*DataRecord, 0, len(records))
+	result := make([]*contentv1.DataRecord, 0, len(records))
 	for _, r := range records {
 		if matchesFilters(r, filters) {
 			result = append(result, r)
@@ -43,7 +45,7 @@ func FilterRecords(records []*DataRecord, filters []Filter) []*DataRecord {
 }
 
 // SortRecords sorts records by the given sort criteria.
-func SortRecords(records []*DataRecord, sorts []Sort) {
+func SortRecords(records []*contentv1.DataRecord, sorts []contentv1.Sort) {
 	if len(sorts) == 0 {
 		return
 	}
@@ -51,7 +53,7 @@ func SortRecords(records []*DataRecord, sorts []Sort) {
 }
 
 // matchesFilters checks if a record matches all filter conditions.
-func matchesFilters(r *DataRecord, filters []Filter) bool {
+func matchesFilters(r *contentv1.DataRecord, filters []contentv1.Filter) bool {
 	for i := range filters {
 		if !matchesFilter(r, &filters[i]) {
 			return false
@@ -61,7 +63,7 @@ func matchesFilters(r *DataRecord, filters []Filter) bool {
 }
 
 // matchesFilter checks if a record matches a single filter condition.
-func matchesFilter(r *DataRecord, f *Filter) bool {
+func matchesFilter(r *contentv1.DataRecord, f *contentv1.Filter) bool {
 	// Handle compound filters
 	if len(f.And) > 0 {
 		for i := range f.And {
@@ -89,38 +91,38 @@ func matchesFilter(r *DataRecord, f *Filter) bool {
 	value, ok := r.Data[f.Property]
 	if !ok {
 		// Property not set - only match is_empty
-		return f.Operator == FilterOpIsEmpty
+		return f.Operator == contentv1.FilterOpIsEmpty
 	}
 
 	return matchesOperator(value, f.Operator, f.Value)
 }
 
 // matchesOperator applies the filter operator to compare values.
-func matchesOperator(value any, op FilterOp, filterValue any) bool {
+func matchesOperator(value any, op contentv1.FilterOp, filterValue any) bool {
 	switch op {
-	case FilterOpIsEmpty:
+	case contentv1.FilterOpIsEmpty:
 		return isEmpty(value)
-	case FilterOpIsNotEmpty:
+	case contentv1.FilterOpIsNotEmpty:
 		return !isEmpty(value)
-	case FilterOpEquals:
+	case contentv1.FilterOpEquals:
 		return compareValues(value, filterValue) == 0
-	case FilterOpNotEquals:
+	case contentv1.FilterOpNotEquals:
 		return compareValues(value, filterValue) != 0
-	case FilterOpGreaterThan:
+	case contentv1.FilterOpGreaterThan:
 		return compareValues(value, filterValue) > 0
-	case FilterOpLessThan:
+	case contentv1.FilterOpLessThan:
 		return compareValues(value, filterValue) < 0
-	case FilterOpGreaterEqual:
+	case contentv1.FilterOpGreaterEqual:
 		return compareValues(value, filterValue) >= 0
-	case FilterOpLessEqual:
+	case contentv1.FilterOpLessEqual:
 		return compareValues(value, filterValue) <= 0
-	case FilterOpContains:
+	case contentv1.FilterOpContains:
 		return containsString(value, filterValue)
-	case FilterOpNotContains:
+	case contentv1.FilterOpNotContains:
 		return !containsString(value, filterValue)
-	case FilterOpStartsWith:
+	case contentv1.FilterOpStartsWith:
 		return startsWithString(value, filterValue)
-	case FilterOpEndsWith:
+	case contentv1.FilterOpEndsWith:
 		return endsWithString(value, filterValue)
 	default:
 		return false
@@ -229,15 +231,15 @@ func toString(value any) string {
 }
 
 // sortRecords sorts records in place by the given sort criteria.
-func sortRecords(records []*DataRecord, sorts []Sort) {
-	slices.SortStableFunc(records, func(a, b *DataRecord) int {
+func sortRecords(records []*contentv1.DataRecord, sorts []contentv1.Sort) {
+	slices.SortStableFunc(records, func(a, b *contentv1.DataRecord) int {
 		for i := range sorts {
 			sort := &sorts[i]
 			va := a.Data[sort.Property]
 			vb := b.Data[sort.Property]
 			c := compareValues(va, vb)
 			if c != 0 {
-				if sort.Direction == SortDesc {
+				if sort.Direction == contentv1.SortDesc {
 					return -c
 				}
 				return c

@@ -1,83 +1,22 @@
-// Handles schema definition, column types, and reflection-based schema generation.
+// Derives table header columns from Go types through JSON Schema reflection.
 
 package jsonldb
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
+
+	jsonldbv1 "github.com/maruel/mddb/backend/internal/jsonldb/data/v1"
 
 	"github.com/invopop/jsonschema"
 )
-
-var (
-	errSchemaVersionRequired    = errors.New("schema version is required")
-	errSchemaVersionUnsupported = errors.New("unsupported schema version (expected 1.x)")
-)
-
-// currentVersion is the current version of the JSONL table format.
-const currentVersion = "1.0"
-
-// columnType represents the type of a table column.
-type columnType string
-
-const (
-	columnTypeText    columnType = "text"
-	columnTypeNumber  columnType = "number"
-	columnTypeBool    columnType = "bool"
-	columnTypeDate    columnType = "date"
-	columnTypeBlob    columnType = "blob"
-	columnTypeBlobRef columnType = "blob_ref" // content-addressed external blob
-	columnTypeJSONB   columnType = "jsonb"
-)
-
-// column represents a table column in storage.
-type column struct {
-	Name        string     `json:"name"`
-	Type        columnType `json:"type"`
-	Required    bool       `json:"required,omitempty"`
-	Description string     `json:"description,omitempty"`
-}
-
-// schemaHeader is the first row of a JSONL data file containing schema and metadata.
-// Used by Table[T] for generic schema storage.
-type schemaHeader struct {
-	Version string   `json:"version"`
-	Columns []column `json:"columns"`
-	// Properties stores application-specific schema for map fields (e.g., DataRecord.Data).
-	// jsonldb treats this as opaque; the application interprets it.
-	Properties json.RawMessage `json:"properties,omitempty"`
-}
-
-// Validate checks that the schema header is well-formed.
-func (h *schemaHeader) Validate() error {
-	if h.Version == "" {
-		return errSchemaVersionRequired
-	}
-	// Accept any 1.x version
-	if !strings.HasPrefix(h.Version, "1.") {
-		return errSchemaVersionUnsupported
-	}
-	// Validate each column
-	for i, col := range h.Columns {
-		if col.Name == "" {
-			return fmt.Errorf("column %d: name is required", i)
-		}
-		if col.Type == "" {
-			return fmt.Errorf("column %d: type is required", i)
-		}
-	}
-	return nil
-}
 
 // schemaFromType extracts column definitions using JSON Schema reflection.
 //
 // It uses github.com/invopop/jsonschema to extract field descriptions from
 // `jsonschema:"description=..."` tags and required fields from the schema.
-func schemaFromType[T any]() ([]column, error) {
+func schemaFromType[T any]() ([]jsonldbv1.Column, error) {
 	t := reflect.TypeFor[T]()
 
 	// Validate type
@@ -109,13 +48,13 @@ func schemaFromType[T any]() ([]column, error) {
 	}
 
 	// Build columns from schema properties
-	var columns []column
+	var columns []jsonldbv1.Column
 	for pair := schema.Properties.Oldest(); pair != nil; pair = pair.Next() {
 		name := pair.Key
 		prop := pair.Value
 
 		// Find the Go field for type inference
-		colType := columnTypeText
+		colType := jsonldbv1.ColumnTypeText
 		for i := range structType.NumField() {
 			field := structType.Field(i)
 			if jsonFieldName(&field) == name {
@@ -124,7 +63,7 @@ func schemaFromType[T any]() ([]column, error) {
 			}
 		}
 
-		columns = append(columns, column{
+		columns = append(columns, jsonldbv1.Column{
 			Name:        name,
 			Type:        colType,
 			Required:    required[name],
@@ -154,7 +93,7 @@ func jsonFieldName(field *reflect.StructField) string {
 }
 
 // goTypeToColumnType maps Go types to JSONL column types.
-func goTypeToColumnType(t reflect.Type) columnType {
+func goTypeToColumnType(t reflect.Type) jsonldbv1.ColumnType {
 	// Dereference pointers
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -162,39 +101,39 @@ func goTypeToColumnType(t reflect.Type) columnType {
 
 	// Check for Blob type (content-addressed external blob)
 	if t == reflect.TypeFor[Blob]() {
-		return columnTypeBlobRef
+		return jsonldbv1.ColumnTypeBlobRef
 	}
 
 	// Check for time.Time first (before switch)
 	if t == reflect.TypeFor[time.Time]() {
-		return columnTypeDate
+		return jsonldbv1.ColumnTypeDate
 	}
 
 	// Check for []byte (blob)
 	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
-		return columnTypeBlob
+		return jsonldbv1.ColumnTypeBlob
 	}
 
 	switch t.Kind() {
 	case reflect.String:
-		return columnTypeText
+		return jsonldbv1.ColumnTypeText
 	case reflect.Bool:
-		return columnTypeBool
+		return jsonldbv1.ColumnTypeBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64:
-		return columnTypeNumber
+		return jsonldbv1.ColumnTypeNumber
 	case reflect.Struct, reflect.Slice, reflect.Array, reflect.Map:
-		return columnTypeJSONB
+		return jsonldbv1.ColumnTypeJSONB
 	case reflect.Complex64, reflect.Complex128:
 		// Complex numbers stored as JSON array [real, imag]
-		return columnTypeJSONB
+		return jsonldbv1.ColumnTypeJSONB
 	case reflect.Invalid, reflect.Uintptr, reflect.Chan, reflect.Func,
 		reflect.Interface, reflect.Pointer, reflect.UnsafePointer:
 		// Unsupported types default to text
-		return columnTypeText
+		return jsonldbv1.ColumnTypeText
 	}
 	// Unreachable: switch exhaustively handles all reflect.Kind values.
 	// Kept as safety fallback.
-	return columnTypeText
+	return jsonldbv1.ColumnTypeText
 }

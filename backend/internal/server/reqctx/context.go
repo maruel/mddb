@@ -6,8 +6,9 @@ package reqctx
 import (
 	"context"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Context keys for request metadata.
@@ -77,25 +78,25 @@ func TokenString(ctx context.Context) string {
 }
 
 // WithUser adds the authenticated user to the context.
-func WithUser(ctx context.Context, user *identity.User) context.Context {
+func WithUser(ctx context.Context, user *identityv1.User) context.Context {
 	return context.WithValue(ctx, keyUser, user)
 }
 
 // User extracts the authenticated user from the context.
-func User(ctx context.Context) *identity.User {
-	if v, ok := ctx.Value(keyUser).(*identity.User); ok {
+func User(ctx context.Context) *identityv1.User {
+	if v, ok := ctx.Value(keyUser).(*identityv1.User); ok {
 		return v
 	}
 	return nil
 }
 
 // WithSession binds the validated host session to downstream authorization and asset links.
-func WithSession(ctx context.Context, session *identity.Session) context.Context {
+func WithSession(ctx context.Context, session *identityv1.Session) context.Context {
 	return context.WithValue(ctx, keySession, session)
 }
 
 // Session returns the host session validated for this request, if any.
-func Session(ctx context.Context) *identity.Session {
-	session, _ := ctx.Value(keySession).(*identity.Session)
+func Session(ctx context.Context) *identityv1.Session {
+	session, _ := ctx.Value(keySession).(*identityv1.Session)
 	return session
 }

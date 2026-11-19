@@ -9,15 +9,16 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestAssetHandler(t *testing.T) {
 	cfg := &Config{
-		ServerConfig: storage.ServerConfig{
+		ServerConfig: storagev1.ServerConfig{
 			JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
 		},
 		BaseURL: "http://localhost:8080",
@@ -29,7 +30,7 @@ func TestAssetHandler(t *testing.T) {
 		nodeID := ksid.ID(456)
 		name := "test-image.png"
 
-		url := cfg.GenerateSignedAssetURL(reqctx.WithSession(t.Context(), &identity.Session{ID: ksid.ID(789), ExpiresAt: storage.ToTime(time.Now().Add(time.Hour))}), wsID, nodeID, name)
+		url := cfg.GenerateSignedAssetURL(reqctx.WithSession(t.Context(), &identityv1.Session{ID: ksid.ID(789), ExpiresAt: storagev1.ToTime(time.Now().Add(time.Hour))}), wsID, nodeID, name)
 
 		// Verify URL format (rooted path, no hostname)
 		if !strings.HasPrefix(url, "/assets/") {

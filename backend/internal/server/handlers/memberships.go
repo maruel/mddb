@@ -5,10 +5,11 @@ package handlers
 import (
 	"context"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // MembershipHandler handles membership-related requests.
@@ -17,7 +18,7 @@ type MembershipHandler struct {
 }
 
 // SwitchWorkspace updates the active workspace while preserving the validated login session.
-func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
+func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identityv1.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
 	// Workspace selection is stored in user settings, not in JWT claims. Preserve the
 	// existing session and its expiry so switching cannot remove session revocation.
 	token := reqctx.TokenString(ctx)
@@ -38,12 +39,12 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 
 	// Verify workspace membership (or org admin)
 	wsMem, err := h.Svc.WSMembership.Get(user.ID, req.WsID)
-	if err != nil && orgMem.Role != identity.OrgRoleOwner && orgMem.Role != identity.OrgRoleAdmin {
+	if err != nil && orgMem.Role != identityv1.OrgRoleOwner && orgMem.Role != identityv1.OrgRoleAdmin {
 		return nil, dto.Forbidden("User is not a member of this workspace")
 	}
 
 	// Persist active workspace in user settings (LRU: prepend to list, limit to 10)
-	if _, err := h.Svc.User.Modify(user.ID, func(u *identity.User) error {
+	if _, err := h.Svc.User.Modify(user.ID, func(u *identityv1.User) error {
 		// Remove this workspace from current list (if present)
 		newList := make([]ksid.ID, 0, len(u.Settings.LastActiveWorkspaces)+1)
 		newList = append(newList, req.WsID) // Prepend as most recent
@@ -87,12 +88,12 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 }
 
 // UpdateWSMembershipSettings updates user preferences within a workspace.
-func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
+func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID ksid.ID, user *identityv1.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
 	m, err := h.Svc.WSMembership.Get(user.ID, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace membership", err)
 	}
-	m, err = h.Svc.WSMembership.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
+	m, err = h.Svc.WSMembership.Modify(m.ID, func(m *identityv1.WorkspaceMembership) error {
 		m.Settings = wsMembershipSettingsToEntity(req.Settings)
 		return nil
 	})

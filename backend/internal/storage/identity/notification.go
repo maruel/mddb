@@ -7,73 +7,46 @@ import (
 	"errors"
 	"slices"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
-
-// NotificationType represents a category of notification.
-type NotificationType string
-
-const (
-	// NotifOrgInvite is sent when a user is invited to an organization.
-	NotifOrgInvite NotificationType = "org_invite"
-	// NotifWSInvite is sent when a user is invited to a workspace.
-	NotifWSInvite NotificationType = "ws_invite"
-	// NotifMemberJoined is sent when a new member joins an org/workspace.
-	NotifMemberJoined NotificationType = "member_joined"
-	// NotifMemberRemoved is sent when a member is removed from an org/workspace.
-	NotifMemberRemoved NotificationType = "member_removed"
-	// NotifPageMention is sent when someone @-mentions you in a page.
-	NotifPageMention NotificationType = "page_mention"
-	// NotifPageEdited is sent when a page you follow is edited.
-	NotifPageEdited NotificationType = "page_edited"
-)
-
-// ChannelSet indicates which delivery channels are enabled for a notification type.
-type ChannelSet struct {
-	Email bool `json:"email"`
-	Web   bool `json:"web"`
-}
 
 // defaultChannels maps each notification type to its default delivery channels.
-var defaultChannels = map[NotificationType]ChannelSet{
-	NotifOrgInvite:     {Email: true, Web: true},
-	NotifWSInvite:      {Email: true, Web: true},
-	NotifMemberJoined:  {Web: true},
-	NotifMemberRemoved: {Web: true},
-	NotifPageMention:   {Email: true, Web: true},
-	NotifPageEdited:    {Web: true},
+var defaultChannels = map[identityv1.NotificationType]identityv1.ChannelSet{
+	identityv1.NotifOrgInvite:     {Email: true, Web: true},
+	identityv1.NotifWSInvite:      {Email: true, Web: true},
+	identityv1.NotifMemberJoined:  {Web: true},
+	identityv1.NotifMemberRemoved: {Web: true},
+	identityv1.NotifPageMention:   {Email: true, Web: true},
+	identityv1.NotifPageEdited:    {Web: true},
 }
 
 // DefaultChannels returns the default channel set for a notification type.
-func DefaultChannels(t NotificationType) ChannelSet {
+func DefaultChannels(t identityv1.NotificationType) identityv1.ChannelSet {
 	if cs, ok := defaultChannels[t]; ok {
 		return cs
 	}
-	return ChannelSet{Web: true}
+	return identityv1.ChannelSet{Web: true}
 }
 
 // AllNotificationTypes returns all defined notification types.
-func AllNotificationTypes() []NotificationType {
-	return []NotificationType{
-		NotifOrgInvite,
-		NotifWSInvite,
-		NotifMemberJoined,
-		NotifMemberRemoved,
-		NotifPageMention,
-		NotifPageEdited,
+func AllNotificationTypes() []identityv1.NotificationType {
+	return []identityv1.NotificationType{
+		identityv1.NotifOrgInvite,
+		identityv1.NotifWSInvite,
+		identityv1.NotifMemberJoined,
+		identityv1.NotifMemberRemoved,
+		identityv1.NotifPageMention,
+		identityv1.NotifPageEdited,
 	}
-}
-
-// NotificationPreferences holds per-type channel overrides.
-type NotificationPreferences struct {
-	Overrides map[NotificationType]ChannelSet `json:"overrides,omitempty"`
 }
 
 // EffectiveChannels returns the user's channels for a notification type,
 // falling back to defaults when no override exists.
-func (p *NotificationPreferences) EffectiveChannels(t NotificationType) ChannelSet {
+func EffectiveChannels(p *identityv1.NotificationPreferences, t identityv1.NotificationType) identityv1.ChannelSet {
 	if p != nil && p.Overrides != nil {
 		if cs, ok := p.Overrides[t]; ok {
 			return cs
@@ -82,66 +55,25 @@ func (p *NotificationPreferences) EffectiveChannels(t NotificationType) ChannelS
 	return DefaultChannels(t)
 }
 
-// Notification represents an in-app notification for a user.
-type Notification struct {
-	ID         ksid.ID          `json:"id"`
-	UserID     ksid.ID          `json:"user_id"`
-	Type       NotificationType `json:"type"`
-	Title      string           `json:"title"`
-	Body       string           `json:"body,omitempty"`
-	ResourceID string           `json:"resource_id,omitempty"`
-	ActorID    ksid.ID          `json:"actor_id,omitempty"`
-	Read       bool             `json:"read"`
-	Created    storage.Time     `json:"created"`
-}
-
-// Clone returns a deep copy.
-func (n *Notification) Clone() *Notification {
-	c := *n
-	return &c
-}
-
-// GetID returns the notification's ID.
-func (n *Notification) GetID() ksid.ID {
-	return n.ID
-}
-
-// Validate checks required fields.
-func (n *Notification) Validate() error {
-	if n.ID.IsZero() {
-		return errNotificationIDRequired
-	}
-	if n.UserID.IsZero() {
-		return errNotificationUserIDRequired
-	}
-	if n.Type == "" {
-		return errNotificationTypeRequired
-	}
-	if n.Title == "" {
-		return errNotificationTitleRequired
-	}
-	return nil
-}
-
 // NotificationService manages notification persistence.
 type NotificationService struct {
-	table    *jsonldb.Table[*Notification]
-	byUserID *jsonldb.Index[ksid.ID, *Notification]
+	table    *jsonldb.Table[*identityv1.Notification]
+	byUserID *jsonldb.Index[ksid.ID, *identityv1.Notification]
 }
 
 // NewNotificationService creates a new notification service.
 func NewNotificationService(tablePath string) (*NotificationService, error) {
-	table, err := jsonldb.NewTable[*Notification](tablePath)
+	table, err := jsonldb.NewTable[*identityv1.Notification](tablePath)
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(n *Notification) ksid.ID { return n.UserID })
+	byUserID := jsonldb.NewIndex(table, func(n *identityv1.Notification) ksid.ID { return n.UserID })
 	return &NotificationService{table: table, byUserID: byUserID}, nil
 }
 
 // Create creates a new notification.
-func (s *NotificationService) Create(userID ksid.ID, notifType NotificationType, title, body, resourceID string, actorID ksid.ID) (*Notification, error) {
-	n := &Notification{
+func (s *NotificationService) Create(userID ksid.ID, notifType identityv1.NotificationType, title, body, resourceID string, actorID ksid.ID) (*identityv1.Notification, error) {
+	n := &identityv1.Notification{
 		ID:         ksid.NewID(),
 		UserID:     userID,
 		Type:       notifType,
@@ -149,7 +81,7 @@ func (s *NotificationService) Create(userID ksid.ID, notifType NotificationType,
 		Body:       body,
 		ResourceID: resourceID,
 		ActorID:    actorID,
-		Created:    storage.Now(),
+		Created:    storagev1.Now(),
 	}
 	if err := s.table.Append(n); err != nil {
 		return nil, err
@@ -158,7 +90,7 @@ func (s *NotificationService) Create(userID ksid.ID, notifType NotificationType,
 }
 
 // Get retrieves a notification by ID.
-func (s *NotificationService) Get(id ksid.ID) (*Notification, error) {
+func (s *NotificationService) Get(id ksid.ID) (*identityv1.Notification, error) {
 	n := s.table.Get(id)
 	if n == nil {
 		return nil, errNotificationNotFound
@@ -167,8 +99,8 @@ func (s *NotificationService) Get(id ksid.ID) (*Notification, error) {
 }
 
 // ListByUser returns notifications for a user, newest first, with optional limit, offset, and unread filter.
-func (s *NotificationService) ListByUser(userID ksid.ID, limit, offset int, unreadOnly bool) []*Notification {
-	var all []*Notification
+func (s *NotificationService) ListByUser(userID ksid.ID, limit, offset int, unreadOnly bool) []*identityv1.Notification {
+	var all []*identityv1.Notification
 	for n := range s.byUserID.Iter(userID) {
 		if unreadOnly && n.Read {
 			continue
@@ -176,7 +108,7 @@ func (s *NotificationService) ListByUser(userID ksid.ID, limit, offset int, unre
 		all = append(all, n)
 	}
 	// Sort newest-first by ID (IDs are time-sortable).
-	slices.SortFunc(all, func(a, b *Notification) int {
+	slices.SortFunc(all, func(a, b *identityv1.Notification) int {
 		return cmp.Compare(b.ID, a.ID)
 	})
 
@@ -193,7 +125,7 @@ func (s *NotificationService) ListByUser(userID ksid.ID, limit, offset int, unre
 		all = all[:limit]
 	}
 
-	result := make([]*Notification, len(all))
+	result := make([]*identityv1.Notification, len(all))
 	for i, n := range all {
 		result[i] = n.Clone()
 	}
@@ -226,7 +158,7 @@ func (s *NotificationService) MarkRead(id, userID ksid.ID) error {
 	if n == nil || n.UserID != userID {
 		return errNotificationNotFound
 	}
-	_, err := s.table.Modify(id, func(n *Notification) error {
+	_, err := s.table.Modify(id, func(n *identityv1.Notification) error {
 		n.Read = true
 		return nil
 	})
@@ -242,7 +174,7 @@ func (s *NotificationService) MarkAllRead(userID ksid.ID) error {
 		}
 	}
 	for _, id := range ids {
-		if _, err := s.table.Modify(id, func(n *Notification) error {
+		if _, err := s.table.Modify(id, func(n *identityv1.Notification) error {
 			n.Read = true
 			return nil
 		}); err != nil {
@@ -263,8 +195,8 @@ func (s *NotificationService) Delete(id, userID ksid.ID) error {
 }
 
 // DeleteOlderThan deletes notifications created before cutoff. Returns count deleted.
-func (s *NotificationService) DeleteOlderThan(cutoff storage.Time) (int, error) {
-	deleted, err := s.table.DeleteFunc(func(n *Notification) bool { return n.Created.Before(cutoff) })
+func (s *NotificationService) DeleteOlderThan(cutoff storagev1.Time) (int, error) {
+	deleted, err := s.table.DeleteFunc(func(n *identityv1.Notification) bool { return n.Created.Before(cutoff) })
 	return len(deleted), err
 }
 
@@ -277,7 +209,7 @@ func (s *NotificationService) DeleteExcessPerUser(maxPerUser int) (int, error) {
 		total[n.UserID]++
 	}
 	seen := make(map[ksid.ID]int)
-	deleted, err := s.table.DeleteFunc(func(n *Notification) bool {
+	deleted, err := s.table.DeleteFunc(func(n *identityv1.Notification) bool {
 		seen[n.UserID]++
 		return seen[n.UserID] <= total[n.UserID]-maxPerUser
 	})
@@ -285,9 +217,5 @@ func (s *NotificationService) DeleteExcessPerUser(maxPerUser int) (int, error) {
 }
 
 var (
-	errNotificationIDRequired     = errors.New("notification id is required")
-	errNotificationUserIDRequired = errors.New("notification user_id is required")
-	errNotificationTypeRequired   = errors.New("notification type is required")
-	errNotificationTitleRequired  = errors.New("notification title is required")
-	errNotificationNotFound       = errors.New("notification not found")
+	errNotificationNotFound = errors.New("notification not found")
 )

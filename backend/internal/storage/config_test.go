@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/email"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
 
 func TestServerConfig(t *testing.T) {
@@ -67,9 +67,9 @@ func TestServerConfig(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadServerConfig() failed: %v", err)
 		}
-		cfg.SMTP = email.Config{Host: "smtp.example.com", Port: 587, Username: "mddb", Password: "secret", From: "mddb@example.com"}
+		cfg.SMTP = storagev1.SMTPConfig{Host: "smtp.example.com", Port: 587, Username: "mddb", Password: "secret", From: "mddb@example.com"}
 		cfg.RateLimits.AuthRatePerMin = 11
-		if err := cfg.Save(cfgDir); err != nil {
+		if err := SaveServerConfig(cfg, cfgDir); err != nil {
 			t.Fatalf("Save() failed: %v", err)
 		}
 

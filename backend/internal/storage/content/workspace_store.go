@@ -26,6 +26,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -43,11 +46,11 @@ var relativeLinkRe = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+/index\.md)\)`)
 //   - Tables: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type WorkspaceFileStore struct {
-	wsDir        string                  // Pre-computed: rootDir/wsID
-	repo         git.Repository          // Cached git repository
-	quotas       *storage.ResourceQuotas // Effective quotas (min of server/org/ws)
-	mu           sync.RWMutex            // Protects ancestry and discovery indexes
-	cache        map[ksid.ID]ksid.ID     // path identity -> parent, including retained containers
+	wsDir        string                    // Pre-computed: rootDir/wsID
+	repo         git.Repository            // Cached git repository
+	quotas       *storagev1.ResourceQuotas // Effective quotas (min of server/org/ws)
+	mu           sync.RWMutex              // Protects ancestry and discovery indexes
+	cache        map[ksid.ID]ksid.ID       // path identity -> parent, including retained containers
 	pathChildren map[ksid.ID][]ksid.ID
 	discoverable map[ksid.ID]struct{}
 	indexParents map[ksid.ID]ksid.ID // Published ancestry; legacy refreshes never mutate it.
@@ -61,7 +64,7 @@ type WorkspaceFileStore struct {
 
 // newWorkspaceFileStore creates a new workspace store.
 // This is called internally by FileStoreService.GetWorkspaceStore.
-func newWorkspaceFileStore(wsDir string, repo git.Repository, quotas *storage.ResourceQuotas) *WorkspaceFileStore {
+func newWorkspaceFileStore(wsDir string, repo git.Repository, quotas *storagev1.ResourceQuotas) *WorkspaceFileStore {
 	return &WorkspaceFileStore{
 		wsDir:        wsDir,
 		repo:         repo,
@@ -82,7 +85,7 @@ func (ws *WorkspaceFileStore) ImportTx(ctx context.Context, fn func() error) err
 }
 
 // EffectiveQuotas returns the effective resource quotas for this workspace.
-func (ws *WorkspaceFileStore) EffectiveQuotas() storage.ResourceQuotas {
+func (ws *WorkspaceFileStore) EffectiveQuotas() storagev1.ResourceQuotas {
 	return *ws.quotas
 }
 
@@ -263,7 +266,7 @@ func (ws *WorkspaceFileStore) ReadPage(id ksid.ID) (*Node, error) {
 // writePage writes a page without committing.
 // Returns the Node (with disk content) and an error.
 func (ws *WorkspaceFileStore) writePage(id, parentID ksid.ID, title, content string) (*Node, error) {
-	now := storage.Now()
+	now := storagev1.Now()
 	p := &page{
 		title:    title,
 		content:  content,
@@ -339,7 +342,7 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 		previousPageTitle, previousBody := p.title, p.content
 		previousTitle := current.Title
 		mutate(p)
-		p.modified = storage.Now()
+		p.modified = storagev1.Now()
 		// Parse the exact bytes being persisted so normalization and the returned
 		// revision describe one saved snapshot, without a post-transaction read.
 		data := formatMarkdownFile(p)
@@ -673,6 +676,9 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse table metadata: %w", err)
 	}
+	if err := checkTableMetadataVersion(metadata["version"]); err != nil {
+		return nil, err
+	}
 
 	node := &Node{
 		ID:       id,
@@ -686,13 +692,13 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 
 	if created, ok := metadata["created"].(string); ok {
 		if t, err := time.Parse(time.RFC3339, created); err == nil {
-			node.Created = storage.ToTime(t)
+			node.Created = storagev1.ToTime(t)
 		}
 	}
 
 	if modified, ok := metadata["modified"].(string); ok {
 		if t, err := time.Parse(time.RFC3339, modified); err == nil {
-			node.Modified = storage.ToTime(t)
+			node.Modified = storagev1.ToTime(t)
 		}
 	}
 
@@ -728,7 +734,7 @@ func tableMetadataRevision(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func tableSchemaRevision(properties []Property) (string, error) {
+func tableSchemaRevision(properties []contentv1.Property) (string, error) {
 	if len(properties) == 0 {
 		properties = nil
 	}
@@ -799,6 +805,23 @@ func (ws *WorkspaceFileStore) MutateTable(ctx context.Context, id ksid.ID, autho
 	return node, nil
 }
 
+// tableMetadataVersion is the metadata.json format that writeTable emits.
+const tableMetadataVersion = "1.0"
+
+// checkTableMetadataVersion accepts any 1.x metadata.json version. A missing version is
+// 1.0: the Notion importer and hand-edited workspaces omit it.
+func checkTableMetadataVersion(v any) error {
+	switch v := v.(type) {
+	case nil:
+		return nil
+	case string:
+		if strings.HasPrefix(v, "1.") {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported table metadata version %v (expected 1.x)", v)
+}
+
 // writeTable writes table metadata without committing.
 func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 	parentID := node.ParentID
@@ -806,14 +829,14 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 
 	metadata := map[string]any{
 		"title":      node.Title,
-		"version":    "1.0",
-		"modified":   storage.Now(),
+		"version":    tableMetadataVersion,
+		"modified":   storagev1.Now(),
 		"properties": node.Properties,
 		"views":      node.Views,
 	}
 
 	if isNew {
-		metadata["created"] = storage.Now()
+		metadata["created"] = storagev1.Now()
 	} else {
 		// For updates, preserve existing created time if possible
 		if oldData, err := os.ReadFile(metadataFile); err == nil { //nolint:gosec // G304: metadataFile is constructed from validated id
@@ -939,7 +962,7 @@ func (ws *WorkspaceFileStore) CheckTableQuota() error {
 }
 
 // AppendRecord appends a record to a table and commits to git.
-func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID ksid.ID, record *DataRecord, author git.Author) error {
+func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID ksid.ID, record *contentv1.DataRecord, author git.Author) error {
 	parentID := ws.getParent(tableID)
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := ws.appendRecord(tableID, parentID, record); err != nil {
@@ -951,11 +974,11 @@ func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID ksid.ID,
 }
 
 // appendRecord appends a record to a table without committing.
-func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, record *DataRecord) error {
+func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, record *contentv1.DataRecord) error {
 	recordsFile := ws.tableRecordsFile(tableID, tableParentID)
 
 	// Check max records per table
-	table, err := jsonldb.NewTable[*DataRecord](recordsFile)
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](recordsFile)
 	// If file doesn't exist, we create it, so no error is fine if IsNotExist
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to open table: %w", err)
@@ -967,7 +990,7 @@ func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, recor
 		}
 	} else {
 		// New table
-		table, err = jsonldb.NewTable[*DataRecord](recordsFile)
+		table, err = jsonldb.NewTable[*contentv1.DataRecord](recordsFile)
 		if err != nil {
 			return fmt.Errorf("failed to create table: %w", err)
 		}
@@ -989,15 +1012,15 @@ func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, recor
 }
 
 // IterRecords iterates over all records in a table.
-func (ws *WorkspaceFileStore) IterRecords(id ksid.ID) (iter.Seq[*DataRecord], error) {
+func (ws *WorkspaceFileStore) IterRecords(id ksid.ID) (iter.Seq[*contentv1.DataRecord], error) {
 	parentID := ws.getParent(id)
 	filePath := ws.tableRecordsFile(id, parentID)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return func(yield func(*DataRecord) bool) {}, nil
+		return func(yield func(*contentv1.DataRecord) bool) {}, nil
 	}
 
-	table, err := jsonldb.NewTable[*DataRecord](filePath)
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
@@ -1014,7 +1037,7 @@ func (ws *WorkspaceFileStore) CountRecords(id ksid.ID) (int, error) {
 		return 0, nil
 	}
 
-	table, err := jsonldb.NewTable[*DataRecord](filePath)
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](filePath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read records: %w", err)
 	}
@@ -1023,26 +1046,26 @@ func (ws *WorkspaceFileStore) CountRecords(id ksid.ID) (int, error) {
 }
 
 // ReadRecordsPage reads a page of records for a table using jsonldb abstraction.
-func (ws *WorkspaceFileStore) ReadRecordsPage(id ksid.ID, offset, limit int) ([]*DataRecord, error) {
+func (ws *WorkspaceFileStore) ReadRecordsPage(id ksid.ID, offset, limit int) ([]*contentv1.DataRecord, error) {
 	parentID := ws.getParent(id)
 	filePath := ws.tableRecordsFile(id, parentID)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return []*DataRecord{}, nil
+		return []*contentv1.DataRecord{}, nil
 	}
 
-	table, err := jsonldb.NewTable[*DataRecord](filePath)
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
 
 	offset = max(0, offset)
 	if offset >= table.Len() {
-		return []*DataRecord{}, nil
+		return []*contentv1.DataRecord{}, nil
 	}
 	end := min(offset+limit, table.Len())
 
-	var records []*DataRecord
+	var records []*contentv1.DataRecord
 	idx := 0
 	for r := range table.Iter(0) {
 		if idx >= offset {
@@ -1057,8 +1080,8 @@ func (ws *WorkspaceFileStore) ReadRecordsPage(id ksid.ID, offset, limit int) ([]
 }
 
 // ReplaceRecord conditionally replaces one record using its record and schema revisions.
-func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, recordID ksid.ID, data map[string]any, expectedRevision, expectedSchemaRevision string, author git.Author) (*DataRecord, error) {
-	var record *DataRecord
+func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, recordID ksid.ID, data map[string]any, expectedRevision, expectedSchemaRevision string, author git.Author) (*contentv1.DataRecord, error) {
+	var record *contentv1.DataRecord
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		node, err := ws.ReadTable(tableID)
 		if err != nil {
@@ -1068,7 +1091,7 @@ func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, record
 			return "", nil, &SchemaRevisionConflictError{CurrentRevision: node.SchemaRevision}
 		}
 		parentID := node.ParentID
-		table, err := jsonldb.NewTable[*DataRecord](ws.tableRecordsFile(tableID, parentID))
+		table, err := jsonldb.NewTable[*contentv1.DataRecord](ws.tableRecordsFile(tableID, parentID))
 		if err != nil {
 			return "", nil, fmt.Errorf("open records: %w", err)
 		}
@@ -1087,7 +1110,7 @@ func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, record
 		if coerced == nil {
 			coerced = make(map[string]any)
 		}
-		record = &DataRecord{ID: recordID, Data: coerced, Created: current.Created, Modified: storage.Now()}
+		record = &contentv1.DataRecord{ID: recordID, Data: coerced, Created: current.Created, Modified: storagev1.Now()}
 		canonical, err := CanonicalRecord(record)
 		if err != nil {
 			return "", nil, err
@@ -1112,7 +1135,7 @@ func (ws *WorkspaceFileStore) DeleteRecord(ctx context.Context, tableID, recordI
 		if err != nil {
 			return "", nil, err
 		}
-		table, err := jsonldb.NewTable[*DataRecord](ws.tableRecordsFile(tableID, node.ParentID))
+		table, err := jsonldb.NewTable[*contentv1.DataRecord](ws.tableRecordsFile(tableID, node.ParentID))
 		if err != nil {
 			return "", nil, fmt.Errorf("open records: %w", err)
 		}
@@ -1176,7 +1199,7 @@ func (ws *WorkspaceFileStore) saveAsset(nodeID, parentID ksid.ID, assetName stri
 		Name:     assetName,
 		MimeType: mime.TypeByExtension(filepath.Ext(assetName)),
 		Size:     info.Size(),
-		Created:  storage.ToTime(info.ModTime()),
+		Created:  storagev1.ToTime(info.ModTime()),
 		Path:     filePath,
 	}, nil
 }
@@ -1256,7 +1279,7 @@ func (ws *WorkspaceFileStore) IterAssets(nodeID ksid.ID) (iter.Seq[*Asset], erro
 				Name:     entry.Name(),
 				MimeType: mime.TypeByExtension(filepath.Ext(entry.Name())),
 				Size:     info.Size(),
-				Created:  storage.ToTime(info.ModTime()),
+				Created:  storagev1.ToTime(info.ModTime()),
 				Path:     filepath.Join(dir, entry.Name()),
 			}
 
@@ -1329,7 +1352,7 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 	}
 
 	id := ksid.NewID()
-	now := storage.Now()
+	now := storagev1.Now()
 
 	node := &Node{
 		ID:       id,
@@ -1362,7 +1385,7 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 			"version":    "1.0",
 			"created":    now,
 			"modified":   now,
-			"properties": []Property{},
+			"properties": []contentv1.Property{},
 		}
 		var err error
 		metadataData, err = json.Marshal(metadata)
@@ -1501,7 +1524,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		id := ksid.NewID()
-		now := storage.Now()
+		now := storagev1.Now()
 
 		p := &page{
 			title:    title,
@@ -1601,7 +1624,7 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id ksid.ID
 
 // CreateTableUnderParent creates a new table under a parent node and commits to git.
 // Returns the new node with the table schema.
-func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parentID ksid.ID, title string, properties []Property, author git.Author) (*Node, error) {
+func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parentID ksid.ID, title string, properties []contentv1.Property, author git.Author) (*Node, error) {
 	// Verify parent exists if parentID is specified (non-root)
 	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
 		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
@@ -1614,7 +1637,7 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		id := ksid.NewID()
-		now := storage.Now()
+		now := storagev1.Now()
 
 		metadata := map[string]any{
 			"title":      title,
@@ -1784,7 +1807,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID ksid.ID) ([]*Node, error) {
 func ParseMarkdown(data []byte) *page {
 	content := string(data)
 	var title, icon, cover string
-	var created, modified storage.Time
+	var created, modified storagev1.Time
 
 	if strings.HasPrefix(content, "---") {
 		parts := strings.SplitN(content, "\n---", 2)
@@ -1798,12 +1821,12 @@ func ParseMarkdown(data []byte) *page {
 				case strings.HasPrefix(line, "created:"):
 					dateStr := strings.TrimSpace(strings.TrimPrefix(line, "created:"))
 					if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
-						created = storage.ToTime(t)
+						created = storagev1.ToTime(t)
 					}
 				case strings.HasPrefix(line, "modified:"):
 					dateStr := strings.TrimSpace(strings.TrimPrefix(line, "modified:"))
 					if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
-						modified = storage.ToTime(t)
+						modified = storagev1.ToTime(t)
 					}
 				case strings.HasPrefix(line, "icon:"):
 					icon = strings.TrimSpace(strings.TrimPrefix(line, "icon:"))
@@ -1815,10 +1838,10 @@ func ParseMarkdown(data []byte) *page {
 	}
 
 	if created.IsZero() {
-		created = storage.Now()
+		created = storagev1.Now()
 	}
 	if modified.IsZero() {
-		modified = storage.Now()
+		modified = storagev1.Now()
 	}
 
 	return &page{
@@ -2119,6 +2142,15 @@ func (ws *WorkspaceFileStore) readSummary(ctx context.Context, dir string, id, p
 		var m map[string]json.RawMessage
 		if e := json.Unmarshal(data, &m); e != nil {
 			return nil, nil, e
+		}
+		if b := m["version"]; b != nil {
+			var v any
+			if e := json.Unmarshal(b, &v); e != nil {
+				return nil, nil, e
+			}
+			if e := checkTableMetadataVersion(v); e != nil {
+				return nil, nil, e
+			}
 		}
 		if b := m["title"]; b != nil {
 			if e := json.Unmarshal(b, &n.Title); e != nil {

@@ -5,26 +5,28 @@ package content
 import (
 	"testing"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
-func makeRecord(data map[string]any) *DataRecord {
-	return &DataRecord{
+func makeRecord(data map[string]any) *contentv1.DataRecord {
+	return &contentv1.DataRecord{
 		ID:   ksid.NewID(),
 		Data: data,
 	}
 }
 
 func TestFilterRecords(t *testing.T) {
-	records := []*DataRecord{
+	records := []*contentv1.DataRecord{
 		makeRecord(map[string]any{"name": "Alice", "age": float64(30), "active": true}),
 		makeRecord(map[string]any{"name": "Bob", "age": float64(25), "active": false}),
 		makeRecord(map[string]any{"name": "Charlie", "age": float64(35), "active": true}),
 	}
 
 	t.Run("equals filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "name", Operator: FilterOpEquals, Value: "Bob"},
+		filters := []contentv1.Filter{
+			{Property: "name", Operator: contentv1.FilterOpEquals, Value: "Bob"},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 1 {
@@ -36,8 +38,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("not equals filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "name", Operator: FilterOpNotEquals, Value: "Bob"},
+		filters := []contentv1.Filter{
+			{Property: "name", Operator: contentv1.FilterOpNotEquals, Value: "Bob"},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 2 {
@@ -46,8 +48,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("greater than filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "age", Operator: FilterOpGreaterThan, Value: float64(28)},
+		filters := []contentv1.Filter{
+			{Property: "age", Operator: contentv1.FilterOpGreaterThan, Value: float64(28)},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 2 {
@@ -56,8 +58,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("less than filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "age", Operator: FilterOpLessThan, Value: float64(30)},
+		filters := []contentv1.Filter{
+			{Property: "age", Operator: contentv1.FilterOpLessThan, Value: float64(30)},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 1 {
@@ -66,8 +68,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("contains filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "name", Operator: FilterOpContains, Value: "li"},
+		filters := []contentv1.Filter{
+			{Property: "name", Operator: contentv1.FilterOpContains, Value: "li"},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 2 { // Alice, Charlie
@@ -76,8 +78,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("starts with filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "name", Operator: FilterOpStartsWith, Value: "A"},
+		filters := []contentv1.Filter{
+			{Property: "name", Operator: contentv1.FilterOpStartsWith, Value: "A"},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 1 {
@@ -86,8 +88,8 @@ func TestFilterRecords(t *testing.T) {
 	})
 
 	t.Run("boolean equals filter", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "active", Operator: FilterOpEquals, Value: true},
+		filters := []contentv1.Filter{
+			{Property: "active", Operator: contentv1.FilterOpEquals, Value: true},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 2 {
@@ -104,18 +106,18 @@ func TestFilterRecords(t *testing.T) {
 }
 
 func TestFilterRecordsCompound(t *testing.T) {
-	records := []*DataRecord{
+	records := []*contentv1.DataRecord{
 		makeRecord(map[string]any{"name": "Alice", "age": float64(30)}),
 		makeRecord(map[string]any{"name": "Bob", "age": float64(25)}),
 		makeRecord(map[string]any{"name": "Charlie", "age": float64(35)}),
 	}
 
 	t.Run("AND filter", func(t *testing.T) {
-		filters := []Filter{
+		filters := []contentv1.Filter{
 			{
-				And: []Filter{
-					{Property: "age", Operator: FilterOpGreaterEqual, Value: float64(25)},
-					{Property: "age", Operator: FilterOpLessEqual, Value: float64(30)},
+				And: []contentv1.Filter{
+					{Property: "age", Operator: contentv1.FilterOpGreaterEqual, Value: float64(25)},
+					{Property: "age", Operator: contentv1.FilterOpLessEqual, Value: float64(30)},
 				},
 			},
 		}
@@ -126,11 +128,11 @@ func TestFilterRecordsCompound(t *testing.T) {
 	})
 
 	t.Run("OR filter", func(t *testing.T) {
-		filters := []Filter{
+		filters := []contentv1.Filter{
 			{
-				Or: []Filter{
-					{Property: "name", Operator: FilterOpEquals, Value: "Alice"},
-					{Property: "name", Operator: FilterOpEquals, Value: "Charlie"},
+				Or: []contentv1.Filter{
+					{Property: "name", Operator: contentv1.FilterOpEquals, Value: "Alice"},
+					{Property: "name", Operator: contentv1.FilterOpEquals, Value: "Charlie"},
 				},
 			},
 		}
@@ -142,15 +144,15 @@ func TestFilterRecordsCompound(t *testing.T) {
 }
 
 func TestFilterRecordsEmpty(t *testing.T) {
-	records := []*DataRecord{
+	records := []*contentv1.DataRecord{
 		makeRecord(map[string]any{"name": "Alice", "email": "alice@example.com"}),
 		makeRecord(map[string]any{"name": "Bob", "email": ""}),
 		makeRecord(map[string]any{"name": "Charlie"}), // email not set
 	}
 
 	t.Run("is empty", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "email", Operator: FilterOpIsEmpty},
+		filters := []contentv1.Filter{
+			{Property: "email", Operator: contentv1.FilterOpIsEmpty},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 2 { // Bob (empty string), Charlie (not set)
@@ -159,8 +161,8 @@ func TestFilterRecordsEmpty(t *testing.T) {
 	})
 
 	t.Run("is not empty", func(t *testing.T) {
-		filters := []Filter{
-			{Property: "email", Operator: FilterOpIsNotEmpty},
+		filters := []contentv1.Filter{
+			{Property: "email", Operator: contentv1.FilterOpIsNotEmpty},
 		}
 		result := FilterRecords(records, filters)
 		if len(result) != 1 {
@@ -170,17 +172,17 @@ func TestFilterRecordsEmpty(t *testing.T) {
 }
 
 func TestSortRecords(t *testing.T) {
-	records := []*DataRecord{
+	records := []*contentv1.DataRecord{
 		makeRecord(map[string]any{"name": "Charlie", "age": float64(35)}),
 		makeRecord(map[string]any{"name": "Alice", "age": float64(30)}),
 		makeRecord(map[string]any{"name": "Bob", "age": float64(25)}),
 	}
 
 	t.Run("sort ascending by name", func(t *testing.T) {
-		r := make([]*DataRecord, len(records))
+		r := make([]*contentv1.DataRecord, len(records))
 		copy(r, records)
 
-		SortRecords(r, []Sort{{Property: "name", Direction: SortAsc}})
+		SortRecords(r, []contentv1.Sort{{Property: "name", Direction: contentv1.SortAsc}})
 
 		if r[0].Data["name"] != "Alice" {
 			t.Errorf("expected Alice first, got %v", r[0].Data["name"])
@@ -194,10 +196,10 @@ func TestSortRecords(t *testing.T) {
 	})
 
 	t.Run("sort descending by age", func(t *testing.T) {
-		r := make([]*DataRecord, len(records))
+		r := make([]*contentv1.DataRecord, len(records))
 		copy(r, records)
 
-		SortRecords(r, []Sort{{Property: "age", Direction: SortDesc}})
+		SortRecords(r, []contentv1.Sort{{Property: "age", Direction: contentv1.SortDesc}})
 
 		if r[0].Data["name"] != "Charlie" {
 			t.Errorf("expected Charlie first (age 35), got %v", r[0].Data["name"])
@@ -211,15 +213,15 @@ func TestSortRecords(t *testing.T) {
 	})
 
 	t.Run("multi-sort", func(t *testing.T) {
-		records := []*DataRecord{
+		records := []*contentv1.DataRecord{
 			makeRecord(map[string]any{"dept": "Engineering", "name": "Charlie"}),
 			makeRecord(map[string]any{"dept": "Engineering", "name": "Alice"}),
 			makeRecord(map[string]any{"dept": "Sales", "name": "Bob"}),
 		}
 
-		SortRecords(records, []Sort{
-			{Property: "dept", Direction: SortAsc},
-			{Property: "name", Direction: SortAsc},
+		SortRecords(records, []contentv1.Sort{
+			{Property: "dept", Direction: contentv1.SortAsc},
+			{Property: "name", Direction: contentv1.SortAsc},
 		})
 
 		if records[0].Data["name"] != "Alice" {
@@ -234,7 +236,7 @@ func TestSortRecords(t *testing.T) {
 	})
 
 	t.Run("empty sorts returns unchanged", func(t *testing.T) {
-		r := make([]*DataRecord, len(records))
+		r := make([]*contentv1.DataRecord, len(records))
 		copy(r, records)
 
 		SortRecords(r, nil)
@@ -247,19 +249,19 @@ func TestSortRecords(t *testing.T) {
 }
 
 func TestQueryRecords(t *testing.T) {
-	records := []*DataRecord{
+	records := []*contentv1.DataRecord{
 		makeRecord(map[string]any{"name": "Charlie", "age": float64(35)}),
 		makeRecord(map[string]any{"name": "Alice", "age": float64(30)}),
 		makeRecord(map[string]any{"name": "Bob", "age": float64(25)}),
 	}
 
 	t.Run("filter and sort", func(t *testing.T) {
-		view := &View{
-			Filters: []Filter{
-				{Property: "age", Operator: FilterOpGreaterEqual, Value: float64(30)},
+		view := &contentv1.View{
+			Filters: []contentv1.Filter{
+				{Property: "age", Operator: contentv1.FilterOpGreaterEqual, Value: float64(30)},
 			},
-			Sorts: []Sort{
-				{Property: "name", Direction: SortAsc},
+			Sorts: []contentv1.Sort{
+				{Property: "name", Direction: contentv1.SortAsc},
 			},
 		}
 

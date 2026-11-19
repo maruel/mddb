@@ -5,16 +5,18 @@ package content
 import (
 	"testing"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
 )
 
 func TestView(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid view", func(t *testing.T) {
-			v := &View{
+			v := &contentv1.View{
 				ID:   ksid.NewID(),
 				Name: "My View",
-				Type: ViewTypeTable,
+				Type: contentv1.ViewTypeTable,
 			}
 			if err := v.Validate(); err != nil {
 				t.Errorf("Validate() unexpected error: %v", err)
@@ -22,9 +24,9 @@ func TestView(t *testing.T) {
 		})
 
 		t.Run("missing ID", func(t *testing.T) {
-			v := &View{
+			v := &contentv1.View{
 				Name: "My View",
-				Type: ViewTypeTable,
+				Type: contentv1.ViewTypeTable,
 			}
 			if err := v.Validate(); err == nil {
 				t.Error("Validate() expected error for missing ID")
@@ -32,9 +34,9 @@ func TestView(t *testing.T) {
 		})
 
 		t.Run("missing name", func(t *testing.T) {
-			v := &View{
+			v := &contentv1.View{
 				ID:   ksid.NewID(),
-				Type: ViewTypeTable,
+				Type: contentv1.ViewTypeTable,
 			}
 			if err := v.Validate(); err == nil {
 				t.Error("Validate() expected error for missing name")
@@ -44,7 +46,7 @@ func TestView(t *testing.T) {
 
 	t.Run("GetID", func(t *testing.T) {
 		id := ksid.NewID()
-		v := &View{ID: id}
+		v := &contentv1.View{ID: id}
 		if v.GetID() != id {
 			t.Errorf("GetID() = %v, want %v", v.GetID(), id)
 		}

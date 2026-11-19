@@ -2,7 +2,7 @@
 
 package mcpschema
 
-import "github.com/maruel/mddb/backend/internal/server/dto"
+import "github.com/maruel/mddb/backend/internal/server/dto/v1"
 
 // ReadRecordInput selects actual table data rather than the node's schema.
 type ReadRecordInput struct {

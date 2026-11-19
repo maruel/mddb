@@ -6,8 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestNotificationService(t *testing.T) {
@@ -23,15 +26,15 @@ func TestNotificationService(t *testing.T) {
 	actorID := ksid.NewID()
 
 	t.Run("Create", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifOrgInvite, "You were invited", "To Acme org", "org123", actorID)
+		n, err := svc.Create(userID, identityv1.NotifOrgInvite, "You were invited", "To Acme org", "org123", actorID)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 		if n.UserID != userID {
 			t.Errorf("UserID: got %v, want %v", n.UserID, userID)
 		}
-		if n.Type != NotifOrgInvite {
-			t.Errorf("Type: got %v, want %v", n.Type, NotifOrgInvite)
+		if n.Type != identityv1.NotifOrgInvite {
+			t.Errorf("Type: got %v, want %v", n.Type, identityv1.NotifOrgInvite)
 		}
 		if n.Title != "You were invited" {
 			t.Errorf("Title: got %q, want %q", n.Title, "You were invited")
@@ -42,7 +45,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifWSInvite, "Workspace invite", "", "", 0)
+		n, err := svc.Create(userID, identityv1.NotifWSInvite, "Workspace invite", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -72,12 +75,12 @@ func TestNotificationService(t *testing.T) {
 
 		for i := range 5 {
 			title := "notif " + string(rune('A'+i))
-			if _, err := svc2.Create(uid, NotifMemberJoined, title, "", "", 0); err != nil {
+			if _, err := svc2.Create(uid, identityv1.NotifMemberJoined, title, "", "", 0); err != nil {
 				t.Fatalf("Create %d failed: %v", i, err)
 			}
 		}
 		// Create one for another user.
-		if _, err := svc2.Create(otherUID, NotifMemberJoined, "other", "", "", 0); err != nil {
+		if _, err := svc2.Create(otherUID, identityv1.NotifMemberJoined, "other", "", "", 0); err != nil {
 			t.Fatalf("Create other failed: %v", err)
 		}
 
@@ -99,7 +102,7 @@ func TestNotificationService(t *testing.T) {
 		uid := ksid.NewID()
 		for i := range 10 {
 			title := "n" + string(rune('0'+i))
-			if _, err := svc2.Create(uid, NotifPageMention, title, "", "", 0); err != nil {
+			if _, err := svc2.Create(uid, identityv1.NotifPageMention, title, "", "", 0); err != nil {
 				t.Fatalf("Create %d failed: %v", i, err)
 			}
 		}
@@ -116,11 +119,11 @@ func TestNotificationService(t *testing.T) {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
 		uid := ksid.NewID()
-		n1, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0)
+		n1, err := svc2.Create(uid, identityv1.NotifOrgInvite, "a", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if _, err := svc2.Create(uid, NotifOrgInvite, "b", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "b", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 		if err := svc2.MarkRead(n1.ID, uid); err != nil {
@@ -139,10 +142,10 @@ func TestNotificationService(t *testing.T) {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
 		uid := ksid.NewID()
-		if _, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "a", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if _, err := svc2.Create(uid, NotifOrgInvite, "b", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "b", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 
@@ -157,11 +160,11 @@ func TestNotificationService(t *testing.T) {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
 		uid := ksid.NewID()
-		n1, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0)
+		n1, err := svc2.Create(uid, identityv1.NotifOrgInvite, "a", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if _, err := svc2.Create(uid, NotifOrgInvite, "b", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "b", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 		if err := svc2.MarkRead(n1.ID, uid); err != nil {
@@ -174,7 +177,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("MarkRead", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifOrgInvite, "mark me", "", "", 0)
+		n, err := svc.Create(userID, identityv1.NotifOrgInvite, "mark me", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -191,7 +194,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("MarkReadWrongUser", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifOrgInvite, "wrong user", "", "", 0)
+		n, err := svc.Create(userID, identityv1.NotifOrgInvite, "wrong user", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -207,7 +210,7 @@ func TestNotificationService(t *testing.T) {
 		}
 		uid := ksid.NewID()
 		for _, title := range []string{"a", "b", "c"} {
-			if _, err := svc2.Create(uid, NotifOrgInvite, title, "", "", 0); err != nil {
+			if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, title, "", "", 0); err != nil {
 				t.Fatalf("Create failed: %v", err)
 			}
 		}
@@ -221,7 +224,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifOrgInvite, "delete me", "", "", 0)
+		n, err := svc.Create(userID, identityv1.NotifOrgInvite, "delete me", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -234,7 +237,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("DeleteWrongUser", func(t *testing.T) {
-		n, err := svc.Create(userID, NotifOrgInvite, "wrong user", "", "", 0)
+		n, err := svc.Create(userID, identityv1.NotifOrgInvite, "wrong user", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -249,15 +252,15 @@ func TestNotificationService(t *testing.T) {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
 		uid := ksid.NewID()
-		if _, err := svc2.Create(uid, NotifOrgInvite, "old", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "old", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if _, err := svc2.Create(uid, NotifOrgInvite, "new", "", "", 0); err != nil {
+		if _, err := svc2.Create(uid, identityv1.NotifOrgInvite, "new", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 
 		// Delete everything before "now + 1 minute" (should delete all).
-		cutoff := storage.Now() + 60_000
+		cutoff := storagev1.Now() + 60_000
 		count, err := svc2.DeleteOlderThan(cutoff)
 		if err != nil {
 			t.Fatalf("DeleteOlderThan failed: %v", err)
@@ -274,13 +277,13 @@ func TestNotificationService(t *testing.T) {
 		}
 		// Interleave two users; each keeps its newest notifications.
 		uid, other := ksid.NewID(), ksid.NewID()
-		var created []*Notification
+		var created []*identityv1.Notification
 		for i := range 5 {
 			for _, u := range []ksid.ID{uid, other} {
 				if u == other && i >= 2 {
 					continue
 				}
-				n, err := svc2.Create(u, NotifOrgInvite, "x", "", "", 0)
+				n, err := svc2.Create(u, identityv1.NotifOrgInvite, "x", "", "", 0)
 				if err != nil {
 					t.Fatalf("Create failed: %v", err)
 				}
@@ -307,32 +310,32 @@ func TestNotificationService(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		tests := []struct {
 			name    string
-			n       *Notification
+			n       *identityv1.Notification
 			wantErr bool
 		}{
 			{
 				name:    "valid",
-				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &identityv1.Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: identityv1.NotifOrgInvite, Title: "hi"},
 				wantErr: false,
 			},
 			{
 				name:    "missing_id",
-				n:       &Notification{UserID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &identityv1.Notification{UserID: ksid.NewID(), Type: identityv1.NotifOrgInvite, Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_user_id",
-				n:       &Notification{ID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &identityv1.Notification{ID: ksid.NewID(), Type: identityv1.NotifOrgInvite, Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_type",
-				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Title: "hi"},
+				n:       &identityv1.Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_title",
-				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: NotifOrgInvite},
+				n:       &identityv1.Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: identityv1.NotifOrgInvite},
 				wantErr: true,
 			},
 		}
@@ -349,32 +352,32 @@ func TestNotificationService(t *testing.T) {
 
 func TestNotificationPreferences(t *testing.T) {
 	t.Run("DefaultChannels", func(t *testing.T) {
-		cs := DefaultChannels(NotifOrgInvite)
+		cs := DefaultChannels(identityv1.NotifOrgInvite)
 		if !cs.Email || !cs.Web {
 			t.Errorf("org_invite defaults: got email=%v web=%v, want both true", cs.Email, cs.Web)
 		}
 
-		cs = DefaultChannels(NotifMemberJoined)
+		cs = DefaultChannels(identityv1.NotifMemberJoined)
 		if cs.Email || !cs.Web {
 			t.Errorf("member_joined defaults: got email=%v web=%v, want email=false web=true", cs.Email, cs.Web)
 		}
 	})
 
 	t.Run("EffectiveChannelsNoOverride", func(t *testing.T) {
-		prefs := &NotificationPreferences{}
-		cs := prefs.EffectiveChannels(NotifOrgInvite)
+		prefs := &identityv1.NotificationPreferences{}
+		cs := EffectiveChannels(prefs, identityv1.NotifOrgInvite)
 		if !cs.Email || !cs.Web {
 			t.Error("expected defaults when no override")
 		}
 	})
 
 	t.Run("EffectiveChannelsWithOverride", func(t *testing.T) {
-		prefs := &NotificationPreferences{
-			Overrides: map[NotificationType]ChannelSet{
-				NotifOrgInvite: {Email: false, Web: true},
+		prefs := &identityv1.NotificationPreferences{
+			Overrides: map[identityv1.NotificationType]identityv1.ChannelSet{
+				identityv1.NotifOrgInvite: {Email: false, Web: true},
 			},
 		}
-		cs := prefs.EffectiveChannels(NotifOrgInvite)
+		cs := EffectiveChannels(prefs, identityv1.NotifOrgInvite)
 		if cs.Email {
 			t.Error("expected email=false from override")
 		}
@@ -384,8 +387,8 @@ func TestNotificationPreferences(t *testing.T) {
 	})
 
 	t.Run("EffectiveChannelsNilPrefs", func(t *testing.T) {
-		var prefs *NotificationPreferences
-		cs := prefs.EffectiveChannels(NotifOrgInvite)
+		var prefs *identityv1.NotificationPreferences
+		cs := EffectiveChannels(prefs, identityv1.NotifOrgInvite)
 		if !cs.Email || !cs.Web {
 			t.Error("expected defaults for nil prefs")
 		}

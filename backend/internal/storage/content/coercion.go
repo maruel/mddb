@@ -5,6 +5,8 @@ package content
 import (
 	"math"
 	"strconv"
+
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
 )
 
 // Type coercion maps JSON wire types through Go types to SQLite storage classes.
@@ -45,21 +47,21 @@ const (
 )
 
 // propertyAffinity returns the SQLite affinity for a property type.
-func propertyAffinity(pt PropertyType) affinity {
+func propertyAffinity(pt contentv1.PropertyType) affinity {
 	switch pt {
-	case PropertyTypeText, PropertyTypeURL, PropertyTypeEmail, PropertyTypePhone, PropertyTypeUser:
+	case contentv1.PropertyTypeText, contentv1.PropertyTypeURL, contentv1.PropertyTypeEmail, contentv1.PropertyTypePhone, contentv1.PropertyTypeUser:
 		return affinityTEXT
-	case PropertyTypeNumber:
+	case contentv1.PropertyTypeNumber:
 		return affinityNUMERIC
-	case PropertyTypeCheckbox:
+	case contentv1.PropertyTypeCheckbox:
 		return affinityINTEGER
-	case PropertyTypeDate:
+	case contentv1.PropertyTypeDate:
 		// ISO8601 string format
 		return affinityTEXT
-	case PropertyTypeSelect:
+	case contentv1.PropertyTypeSelect:
 		// Select stores option ID as text
 		return affinityTEXT
-	case PropertyTypeMultiSelect:
+	case contentv1.PropertyTypeMultiSelect:
 		// Multi-select stores as JSON array, no coercion
 		return affinityBLOB
 	default:
@@ -218,13 +220,13 @@ func coerceToNumeric(value any) any {
 
 // CoerceRecordData applies type coercion to all values in a data map based on property definitions.
 // Properties not in the schema are passed through unchanged (BLOB affinity).
-func CoerceRecordData(data map[string]any, properties []Property) map[string]any {
+func CoerceRecordData(data map[string]any, properties []contentv1.Property) map[string]any {
 	if data == nil {
 		return nil
 	}
 
 	// Build property type lookup
-	propTypes := make(map[string]PropertyType, len(properties))
+	propTypes := make(map[string]contentv1.PropertyType, len(properties))
 	for _, prop := range properties {
 		propTypes[prop.Name] = prop.Type
 	}

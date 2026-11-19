@@ -5,7 +5,7 @@ package notion
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/storage/content"
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
 )
 
 func TestParseManifestBytes(t *testing.T) {
@@ -289,8 +289,8 @@ databases:
 		if v1.Name != "All Tasks" {
 			t.Errorf("expected name %q, got %q", "All Tasks", v1.Name)
 		}
-		if v1.Type != content.ViewTypeTable {
-			t.Errorf("expected type %q, got %q", content.ViewTypeTable, v1.Type)
+		if v1.Type != contentv1.ViewTypeTable {
+			t.Errorf("expected type %q, got %q", contentv1.ViewTypeTable, v1.Type)
 		}
 		if !v1.Default {
 			t.Error("expected default to be true")
@@ -307,13 +307,13 @@ databases:
 		if len(v1.Sorts) != 1 {
 			t.Fatalf("expected 1 sort, got %d", len(v1.Sorts))
 		}
-		if v1.Sorts[0].Direction != content.SortDesc {
+		if v1.Sorts[0].Direction != contentv1.SortDesc {
 			t.Errorf("expected desc, got %s", v1.Sorts[0].Direction)
 		}
 		if len(v1.Filters) != 1 {
 			t.Errorf("expected 1 filter, got %d", len(v1.Filters))
 		}
-		if v1.Filters[0].Operator != content.FilterOpEquals {
+		if v1.Filters[0].Operator != contentv1.FilterOpEquals {
 			t.Errorf("expected equals operator, got %q", v1.Filters[0].Operator)
 		}
 
@@ -322,8 +322,8 @@ databases:
 		if v2.Name != "By Status" {
 			t.Errorf("expected name %q, got %q", "By Status", v2.Name)
 		}
-		if v2.Type != content.ViewTypeBoard {
-			t.Errorf("expected type %q, got %q", content.ViewTypeBoard, v2.Type)
+		if v2.Type != contentv1.ViewTypeBoard {
+			t.Errorf("expected type %q, got %q", contentv1.ViewTypeBoard, v2.Type)
 		}
 		if len(v2.Groups) != 1 {
 			t.Fatalf("expected 1 group, got %d", len(v2.Groups))

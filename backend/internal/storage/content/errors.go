@@ -2,7 +2,9 @@
 
 package content
 
-import "errors"
+import (
+	"errors"
+)
 
 // RevisionConflictError reports the revision observed while rejecting a stale mutation.
 // A conflict does not distinguish a lost successful response from another writer.
@@ -36,8 +38,6 @@ var (
 	// ErrRecordNotFound identifies a missing record.
 	ErrRecordNotFound = errors.New("record not found")
 	errAssetNotFound  = errors.New("asset not found")
-	errIDRequired     = errors.New("ID is required")
-	errNameRequired   = errors.New("name is required")
 	errQuotaExceeded  = errors.New("quota exceeded")
 	// ErrTableQuotaExceeded is returned when the table limit for a workspace is reached.
 	ErrTableQuotaExceeded = errors.New("maximum number of tables per workspace exceeded")

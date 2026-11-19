@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"os"
 
+	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"gopkg.in/yaml.v3"
 )
 
@@ -115,13 +116,13 @@ func (m *ViewManifest) ViewsForDatabase(notionID string) []ViewConfig {
 }
 
 // ToContentViews converts manifest view configs to content.View structs.
-func (m *ViewManifest) ToContentViews(notionID string) []content.View {
+func (m *ViewManifest) ToContentViews(notionID string) []contentv1.View {
 	configs := m.ViewsForDatabase(notionID)
 	if configs == nil {
 		return nil
 	}
 
-	views := make([]content.View, 0, len(configs))
+	views := make([]contentv1.View, 0, len(configs))
 	for i := range configs {
 		views = append(views, configToView(&configs[i]))
 	}
@@ -173,8 +174,8 @@ type FilterConfig struct {
 }
 
 // configToView converts a ViewConfig to a content.View.
-func configToView(cfg *ViewConfig) content.View {
-	view := content.View{
+func configToView(cfg *ViewConfig) contentv1.View {
+	view := contentv1.View{
 		ID:      ksid.NewID(),
 		Name:    cfg.Name,
 		Type:    mapViewType(cfg.Type),
@@ -188,7 +189,7 @@ func configToView(cfg *ViewConfig) content.View {
 		if col.Visible != nil {
 			visible = *col.Visible
 		}
-		view.Columns = append(view.Columns, content.ViewColumn{
+		view.Columns = append(view.Columns, contentv1.ViewColumn{
 			Property: col.Property,
 			Width:    col.Width,
 			Visible:  visible,
@@ -198,7 +199,7 @@ func configToView(cfg *ViewConfig) content.View {
 	// Convert sorts
 	for i := range cfg.Sorts {
 		sort := &cfg.Sorts[i]
-		view.Sorts = append(view.Sorts, content.Sort{
+		view.Sorts = append(view.Sorts, contentv1.Sort{
 			Property:  sort.Property,
 			Direction: mapSortDir(sort.Direction),
 		})
@@ -212,7 +213,7 @@ func configToView(cfg *ViewConfig) content.View {
 
 	// Convert groups
 	if cfg.GroupBy != "" {
-		group := content.Group{
+		group := contentv1.Group{
 			Property: cfg.GroupBy,
 		}
 		// Convert hidden groups to any slice
@@ -226,8 +227,8 @@ func configToView(cfg *ViewConfig) content.View {
 }
 
 // configToFilter converts a FilterConfig to a content.Filter.
-func configToFilter(cfg *FilterConfig) content.Filter {
-	filter := content.Filter{
+func configToFilter(cfg *FilterConfig) contentv1.Filter {
+	filter := contentv1.Filter{
 		Property: cfg.Property,
 		Operator: mapFilterOp(cfg.Operator),
 		Value:    cfg.Value,
@@ -255,62 +256,62 @@ func isValidViewType(t string) bool {
 }
 
 // mapViewType converts a string view type to content.ViewType.
-func mapViewType(t string) content.ViewType {
+func mapViewType(t string) contentv1.ViewType {
 	switch t {
 	case "table":
-		return content.ViewTypeTable
+		return contentv1.ViewTypeTable
 	case "board":
-		return content.ViewTypeBoard
+		return contentv1.ViewTypeBoard
 	case "gallery":
-		return content.ViewTypeGallery
+		return contentv1.ViewTypeGallery
 	case "list":
-		return content.ViewTypeList
+		return contentv1.ViewTypeList
 	case "calendar":
-		return content.ViewTypeCalendar
+		return contentv1.ViewTypeCalendar
 	default:
-		return content.ViewTypeTable
+		return contentv1.ViewTypeTable
 	}
 }
 
 // mapSortDir converts a string sort direction to content.SortDir.
-func mapSortDir(dir string) content.SortDir {
+func mapSortDir(dir string) contentv1.SortDir {
 	switch dir {
 	case "desc":
-		return content.SortDesc
+		return contentv1.SortDesc
 	default:
-		return content.SortAsc
+		return contentv1.SortAsc
 	}
 }
 
 // mapFilterOp converts a string filter operator to content.FilterOp.
-func mapFilterOp(op string) content.FilterOp {
+func mapFilterOp(op string) contentv1.FilterOp {
 	switch op {
 	case "equals":
-		return content.FilterOpEquals
+		return contentv1.FilterOpEquals
 	case "not_equals":
-		return content.FilterOpNotEquals
+		return contentv1.FilterOpNotEquals
 	case "contains":
-		return content.FilterOpContains
+		return contentv1.FilterOpContains
 	case "not_contains":
-		return content.FilterOpNotContains
+		return contentv1.FilterOpNotContains
 	case "starts_with":
-		return content.FilterOpStartsWith
+		return contentv1.FilterOpStartsWith
 	case "ends_with":
-		return content.FilterOpEndsWith
+		return contentv1.FilterOpEndsWith
 	case "gt":
-		return content.FilterOpGreaterThan
+		return contentv1.FilterOpGreaterThan
 	case "lt":
-		return content.FilterOpLessThan
+		return contentv1.FilterOpLessThan
 	case "gte":
-		return content.FilterOpGreaterEqual
+		return contentv1.FilterOpGreaterEqual
 	case "lte":
-		return content.FilterOpLessEqual
+		return contentv1.FilterOpLessEqual
 	case "is_empty":
-		return content.FilterOpIsEmpty
+		return contentv1.FilterOpIsEmpty
 	case "is_not_empty":
-		return content.FilterOpIsNotEmpty
+		return contentv1.FilterOpIsNotEmpty
 	default:
-		return content.FilterOpEquals
+		return contentv1.FilterOpEquals
 	}
 }
 

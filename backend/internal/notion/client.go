@@ -159,7 +159,7 @@ type SearchRequest struct {
 }
 
 // Search searches for pages and databases.
-func (c *Client) Search(ctx context.Context, req *SearchRequest) (*SearchResponse, error) {
+func (c *Client) Search(ctx context.Context, req *SearchRequest) (*PaginatedResponse[SearchResult], error) {
 	if req.PageSize == 0 {
 		req.PageSize = 100
 	}
@@ -169,7 +169,7 @@ func (c *Client) Search(ctx context.Context, req *SearchRequest) (*SearchRespons
 		return nil, err
 	}
 
-	var resp SearchResponse
+	var resp PaginatedResponse[SearchResult]
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse search response: %w", err)
 	}
@@ -235,7 +235,7 @@ type Sort struct {
 }
 
 // QueryDatabase queries a database for pages.
-func (c *Client) QueryDatabase(ctx context.Context, databaseID string, opts *QueryOptions) (*QueryResponse, error) {
+func (c *Client) QueryDatabase(ctx context.Context, databaseID string, opts *QueryOptions) (*PaginatedResponse[Page], error) {
 	if opts == nil {
 		opts = &QueryOptions{}
 	}
@@ -248,7 +248,7 @@ func (c *Client) QueryDatabase(ctx context.Context, databaseID string, opts *Que
 		return nil, err
 	}
 
-	var resp QueryResponse
+	var resp PaginatedResponse[Page]
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse query response: %w", err)
 	}
@@ -301,7 +301,7 @@ func (c *Client) GetPage(ctx context.Context, id string) (*Page, error) {
 }
 
 // GetBlockChildren retrieves the children of a block.
-func (c *Client) GetBlockChildren(ctx context.Context, blockID, cursor string) (*BlocksResponse, error) {
+func (c *Client) GetBlockChildren(ctx context.Context, blockID, cursor string) (*PaginatedResponse[Block], error) {
 	path := "/blocks/" + blockID + "/children?page_size=100"
 	if cursor != "" {
 		path += "&start_cursor=" + cursor
@@ -312,7 +312,7 @@ func (c *Client) GetBlockChildren(ctx context.Context, blockID, cursor string) (
 		return nil, err
 	}
 
-	var resp BlocksResponse
+	var resp PaginatedResponse[Block]
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse blocks response: %w", err)
 	}

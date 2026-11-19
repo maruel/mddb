@@ -6,16 +6,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // ServerHandler handles server configuration endpoints.
 type ServerHandler struct {
-	Cfg              *storage.ServerConfig
+	Cfg              *storagev1.ServerConfig
 	ConfigDir        string                    // holds settings.json
 	FileStore        *content.FileStoreService // for cache invalidation on quota changes
 	BandwidthLimiter BandwidthUpdater          // for hot-reload of bandwidth limit
@@ -23,7 +24,7 @@ type ServerHandler struct {
 }
 
 // GetConfig returns the current server configuration with masked password.
-func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.ServerConfigRequest) (*dto.ServerConfigResponse, error) {
+func (h *ServerHandler) GetConfig(ctx context.Context, _ *identityv1.User, _ *dto.ServerConfigRequest) (*dto.ServerConfigResponse, error) {
 	rq := h.Cfg.Quotas.ResourceQuotas
 	return &dto.ServerConfigResponse{
 		SMTP: dto.SMTPConfigResponse{
@@ -60,7 +61,7 @@ func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.
 }
 
 // UpdateConfig updates the server configuration and saves to disk.
-func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req *dto.UpdateServerConfigRequest) (*dto.UpdateServerConfigResponse, error) {
+func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identityv1.User, req *dto.UpdateServerConfigRequest) (*dto.OkResponse, error) {
 	// TODO: Make saved SMTP settings take effect and allow disabling SMTP.
 	// cmd/mddb/main.go builds email.Service and the email verification
 	// service once at startup from serverCfg.SMTP, so changes saved here only
@@ -70,7 +71,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	// swap the email services when the config changes, and treat an all-empty
 	// request as "disable". docs.mddb.app's email guide documents the restart.
 	if req.SMTP != nil {
-		newSMTP := email.Config{
+		newSMTP := storagev1.SMTPConfig{
 			Host:     req.SMTP.Host,
 			Port:     req.SMTP.Port,
 			Username: req.SMTP.Username,
@@ -90,8 +91,8 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 
 	// Update quotas if provided
 	if req.Quotas != nil {
-		newQuotas := storage.ServerQuotas{
-			ResourceQuotas: storage.ResourceQuotas{
+		newQuotas := storagev1.ServerQuotas{
+			ResourceQuotas: storagev1.ResourceQuotas{
 				MaxPages:              req.Quotas.MaxPages,
 				MaxStorageBytes:       req.Quotas.MaxStorageBytes,
 				MaxRecordsPerTable:    req.Quotas.MaxRecordsPerTable,
@@ -121,7 +122,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 
 	// Update rate limits if provided
 	if req.RateLimits != nil {
-		newRateLimits := storage.RateLimits{
+		newRateLimits := storagev1.RateLimits{
 			AuthRatePerMin:       req.RateLimits.AuthRatePerMin,
 			WriteRatePerMin:      req.RateLimits.WriteRatePerMin,
 			ReadAuthRatePerMin:   req.RateLimits.ReadAuthRatePerMin,
@@ -135,7 +136,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	}
 
 	// Save to disk
-	if err := h.Cfg.Save(h.ConfigDir); err != nil {
+	if err := storage.SaveServerConfig(h.Cfg, h.ConfigDir); err != nil {
 		return nil, dto.Internal(fmt.Sprintf("failed to save config: %v", err))
 	}
 
@@ -154,5 +155,5 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 		)
 	}
 
-	return &dto.UpdateServerConfigResponse{Ok: true}, nil
+	return &dto.OkResponse{Ok: true}, nil
 }

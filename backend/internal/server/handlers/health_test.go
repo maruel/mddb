@@ -5,7 +5,7 @@ package handlers
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 

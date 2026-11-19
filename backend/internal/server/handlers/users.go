@@ -5,10 +5,11 @@ package handlers
 import (
 	"context"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	"github.com/maruel/ksid"
-	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // UserHandler handles user management requests.
@@ -17,7 +18,7 @@ type UserHandler struct {
 }
 
 // ListUsers returns all users in the organization.
-func (h *UserHandler) ListUsers(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
+func (h *UserHandler) ListUsers(ctx context.Context, orgID ksid.ID, _ *identityv1.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
 	for user := range h.Svc.User.Iter(0) {
@@ -37,7 +38,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, orgID ksid.ID, _ *identity.
 }
 
 // UpdateOrgMemberRole updates a user's organization role.
-func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID ksid.ID, _ *identity.User, req *dto.UpdateOrgMemberRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID ksid.ID, _ *identityv1.User, req *dto.UpdateOrgMemberRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID.IsZero() || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
@@ -50,7 +51,7 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID ksid.ID, _ 
 		}
 	} else {
 		newRole := orgRoleToEntity(req.Role)
-		if _, err = h.Svc.OrgMembership.Modify(m.ID, func(m *identity.OrganizationMembership) error {
+		if _, err = h.Svc.OrgMembership.Modify(m.ID, func(m *identityv1.OrganizationMembership) error {
 			m.Role = newRole
 			return nil
 		}); err != nil {
@@ -67,7 +68,7 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID ksid.ID, _ 
 
 // RemoveOrgMember removes a user from an organization and cascades to remove
 // all their workspace memberships within the organization.
-func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.RemoveOrgMemberRequest) (*dto.OkResponse, error) {
+func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID ksid.ID, user *identityv1.User, req *dto.RemoveOrgMemberRequest) (*dto.OkResponse, error) {
 	if req.UserID == user.ID {
 		return nil, dto.Forbidden("cannot remove yourself")
 	}
@@ -78,10 +79,10 @@ func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID ksid.ID, user *
 	}
 
 	// Prevent removing the last owner.
-	if m.Role == identity.OrgRoleOwner {
+	if m.Role == identityv1.OrgRoleOwner {
 		ownerCount := 0
 		for om := range h.Svc.OrgMembership.IterByOrg(orgID) {
-			if om.Role == identity.OrgRoleOwner {
+			if om.Role == identityv1.OrgRoleOwner {
 				ownerCount++
 			}
 		}
@@ -103,14 +104,14 @@ func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID ksid.ID, user *
 	if org != nil {
 		orgName = org.Name
 	}
-	h.Svc.Emit(ctx, nil, req.UserID, identity.NotifMemberRemoved,
+	h.Svc.Emit(ctx, nil, req.UserID, identityv1.NotifMemberRemoved,
 		"You were removed from "+orgName, "", orgID.String(), user.ID)
 
 	return &dto.OkResponse{Ok: true}, nil
 }
 
 // UpdateWSMemberRole updates a user's workspace role.
-func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID ksid.ID, _ *identity.User, req *dto.UpdateWSMemberRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.UpdateWSMemberRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID.IsZero() || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
@@ -123,7 +124,7 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID ksid.ID, _ *i
 		}
 	} else {
 		newRole := wsRoleToEntity(req.Role)
-		if _, err = h.Svc.WSMembership.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
+		if _, err = h.Svc.WSMembership.Modify(m.ID, func(m *identityv1.WorkspaceMembership) error {
 			m.Role = newRole
 			return nil
 		}); err != nil {
@@ -140,7 +141,7 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID ksid.ID, _ *i
 
 // ListWorkspaceMembers returns the current members of a workspace.
 // Used by user-type table columns to populate the member picker.
-func (h *UserHandler) ListWorkspaceMembers(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.ListWorkspaceMembersRequest) (*dto.ListWorkspaceMembersResponse, error) {
+func (h *UserHandler) ListWorkspaceMembers(_ context.Context, wsID ksid.ID, _ *identityv1.User, _ *dto.ListWorkspaceMembersRequest) (*dto.ListWorkspaceMembersResponse, error) {
 	var members []dto.WorkspaceMemberResponse
 	for m := range h.Svc.WSMembership.IterByWorkspace(wsID) {
 		u, err := h.Svc.User.Get(m.UserID)
@@ -159,7 +160,7 @@ func (h *UserHandler) ListWorkspaceMembers(_ context.Context, wsID ksid.ID, _ *i
 
 // ResolveUsers resolves a list of user IDs to display info, marking removed members as ghosts.
 // Used by user-type table columns to display values for users no longer in the workspace.
-func (h *UserHandler) ResolveUsers(_ context.Context, wsID ksid.ID, _ *identity.User, req *dto.ResolveUsersRequest) (*dto.ResolveUsersResponse, error) {
+func (h *UserHandler) ResolveUsers(_ context.Context, wsID ksid.ID, _ *identityv1.User, req *dto.ResolveUsersRequest) (*dto.ResolveUsersResponse, error) {
 	// Build set of current workspace member IDs for ghost detection.
 	memberSet := make(map[string]struct{})
 	for m := range h.Svc.WSMembership.IterByWorkspace(wsID) {
@@ -191,8 +192,8 @@ func (h *UserHandler) ResolveUsers(_ context.Context, wsID ksid.ID, _ *identity.
 }
 
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
-	_, err := h.Svc.User.Modify(user.ID, func(u *identity.User) error {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identityv1.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
+	_, err := h.Svc.User.Modify(user.ID, func(u *identityv1.User) error {
 		u.Settings = userSettingsToEntity(req.Settings, u.Settings)
 		return nil
 	})
@@ -209,7 +210,7 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.Use
 }
 
 // bestAvatarURL returns the first non-empty avatar URL from a user's OAuth identities.
-func bestAvatarURL(u *identity.User) string {
+func bestAvatarURL(u *identityv1.User) string {
 	for i := range u.OAuthIdentities {
 		if u.OAuthIdentities[i].AvatarURL != "" {
 			return u.OAuthIdentities[i].AvatarURL

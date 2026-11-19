@@ -4,6 +4,7 @@ package dto
 
 import (
 	"github.com/maruel/ksid"
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
 
 // --- Common Responses ---
@@ -37,14 +38,14 @@ type ProvidersResponse struct {
 
 // SessionResponse is the API representation of a session.
 type SessionResponse struct {
-	ExpiresAt   Time    `json:"expires_at"`
-	ID          ksid.ID `json:"id" jsonschema:"description=Unique session identifier"`
-	DeviceInfo  string  `json:"device_info" jsonschema:"description=Browser/OS info"`
-	IPAddress   string  `json:"ip_address" jsonschema:"description=IP address"`
-	CountryCode string  `json:"country_code,omitempty" jsonschema:"description=ISO 3166-1 alpha-2 country code at login"`
-	Created     Time    `json:"created" jsonschema:"description=Session creation Unix timestamp"`
-	LastUsed    Time    `json:"last_used" jsonschema:"description=Last activity Unix timestamp"`
-	IsCurrent   bool    `json:"is_current" jsonschema:"description=Whether this is the current session"`
+	ExpiresAt   storagev1.Time `json:"expires_at"`
+	ID          ksid.ID        `json:"id" jsonschema:"description=Unique session identifier"`
+	DeviceInfo  string         `json:"device_info" jsonschema:"description=Browser/OS info"`
+	IPAddress   string         `json:"ip_address" jsonschema:"description=IP address"`
+	CountryCode string         `json:"country_code,omitempty" jsonschema:"description=ISO 3166-1 alpha-2 country code at login"`
+	Created     storagev1.Time `json:"created" jsonschema:"description=Session creation Unix timestamp"`
+	LastUsed    storagev1.Time `json:"last_used" jsonschema:"description=Last activity Unix timestamp"`
+	IsCurrent   bool           `json:"is_current" jsonschema:"description=Whether this is the current session"`
 }
 
 // ListSessionsResponse is a response containing user's sessions.
@@ -52,21 +53,12 @@ type ListSessionsResponse struct {
 	Sessions []SessionResponse `json:"sessions"`
 }
 
-// LogoutResponse is a response from logout.
-type LogoutResponse = OkResponse
-
-// RevokeSessionResponse is a response from revoking a session.
-type RevokeSessionResponse = OkResponse
-
 // RevokeAllSessionsResponse is a response from revoking all sessions.
 type RevokeAllSessionsResponse struct {
 	RevokedCount int `json:"revoked_count" jsonschema:"description=Number of sessions revoked"`
 }
 
 // --- Node Content Responses ---
-
-// DeleteNodeResponse is a response from deleting a node.
-type DeleteNodeResponse = OkResponse
 
 // ListNodeVersionsResponse is a response containing node version history.
 type ListNodeVersionsResponse struct {
@@ -89,9 +81,6 @@ type UpdateTableResponse struct {
 	SchemaRevision string     `json:"schema_revision"`
 }
 
-// DeleteTableResponse is a response from deleting a table.
-type DeleteTableResponse = OkResponse
-
 // CreateViewResponse is a response from creating a view.
 type CreateViewResponse struct {
 	View View `json:"view"`
@@ -101,9 +90,6 @@ type CreateViewResponse struct {
 type UpdateViewResponse struct {
 	View View `json:"view"`
 }
-
-// DeleteViewResponse is a response from deleting a view.
-type DeleteViewResponse = OkResponse
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
@@ -126,17 +112,11 @@ type GetRecordResponse struct {
 	Revision string         `json:"revision"`
 	ID       ksid.ID        `json:"id"`
 	Data     map[string]any `json:"data"`
-	Created  Time           `json:"created"`
-	Modified Time           `json:"modified"`
+	Created  storagev1.Time `json:"created"`
+	Modified storagev1.Time `json:"modified"`
 }
 
-// DeleteRecordResponse is a response from deleting a record.
-type DeleteRecordResponse = OkResponse
-
 // --- Node Responses ---
-
-// MoveNodeResponse is a response from moving a node.
-type MoveNodeResponse = OkResponse
 
 // --- Asset Responses ---
 
@@ -147,12 +127,12 @@ type ListNodeAssetsResponse struct {
 
 // AssetSummary is a brief representation of an asset for list responses.
 type AssetSummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	MimeType string `json:"mime_type"`
-	Created  Time   `json:"created"`
-	URL      string `json:"url"`
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	Size     int64          `json:"size"`
+	MimeType string         `json:"mime_type"`
+	Created  storagev1.Time `json:"created"`
+	URL      string         `json:"url"`
 }
 
 // UploadNodeAssetResponse is a response from uploading an asset.
@@ -163,9 +143,6 @@ type UploadNodeAssetResponse struct {
 	MimeType string `json:"mime_type"`
 	URL      string `json:"url"`
 }
-
-// DeleteNodeAssetResponse is a response from deleting an asset.
-type DeleteNodeAssetResponse = OkResponse
 
 // ServeAssetResponse wraps the binary asset data.
 type ServeAssetResponse struct {
@@ -259,9 +236,6 @@ type LinkOAuthAccountResponse struct {
 	RedirectURL string `json:"redirect_url"`
 }
 
-// UnlinkOAuthAccountResponse is a response from unlinking an OAuth provider.
-type UnlinkOAuthAccountResponse = OkResponse
-
 // --- Health Responses ---
 
 // HealthResponse is a response from a health check.
@@ -294,8 +268,8 @@ type UserResponse struct {
 	HasPassword     bool            `json:"has_password,omitempty" jsonschema:"description=Whether user has a password set"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
-	Created         Time            `json:"created" jsonschema:"description=Account creation Unix timestamp"`
-	Modified        Time            `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Created         storagev1.Time  `json:"created" jsonschema:"description=Account creation Unix timestamp"`
+	Modified        storagev1.Time  `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 
 	// Current context
 	OrganizationID ksid.ID          `json:"organization_id,omitempty" jsonschema:"description=Active organization ID"`
@@ -316,7 +290,7 @@ type OrgMembershipResponse struct {
 	OrganizationID   ksid.ID          `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
 	OrganizationName string           `json:"organization_name,omitempty" jsonschema:"description=Organization name"`
 	Role             OrganizationRole `json:"role" jsonschema:"description=User role within the organization"`
-	Created          Time             `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
+	Created          storagev1.Time   `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
 }
 
 // WSMembershipResponse is the API representation of a workspace membership.
@@ -328,7 +302,7 @@ type WSMembershipResponse struct {
 	OrganizationID ksid.ID                     `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Role           WorkspaceRole               `json:"role" jsonschema:"description=User role within the workspace"`
 	Settings       WorkspaceMembershipSettings `json:"settings" jsonschema:"description=User preferences within this workspace"`
-	Created        Time                        `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
+	Created        storagev1.Time              `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
 }
 
 // OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
@@ -338,19 +312,19 @@ type OrgInvitationResponse struct {
 	OrganizationID ksid.ID          `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
 	Role           OrganizationRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	InvitedBy      ksid.ID          `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt      Time             `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
-	Created        Time             `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
+	ExpiresAt      storagev1.Time   `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
+	Created        storagev1.Time   `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
 }
 
 // WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
 type WSInvitationResponse struct {
-	ID          ksid.ID       `json:"id" jsonschema:"description=Unique invitation identifier"`
-	Email       string        `json:"email" jsonschema:"description=Email address of the invitee"`
-	WorkspaceID ksid.ID       `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
-	Role        WorkspaceRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
-	InvitedBy   ksid.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt   Time          `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
-	Created     Time          `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
+	ID          ksid.ID        `json:"id" jsonschema:"description=Unique invitation identifier"`
+	Email       string         `json:"email" jsonschema:"description=Email address of the invitee"`
+	WorkspaceID ksid.ID        `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
+	Role        WorkspaceRole  `json:"role" jsonschema:"description=Role assigned upon acceptance"`
+	InvitedBy   ksid.ID        `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
+	ExpiresAt   storagev1.Time `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
+	Created     storagev1.Time `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
 }
 
 // OrganizationResponse is the API representation of an organization.
@@ -362,7 +336,7 @@ type OrganizationResponse struct {
 	Settings       OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
 	MemberCount    int                  `json:"member_count" jsonschema:"description=Number of members"`
 	WorkspaceCount int                  `json:"workspace_count" jsonschema:"description=Number of workspaces"`
-	Created        Time                 `json:"created" jsonschema:"description=Organization creation Unix timestamp"`
+	Created        storagev1.Time       `json:"created" jsonschema:"description=Organization creation Unix timestamp"`
 
 	// ServerResourceLimits shows the server-imposed upper bound for each resource quota.
 	// The organization's resource quotas cannot exceed these server-level limits.
@@ -374,11 +348,11 @@ type WorkspaceResponse struct {
 	ID             ksid.ID            `json:"id" jsonschema:"description=Unique workspace identifier"`
 	OrganizationID ksid.ID            `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Name           string             `json:"name" jsonschema:"description=Display name of the workspace"`
-	Quotas         WorkspaceQuotas    `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
+	Quotas         ResourceQuotas     `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
 	Settings       WorkspaceSettings  `json:"settings" jsonschema:"description=Workspace-wide configuration"`
 	GitRemote      *GitRemoteResponse `json:"git_remote,omitempty" jsonschema:"description=Git remote configuration"`
 	MemberCount    int                `json:"member_count" jsonschema:"description=Number of members"`
-	Created        Time               `json:"created" jsonschema:"description=Workspace creation Unix timestamp"`
+	Created        storagev1.Time     `json:"created" jsonschema:"description=Workspace creation Unix timestamp"`
 
 	// ParentResourceLimits shows the effective upper bound imposed by the server and organization.
 	// The workspace's resource quotas cannot exceed these combined limits.
@@ -388,18 +362,18 @@ type WorkspaceResponse struct {
 
 // GitRemoteResponse is the API representation of a git remote.
 type GitRemoteResponse struct {
-	WorkspaceID    ksid.ID `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
-	URL            string  `json:"url" jsonschema:"description=Git repository URL"`
-	Type           string  `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
-	AuthType       string  `json:"auth_type" jsonschema:"description=Authentication method (token/ssh/github_app)"`
-	InstallationID int64   `json:"installation_id,omitempty" jsonschema:"description=GitHub App installation ID"`
-	RepoOwner      string  `json:"repo_owner,omitempty" jsonschema:"description=Repository owner"`
-	RepoName       string  `json:"repo_name,omitempty" jsonschema:"description=Repository name"`
-	Branch         string  `json:"branch,omitempty" jsonschema:"description=Branch to sync"`
-	SyncStatus     string  `json:"sync_status,omitempty" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
-	LastSyncError  string  `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
-	Created        Time    `json:"created" jsonschema:"description=Remote creation Unix timestamp"`
-	LastSync       Time    `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
+	WorkspaceID    ksid.ID        `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
+	URL            string         `json:"url" jsonschema:"description=Git repository URL"`
+	Type           string         `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType       string         `json:"auth_type" jsonschema:"description=Authentication method (token/ssh/github_app)"`
+	InstallationID int64          `json:"installation_id,omitempty" jsonschema:"description=GitHub App installation ID"`
+	RepoOwner      string         `json:"repo_owner,omitempty" jsonschema:"description=Repository owner"`
+	RepoName       string         `json:"repo_name,omitempty" jsonschema:"description=Repository name"`
+	Branch         string         `json:"branch,omitempty" jsonschema:"description=Branch to sync"`
+	SyncStatus     string         `json:"sync_status,omitempty" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
+	LastSyncError  string         `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
+	Created        storagev1.Time `json:"created" jsonschema:"description=Remote creation Unix timestamp"`
+	LastSync       storagev1.Time `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
 }
 
 // GitHubAppRepoResponse represents a GitHub repository from App installation.
@@ -418,9 +392,9 @@ type ListGitHubAppReposResponse struct {
 
 // GitSyncStatusResponse is a response containing sync status.
 type GitSyncStatusResponse struct {
-	SyncStatus    string `json:"sync_status" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
-	LastSync      Time   `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
-	LastSyncError string `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
+	SyncStatus    string         `json:"sync_status" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
+	LastSync      storagev1.Time `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
+	LastSyncError string         `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
 }
 
 // GitHubAppInstallationResponse represents a GitHub App installation.
@@ -439,9 +413,6 @@ type GitHubAppAvailableResponse struct {
 	Available bool `json:"available" jsonschema:"description=Whether GitHub App is configured on the server"`
 }
 
-// PullGitResponse is a response from pulling from git remote.
-type PullGitResponse = OkResponse
-
 // NodeResponse is the API representation of a node.
 type NodeResponse struct {
 	Revision       string            `json:"revision,omitempty" jsonschema:"description=Canonical page content revision"`
@@ -452,8 +423,8 @@ type NodeResponse struct {
 	Content        string            `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
 	Properties     []Property        `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
 	Views          []View            `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
-	Created        Time              `json:"created" jsonschema:"description=Node creation Unix timestamp"`
-	Modified       Time              `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Created        storagev1.Time    `json:"created" jsonschema:"description=Node creation Unix timestamp"`
+	Modified       storagev1.Time    `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 	Tags           []string          `json:"tags,omitempty" jsonschema:"description=Node tags"`
 	FaviconURL     string            `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
 	Icon           string            `json:"icon,omitempty" jsonschema:"description=Page icon: emoji character or MDI icon name"`
@@ -468,12 +439,12 @@ type NodeResponse struct {
 
 // GetPageResponse is a response containing page content.
 type GetPageResponse struct {
-	Revision string  `json:"revision" jsonschema:"description=Canonical page content revision"`
-	ID       ksid.ID `json:"id" jsonschema:"description=Node identifier"`
-	Title    string  `json:"title" jsonschema:"description=Page title"`
-	Content  string  `json:"content" jsonschema:"description=Markdown content"`
-	Created  Time    `json:"created" jsonschema:"description=Page creation Unix timestamp"`
-	Modified Time    `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Revision string         `json:"revision" jsonschema:"description=Canonical page content revision"`
+	ID       ksid.ID        `json:"id" jsonschema:"description=Node identifier"`
+	Title    string         `json:"title" jsonschema:"description=Page title"`
+	Content  string         `json:"content" jsonschema:"description=Markdown content"`
+	Created  storagev1.Time `json:"created" jsonschema:"description=Page creation Unix timestamp"`
+	Modified storagev1.Time `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }
 
 // CreatePageResponse is a response from creating a page.
@@ -488,22 +459,19 @@ type UpdatePageResponse struct {
 
 // UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.
 type UpdatePageFrontmatterResponse struct {
-	ID       ksid.ID `json:"id" jsonschema:"description=Node identifier"`
-	Modified Time    `json:"modified" jsonschema:"description=Node revision after the update"`
+	ID       ksid.ID        `json:"id" jsonschema:"description=Node identifier"`
+	Modified storagev1.Time `json:"modified" jsonschema:"description=Node revision after the update"`
 }
-
-// DeletePageResponse is a response from deleting a page.
-type DeletePageResponse = OkResponse
 
 // GetTableSchemaResponse is a response containing table schema.
 type GetTableSchemaResponse struct {
-	SchemaRevision string     `json:"schema_revision" jsonschema:"description=Revision of the table schema"`
-	ID             ksid.ID    `json:"id" jsonschema:"description=Node identifier"`
-	Title          string     `json:"title" jsonschema:"description=Table title"`
-	Properties     []Property `json:"properties" jsonschema:"description=Table schema"`
-	Views          []View     `json:"views,omitempty" jsonschema:"description=Saved view configurations"`
-	Created        Time       `json:"created" jsonschema:"description=Table creation Unix timestamp"`
-	Modified       Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	SchemaRevision string         `json:"schema_revision" jsonschema:"description=Revision of the table schema"`
+	ID             ksid.ID        `json:"id" jsonschema:"description=Node identifier"`
+	Title          string         `json:"title" jsonschema:"description=Table title"`
+	Properties     []Property     `json:"properties" jsonschema:"description=Table schema"`
+	Views          []View         `json:"views,omitempty" jsonschema:"description=Saved view configurations"`
+	Created        storagev1.Time `json:"created" jsonschema:"description=Table creation Unix timestamp"`
+	Modified       storagev1.Time `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }
 
 // CreateTableUnderParentResponse is a response from creating a table under a parent.
@@ -532,8 +500,8 @@ type DataRecordResponse struct {
 	Revision string         `json:"revision" jsonschema:"description=Canonical record revision"`
 	ID       ksid.ID        `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
-	Created  Time           `json:"created" jsonschema:"description=Record creation Unix timestamp"`
-	Modified Time           `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Created  storagev1.Time `json:"created" jsonschema:"description=Record creation Unix timestamp"`
+	Modified storagev1.Time `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }
 
 // --- Global Admin Responses ---
@@ -555,20 +523,20 @@ type AdminOrgDetail struct {
 	Name           string                 `json:"name" jsonschema:"description=Organization name"`
 	MemberCount    int                    `json:"member_count" jsonschema:"description=Number of members"`
 	WorkspaceCount int                    `json:"workspace_count" jsonschema:"description=Number of workspaces"`
-	Created        Time                   `json:"created" jsonschema:"description=Creation timestamp"`
+	Created        storagev1.Time         `json:"created" jsonschema:"description=Creation timestamp"`
 	Workspaces     []AdminWorkspaceDetail `json:"workspaces" jsonschema:"description=Workspace details"`
 }
 
 // AdminWorkspaceDetail contains workspace details for the admin dashboard.
 type AdminWorkspaceDetail struct {
-	ID           ksid.ID `json:"id" jsonschema:"description=Workspace identifier"`
-	OrgID        ksid.ID `json:"org_id" jsonschema:"description=Parent organization ID"`
-	Name         string  `json:"name" jsonschema:"description=Workspace name"`
-	MemberCount  int     `json:"member_count" jsonschema:"description=Number of members"`
-	PageCount    int     `json:"page_count" jsonschema:"description=Number of pages"`
-	StorageBytes int64   `json:"storage_bytes" jsonschema:"description=Storage usage in bytes"`
-	GitCommits   int     `json:"git_commits" jsonschema:"description=Number of git commits"`
-	Created      Time    `json:"created" jsonschema:"description=Creation timestamp"`
+	ID           ksid.ID        `json:"id" jsonschema:"description=Workspace identifier"`
+	OrgID        ksid.ID        `json:"org_id" jsonschema:"description=Parent organization ID"`
+	Name         string         `json:"name" jsonschema:"description=Workspace name"`
+	MemberCount  int            `json:"member_count" jsonschema:"description=Number of members"`
+	PageCount    int            `json:"page_count" jsonschema:"description=Number of pages"`
+	StorageBytes int64          `json:"storage_bytes" jsonschema:"description=Storage usage in bytes"`
+	GitCommits   int            `json:"git_commits" jsonschema:"description=Number of git commits"`
+	Created      storagev1.Time `json:"created" jsonschema:"description=Creation timestamp"`
 }
 
 // AdminRequestMetrics contains request throughput metrics.
@@ -603,9 +571,6 @@ type NotionImportStatusResponse struct {
 	Errors     int    `json:"errors,omitempty" jsonschema:"description=Number of errors encountered"`
 	DurationMs int64  `json:"duration_ms,omitempty" jsonschema:"description=Import duration in milliseconds"`
 }
-
-// NotionImportCancelResponse is a response from cancelling a Notion import.
-type NotionImportCancelResponse = OkResponse
 
 // --- Server Config Responses ---
 
@@ -645,9 +610,6 @@ type ServerConfigResponse struct {
 	RateLimits RateLimitsConfigResponse `json:"rate_limits" jsonschema:"description=Rate limiting configuration"`
 }
 
-// UpdateServerConfigResponse is a response from updating server configuration.
-type UpdateServerConfigResponse = OkResponse
-
 // --- Notification Responses ---
 
 // ListNotificationsResponse is a response containing paginated notifications.
@@ -666,18 +628,3 @@ type UnreadCountResponse struct {
 type VAPIDKeyResponse struct {
 	PublicKey string `json:"public_key"`
 }
-
-// MarkNotificationReadResponse is a response from marking a notification read.
-type MarkNotificationReadResponse = OkResponse
-
-// MarkAllNotificationsReadResponse is a response from marking all notifications read.
-type MarkAllNotificationsReadResponse = OkResponse
-
-// DeleteNotificationResponse is a response from deleting a notification.
-type DeleteNotificationResponse = OkResponse
-
-// PushSubscribeResponse is a response from subscribing to push notifications.
-type PushSubscribeResponse = OkResponse
-
-// PushUnsubscribeResponse is a response from unsubscribing from push notifications.
-type PushUnsubscribeResponse = OkResponse
