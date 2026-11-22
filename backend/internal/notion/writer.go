@@ -227,7 +227,7 @@ func (w *Writer) WriteRecords(nodeID ksid.ID, properties []contentv1.Property, r
 	}
 
 	for _, record := range records {
-		if err := table.Append(record); err != nil {
+		if err := table.Append(record, nil); err != nil {
 			return fmt.Errorf("failed to append record: %w", err)
 		}
 	}
@@ -242,7 +242,7 @@ func (w *Writer) AppendRecord(nodeID ksid.ID, record *contentv1.DataRecord) erro
 		return err
 	}
 
-	if err := table.Append(record); err != nil {
+	if err := table.Append(record, nil); err != nil {
 		return fmt.Errorf("failed to append record: %w", err)
 	}
 

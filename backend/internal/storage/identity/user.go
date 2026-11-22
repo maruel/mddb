@@ -115,7 +115,7 @@ func (s *UserService) Create(email, password, name string) (*identityv1.User, er
 		},
 		PasswordHash: string(hash),
 	}
-	if err := s.table.Append(stored); err != nil {
+	if err := s.table.Append(stored, nil); err != nil {
 		return nil, err
 	}
 	user := stored.User

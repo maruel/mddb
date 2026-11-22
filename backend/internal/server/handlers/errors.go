@@ -9,11 +9,22 @@ import (
 	"net/http"
 
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 )
+
+// ContentError maps storage-owned quota admission failures to the API contract,
+// including errors wrapped by mutation handlers. Other errors retain their meaning.
+func ContentError(err error) error {
+	if quota, ok := errors.AsType[*content.QuotaError](err); ok {
+		return dto.QuotaExceededInt64(quota.Resource, quota.Limit)
+	}
+	return err
+}
 
 // writeErrorResponse writes an APIError as a JSON response.
 // Use this in raw http.HandlerFunc handlers that don't use server.Wrap.
 func writeErrorResponse(w http.ResponseWriter, err error) {
+	err = ContentError(err)
 	statusCode := http.StatusInternalServerError
 	errorCode := dto.ErrorCodeInternal
 	message := "internal error"

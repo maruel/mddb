@@ -28,10 +28,10 @@ func TestUniqueIndex(t *testing.T) {
 		}
 
 		// Append rows
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.Append(&testRow{ID: 2, Name: "bob"}); err != nil {
+		if err := table.Append(&testRow{ID: 2, Name: "bob"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,7 +47,7 @@ func TestUniqueIndex(t *testing.T) {
 		}
 
 		// Test update with key change
-		if _, err := table.Update(&testRow{ID: 1, Name: "alice-renamed"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 1, Name: "alice-renamed"}, nil); err != nil {
 			t.Fatal(err)
 		}
 		if got := byName.Get("alice"); got != nil {
@@ -58,7 +58,7 @@ func TestUniqueIndex(t *testing.T) {
 		}
 
 		// Test update without key change
-		if _, err := table.Update(&testRow{ID: 2, Name: "bob"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 2, Name: "bob"}, nil); err != nil {
 			t.Fatal(err)
 		}
 		if got := byName.Get("bob"); got == nil || got.ID != 2 {
@@ -85,10 +85,10 @@ func TestUniqueIndex(t *testing.T) {
 		}
 
 		// Add data before creating index
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.Append(&testRow{ID: 2, Name: "bob"}); err != nil {
+		if err := table.Append(&testRow{ID: 2, Name: "bob"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -115,12 +115,12 @@ func TestUniqueIndex(t *testing.T) {
 			return string(r.Name[0])
 		})
 
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
 		// Update without changing the indexed key
-		if _, err := table.Update(&testRow{ID: 1, Name: "amy"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 1, Name: "amy"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -156,13 +156,13 @@ func TestIndex(t *testing.T) {
 		}
 
 		// Append rows
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.Append(&testRow{ID: 2, Name: "adam"}); err != nil {
+		if err := table.Append(&testRow{ID: 2, Name: "adam"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.Append(&testRow{ID: 3, Name: "bob"}); err != nil {
+		if err := table.Append(&testRow{ID: 3, Name: "bob"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -180,7 +180,7 @@ func TestIndex(t *testing.T) {
 		}
 
 		// Test update with key change
-		if _, err := table.Update(&testRow{ID: 1, Name: "zelda"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 1, Name: "zelda"}, nil); err != nil {
 			t.Fatal(err)
 		}
 		ids = collectIDs(byFirstLetter.Iter("a"))
@@ -210,10 +210,10 @@ func TestIndex(t *testing.T) {
 		}
 
 		// Add data before creating index
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := table.Append(&testRow{ID: 2, Name: "adam"}); err != nil {
+		if err := table.Append(&testRow{ID: 2, Name: "adam"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -242,7 +242,7 @@ func TestIndex(t *testing.T) {
 
 		// Add multiple rows with same key
 		for i := 1; i <= 5; i++ {
-			if err := table.Append(&testRow{ID: i, Name: "a" + string(rune('0'+i))}); err != nil {
+			if err := table.Append(&testRow{ID: i, Name: "a" + string(rune('0'+i))}, nil); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -271,12 +271,12 @@ func TestIndex(t *testing.T) {
 			return string(r.Name[0])
 		})
 
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
 		// Update without changing the indexed key (still starts with 'a')
-		if _, err := table.Update(&testRow{ID: 1, Name: "amy"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 1, Name: "amy"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -298,7 +298,7 @@ func TestIndex(t *testing.T) {
 		})
 
 		// Add single row with key "a"
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -326,12 +326,12 @@ func TestIndex(t *testing.T) {
 		})
 
 		// Add single row with key "a"
-		if err := table.Append(&testRow{ID: 1, Name: "alice"}); err != nil {
+		if err := table.Append(&testRow{ID: 1, Name: "alice"}, nil); err != nil {
 			t.Fatal(err)
 		}
 
 		// Update to change key from "a" to "z"
-		if _, err := table.Update(&testRow{ID: 1, Name: "zelda"}); err != nil {
+		if _, err := table.Update(&testRow{ID: 1, Name: "zelda"}, nil); err != nil {
 			t.Fatal(err)
 		}
 

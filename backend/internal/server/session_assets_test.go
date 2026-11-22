@@ -3,6 +3,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -46,7 +47,7 @@ func TestSessionAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.SaveAsset(t.Context(), page.ID, "photo #1.png", []byte("image data"), handlers.GitAuthor(user)); err != nil {
+	if _, err := store.SaveAsset(t.Context(), page.ID, "photo #1.png", bytes.NewReader([]byte("image data")), int64(len([]byte("image data"))), handlers.GitAuthor(user)); err != nil {
 		t.Fatal(err)
 	}
 	cfg := &handlers.Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret})}

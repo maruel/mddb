@@ -59,7 +59,7 @@ func (s *WorkspaceInvitationService) Create(email string, wsID ksid.ID, role ide
 		ExpiresAt:   storagev1.ToTime(time.Now().Add(7 * 24 * time.Hour)), // 7 days
 		Created:     storagev1.Now(),
 	}
-	if err := s.table.Append(invitation); err != nil {
+	if err := s.table.Append(invitation, nil); err != nil {
 		return nil, err
 	}
 	return invitation, nil

@@ -172,10 +172,10 @@ func TestTable(t *testing.T) {
 			}{
 				{"empty table", func() {}, 0},
 				{"one row", func() {
-					_ = table.Append(&testRow{ID: 1, Name: "One"})
+					_ = table.Append(&testRow{ID: 1, Name: "One"}, nil)
 				}, 1},
 				{"two rows", func() {
-					_ = table.Append(&testRow{ID: 2, Name: "Two"})
+					_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
 				}, 2},
 			}
 
@@ -195,8 +195,8 @@ func TestTable(t *testing.T) {
 			table, _ := setupTable(t)
 
 			// Add test data
-			_ = table.Append(&testRow{ID: 10, Name: "Ten"})
-			_ = table.Append(&testRow{ID: 20, Name: "Twenty"})
+			_ = table.Append(&testRow{ID: 10, Name: "Ten"}, nil)
+			_ = table.Append(&testRow{ID: 20, Name: "Twenty"}, nil)
 
 			tests := []struct {
 				name   string
@@ -229,7 +229,7 @@ func TestTable(t *testing.T) {
 		t.Run("returns clone", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"}, nil)
 			got := table.Get(ksid.ID(1))
 			got.Name = "Modified"
 
@@ -251,7 +251,7 @@ func TestTable(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 			for _, row := range []*testRow{{ID: 1, Name: "One"}, {ID: 2, Name: "Two"}, {ID: 3, Name: "Three"}} {
-				if err := table.Append(row); err != nil {
+				if err := table.Append(row, nil); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -294,7 +294,7 @@ func TestTable(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if err := table.Append(&validatingRow{ID: 1, Name: "One"}); err != nil {
+					if err := table.Append(&validatingRow{ID: 1, Name: "One"}, nil); err != nil {
 						t.Fatal(err)
 					}
 					if n, err := table.UpdateFunc(update); err == nil || n != 0 {
@@ -318,7 +318,7 @@ func TestTable(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 			for _, row := range []*testRow{{ID: 1, Name: "One"}, {ID: 2, Name: "Two"}, {ID: 3, Name: "Three"}, {ID: 4, Name: "Four"}} {
-				if err := table.Append(row); err != nil {
+				if err := table.Append(row, nil); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -362,9 +362,9 @@ func TestTable(t *testing.T) {
 			table, path := setupTable(t)
 
 			// Add test data
-			_ = table.Append(&testRow{ID: 1, Name: "One"})
-			_ = table.Append(&testRow{ID: 2, Name: "Two"})
-			_ = table.Append(&testRow{ID: 3, Name: "Three"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"}, nil)
+			_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
+			_ = table.Append(&testRow{ID: 3, Name: "Three"}, nil)
 
 			t.Run("delete existing row", func(t *testing.T) {
 				deleted, err := table.Delete(ksid.ID(2))
@@ -413,8 +413,8 @@ func TestTable(t *testing.T) {
 		t.Run("delete first row", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "One"})
-			_ = table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"}, nil)
+			_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
 
 			deleted, err := table.Delete(ksid.ID(1))
 			if err != nil {
@@ -434,8 +434,8 @@ func TestTable(t *testing.T) {
 		t.Run("delete last row", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "One"})
-			_ = table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"}, nil)
+			_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
 
 			deleted, err := table.Delete(ksid.ID(2))
 			if err != nil {
@@ -455,14 +455,14 @@ func TestTable(t *testing.T) {
 		t.Run("returns clone", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "Original"})
-			_ = table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"}, nil)
+			_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
 
 			deleted, _ := table.Delete(ksid.ID(1))
 			deleted.Name = "Modified"
 
 			// Re-add and verify it's not affected by mutation
-			_ = table.Append(&testRow{ID: 1, Name: "Readded"})
+			_ = table.Append(&testRow{ID: 1, Name: "Readded"}, nil)
 			got := table.Get(ksid.ID(1))
 			if got.Name != "Readded" {
 				t.Error("Delete() returned reference instead of clone")
@@ -473,14 +473,14 @@ func TestTable(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		t.Run("failed publication", func(t *testing.T) {
 			checkFailedPublication(t, func(table *Table[*testRow]) error {
-				_, err := table.Update(&testRow{ID: 10, Name: "changed"})
+				_, err := table.Update(&testRow{ID: 10, Name: "changed"}, nil)
 				return err
 			})
 		})
 		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "Update") })
 		t.Run("open reader keeps its snapshot", func(t *testing.T) {
 			table, path := setupTable(t)
-			if err := table.Append(&testRow{ID: 1, Name: "Original"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "Original"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.Chmod(path, 0o640); err != nil { //nolint:gosec // G302: verifies preservation of explicit permissions
@@ -499,7 +499,7 @@ func TestTable(t *testing.T) {
 					t.Error(err)
 				}
 			})
-			if _, err := table.Update(&testRow{ID: 1, Name: "Updated"}); err != nil {
+			if _, err := table.Update(&testRow{ID: 1, Name: "Updated"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			// Git can hold this descriptor or mmap while another request saves.
@@ -531,10 +531,10 @@ func TestTable(t *testing.T) {
 			table, path := setupTable(t)
 
 			// Add test data
-			_ = table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"}, nil)
 
 			t.Run("update existing row", func(t *testing.T) {
-				prev, err := table.Update(&testRow{ID: 1, Name: "Updated"})
+				prev, err := table.Update(&testRow{ID: 1, Name: "Updated"}, nil)
 				if err != nil {
 					t.Fatalf("Update error: %v", err)
 				}
@@ -549,7 +549,7 @@ func TestTable(t *testing.T) {
 			})
 
 			t.Run("update non-existing row", func(t *testing.T) {
-				prev, err := table.Update(&testRow{ID: 999, Name: "New"})
+				prev, err := table.Update(&testRow{ID: 999, Name: "New"}, nil)
 				if err != nil {
 					t.Fatalf("Update error: %v", err)
 				}
@@ -577,10 +577,10 @@ func TestTable(t *testing.T) {
 				t.Fatalf("NewTable failed: %v", err)
 			}
 
-			_ = table.Append(&validatingRow{ID: 1, Name: "Valid"})
+			_ = table.Append(&validatingRow{ID: 1, Name: "Valid"}, nil)
 
 			t.Run("validation error", func(t *testing.T) {
-				_, err := table.Update(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true})
+				_, err := table.Update(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true}, nil)
 				if err == nil {
 					t.Error("Update() expected validation error, got nil")
 				}
@@ -604,8 +604,8 @@ func TestTable(t *testing.T) {
 			t.Run("loads existing table", func(t *testing.T) {
 				table, path := setupTable(t)
 
-				_ = table.Append(&testRow{ID: 1, Name: "One"})
-				_ = table.Append(&testRow{ID: 2, Name: "Two"})
+				_ = table.Append(&testRow{ID: 1, Name: "One"}, nil)
+				_ = table.Append(&testRow{ID: 2, Name: "Two"}, nil)
 
 				table2, err := NewTable[*testRow](path)
 				if err != nil {
@@ -714,7 +714,7 @@ not valid json
 				{ID: 40, Name: "Forty"},
 			}
 			for _, r := range iterRows {
-				_ = table.Append(r)
+				_ = table.Append(r, nil)
 			}
 
 			tests := []struct {
@@ -747,7 +747,7 @@ not valid json
 			table, _ := setupTable(t)
 
 			for i := 1; i <= 10; i++ {
-				_ = table.Append(&testRow{ID: i, Name: "Row"})
+				_ = table.Append(&testRow{ID: i, Name: "Row"}, nil)
 			}
 
 			count := 0
@@ -766,7 +766,7 @@ not valid json
 		t.Run("returns clones", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"}, nil)
 
 			for row := range table.Iter(0) {
 				row.Name = "Modified"
@@ -780,10 +780,10 @@ not valid json
 
 		t.Run("does not hold read lock during yield", func(t *testing.T) {
 			table, _ := setupTable(t)
-			if err := table.Append(&testRow{ID: 1, Name: "First"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "First"}, nil); err != nil {
 				t.Fatal(err)
 			}
-			if err := table.Append(&testRow{ID: 2, Name: "Second"}); err != nil {
+			if err := table.Append(&testRow{ID: 2, Name: "Second"}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -806,7 +806,7 @@ not valid json
 						done <- err
 						return
 					}
-					done <- table.Append(&testRow{ID: 3, Name: "Third"})
+					done <- table.Append(&testRow{ID: 3, Name: "Third"}, nil)
 				})
 				select {
 				case err := <-done:
@@ -856,7 +856,7 @@ not valid json
 				t.Fatal(err)
 			}
 			table, path := setupTable(t)
-			if err := table.Append(&testRow{ID: 10, Name: "before"}); err != nil {
+			if err := table.Append(&testRow{ID: 10, Name: "before"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			before, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
@@ -864,7 +864,7 @@ not valid json
 				t.Fatal(err)
 			}
 			row := &testRow{ID: 20, Name: strings.Repeat("large row", 512)}
-			if err := table.Append(row); err == nil {
+			if err := table.Append(row, nil); err == nil {
 				t.Fatal("partial write unexpectedly succeeded")
 			}
 			after, err := os.ReadFile(path) //nolint:gosec // G304: test-owned path.
@@ -878,7 +878,7 @@ not valid json
 				t.Fatal("failed append changed cached rows")
 			}
 			row.Name = "retry"
-			if err := table.Append(row); err != nil {
+			if err := table.Append(row, nil); err != nil {
 				t.Fatalf("retry failed: %v", err)
 			}
 			reloaded, err := NewTable[*testRow](path)
@@ -890,16 +890,16 @@ not valid json
 			}
 		})
 		t.Run("failed publication", func(t *testing.T) {
-			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 40, Name: "forty"}) })
+			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 40, Name: "forty"}, nil) })
 		})
 		t.Run("out-of-order failed publication", func(t *testing.T) {
-			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 20, Name: "twenty"}) })
+			checkFailedPublication(t, func(table *Table[*testRow]) error { return table.Append(&testRow{ID: 20, Name: "twenty"}, nil) })
 		})
 		t.Run("valid", func(t *testing.T) {
 			table, path := setupTable(t)
 
 			t.Run("append to empty table", func(t *testing.T) {
-				err := table.Append(&testRow{ID: 1, Name: "First"})
+				err := table.Append(&testRow{ID: 1, Name: "First"}, nil)
 				if err != nil {
 					t.Fatalf("Append error: %v", err)
 				}
@@ -909,7 +909,7 @@ not valid json
 			})
 
 			t.Run("append multiple rows", func(t *testing.T) {
-				err := table.Append(&testRow{ID: 2, Name: "Second"})
+				err := table.Append(&testRow{ID: 2, Name: "Second"}, nil)
 				if err != nil {
 					t.Fatalf("Append error: %v", err)
 				}
@@ -933,7 +933,7 @@ not valid json
 			t.Run("zero ID", func(t *testing.T) {
 				table, _ := setupTable(t)
 
-				err := table.Append(&testRow{ID: 0, Name: "Zero"})
+				err := table.Append(&testRow{ID: 0, Name: "Zero"}, nil)
 				if err == nil {
 					t.Error("Append() expected error for zero ID, got nil")
 				}
@@ -942,8 +942,8 @@ not valid json
 			t.Run("duplicate ID", func(t *testing.T) {
 				table, _ := setupTable(t)
 
-				_ = table.Append(&testRow{ID: 1, Name: "First"})
-				err := table.Append(&testRow{ID: 1, Name: "Duplicate"})
+				_ = table.Append(&testRow{ID: 1, Name: "First"}, nil)
+				err := table.Append(&testRow{ID: 1, Name: "Duplicate"}, nil)
 				if err == nil {
 					t.Error("Append() expected error for duplicate ID, got nil")
 				}
@@ -956,7 +956,7 @@ not valid json
 					t.Fatalf("NewTable failed: %v", err)
 				}
 
-				err = table.Append(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true})
+				err = table.Append(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true}, nil)
 				if err == nil {
 					t.Error("Append() expected validation error, got nil")
 				}
@@ -974,7 +974,7 @@ not valid json
 					schema: jsonldbv1.SchemaHeader{Version: "1.0"},
 				}
 
-				err := table.Append(&testRow{ID: 1, Name: "test"})
+				err := table.Append(&testRow{ID: 1, Name: "test"}, nil)
 				if err == nil {
 					t.Error("Append to non-existent directory should fail")
 				}
@@ -1005,7 +1005,7 @@ not valid json
 
 			// Append row with blob
 			row := &blobTestRow{ID: 1, Name: "test", Content: blob}
-			if err := table.Append(row); err != nil {
+			if err := table.Append(row, nil); err != nil {
 				t.Fatalf("Append error: %v", err)
 			}
 
@@ -1050,7 +1050,7 @@ not valid json
 				t.Fatal(err)
 			}
 
-			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1089,7 +1089,7 @@ not valid json
 				t.Fatal(err)
 			}
 
-			if err := table.Append(&blobTestRow{ID: 1, Name: "no-blob"}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "no-blob"}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1120,7 +1120,7 @@ not valid json
 			}
 
 			// Append and then delete
-			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1157,10 +1157,10 @@ not valid json
 			}
 
 			// Two rows reference the same blob
-			if err := table.Append(&blobTestRow{ID: 1, Name: "row1", Content: blob}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "row1", Content: blob}, nil); err != nil {
 				t.Fatal(err)
 			}
-			if err := table.Append(&blobTestRow{ID: 2, Name: "row2", Content: blob}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 2, Name: "row2", Content: blob}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1208,14 +1208,14 @@ not valid json
 			}
 
 			// Append row with blob
-			if err := table.Append(&blobTestRow{ID: 1, Name: "original", Content: blob}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "original", Content: blob}, nil); err != nil {
 				t.Fatal(err)
 			}
 
 			// Update row, keeping the same blob
 			row := table.Get(ksid.ID(1))
 			row.Name = "updated"
-			if _, err := table.Update(row); err != nil {
+			if _, err := table.Update(row, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1270,7 +1270,7 @@ not valid json
 			}
 
 			// Only use the first blob
-			if err := table.Append(&blobTestRow{ID: 1, Name: "row", Content: keep}); err != nil {
+			if err := table.Append(&blobTestRow{ID: 1, Name: "row", Content: keep}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1343,7 +1343,7 @@ not valid json
 		t.Run("blob cleanup failure", func(t *testing.T) { checkBlobCleanupFailure(t, "Modify") })
 		t.Run("success", func(t *testing.T) {
 			table, _ := setupTable(t)
-			_ = table.Append(&testRow{ID: 1, Name: "original"})
+			_ = table.Append(&testRow{ID: 1, Name: "original"}, nil)
 
 			result, err := table.Modify(ksid.ID(1), func(row *testRow) error {
 				row.Name = "modified"
@@ -1376,7 +1376,7 @@ not valid json
 
 		t.Run("callback error", func(t *testing.T) {
 			table, _ := setupTable(t)
-			_ = table.Append(&testRow{ID: 1, Name: "original"})
+			_ = table.Append(&testRow{ID: 1, Name: "original"}, nil)
 
 			_, err := table.Modify(ksid.ID(1), func(row *testRow) error {
 				return errors.New("callback failed")
@@ -1395,7 +1395,7 @@ not valid json
 		t.Run("validation error", func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "test.jsonl")
 			table, _ := NewTable[*validatingRow](path)
-			_ = table.Append(&validatingRow{ID: 1, Name: "valid"})
+			_ = table.Append(&validatingRow{ID: 1, Name: "valid"}, nil)
 
 			_, err := table.Modify(ksid.ID(1), func(row *validatingRow) error {
 				row.FailValidate = true
@@ -1408,7 +1408,7 @@ not valid json
 
 		t.Run("notifies observers", func(t *testing.T) {
 			table, _ := setupTable(t)
-			_ = table.Append(&testRow{ID: 1, Name: "original"})
+			_ = table.Append(&testRow{ID: 1, Name: "original"}, nil)
 
 			obs := &mockObserver{}
 			table.AddObserver(obs)
@@ -1425,7 +1425,7 @@ not valid json
 
 		t.Run("returns clone", func(t *testing.T) {
 			table, _ := setupTable(t)
-			_ = table.Append(&testRow{ID: 1, Name: "original"})
+			_ = table.Append(&testRow{ID: 1, Name: "original"}, nil)
 
 			result, _ := table.Modify(ksid.ID(1), func(row *testRow) error {
 				row.Name = "modified"
@@ -1451,7 +1451,7 @@ not valid json
 			table.AddObserver(obs)
 
 			// Test OnAppend
-			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "one"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			if !slices.Equal(obs.appends, []int{1}) {
@@ -1459,7 +1459,7 @@ not valid json
 			}
 
 			// Test OnUpdate
-			if _, err := table.Update(&testRow{ID: 1, Name: "updated"}); err != nil {
+			if _, err := table.Update(&testRow{ID: 1, Name: "updated"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			if len(obs.updates) != 1 || obs.updates[0] != [2]int{1, 1} {
@@ -1483,7 +1483,7 @@ not valid json
 			table.AddObserver(obs1)
 			table.AddObserver(obs2)
 
-			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "one"}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1499,10 +1499,10 @@ not valid json
 			table, _ := setupTable(t)
 
 			// Add data before observer
-			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "one"}, nil); err != nil {
 				t.Fatal(err)
 			}
-			if err := table.Append(&testRow{ID: 2, Name: "two"}); err != nil {
+			if err := table.Append(&testRow{ID: 2, Name: "two"}, nil); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1522,12 +1522,12 @@ not valid json
 			table, _ := setupTable(t)
 
 			// Append rows in order
-			_ = table.Append(&testRow{ID: 10, Name: "ten"})
-			_ = table.Append(&testRow{ID: 20, Name: "twenty"})
-			_ = table.Append(&testRow{ID: 30, Name: "thirty"})
+			_ = table.Append(&testRow{ID: 10, Name: "ten"}, nil)
+			_ = table.Append(&testRow{ID: 20, Name: "twenty"}, nil)
+			_ = table.Append(&testRow{ID: 30, Name: "thirty"}, nil)
 
 			// Append row with lower ID (simulating clock drift)
-			err := table.Append(&testRow{ID: 15, Name: "fifteen"})
+			err := table.Append(&testRow{ID: 15, Name: "fifteen"}, nil)
 			if err != nil {
 				t.Fatalf("Append error: %v", err)
 			}
@@ -1557,9 +1557,9 @@ not valid json
 		t.Run("on append in order", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_ = table.Append(&testRow{ID: 1, Name: "one"})
-			_ = table.Append(&testRow{ID: 2, Name: "two"})
-			_ = table.Append(&testRow{ID: 3, Name: "three"})
+			_ = table.Append(&testRow{ID: 1, Name: "one"}, nil)
+			_ = table.Append(&testRow{ID: 2, Name: "two"}, nil)
+			_ = table.Append(&testRow{ID: 3, Name: "three"}, nil)
 
 			ids := make([]int, 0, 3)
 			for row := range table.Iter(0) {
@@ -1657,7 +1657,7 @@ not valid json
 			}
 
 			// Append a row to trigger file creation
-			if err := table.Append(&testRow{ID: 1, Name: "Test"}); err != nil {
+			if err := table.Append(&testRow{ID: 1, Name: "Test"}, nil); err != nil {
 				t.Fatalf("Append error: %v", err)
 			}
 
@@ -1737,7 +1737,7 @@ func TestDeriveBlobDir(t *testing.T) {
 func checkFailedPublication(t *testing.T, mutate func(*Table[*testRow]) error) {
 	table, path := setupTable(t)
 	for _, row := range []*testRow{{ID: 10, Name: "ten"}, {ID: 30, Name: "thirty"}} {
-		if err := table.Append(row); err != nil {
+		if err := table.Append(row, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1819,7 +1819,7 @@ func checkBlobCleanupFailure(t *testing.T, operation string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := table.Append(&blobTestRow{ID: 10, Name: "before", Content: blob}); err != nil {
+	if err := table.Append(&blobTestRow{ID: 10, Name: "before", Content: blob}, nil); err != nil {
 		t.Fatal(err)
 	}
 	index := NewUniqueIndex(table, func(row *blobTestRow) string { return row.Name })
@@ -1841,7 +1841,7 @@ func checkBlobCleanupFailure(t *testing.T, operation string) {
 			result = rows[0]
 		}
 	case "Update":
-		result, err = table.Update(&blobTestRow{ID: 10, Name: "after"})
+		result, err = table.Update(&blobTestRow{ID: 10, Name: "after"}, nil)
 	case "Modify":
 		result, err = table.Modify(10, func(row *blobTestRow) error { row.Name = "after"; row.Content = Blob{}; return nil })
 	}

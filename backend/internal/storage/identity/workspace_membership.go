@@ -85,7 +85,7 @@ func (s *WorkspaceMembershipService) Create(userID, wsID ksid.ID, role identityv
 		Role:        role,
 		Created:     storagev1.Now(),
 	}
-	if err := s.table.Append(membership); err != nil {
+	if err := s.table.Append(membership, nil); err != nil {
 		return nil, err
 	}
 	return membership, nil

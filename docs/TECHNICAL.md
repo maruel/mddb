@@ -400,8 +400,32 @@ table schemas and records, and retained assets. Git objects, administrative
 configuration, and temporary staging belong to physical disk policy instead.
 Replacement charges the difference between old and new stored content, not the
 full incoming payload. Deletion releases logical capacity; retained Git history
-can continue consuming physical disk. Enforcement does not yet cover every mutation or atomically reserve pooled
-capacity across workspaces.
+can continue consuming physical disk.
+
+Ordinary page creation/replacement/append and front matter, table metadata/schema
+and views, records, and assets enforce workspace ceilings in the shared repository
+mutation transaction. Each request admits one node, file replacement, or record;
+there is no ordinary multi-item batch endpoint. Completed individual requests are
+retained progress, and a rejected quota unit publishes no new content. Hybrid node
+creation checks both counts and its combined serialized bytes before writing.
+JSONL admission counts the actual staged serialized candidate for replacements,
+and the exact initial header, row and newline bytes for append. Staging is excluded
+from retained logical usage and is removed on rejection. Asset uploads keep multipart
+memory bounded and stream the parser-measured size into storage-owned admission
+and private atomic staging, including when the request-body ceiling is unlimited.
+The stored stream must match that exact size before publication; failed or
+mismatched streams preserve the existing asset and remove private staging. Equal-size and shrinking
+replacements stay available over a lowered ceiling; growth in another exceeded
+resource still rejects. The storage owner applies this policy to all callers,
+including administrators and direct in-process calls.
+
+Usage admission scans current content while holding the repository mutation gate;
+replaced store caches share that gate and do not own independent usage counters.
+The scan reads file metadata without parsing page bodies or re-encoding records.
+Unreadable accounting fails admission instead of becoming zero usage. Root
+administrative files, Git metadata, and private write staging are excluded.
+Hosted imports and application sync do not yet use this ordinary-write admission
+boundary. Pooled capacity is not yet atomically reserved across workspaces.
 
 Lowering an admission limit does not delete content, cancel admitted work, or
 revoke existing sessions. New growth must fit every applicable ceiling. Reads,

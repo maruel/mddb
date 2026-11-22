@@ -35,6 +35,7 @@ import (
 var testJWTSecret = []byte("test-secret-key-32-bytes-long!!!")
 
 type testEnv struct {
+	config        *Config
 	dataDir       string
 	server        *httptest.Server
 	services      *handlers.Services
@@ -155,6 +156,7 @@ func setupTestEnv(t testing.TB) *testEnv {
 	t.Cleanup(server.Close)
 
 	return &testEnv{
+		config:        cfg,
 		dataDir:       tempDir,
 		server:        server,
 		services:      svc,

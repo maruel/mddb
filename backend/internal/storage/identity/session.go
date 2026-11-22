@@ -140,7 +140,7 @@ func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo,
 	if s.table.Get(id) != nil {
 		return nil, errors.New("session already exists")
 	}
-	if err := s.table.Append(session); err != nil {
+	if err := s.table.Append(session, nil); err != nil {
 		// Append can install the row before a deferred file close reports failure.
 		// The caller needs that handle to audit and revoke the partial creation.
 		return s.table.Get(id), err

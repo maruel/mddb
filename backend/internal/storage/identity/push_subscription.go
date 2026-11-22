@@ -49,7 +49,7 @@ func (s *PushSubscriptionService) Create(userID ksid.ID, endpoint, p256dh, auth 
 		Auth:     auth,
 		Created:  storagev1.Now(),
 	}
-	if err := s.table.Append(sub); err != nil {
+	if err := s.table.Append(sub, nil); err != nil {
 		return nil, err
 	}
 	return sub.Clone(), nil

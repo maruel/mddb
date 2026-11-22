@@ -5,8 +5,10 @@ package content
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 	"sync"
 	"testing"
 	"testing/synctest"
+	"time"
 	"unicode/utf8"
 
 	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
@@ -526,7 +529,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := ws.SaveAsset(t.Context(), n.ID, ".user-note", []byte("user"), a); err != nil {
+			if _, err := ws.SaveAsset(t.Context(), n.ID, ".user-note", bytes.NewReader([]byte("user")), int64(len([]byte("user"))), a); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.WriteFile(filepath.Join(ws.pageDir(n.ID, 0), storage.AtomicFilePrefix+"interrupted"), []byte("temporary"), 0o600); err != nil {
@@ -797,7 +800,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := ws.SaveAsset(ctx, assetNode.ID, "retained.txt", []byte("asset"), a); err != nil {
+			if _, err := ws.SaveAsset(ctx, assetNode.ID, "retained.txt", bytes.NewReader([]byte("asset")), int64(len([]byte("asset"))), a); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := ws.ListNodeSummaries(ctx, nil, 0, 50); err != nil {
@@ -1293,7 +1296,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		assetData := []byte("test asset content")
 
 		t.Run("SaveAsset", func(t *testing.T) {
-			asset, err := ws.SaveAsset(ctx, nodeID, assetName, assetData, author)
+			asset, err := ws.SaveAsset(ctx, nodeID, assetName, bytes.NewReader(assetData), int64(len(assetData)), author)
 			if err != nil {
 				t.Fatalf("failed to save asset: %v", err)
 			}
@@ -1352,7 +1355,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 
 			// Upload an asset (as would happen during cover image upload)
 			imageData := []byte("fake image data")
-			asset, err := ws.SaveAsset(ctx, node.ID, "cover.jpg", imageData, author)
+			asset, err := ws.SaveAsset(ctx, node.ID, "cover.jpg", bytes.NewReader(imageData), int64(len(imageData)), author)
 			if err != nil {
 				t.Fatalf("failed to save asset: %v", err)
 			}
@@ -2003,6 +2006,490 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("WorkspaceAdmission", func(t *testing.T) {
+		t.Run("serialized page replacements and recovery", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Page", strings.Repeat("a", 200), author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, used, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxStorageBytes = used
+			ws.quotas = &q
+			snap, err := ws.ReadPageSnapshot(t.Context(), n.ID, 0, 4096)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.AppendPage(t.Context(), n.ID, "growth", snap.Revision, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("append at ceiling: %v", err)
+			}
+			if _, err := ws.UpdatePageFrontmatter(t.Context(), n.ID, "large icon", "cover", author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("front matter growth: %v", err)
+			}
+			if _, err := ws.UpdatePage(t.Context(), n.ID, "a much longer title", strings.Repeat("a", 200), snap.Revision, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("serialized header not charged: %v", err)
+			}
+			if _, err := ws.UpdatePage(t.Context(), n.ID, "Page", "stale", "wrong revision", author); !errors.Is(err, ErrRevisionConflict) {
+				t.Fatalf("stale write: %v", err)
+			}
+			_, after, err := ws.GetWorkspaceUsage()
+			if err != nil || after != used {
+				t.Fatalf("rejection changed usage: %d -> %d (%v)", used, after, err)
+			}
+			q.MaxStorageBytes = 0
+			q.MaxPages = 0
+			n, err = ws.UpdatePage(t.Context(), n.ID, "Page", strings.Repeat("b", 200), snap.Revision, author)
+			if err != nil {
+				t.Fatalf("equal replacement over zero ceiling: %v", err)
+			}
+			n, err = ws.UpdatePage(t.Context(), n.ID, "Page", "short", n.Revision, author)
+			if err != nil {
+				t.Fatalf("shrinking recovery: %v", err)
+			}
+			if _, err := ws.CreatePageUnderParent(t.Context(), 0, "blocked", "", author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("new page over zero count: %v", err)
+			}
+			if _, err := ws.DeletePage(t.Context(), n.ID, author); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("inherited zero permits existing shrinking content", func(t *testing.T) {
+			fs, ws, wsID := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Inherited", strings.Repeat("a", 100), author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			w, err := fs.wsSvc.Get(wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fs.orgSvc.Modify(w.OrganizationID, func(o *identityv1.Organization) error {
+				o.Quotas.MaxPages = 0
+				o.Quotas.MaxStorageBytes = 0
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error { w.Quotas.MaxPages = -1; w.Quotas.MaxStorageBytes = -1; return nil }); err != nil {
+				t.Fatal(err)
+			}
+			fs.InvalidateWorkspaceStore(wsID)
+			ws, err = fs.GetWorkspaceStore(t.Context(), wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ws.EffectiveQuotas().MaxPages != 0 || ws.EffectiveQuotas().MaxStorageBytes != 0 {
+				t.Fatal("zero not inherited")
+			}
+			snap, err := ws.ReadPageSnapshot(t.Context(), n.ID, 0, 4096)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.UpdatePage(t.Context(), n.ID, "Inherited", "short", snap.Revision, author); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.CreatePageUnderParent(t.Context(), 0, "blocked", "", author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("inherited zero creation: %v", err)
+			}
+		})
+
+		t.Run("table ceilings and schema recovery", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			q := ws.EffectiveQuotas()
+			q.MaxPages = 0
+			q.MaxTablesPerWorkspace = 1
+			q.MaxColumnsPerTable = 2
+			ws.quotas = &q
+			n, err := ws.CreateTableUnderParent(t.Context(), 0, "Table", []contentv1.Property{{Name: "a", Type: "text"}, {Name: "b", Type: "text"}}, author)
+			if err != nil {
+				t.Fatalf("table uses independent count: %v", err)
+			}
+			if _, err := ws.CreateNode(t.Context(), "extra", NodeTypeTable, 0, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("node table bypassed count: %v", err)
+			}
+			q.MaxColumnsPerTable = 0
+			n.Properties = n.Properties[:1]
+			if err := ws.WriteTable(t.Context(), n, false, author); err != nil {
+				t.Fatalf("schema shrink: %v", err)
+			}
+			n.Properties = append(n.Properties, contentv1.Property{Name: "new", Type: "text"})
+			if err := ws.WriteTable(t.Context(), n, false, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("schema growth over zero: %v", err)
+			}
+			_, used, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q.MaxStorageBytes = used
+			n.Properties = n.Properties[:1]
+			n.Title = strings.Repeat("large", 100)
+			if err := ws.WriteTable(t.Context(), n, false, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("metadata growth: %v", err)
+			}
+			if err := ws.DeleteTable(t.Context(), n.ID, author); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("first direct JSONL append consumes a table slot", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Page", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxTablesPerWorkspace = 0
+			ws.quotas = &q
+			if err := ws.AppendRecord(t.Context(), n.ID, &contentv1.DataRecord{ID: ksid.NewID()}, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("implicit table bypass: %v", err)
+			}
+			if _, err := os.Stat(ws.tableRecordsFile(n.ID, 0)); !os.IsNotExist(err) {
+				t.Fatalf("rejected append left data file: %v", err)
+			}
+		})
+
+		t.Run("metadata shares an existing JSONL table slot", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Hybrid", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxTablesPerWorkspace = 1
+			ws.quotas = &q
+			if err := ws.AppendRecord(t.Context(), n.ID, &contentv1.DataRecord{ID: ksid.NewID()}, author); err != nil {
+				t.Fatal(err)
+			}
+			_, used, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			limit := q.MaxStorageBytes
+			q.MaxStorageBytes = used
+			if err := ws.WriteTable(t.Context(), &Node{ID: n.ID, Title: "Hybrid", Type: NodeTypeTable}, true, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("metadata bytes bypassed admission: %v", err)
+			}
+			if _, err := os.Stat(ws.tableMetadataFile(n.ID, 0)); !os.IsNotExist(err) {
+				t.Fatalf("rejected metadata published: %v", err)
+			}
+			q.MaxStorageBytes = limit
+			if err := ws.WriteTable(t.Context(), &Node{ID: n.ID, Title: "Hybrid", Type: NodeTypeTable}, true, author); err != nil {
+				t.Fatalf("existing JSONL table charged twice: %v", err)
+			}
+			u, err := ws.scanUsage()
+			if err != nil || u.tables != 1 {
+				t.Fatalf("table count=%d error=%v", u.tables, err)
+			}
+		})
+		t.Run("hybrid combined count and byte ceilings", func(t *testing.T) {
+			fixed := time.Now().Truncate(time.Second).Add(123 * time.Millisecond)
+			synctest.Test(t, func(t *testing.T) {
+				// Pin serialized timestamps after the KSID epoch without wall-clock waits.
+				time.Sleep(time.Until(fixed))
+				_, ws, _ := initWS(t)
+				_, before, err := ws.GetWorkspaceUsage()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ws.CreateNode(t.Context(), "Hybrid", NodeTypeHybrid, 0, author); err != nil {
+					t.Fatal(err)
+				}
+				_, used, err := ws.GetWorkspaceUsage()
+				if err != nil {
+					t.Fatal(err)
+				}
+				unit := used - before
+				q := ws.EffectiveQuotas()
+				ws.quotas = &q
+				for _, counts := range [][2]int{{1, 2}, {2, 1}} {
+					q.MaxPages = counts[0]
+					q.MaxTablesPerWorkspace = counts[1]
+					if _, err := ws.CreateNode(t.Context(), "Hybrid", NodeTypeHybrid, 0, author); !errors.Is(err, errQuotaExceeded) {
+						t.Fatalf("hybrid count ceilings %v: %v", counts, err)
+					}
+				}
+				q.MaxPages = 2
+				q.MaxTablesPerWorkspace = 2
+				q.MaxStorageBytes = used + unit - 1
+				if _, err := ws.CreateNode(t.Context(), "Hybrid", NodeTypeHybrid, 0, author); !errors.Is(err, errQuotaExceeded) {
+					t.Fatalf("combined hybrid byte ceiling: %v", err)
+				}
+				u, err := ws.scanUsage()
+				if err != nil || u.pages != 1 || u.tables != 1 || u.bytes != used {
+					t.Fatalf("rejected hybrid published partial data: %+v (%v)", u, err)
+				}
+				q.MaxStorageBytes = used + unit
+				if _, err := ws.CreateNode(t.Context(), "Hybrid", NodeTypeHybrid, 0, author); err != nil {
+					t.Fatalf("hybrid at exact byte ceiling: %v", err)
+				}
+			})
+		})
+		t.Run("view replacement and shrinking recovery", func(t *testing.T) {
+			fixed := time.Now().Truncate(time.Second).Add(123 * time.Millisecond)
+			synctest.Test(t, func(t *testing.T) {
+				// Pin serialized timestamps after the KSID epoch without wall-clock waits.
+				time.Sleep(time.Until(fixed))
+				_, ws, _ := initWS(t)
+				n, err := ws.CreateTableUnderParent(t.Context(), 0, "Views", nil, author)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, used, err := ws.GetWorkspaceUsage()
+				if err != nil {
+					t.Fatal(err)
+				}
+				q := ws.EffectiveQuotas()
+				q.MaxStorageBytes = used
+				ws.quotas = &q
+				n.Views = []contentv1.View{{ID: ksid.NewID(), Name: "Long view name", Type: contentv1.ViewTypeTable}}
+				if err := ws.WriteTable(t.Context(), n, false, author); !errors.Is(err, errQuotaExceeded) {
+					t.Fatalf("view growth: %v", err)
+				}
+				stored, err := ws.ReadTable(n.ID)
+				if err != nil || len(stored.Views) != 0 {
+					t.Fatalf("rejected view persisted: %+v (%v)", stored, err)
+				}
+				q.MaxStorageBytes = 1 << 30
+				if err := ws.WriteTable(t.Context(), n, false, author); err != nil {
+					t.Fatal(err)
+				}
+				_, used, err = ws.GetWorkspaceUsage()
+				if err != nil {
+					t.Fatal(err)
+				}
+				q.MaxStorageBytes = used
+				n.Views[0].Name = "Same size name"
+				if err := ws.WriteTable(t.Context(), n, false, author); err != nil {
+					t.Fatalf("equal view replacement: %v", err)
+				}
+				q.MaxStorageBytes = 0
+				n.Views[0].Name = "Short"
+				if err := ws.WriteTable(t.Context(), n, false, author); err != nil {
+					t.Fatalf("view shrinking recovery: %v", err)
+				}
+			})
+		})
+
+		t.Run("exact JSONL bytes and record recovery", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreateTableUnderParent(t.Context(), 0, "Records", nil, author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := &contentv1.DataRecord{ID: ksid.NewID(), Data: map[string]any{"text": strings.Repeat("a", 200)}, Created: storagev1.Now(), Modified: storagev1.Time(1_000_000_000_999)}
+			_, used, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			row, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxStorageBytes = used + int64(len(row))
+			ws.quotas = &q
+			if err := ws.AppendRecord(t.Context(), n.ID, r, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("header/newlines uncharged: %v", err)
+			}
+			if _, err := os.Stat(ws.tableRecordsFile(n.ID, 0)); !os.IsNotExist(err) {
+				t.Fatalf("rejected first append left table: %v", err)
+			}
+			q.MaxStorageBytes = 1 << 30
+			if err := ws.AppendRecord(t.Context(), n.ID, r, author); err != nil {
+				t.Fatal(err)
+			}
+			_, used, err = ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q.MaxStorageBytes = used
+			update := func() error {
+				records, err := ws.ReadRecordsPage(n.ID, 0, 1)
+				if err != nil {
+					return err
+				}
+				return replaceTestRecord(t, t.Context(), ws, n.ID, records[0], r.Data, author)
+			}
+			r.Data["text"] = strings.Repeat("b", 200)
+			if err := update(); err != nil {
+				t.Fatalf("equal record: %v", err)
+			}
+			published, err := os.ReadFile(ws.tableRecordsFile(n.ID, 0))
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Data["text"] = strings.Repeat("long", 200)
+			if err := update(); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("record growth: %v", err)
+			}
+			after, err := os.ReadFile(ws.tableRecordsFile(n.ID, 0))
+			if err != nil || !bytes.Equal(after, published) {
+				t.Fatalf("rejected staged JSONL changed publication (%v)", err)
+			}
+			staging, err := filepath.Glob(filepath.Join(ws.pageDir(n.ID, 0), ".jsonldb-*"))
+			if err != nil || len(staging) != 0 {
+				t.Fatalf("retained JSONL staging: %v (%v)", staging, err)
+			}
+			q.MaxRecordsPerTable = 0
+			q.MaxStorageBytes = 0
+			r.Data["text"] = "short"
+			if err := update(); err != nil {
+				t.Fatalf("record shrinking: %v", err)
+			}
+			if err := ws.AppendRecord(t.Context(), n.ID, &contentv1.DataRecord{ID: ksid.NewID()}, author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("record count: %v", err)
+			}
+			records, err := ws.ReadRecordsPage(n.ID, 0, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			revision, err := RecordRevision(records[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ws.DeleteRecord(t.Context(), n.ID, r.ID, revision, author); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("asset net replacement and recovery", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Assets", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", bytes.NewReader([]byte("abcd")), int64(len([]byte("abcd"))), author); err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxAssetSizeBytes = 0
+			q.MaxStorageBytes = 0
+			ws.quotas = &q
+			for _, data := range []string{"efgh", "abc"} {
+				if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", bytes.NewReader([]byte(data)), int64(len([]byte(data))), author); err != nil {
+					t.Fatalf("replacement %q: %v", data, err)
+				}
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", bytes.NewReader([]byte("growth")), int64(len([]byte("growth"))), author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("asset growth: %v", err)
+			}
+			data, err := ws.ReadAsset(n.ID, "file.txt")
+			if err != nil || string(data) != "abc" {
+				t.Fatalf("quota rejection replaced asset: %q (%v)", data, err)
+			}
+			if err := ws.DeleteAsset(t.Context(), n.ID, "file.txt", author); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("asset stream lengths and early admission", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Streams", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", strings.NewReader("old"), 3, author); err != nil {
+				t.Fatal(err)
+			}
+			q := ws.EffectiveQuotas()
+			q.MaxAssetSizeBytes = 0
+			ws.quotas = &q
+			reader := strings.NewReader("too large")
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "new.txt", reader, int64(reader.Len()), author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("stream quota: %v", err)
+			}
+			if reader.Len() != len("too large") {
+				t.Fatal("rejected stream was read before admission")
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", strings.NewReader("oversized"), 2, author); err == nil {
+				t.Fatal("oversized stream succeeded")
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", strings.NewReader("x"), 2, author); err == nil {
+				t.Fatal("short stream succeeded")
+			}
+			data, err := ws.ReadAsset(n.ID, "file.txt")
+			if err != nil || string(data) != "old" {
+				t.Fatalf("failed stream replaced prior publication: %q (%v)", data, err)
+			}
+			staging, err := filepath.Glob(filepath.Join(ws.pageDir(n.ID, 0), storage.AtomicFilePrefix+"*"))
+			if err != nil || len(staging) != 0 {
+				t.Fatalf("retained stream staging: %v (%v)", staging, err)
+			}
+		})
+
+		t.Run("failed final asset bytes preserve the storage publication", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Stream errors", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", strings.NewReader("old"), 3, author); err != nil {
+				t.Fatal(err)
+			}
+			failure := errors.New("asset source final-byte failure")
+			source := &assetFinalErrorReader{data: []byte("new"), err: failure}
+			if _, err := ws.SaveAsset(t.Context(), n.ID, "file.txt", source, 3, author); !errors.Is(err, failure) {
+				t.Fatalf("storage owner lost source error: %v", err)
+			}
+			data, err := ws.ReadAsset(n.ID, "file.txt")
+			if err != nil || string(data) != "old" {
+				t.Fatalf("failed asset stream published: %q (%v)", data, err)
+			}
+			staging, err := filepath.Glob(filepath.Join(ws.pageDir(n.ID, 0), storage.AtomicFilePrefix+"*"))
+			if err != nil || len(staging) != 0 {
+				t.Fatalf("retained failed-stream staging: %v (%v)", staging, err)
+			}
+		})
+
+		t.Run("store replacements share last-byte authority", func(t *testing.T) {
+			fs, initial, wsID := initWS(t)
+			n, err := initial.CreatePageUnderParent(t.Context(), 0, "Concurrent", "", author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, used, err := initial.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identityv1.Workspace) error { w.Quotas.MaxStorageBytes = used + 1; return nil }); err != nil {
+				t.Fatal(err)
+			}
+			fs.InvalidateWorkspaceStore(wsID)
+			first, err := fs.GetWorkspaceStore(t.Context(), wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fs.InvalidateWorkspaceStore(wsID)
+			second, err := fs.GetWorkspaceStore(t.Context(), wsID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			start := make(chan struct{})
+			results := make(chan error, 2)
+			for i, store := range []*WorkspaceFileStore{first, second} {
+				go func() {
+					<-start
+					_, err := store.SaveAsset(t.Context(), n.ID, fmt.Sprintf("%d.txt", i), bytes.NewReader([]byte("x")), int64(len([]byte("x"))), author)
+					results <- err
+				}()
+			}
+			close(start)
+			successes := 0
+			for range 2 {
+				err := <-results
+				if err == nil {
+					successes++
+				} else if !errors.Is(err, errQuotaExceeded) {
+					t.Fatal(err)
+				}
+			}
+			if successes != 1 {
+				t.Fatalf("last-byte successful writers: %d", successes)
+			}
+		})
+	})
+
 	t.Run("Quotas", func(t *testing.T) {
 		t.Run("PageQuota", func(t *testing.T) {
 			fs, _, wsID := initWS(t)
@@ -2022,20 +2509,13 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to get workspace store: %v", err)
 			}
 
-			id1 := ksid.NewID()
-			if _, err := writePageFixture(ws, ctx, id1, "Page 1", "content", author); err != nil {
-				t.Fatalf("failed to create page 1: %v", err)
+			for _, title := range []string{"Page 1", "Page 2"} {
+				if _, err := ws.CreatePageUnderParent(ctx, 0, title, "content", author); err != nil {
+					t.Fatal(err)
+				}
 			}
-
-			id2 := ksid.NewID()
-			if _, err := writePageFixture(ws, ctx, id2, "Page 2", "content", author); err != nil {
-				t.Fatalf("failed to create page 2: %v", err)
-			}
-
-			id3 := ksid.NewID()
-			_, err = writePageFixture(ws, ctx, id3, "Page 3", "content", author)
-			if err != nil {
-				t.Logf("Got error creating page 3: %v (quota may be enforced)", err)
+			if _, err := ws.CreatePageUnderParent(ctx, 0, "Page 3", "content", author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("page count not enforced: %v", err)
 			}
 		})
 
@@ -2050,15 +2530,6 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to set quota: %v", err)
 			}
 
-			org, err := fs.wsSvc.Get(wsID)
-			var zeroOrgID ksid.ID
-			if err == nil && org.OrganizationID != zeroOrgID {
-				_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identityv1.Organization) error {
-					o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
-					return nil
-				})
-			}
-
 			fs.InvalidateWorkspaceStore(wsID)
 			ws, err := fs.GetWorkspaceStore(ctx, wsID)
 			if err != nil {
@@ -2070,12 +2541,8 @@ func TestWorkspaceFileStore(t *testing.T) {
 				largeContent[i] = byte('x')
 			}
 
-			id := ksid.NewID()
-			_, err = writePageFixture(ws, ctx, id, "Large", string(largeContent), author)
-			if err == nil {
-				t.Logf("WritePage succeeded - quota enforcement might not be strict")
-			} else if !errors.Is(err, errQuotaExceeded) {
-				t.Logf("Got error: %v (not quota exceeded)", err)
+			if _, err := ws.CreatePageUnderParent(ctx, 0, "Large", string(largeContent), author); !errors.Is(err, errQuotaExceeded) {
+				t.Fatalf("storage quota not enforced: %v", err)
 			}
 		})
 
@@ -2547,11 +3014,38 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 }
 
 // writePageFixture creates exact-ID legacy fixtures; production creates pages through CreatePageUnderParent.
+// writePage builds test fixtures without a history commit.
+func writePage(ws *WorkspaceFileStore, id, parentID ksid.ID, title, content string) (*Node, error) {
+	now := storagev1.Now()
+	p := &page{
+		title:    title,
+		content:  content,
+		created:  now,
+		modified: now,
+	}
+
+	if err := ws.writePageFile(id, parentID, p); err != nil {
+		return nil, err
+	}
+
+	return &Node{
+		ID:       id,
+		ParentID: parentID,
+		Title:    title,
+		Type:     NodeTypeDocument,
+		Content:  content,
+		Created:  p.created,
+		Modified: p.modified,
+		Icon:     p.icon,
+		Cover:    p.cover,
+	}, nil
+}
+
 func writePageFixture(ws *WorkspaceFileStore, ctx context.Context, id ksid.ID, title, content string, author git.Author) (*Node, error) {
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var err error
-		node, err = ws.writePage(id, 0, title, content)
+		node, err = writePage(ws, id, 0, title, content)
 		if err != nil {
 			return "", nil, err
 		}
@@ -2613,6 +3107,42 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 				b.Fatal(err)
 			}
 			i++
+		}
+	})
+
+	b.Run("LargeWorkspacePageWrite", func(b *testing.B) {
+		dir := b.TempDir()
+		repo, err := git.NewManager(dir, "bench", "bench@example.com").WorkspaceRepo(b.Context(), "workspace", true)
+		if err != nil {
+			b.Fatal(err)
+		}
+		quotas := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(filepath.Join(dir, "workspace"), repo, &quotas)
+		var id ksid.ID
+		files := make([]string, 0, 500)
+		for range 500 {
+			id = ksid.NewID()
+			if _, err := writePage(ws, id, 0, "Benchmark", strings.Repeat("a", 1024)); err != nil {
+				b.Fatal(err)
+			}
+			files = append(files, id.String()+"/index.md")
+		}
+		if err := repo.CommitTx(b.Context(), git.Author{}, func() (string, []string, error) { return "fixture", files, nil }); err != nil {
+			b.Fatal(err)
+		}
+		snapshot, err := ws.ReadPageSnapshot(b.Context(), id, 0, 4096)
+		if err != nil {
+			b.Fatal(err)
+		}
+		revision := snapshot.Revision
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := range b.N {
+			node, err := ws.UpdatePage(b.Context(), id, "Benchmark", strings.Repeat(string(rune('b'+i%2)), 1025+i), revision, git.Author{})
+			if err != nil {
+				b.Fatal(err)
+			}
+			revision = node.Revision
 		}
 	})
 
@@ -2826,4 +3356,24 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 			i++
 		}
 	})
+}
+
+// assetFinalErrorReader reports a source failure together with its final bytes.
+type assetFinalErrorReader struct {
+	data []byte
+	err  error
+	done bool
+}
+
+func (r *assetFinalErrorReader) Read(p []byte) (int, error) {
+	if r.done {
+		return 0, io.EOF
+	}
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	if len(r.data) == 0 {
+		r.done = true
+		return n, r.err
+	}
+	return n, nil
 }

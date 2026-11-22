@@ -145,7 +145,7 @@ func TestSchemaFromType(t *testing.T) {
 			}
 
 			// Write a row to create the file
-			err = table.Append(&testRow{ID: 1, Name: "Test"})
+			err = table.Append(&testRow{ID: 1, Name: "Test"}, nil)
 			if err != nil {
 				t.Fatalf("Append error: %v", err)
 			}

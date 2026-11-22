@@ -65,7 +65,7 @@ func (s *EmailVerificationService) Create(userID ksid.ID, email string) (*identi
 		Created:   now,
 	}
 
-	if err := s.table.Append(verification); err != nil {
+	if err := s.table.Append(verification, nil); err != nil {
 		return nil, err
 	}
 	return verification.Clone(), nil

@@ -64,7 +64,7 @@ func (s *OrganizationService) Create(_ context.Context, name, billingEmail strin
 		},
 		Created: storagev1.Now(),
 	}
-	if err := s.table.Append(org); err != nil {
+	if err := s.table.Append(org, nil); err != nil {
 		return nil, err
 	}
 	return org, nil

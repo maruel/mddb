@@ -1,4 +1,4 @@
-// Owns atomic conditional page and record mutations, serialized imports, discovery, and canonical snapshots.
+// Owns quota-admitted page and record mutations, conditional writes, serialized imports, discovery, and canonical snapshots.
 
 // Package content provides versioned file storage for the mddb system.
 package content
@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"iter"
 	"log/slog"
 	"maps"
@@ -157,27 +158,24 @@ func (ws *WorkspaceFileStore) deleteFromCache(id ksid.ID) {
 // checkPageQuota returns an error if creating a new page would exceed quota.
 // MaxPages=0 means disabled (0 pages allowed). Server always provides a positive floor.
 func (ws *WorkspaceFileStore) checkPageQuota() error {
-	count, _, err := ws.GetWorkspaceUsage()
+	u, err := ws.scanUsage()
 	if err != nil {
 		return err
 	}
-	if count >= ws.quotas.MaxPages {
-		return errQuotaExceeded
-	}
-	return nil
+	return quotaGrowth("pages", int64(u.pages), int64(u.pages+1), int64(ws.quotas.MaxPages))
 }
 
 // checkStorageQuota returns an error if adding the given bytes would exceed workspace storage quota.
 // MaxStorageBytes=0 means disabled (0 bytes allowed). Server always provides a positive floor.
 func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
-	_, usage, err := ws.GetWorkspaceUsage()
+	if additionalBytes <= 0 {
+		return nil
+	}
+	u, err := ws.scanUsage()
 	if err != nil {
 		return err
 	}
-	if usage+additionalBytes > ws.quotas.MaxStorageBytes {
-		return errQuotaExceeded
-	}
-	return nil
+	return quotaGrowth("storage bytes", u.bytes, u.bytes+additionalBytes, ws.quotas.MaxStorageBytes)
 }
 
 // Path helpers
@@ -263,39 +261,14 @@ func (ws *WorkspaceFileStore) ReadPage(id ksid.ID) (*Node, error) {
 	}, nil
 }
 
-// writePage writes a page without committing.
-// Returns the Node (with disk content) and an error.
-func (ws *WorkspaceFileStore) writePage(id, parentID ksid.ID, title, content string) (*Node, error) {
-	now := storagev1.Now()
-	p := &page{
-		title:    title,
-		content:  content,
-		created:  now,
-		modified: now,
-	}
-
-	if err := ws.writePageFile(id, parentID, p); err != nil {
-		return nil, err
-	}
-
-	return &Node{
-		ID:       id,
-		ParentID: parentID,
-		Title:    title,
-		Type:     NodeTypeDocument,
-		Content:  content,
-		Created:  p.created,
-		Modified: p.modified,
-		Icon:     p.icon,
-		Cover:    p.cover,
-	}, nil
-}
-
 // writePageFile writes the page file.
 func (ws *WorkspaceFileStore) writePageFile(id, parentID ksid.ID, p *page) error {
 	data := formatMarkdownFile(p)
 	pageDir := ws.pageDir(id, parentID)
 	filePath := ws.pageIndexFile(id, parentID)
+	if err := ws.admitFile(filePath, int64(len(data))); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -355,6 +328,9 @@ func (ws *WorkspaceFileStore) mutatePage(ctx context.Context, id ksid.ID, expect
 			node = current
 			node.Revision = revision
 			return "", nil, nil
+		}
+		if err := ws.admitFile(ws.pageIndexFile(id, parent), int64(len(data))); err != nil {
+			return "", nil, err
 		}
 		if err := storage.WriteFile(ws.pageIndexFile(id, parent), data); err != nil {
 			return "", nil, err
@@ -623,27 +599,8 @@ func (ws *WorkspaceFileStore) readNodeFromPath(path string, id, parentID ksid.ID
 
 // GetWorkspaceUsage returns the page count and storage usage for the workspace.
 func (ws *WorkspaceFileStore) GetWorkspaceUsage() (pageCount int, storageUsage int64, err error) {
-	pages, err := ws.IterPages()
-	if err != nil {
-		return 0, 0, err
-	}
-	for range pages {
-		pageCount++
-	}
-
-	err = filepath.Walk(ws.wsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil //nolint:nilerr // skip transient errors (e.g. git maintenance.lock race)
-		}
-		if info.IsDir() && info.Name() == ".git" {
-			return filepath.SkipDir
-		}
-		if !info.IsDir() {
-			storageUsage += info.Size()
-		}
-		return nil
-	})
-	return
+	u, err := ws.scanUsage()
+	return u.pages, u.bytes, err
 }
 
 // CommitCount returns the number of git commits in the workspace repository.
@@ -824,6 +781,9 @@ func checkTableMetadataVersion(v any) error {
 
 // writeTable writes table metadata without committing.
 func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
+	if err := ws.checkTableShape(node.ID, node.Properties); err != nil {
+		return err
+	}
 	parentID := node.ParentID
 	metadataFile := ws.tableMetadataFile(node.ID, parentID)
 
@@ -854,22 +814,8 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	// Check storage quota for new or updated metadata
-	if isNew {
-		if err := ws.checkStorageQuota(int64(len(data))); err != nil {
-			return err
-		}
-	} else {
-		// For updates, check quota for additional bytes only
-		oldData, err := os.ReadFile(metadataFile) //nolint:gosec // G304: metadataFile is constructed from validated id
-		if err == nil {
-			additionalBytes := int64(len(data)) - int64(len(oldData))
-			if additionalBytes > 0 {
-				if err := ws.checkStorageQuota(additionalBytes); err != nil {
-					return err
-				}
-			}
-		}
+	if err := ws.admitFile(metadataFile, int64(len(data))); err != nil {
+		return err
 	}
 
 	if err := os.MkdirAll(ws.pageDir(node.ID, parentID), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
@@ -944,27 +890,20 @@ func (ws *WorkspaceFileStore) iterTablesRecursive(dir string, parentID ksid.ID, 
 }
 
 // CheckTableQuota checks if the workspace has reached its table limit.
-// Returns ErrTableQuotaExceeded if the limit is reached.
+// Returns QuotaError if the limit is reached.
 // MaxTablesPerWorkspace=0 means disabled (0 tables allowed).
 func (ws *WorkspaceFileStore) CheckTableQuota() error {
-	tables, err := ws.IterTables()
+	u, err := ws.scanUsage()
 	if err != nil {
 		return err
 	}
-	count := 0
-	for range tables {
-		count++
-		if count >= ws.quotas.MaxTablesPerWorkspace {
-			return ErrTableQuotaExceeded
-		}
-	}
-	return nil
+	return quotaGrowth("tables per workspace", int64(u.tables), int64(u.tables+1), int64(ws.quotas.MaxTablesPerWorkspace))
 }
 
 // AppendRecord appends a record to a table and commits to git.
 func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID ksid.ID, record *contentv1.DataRecord, author git.Author) error {
-	parentID := ws.getParent(tableID)
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(tableID)
 		if err := ws.appendRecord(tableID, parentID, record); err != nil {
 			return "", nil, err
 		}
@@ -977,35 +916,29 @@ func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID ksid.ID,
 func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, record *contentv1.DataRecord) error {
 	recordsFile := ws.tableRecordsFile(tableID, tableParentID)
 
-	// Check max records per table
-	table, err := jsonldb.NewTable[*contentv1.DataRecord](recordsFile)
-	// If file doesn't exist, we create it, so no error is fine if IsNotExist
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to open table: %w", err)
-	}
-
-	if table != nil {
-		if table.Len() >= ws.quotas.MaxRecordsPerTable {
-			return fmt.Errorf("record quota exceeded: max %d", ws.quotas.MaxRecordsPerTable)
+	// A direct append can introduce the first JSONL table into an existing
+	// page directory. The storage boundary must charge that table slot too.
+	if _, err := os.Stat(recordsFile); os.IsNotExist(err) {
+		if _, err := os.Stat(ws.tableMetadataFile(tableID, tableParentID)); os.IsNotExist(err) {
+			if err := ws.CheckTableQuota(); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
 		}
-	} else {
-		// New table
-		table, err = jsonldb.NewTable[*contentv1.DataRecord](recordsFile)
-		if err != nil {
-			return fmt.Errorf("failed to create table: %w", err)
-		}
-	}
-
-	// Calculate size for storage quota
-	data, err := json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %w", err)
-	}
-	if err := ws.checkStorageQuota(int64(len(data))); err != nil {
+	} else if err != nil {
 		return err
 	}
 
-	if err := table.Append(record); err != nil {
+	table, err := jsonldb.NewTable[*contentv1.DataRecord](recordsFile)
+	if err != nil {
+		return fmt.Errorf("failed to open table: %w", err)
+	}
+	if table.Len() >= ws.quotas.MaxRecordsPerTable {
+		return &QuotaError{Resource: "records per table", Limit: int64(ws.quotas.MaxRecordsPerTable)}
+	}
+
+	if err := table.Append(record, func(next int64) error { return ws.admitFile(recordsFile, next) }); err != nil {
 		return fmt.Errorf("failed to append record: %w", err)
 	}
 	return nil
@@ -1115,7 +1048,7 @@ func (ws *WorkspaceFileStore) ReplaceRecord(ctx context.Context, tableID, record
 		if err != nil {
 			return "", nil, err
 		}
-		if _, err := table.Update(record); err != nil {
+		if _, err := table.Update(record, func(next int64) error { return ws.admitFile(ws.tableRecordsFile(tableID, parentID), next) }); err != nil {
 			return "", nil, err
 		}
 		record = canonical
@@ -1157,13 +1090,14 @@ func (ws *WorkspaceFileStore) DeleteRecord(ctx context.Context, tableID, recordI
 	})
 }
 
-// SaveAsset saves an asset and commits to git.
-func (ws *WorkspaceFileStore) SaveAsset(ctx context.Context, nodeID ksid.ID, assetName string, data []byte, author git.Author) (*Asset, error) {
-	parentID := ws.getParent(nodeID)
+// SaveAsset admits and streams an exact-size asset before committing to git.
+// Invalid stream lengths preserve the prior asset and release private staging.
+func (ws *WorkspaceFileStore) SaveAsset(ctx context.Context, nodeID ksid.ID, assetName string, data io.Reader, size int64, author git.Author) (*Asset, error) {
 	var asset *Asset
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(nodeID)
 		var err error
-		asset, err = ws.saveAsset(nodeID, parentID, assetName, data)
+		asset, err = ws.saveAsset(nodeID, parentID, assetName, data, size)
 		if err != nil {
 			return "", nil, err
 		}
@@ -1173,19 +1107,31 @@ func (ws *WorkspaceFileStore) SaveAsset(ctx context.Context, nodeID ksid.ID, ass
 	return asset, err
 }
 
-// saveAsset saves an asset without committing.
-func (ws *WorkspaceFileStore) saveAsset(nodeID, parentID ksid.ID, assetName string, data []byte) (*Asset, error) {
-	if err := ws.checkStorageQuota(int64(len(data))); err != nil {
+// saveAsset streams an admitted asset without committing.
+func (ws *WorkspaceFileStore) saveAsset(nodeID, parentID ksid.ID, assetName string, data io.Reader, size int64) (*Asset, error) {
+	if size < 0 {
+		return nil, errors.New("negative asset size")
+	}
+	filePath, err := ws.assetPath(nodeID, parentID, assetName)
+	if err != nil {
 		return nil, err
 	}
-
-	dir := ws.pageDir(nodeID, parentID)
+	dir := filepath.Dir(filePath)
+	old, err := fileBytes(filePath)
+	if err != nil {
+		return nil, err
+	}
+	if err := quotaGrowth("asset bytes", old, size, ws.quotas.MaxAssetSizeBytes); err != nil {
+		return nil, err
+	}
+	if err := ws.admitFile(filePath, size); err != nil {
+		return nil, err
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	filePath := filepath.Join(dir, assetName)
-	if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+	if err := storage.WriteFileReader(filePath, data, size); err != nil {
 		return nil, fmt.Errorf("failed to write asset: %w", err)
 	}
 
@@ -1221,8 +1167,8 @@ func (ws *WorkspaceFileStore) ReadAsset(nodeID ksid.ID, assetName string) ([]byt
 
 // DeleteAsset deletes an asset and commits to git.
 func (ws *WorkspaceFileStore) DeleteAsset(ctx context.Context, nodeID ksid.ID, assetName string, author git.Author) error {
-	parentID := ws.getParent(nodeID)
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(nodeID)
 		if err := ws.deleteAsset(nodeID, parentID, assetName); err != nil {
 			return "", nil, err
 		}
@@ -1347,8 +1293,15 @@ func (ws *WorkspaceFileStore) CreateNode(ctx context.Context, title string, node
 // If parentID is zero, the node is created at the root level.
 // Otherwise, it is created under the parent directory.
 func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parentID ksid.ID) (*Node, []string, error) {
-	if err := ws.checkPageQuota(); err != nil {
-		return nil, nil, err
+	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
+		if err := ws.checkPageQuota(); err != nil {
+			return nil, nil, err
+		}
+	}
+	if nodeType == NodeTypeTable || nodeType == NodeTypeHybrid {
+		if err := ws.CheckTableQuota(); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	id := ksid.NewID()
@@ -1409,7 +1362,7 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 		}
 
 		filePath := ws.pageIndexFile(id, parentID)
-		if err := os.WriteFile(filePath, pageData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+		if err := storage.WriteFile(filePath, pageData); err != nil {
 			return nil, nil, fmt.Errorf("failed to write page: %w", err)
 		}
 		files = append(files, ws.gitPath(parentID, id, "index.md"))
@@ -1421,7 +1374,7 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 		}
 
 		metadataFile := ws.tableMetadataFile(id, parentID)
-		if err := os.WriteFile(metadataFile, metadataData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+		if err := storage.WriteFile(metadataFile, metadataData); err != nil {
 			return nil, nil, fmt.Errorf("failed to write metadata: %w", err)
 		}
 		files = append(files, ws.gitPath(parentID, id, "metadata.json"))
@@ -1517,12 +1470,11 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
 	}
 
-	if err := ws.checkPageQuota(); err != nil {
-		return nil, err
-	}
-
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		if err := ws.checkPageQuota(); err != nil {
+			return "", nil, err
+		}
 		id := ksid.NewID()
 		now := storagev1.Now()
 
@@ -1544,7 +1496,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		}
 
 		filePath := ws.pageIndexFile(id, parentID)
-		if err := os.WriteFile(filePath, pageData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+		if err := storage.WriteFile(filePath, pageData); err != nil {
 			return "", nil, fmt.Errorf("failed to write page: %w", err)
 		}
 
@@ -1630,12 +1582,14 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 		return nil, fmt.Errorf("parent node not found: %w", ErrNodeNotFound)
 	}
 
-	if err := ws.checkPageQuota(); err != nil {
-		return nil, err
-	}
-
 	var node *Node
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		if err := ws.CheckTableQuota(); err != nil {
+			return "", nil, err
+		}
+		if err := quotaGrowth("columns per table", 0, int64(len(properties)), int64(ws.quotas.MaxColumnsPerTable)); err != nil {
+			return "", nil, err
+		}
 		id := ksid.NewID()
 		now := storagev1.Now()
 
@@ -1661,7 +1615,7 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 		}
 
 		metadataFile := ws.tableMetadataFile(id, parentID)
-		if err := os.WriteFile(metadataFile, metadataData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+		if err := storage.WriteFile(metadataFile, metadataData); err != nil {
 			return "", nil, fmt.Errorf("failed to write metadata: %w", err)
 		}
 
@@ -2285,4 +2239,127 @@ func (ws *WorkspaceFileStore) indexedNodePath(ctx context.Context, id ksid.ID) (
 	ws.mu.RUnlock()
 	slices.Reverse(parts)
 	return p, filepath.Join(ws.wsDir, filepath.Join(parts...)), nil
+}
+
+// scanUsage observes current content, never Git/admin files or private staging.
+// Callers admitting growth hold the repository mutation gate through publication;
+// no independently cached counter can grant capacity after a store replacement.
+func (ws *WorkspaceFileStore) scanUsage() (out workspaceUsage, err error) {
+	tables := make(map[string]struct{})
+	err = filepath.WalkDir(ws.wsDir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == ws.wsDir {
+			return nil
+		}
+		name := entry.Name()
+		rel, err := filepath.Rel(ws.wsDir, path)
+		if err != nil {
+			return err
+		}
+		if filepath.Dir(rel) == "." {
+			if _, err := ksid.Parse(name); err != nil || !entry.IsDir() {
+				if entry.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+		if name == ".git" || strings.HasPrefix(name, storage.AtomicFilePrefix) || strings.HasPrefix(name, ".jsonldb-") || (name == "tmp" && strings.HasSuffix(filepath.Dir(path), ".blobs")) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("cannot account non-regular content %s", rel)
+		}
+		out.bytes += info.Size()
+		if _, parseErr := ksid.Parse(filepath.Base(filepath.Dir(path))); parseErr == nil {
+			if name == "index.md" {
+				out.pages++
+			}
+			if name == "metadata.json" || name == "data.jsonl" {
+				tables[filepath.Dir(path)] = struct{}{}
+			}
+		}
+		return nil
+	})
+	out.tables = len(tables)
+	return out, err
+}
+
+// admitFile checks the serialized replacement, including headers and newlines.
+// Staged bytes are excluded from the scan and never become retained usage until
+// publication. Callers must hold the repository mutation gate until then.
+func (ws *WorkspaceFileStore) admitFile(path string, next int64) error {
+	old, err := fileBytes(path)
+	if err != nil {
+		return err
+	}
+	return ws.checkStorageQuota(next - old)
+}
+
+func (ws *WorkspaceFileStore) checkTableShape(id ksid.ID, properties []contentv1.Property) error {
+	before := 0
+	old, err := ws.ReadTable(id)
+	if err == nil {
+		before = len(old.Properties)
+	} else if !errors.Is(err, ErrTableNotFound) {
+		return err
+	}
+	if err := quotaGrowth("columns per table", int64(before), int64(len(properties)), int64(ws.quotas.MaxColumnsPerTable)); err != nil {
+		return err
+	}
+	if errors.Is(err, ErrTableNotFound) {
+		if _, err := os.Stat(ws.tableRecordsFile(id, ws.getParent(id))); os.IsNotExist(err) {
+			return ws.CheckTableQuota()
+		} else if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// AssetSize observes the exact regular-file size for replacement accounting,
+// including assets omitted from presentation listings. Missing assets use zero.
+func (ws *WorkspaceFileStore) AssetSize(ctx context.Context, nodeID ksid.ID, name string) (size int64, err error) {
+	err = ws.repo.ReadTx(ctx, func(*git.SavedFiles) error {
+		path, e := ws.assetPath(nodeID, ws.getParent(nodeID), name)
+		if e != nil {
+			return e
+		}
+		info, e := os.Stat(path)
+		if os.IsNotExist(e) {
+			return nil
+		}
+		if e != nil {
+			return e
+		}
+		if !info.Mode().IsRegular() {
+			return errors.New("asset is not a regular file")
+		}
+		size = info.Size()
+		return nil
+	})
+	return
+}
+
+func (ws *WorkspaceFileStore) assetPath(nodeID, parentID ksid.ID, name string) (string, error) {
+	if nodeID.IsZero() {
+		return "", ErrNodeNotFound
+	}
+	if name == "" || filepath.Base(name) != name || strings.ContainsAny(name, "/\\") || name == "index.md" || name == "metadata.json" || name == "data.jsonl" || name == ".git" || strings.HasPrefix(name, storage.AtomicFilePrefix) || strings.HasPrefix(name, ".jsonldb-") {
+		return "", errors.New("invalid asset name")
+	}
+	return filepath.Join(ws.pageDir(nodeID, parentID), name), nil
 }

@@ -83,7 +83,7 @@ func (s *NotificationService) Create(userID ksid.ID, notifType identityv1.Notifi
 		ActorID:    actorID,
 		Created:    storagev1.Now(),
 	}
-	if err := s.table.Append(n); err != nil {
+	if err := s.table.Append(n, nil); err != nil {
 		return nil, err
 	}
 	return n.Clone(), nil

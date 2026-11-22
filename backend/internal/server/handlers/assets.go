@@ -3,10 +3,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"mime"
 	"net/http"
@@ -58,29 +58,30 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Use the server-level MaxAssetSizeBytes as the upload limit.
-	maxBytes := h.Cfg.Snapshot().Quotas.MaxAssetSizeBytes
-
-	// Fast pre-check via Content-Length before reading the body, so we can
-	// return a structured JSON error. (Browsers always send Content-Length for
-	// multipart uploads.)
-	if r.ContentLength > maxBytes {
-		writeErrorResponse(w, dto.PayloadTooLarge(maxBytes))
-		return
+	// Body limits govern transport independently of retained asset limits. The
+	// storage owner admits net replacement growth, including shrinking recovery.
+	maxBytes := h.Cfg.Snapshot().Quotas.MaxRequestBodyBytes
+	if maxBytes > 0 {
+		if r.ContentLength > maxBytes {
+			writeErrorResponse(w, dto.PayloadTooLarge(maxBytes))
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	}
-
-	// MaxBytesReader as a hard backstop for requests without Content-Length.
-	// If it triggers, Go writes 413 automatically; the pre-check above covers
-	// the normal browser path with a structured JSON response.
-	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
-	if err := r.ParseMultipartForm(maxBytes); err != nil { //nolint:gosec // bounded by MaxBytesReader above
+	if err := r.ParseMultipartForm(10 << 20); err != nil { //nolint:gosec // G120: MaxBytesReader enforces the configured body limit; zero explicitly permits unlimited requests.
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			return // Go already wrote 413 via MaxBytesReader
+			writeErrorResponse(w, dto.PayloadTooLarge(maxBytes))
+			return
 		}
 		writeErrorResponse(w, dto.BadRequest("form_parse"))
 		return
 	}
+	defer func(ctx context.Context) {
+		if err := r.MultipartForm.RemoveAll(); err != nil {
+			slog.ErrorContext(ctx, "Failed to remove multipart staging", "err", err)
+		}
+	}(r.Context())
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -93,27 +94,10 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		}
 	}()
 
-	data, err := io.ReadAll(file)
-	if err != nil {
-		writeErrorResponse(w, dto.Internal("file_read"))
-		return
-	}
-
 	// Get user from context (set by WrapAuthRaw middleware)
 	user := reqctx.User(r.Context())
 	if user == nil {
 		writeErrorResponse(w, dto.Internal("user_context"))
-		return
-	}
-
-	// Check server-wide storage quota before saving
-	maxStorage := h.Cfg.Snapshot().Quotas.MaxTotalStorageBytes
-	if err := h.Svc.FileStore.CheckServerStorageQuota(int64(len(data)), maxStorage); err != nil {
-		if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
-			writeErrorResponse(w, dto.QuotaExceededInt64("total storage", maxStorage))
-			return
-		}
-		writeErrorResponse(w, dto.Internal("storage_quota_check"))
 		return
 	}
 
@@ -124,11 +108,24 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Enforce maximum asset file size using effective quotas
-	eq := ws.EffectiveQuotas()
-	if int64(len(data)) > eq.MaxAssetSizeBytes {
-		writeErrorResponse(w, dto.PayloadTooLarge(eq.MaxAssetSizeBytes))
+	// This existing pooled precheck is best-effort until aggregate admission.
+	// Charge replacements by net growth so lowered pooled limits allow recovery.
+	old, err := ws.AssetSize(r.Context(), nodeID, header.Filename)
+	if err != nil {
+		writeErrorResponse(w, dto.InternalWithError("asset_accounting", err))
 		return
+	}
+	growth := header.Size - old
+	maxStorage := h.Cfg.Snapshot().Quotas.MaxTotalStorageBytes
+	if growth > 0 {
+		if err := h.Svc.FileStore.CheckServerStorageQuota(growth, maxStorage); err != nil {
+			if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
+				writeErrorResponse(w, dto.QuotaExceededInt64("total storage", maxStorage))
+				return
+			}
+			writeErrorResponse(w, dto.InternalWithError("storage_quota_check", err))
+			return
+		}
 	}
 
 	// Verify node exists before saving asset
@@ -137,10 +134,10 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	asset, err := ws.SaveAsset(r.Context(), nodeID, header.Filename, data, author)
+	asset, err := ws.SaveAsset(r.Context(), nodeID, header.Filename, file, header.Size, author)
 	if err != nil {
 		slog.Error("Failed to save asset", "error", err, "nodeID", nodeID, "filename", header.Filename, "wsID", wsID, "author", author)
-		writeErrorResponse(w, dto.Internal("asset_save"))
+		writeErrorResponse(w, dto.InternalWithError("asset_save", err))
 		return
 	}
 

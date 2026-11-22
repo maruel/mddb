@@ -63,7 +63,7 @@ func (s *WorkspaceService) Create(_ context.Context, orgID ksid.ID, name string)
 		Quotas:         DefaultWorkspaceQuotas(),
 		Created:        storagev1.Now(),
 	}
-	if err := s.table.Append(ws); err != nil {
+	if err := s.table.Append(ws, nil); err != nil {
 		return nil, err
 	}
 	return ws, nil

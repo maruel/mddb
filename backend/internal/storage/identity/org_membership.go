@@ -90,7 +90,7 @@ func (s *OrganizationMembershipService) Create(userID, orgID ksid.ID, role ident
 		Role:           role,
 		Created:        storagev1.Now(),
 	}
-	if err := s.table.Append(membership); err != nil {
+	if err := s.table.Append(membership, nil); err != nil {
 		return nil, err
 	}
 	return membership, nil

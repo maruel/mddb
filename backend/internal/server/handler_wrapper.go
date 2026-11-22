@@ -120,6 +120,7 @@ func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *ht
 // writeJSONResponse writes a JSON response or error response.
 func writeJSONResponse[Out any](ctx context.Context, w http.ResponseWriter, output *Out, err error) {
 	if err != nil {
+		err = handlers.ContentError(err)
 		statusCode := http.StatusInternalServerError
 		errorCode := dto.ErrorCodeInternal
 		details := make(map[string]any)

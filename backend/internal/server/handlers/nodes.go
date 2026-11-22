@@ -326,7 +326,10 @@ func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, u
 	author := GitAuthor(user)
 	node, err := ws.UpdatePageFrontmatter(ctx, req.ID, req.Icon, req.Cover, author)
 	if err != nil {
-		return nil, dto.NotFound("page")
+		if errors.Is(err, content.ErrNodeNotFound) {
+			return nil, dto.NotFound("page")
+		}
+		return nil, dto.InternalWithError("Failed to update page front matter", err)
 	}
 	h.Svc.PublishNodeEvent(ctx, wsID, dto.EventNodeUpdated, node, user.ID)
 	return &dto.UpdatePageFrontmatterResponse{ID: node.ID, Modified: node.Modified}, nil
@@ -360,21 +363,6 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *ident
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
-	}
-
-	eq := ws.EffectiveQuotas()
-
-	// Check column quota
-	if len(req.Properties) > eq.MaxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", eq.MaxColumnsPerTable)
-	}
-
-	// Check table quota for workspace
-	if err := ws.CheckTableQuota(); err != nil {
-		if errors.Is(err, content.ErrTableQuotaExceeded) {
-			return nil, dto.QuotaExceeded("tables per workspace", eq.MaxTablesPerWorkspace)
-		}
-		return nil, dto.InternalWithError("Failed to check table quota", err)
 	}
 
 	author := GitAuthor(user)
@@ -414,12 +402,6 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
-	}
-
-	// Check column quota
-	eq := ws.EffectiveQuotas()
-	if len(req.Properties) > eq.MaxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", eq.MaxColumnsPerTable)
 	}
 
 	node, err := ws.MutateTable(ctx, req.ID, GitAuthor(user), func(node *content.Node) error {

@@ -153,7 +153,7 @@ func (t *Table[T]) SetProperties(props json.RawMessage) error {
 	defer t.mu.Unlock()
 	prev := t.schema.Properties
 	t.schema.Properties = slices.Clone(props)
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(nil); err != nil {
 		t.schema.Properties = prev
 		return err
 	}
@@ -193,7 +193,7 @@ func (t *Table[T]) Delete(id ksid.ID) (T, error) {
 	// Keep the original backing array intact until publication succeeds.
 	prevRows := t.rows
 	t.rows = slices.Delete(slices.Clone(t.rows), idx, idx+1)
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(nil); err != nil {
 		t.rows = prevRows
 		return zero, err
 	}
@@ -238,7 +238,7 @@ func (t *Table[T]) DeleteFunc(del func(T) bool) ([]T, error) {
 
 	prevRows := t.rows
 	t.rows = kept
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(nil); err != nil {
 		t.rows = prevRows
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func (t *Table[T]) UpdateFunc(update func(row T) bool) (int, error) {
 
 	prevRows := t.rows
 	t.rows = next
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(nil); err != nil {
 		t.rows = prevRows
 		return 0, err
 	}
@@ -348,7 +348,9 @@ func (t *Table[T]) untrackBlobRefsLocked(row T) error {
 // Returns an error if validation fails. The entire table is rewritten to disk on success.
 // A blob cleanup error returns the previous row with an error describing the
 // already persisted update; observers have received the update.
-func (t *Table[T]) Update(row T) (T, error) {
+// admit, when non-nil, checks the complete serialized file size before publication.
+// The caller owns serialization with any shared capacity authority.
+func (t *Table[T]) Update(row T, admit func(int64) error) (T, error) {
 	var zero T
 	if err := row.Validate(); err != nil {
 		return zero, fmt.Errorf("invalid row: %w", err)
@@ -364,7 +366,7 @@ func (t *Table[T]) Update(row T) (T, error) {
 
 	prev := t.rows[idx]
 	t.rows[idx] = row
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(admit); err != nil {
 		t.rows[idx] = prev
 		return zero, err
 	}
@@ -419,7 +421,7 @@ func (t *Table[T]) Modify(id ksid.ID, fn func(row T) error) (T, error) {
 	}
 
 	t.rows[idx] = row
-	if err := t.saveLocked(); err != nil {
+	if err := t.saveLocked(nil); err != nil {
 		t.rows[idx] = prev // Rollback on save failure
 		return zero, err
 	}
@@ -569,7 +571,9 @@ func (t *Table[T]) Iter(startID ksid.ID) iter.Seq[T] {
 // cached rows and observers already include the row. Failed partial writes are
 // replaced with the previous snapshot; a failed rollback explicitly reports
 // incomplete stored state.
-func (t *Table[T]) Append(row T) (err error) {
+// admit, when non-nil, checks the resulting file size before publication, including
+// the initial schema header and newlines. The caller owns shared-capacity serialization.
+func (t *Table[T]) Append(row T, admit func(int64) error) (err error) {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
 	}
@@ -593,7 +597,7 @@ func (t *Table[T]) Append(row T) (err error) {
 		})
 		prevRows := t.rows
 		t.rows = slices.Insert(slices.Clone(t.rows), idx, row)
-		if err := t.saveLocked(); err != nil {
+		if err := t.saveLocked(admit); err != nil {
 			t.rows = prevRows
 			return fmt.Errorf("failed to save table: %w", err)
 		}
@@ -602,16 +606,36 @@ func (t *Table[T]) Append(row T) (err error) {
 			t.byID[t.rows[i].GetID()] = i
 		}
 	} else {
-		// Normal case: append to end of file
-		if _, err := os.Stat(t.path); os.IsNotExist(err) {
-			if err := t.saveLocked(); err != nil {
-				return fmt.Errorf("failed to write schema header: %w", err)
-			}
-		}
-
+		// Admit the exact header/row/newline bytes before creating even an empty
+		// file. Existing bytes are authoritative, not a canonical size estimate.
 		data, marshalErr := json.Marshal(row)
 		if marshalErr != nil {
 			return fmt.Errorf("failed to marshal row: %w", marshalErr)
+		}
+		info, statErr := os.Stat(t.path)
+		var size int64
+		missing := errors.Is(statErr, os.ErrNotExist)
+		if statErr != nil && !missing {
+			return statErr
+		}
+		if missing {
+			header, err := json.Marshal(t.schema)
+			if err != nil {
+				return err
+			}
+			size = int64(len(header) + 1)
+		} else {
+			size = info.Size()
+		}
+		if admit != nil {
+			if err := admit(size + int64(len(data)+1)); err != nil {
+				return err
+			}
+		}
+		if missing {
+			if err := t.saveLocked(nil); err != nil {
+				return fmt.Errorf("failed to write schema header: %w", err)
+			}
 		}
 
 		f, openErr := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
@@ -632,7 +656,7 @@ func (t *Table[T]) Append(row T) (err error) {
 			// A failed Write may have published a prefix of the row. Replace it
 			// with the cached snapshot without truncating a concurrent reader.
 			err := fmt.Errorf("failed to write row: %w", writeErr)
-			if rollbackErr := t.saveLocked(); rollbackErr != nil {
+			if rollbackErr := t.saveLocked(nil); rollbackErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to restore table after append; stored state may be incomplete: %w", rollbackErr))
 			}
 			return err
@@ -653,7 +677,7 @@ func (t *Table[T]) Append(row T) (err error) {
 }
 
 // saveLocked writes the schema header and all rows to the file. Caller must hold t.mu.
-func (t *Table[T]) saveLocked() (err error) {
+func (t *Table[T]) saveLocked(admit func(int64) error) (err error) {
 	// Git reads tables concurrently with request mutations and may mmap them.
 	// Replace the file instead of truncating an inode another reader still owns.
 	tmp := filepath.Join(filepath.Dir(t.path), ".jsonldb-"+rand.Text())
@@ -674,6 +698,14 @@ func (t *Table[T]) saveLocked() (err error) {
 	}
 	if err == nil {
 		err = t.writeLocked(f)
+	}
+	if err == nil && admit != nil {
+		info, statErr := f.Stat()
+		if statErr != nil {
+			err = statErr
+		} else {
+			err = admit(info.Size())
+		}
 	}
 	if err := errors.Join(err, f.Close()); err != nil {
 		return err

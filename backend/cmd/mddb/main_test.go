@@ -34,7 +34,7 @@ func TestRunNotificationCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	user := ksid.NewID()
-	if err := table.Append(&identityv1.Notification{ID: ksid.NewID(), UserID: user, Type: identityv1.NotifOrgInvite, Title: "Retained", Created: storagev1.ToTime(time.Now().AddDate(-1, 0, 0))}); err != nil {
+	if err := table.Append(&identityv1.Notification{ID: ksid.NewID(), UserID: user, Type: identityv1.NotifOrgInvite, Title: "Retained", Created: storagev1.ToTime(time.Now().AddDate(-1, 0, 0))}, nil); err != nil {
 		t.Fatal(err)
 	}
 	svc, err := identity.NewNotificationService(path)
