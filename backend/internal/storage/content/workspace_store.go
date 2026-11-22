@@ -19,7 +19,6 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -702,6 +701,37 @@ func tableSchemaRevision(properties []contentv1.Property) (string, error) {
 	return tableMetadataRevision(data), nil
 }
 
+// tableChanges compares title and schema as metadata.json persists them. The file omits empty
+// nested slices, so a resubmitted schema whose empty options or view filters are non-nil is
+// unchanged; rewriting it would only advance "modified" and charge its bytes to the quota.
+func tableChanges(before, after *Node) (NodeChanges, error) {
+	props, err := persistedDiffer(before.Properties, after.Properties)
+	if err != nil {
+		return NodeChanges{}, err
+	}
+	views, err := persistedDiffer(before.Views, after.Views)
+	if err != nil {
+		return NodeChanges{}, err
+	}
+	return NodeChanges{Title: before.Title != after.Title, Schema: props || views}, nil
+}
+
+// persistedDiffer reports whether a and b have different JSON encodings; nil and empty are equal.
+func persistedDiffer[T any](a, b []T) (bool, error) {
+	if len(a) == 0 && len(b) == 0 {
+		return false, nil
+	}
+	ea, err := json.Marshal(a)
+	if err != nil {
+		return false, fmt.Errorf("encode table schema: %w", err)
+	}
+	eb, err := json.Marshal(b)
+	if err != nil {
+		return false, fmt.Errorf("encode table schema: %w", err)
+	}
+	return !bytes.Equal(ea, eb), nil
+}
+
 // WriteTable writes table metadata and commits to git.
 func (ws *WorkspaceFileStore) WriteTable(ctx context.Context, node *Node, isNew bool, author git.Author) error {
 	parentID := node.ParentID
@@ -711,7 +741,9 @@ func (ws *WorkspaceFileStore) WriteTable(ctx context.Context, node *Node, isNew 
 			if err != nil {
 				return "", nil, err
 			}
-			node.Changes = NodeChanges{Title: before.Title != node.Title, Schema: !reflect.DeepEqual(before.Properties, node.Properties) || !reflect.DeepEqual(before.Views, node.Views)}
+			if node.Changes, err = tableChanges(before, node); err != nil {
+				return "", nil, err
+			}
 			if !node.Changes.Title && !node.Changes.Schema {
 				return "", nil, nil
 			}
@@ -741,7 +773,9 @@ func (ws *WorkspaceFileStore) MutateTable(ctx context.Context, id ksid.ID, autho
 		if err := mutate(node); err != nil {
 			return "", nil, err
 		}
-		node.Changes = NodeChanges{Title: before.Title != node.Title, Schema: !reflect.DeepEqual(before.Properties, node.Properties) || !reflect.DeepEqual(before.Views, node.Views)}
+		if node.Changes, err = tableChanges(before, node); err != nil {
+			return "", nil, err
+		}
 		if !node.Changes.Title && !node.Changes.Schema {
 			return "", nil, nil
 		}

@@ -776,6 +776,63 @@ func TestWorkspaceFileStore(t *testing.T) {
 		}
 	})
 
+	t.Run("UnchangedTableSchema", func(t *testing.T) {
+		// Stored metadata decodes omitted slices as nil; clients resubmit them empty.
+		_, ws, _ := initWS(t)
+		a := git.Author{Name: "Test", Email: "test@example.com"}
+		table, err := ws.CreateTableUnderParent(t.Context(), 0, "Table", []contentv1.Property{{Name: "key", Type: contentv1.PropertyTypeText}}, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		viewID := ksid.NewID()
+		if _, err := ws.MutateTable(t.Context(), table.ID, a, func(n *Node) error {
+			n.Views = []contentv1.View{{ID: viewID, Name: "All", Type: contentv1.ViewTypeTable}}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		metadata, err := os.ReadFile(ws.tableMetadataFile(table.ID, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		commits, err := ws.repo.CommitCount(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		resubmit := func(n *Node) {
+			n.Properties = []contentv1.Property{{Name: "key", Type: contentv1.PropertyTypeText, Options: []contentv1.SelectOption{}}}
+			n.Views = []contentv1.View{{ID: viewID, Name: "All", Type: contentv1.ViewTypeTable, Columns: []contentv1.ViewColumn{}, Filters: []contentv1.Filter{}, Sorts: []contentv1.Sort{}, Groups: []contentv1.Group{}}}
+		}
+		got, err := ws.MutateTable(t.Context(), table.ID, a, func(n *Node) error { resubmit(n); return nil })
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Changes != (NodeChanges{}) {
+			t.Errorf("MutateTable changes = %+v", got.Changes)
+		}
+		node, err := ws.ReadTable(table.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resubmit(node)
+		if err := ws.WriteTable(t.Context(), node, false, a); err != nil {
+			t.Fatal(err)
+		}
+		if node.Changes != (NodeChanges{}) {
+			t.Errorf("WriteTable changes = %+v", node.Changes)
+		}
+		after, err := os.ReadFile(ws.tableMetadataFile(table.ID, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(after, metadata) {
+			t.Errorf("metadata rewritten:\n%s\n%s", metadata, after)
+		}
+		if n, err := ws.repo.CommitCount(t.Context()); err != nil || n != commits {
+			t.Errorf("commits = %d, %v; want %d", n, err, commits)
+		}
+	})
+
 	t.Run("RetainedContainerDiscovery", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			fs, ws, wsID := initWS(t)
