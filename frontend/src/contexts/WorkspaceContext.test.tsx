@@ -1269,3 +1269,82 @@ for (const command of ["children", "move", "switch"] as const) {
     expect(workspace.saveError()).toBeNull();
   });
 }
+it("schema refresh keeps the document owner and cancels stale selection responses", async () => {
+  await mount(true);
+  await workspace.loadNode("one", { refresh: false });
+  const document = workspace.selectedDocument();
+  replies.set("table", [
+    Response.json({
+      id: "one",
+      title: "New table title",
+      properties: [{ name: "Remote", type: "text" }],
+      views: [],
+      schema_revision: "new-schema",
+    }),
+  ]);
+  await workspace.refreshTableSchema();
+  expect(workspace.selectedNodeData()?.schema_revision).toBe("new-schema");
+  expect(workspace.selectedNodeData()?.title).toBe("New table title");
+  expect(workspace.selectedDocument()).toBe(document);
+  expect(workspace.selectedNodeData()?.has_table).toBe(true);
+  replies.set("table", [
+    Response.json({ id: "one", title: "one", properties: null, views: null, schema_revision: "" }),
+  ]);
+  await workspace.refreshTableSchema();
+  expect(workspace.selectedNodeData()?.has_table).toBe(false);
+  expect(workspace.selectedNodeData()?.properties).toBeUndefined();
+  expect(workspace.selectedDocument()).toBe(document);
+  const pending = transport("table");
+  const refresh = workspace.refreshTableSchema();
+  await waitFor(() => expect(requests.at(-1)?.id).toBe("table"));
+  const request = requests.at(-1)!;
+  await workspace.loadNode("two", { refresh: false });
+  await waitFor(() => expect(request.stopped).toBe(true));
+  pending.resolve(Response.json({ id: "one", title: "obsolete", schema_revision: "obsolete" }));
+  await refresh;
+  expect(workspace.selectedNodeData()?.id).toBe("two");
+  expect(workspace.selectedNodeData()?.schema_revision).not.toBe("obsolete");
+});
+
+it("resync roots cannot retire the selected document schema refresh", async () => {
+  await mount(true);
+  await workspace.loadNode("one", { refresh: false });
+  workspace.updateSelectedNode({ ...workspace.selectedNodeData()!, has_table: true, schema_revision: "before" });
+  const document = workspace.selectedDocument();
+  const rootRead = Promise.withResolvers<Response>();
+  roots.push(rootRead.promise);
+  const schemaRead = transport("table");
+  Events.current.dispatchEvent(new window.MessageEvent("workspace", { data: JSON.stringify({ type: "resync" }) }));
+  await waitFor(() => expect(data.loadingNodes()).toBe(true));
+  const request = requests.findLast((r) => r.id === "table");
+  expect(request).toBeDefined();
+  expect(request!.signal.aborted).toBe(false);
+  schemaRead.resolve(
+    Response.json({
+      id: "one",
+      title: "one",
+      properties: [{ name: "Recovered", type: "text" }],
+      views: [],
+      schema_revision: "after",
+    }),
+  );
+  await waitFor(() => expect(workspace.selectedNodeData()?.schema_revision).toBe("after"));
+  rootRead.resolve(Response.json({ nodes: initial() }));
+  await waitFor(() => expect(data.loadingNodes()).toBe(false));
+  expect(workspace.selectedNodeData()?.schema_revision).toBe("after");
+  expect(workspace.selectedDocument()).toBe(document);
+});
+
+it("workspace replacement aborts selected schema transport before its gate releases", async () => {
+  await mount(true);
+  await workspace.loadNode("one", { refresh: false });
+  const pending = transport("table");
+  const refresh = workspace.refreshTableSchema();
+  const request = requests.at(-1)!;
+  roots.push(Response.json({ nodes: initial() }));
+  auth.setUser({ ...account, workspace_id: "replacement" });
+  await waitFor(() => expect(request.stopped).toBe(true));
+  pending.resolve(Response.json({ id: "one", title: "obsolete", schema_revision: "obsolete" }));
+  await refresh;
+  expect(workspace.selectedNodeData()).toBeNull();
+});

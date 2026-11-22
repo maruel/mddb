@@ -118,6 +118,125 @@ test.describe("Table Creation and Basic Operations", () => {
     });
   }
 
+  test("a schema conflict refreshes metadata and retains the attempted record draft", async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(
+      page,
+      request,
+      "schema-conflict",
+      [{ name: "Name", type: "text" }],
+      [{ Name: "Original" }],
+    );
+    const ws = client.ws(wsID);
+    const record = (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+      .records![0]!;
+    let reject = true;
+    await page.route(`**/nodes/${tableId}/table/records/${record.id}`, async (route) => {
+      if (route.request().method() === "POST" && reject) {
+        reject = false;
+        await route.fulfill({
+          status: 409,
+          json: { error: { code: "CONFLICT", message: "Schema changed" }, details: { recovery: "read_current" } },
+        });
+      } else await route.continue();
+    });
+    await page.locator("td").getByText("Original", { exact: true }).click();
+    const input = page.locator('table td input[type="text"]').first();
+    await input.fill("Preserved rejected edit");
+    const refreshed = page.waitForRequest((r) => r.method() === "GET" && r.url().endsWith(`/nodes/${tableId}/table`));
+    await input.press("Enter");
+    await refreshed;
+    await expect(page.locator("pre").filter({ hasText: "Preserved rejected edit" })).toBeVisible();
+    expect((await ws.getRecord(tableId, record.id)).data?.Name).toBe("Original");
+    await page.locator("td").getByText("Original", { exact: true }).click();
+    await input.fill("Recovered edit");
+    await input.press("Enter");
+    await expect.poll(async () => (await ws.getRecord(tableId, record.id)).data?.Name).toBe("Recovered edit");
+  });
+  for (const reconnect of [false, true]) {
+    test(`${reconnect ? "reconnect" : "external"} schema refresh preserves a pending hybrid page draft and record editing`, async ({
+      page,
+      request,
+    }) => {
+      const { client, wsID, tableId } = await setupTable(
+        page,
+        request,
+        "schema-live",
+        [{ name: "Name", type: "text" }],
+        [{ Name: "Original" }],
+      );
+      const ws = client.ws(wsID);
+      const { readFile, writeFile } = await import("node:fs/promises");
+      const source = await ws.createPage("0", { title: "Hybrid page", content: "Protected page body" });
+      // Hybrid nodes are a supported disk layout; reuse bytes produced by the API.
+      await writeFile(`data-e2e/${wsID}/${tableId}/index.md`, await readFile(`data-e2e/${wsID}/${source.id}/index.md`));
+      await ws.deletePage(source.id);
+      await page.reload();
+      await expect(page.getByText("Original", { exact: true })).toBeVisible();
+      expect((await ws.getNode(tableId)).has_page).toBe(true);
+      expect((await ws.getNode(tableId)).has_table).toBe(true);
+      await expect(page.getByTestId("wysiwyg-editor")).toContainText("Protected page body");
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route(`**/nodes/${tableId}/page`, async (route) => {
+        await held;
+        await route.continue();
+      });
+      try {
+        const title = page.getByRole("textbox", { name: "Title", exact: true });
+        await title.fill("Local pending page title");
+        const body = page.getByTestId("wysiwyg-editor").locator(".ProseMirror");
+        await body.fill("Local pending page body");
+        if (reconnect) {
+          await page.context().setOffline(true);
+          await expect(page.getByTestId("connection-status")).toHaveText("Reconnecting");
+        }
+        const before = await ws.getTable(tableId);
+        await ws.updateTable(tableId, {
+          title: "Remote table title",
+          properties: [...before.properties!, { name: "Remote column", type: "text" }],
+          expected_title: before.title,
+          expected_schema_revision: before.schema_revision,
+        });
+        if (reconnect) {
+          await page.context().setOffline(false);
+          await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+        }
+        await expect(page.locator("th").getByText("Remote column", { exact: true })).toBeVisible();
+        await expect(title).toHaveValue("Local pending page title");
+        await expect(body).toContainText("Local pending page body");
+        await page.locator("td").getByText("Original", { exact: true }).click();
+        const input = page.locator('table td input[type="text"]').first();
+        await input.fill("Edited after schema refresh");
+        await input.press("Enter");
+        await expect
+          .poll(
+            async () =>
+              (await ws.listRecords(tableId, { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 }))
+                .records?.[0]?.data?.Name,
+          )
+          .toBe("Edited after schema refresh");
+        await expect(title).toHaveValue("Local pending page title");
+        await expect(body).toContainText("Local pending page body");
+        if (reconnect) {
+          await page.context().setOffline(true);
+          await expect(page.getByTestId("connection-status")).toHaveText("Reconnecting");
+        }
+        await ws.deleteTable(tableId);
+        if (reconnect) {
+          await page.context().setOffline(false);
+          await expect(page.getByTestId("connection-status")).toHaveText("Connected");
+        }
+        await expect(page.locator("table")).toHaveCount(0);
+        await expect(title).toHaveValue("Local pending page title");
+        await expect(body).toContainText("Local pending page body");
+      } finally {
+        await page.context().setOffline(false);
+        release();
+      }
+    });
+  }
   test.screenshot("create a table with properties and view it", async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, "table-create");
     await gotoWithSession(page, token);

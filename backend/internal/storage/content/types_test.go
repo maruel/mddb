@@ -3,6 +3,8 @@
 package content
 
 import (
+	"encoding/json"
+	"math"
 	"testing"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
@@ -13,6 +15,57 @@ import (
 )
 
 func TestDataRecord(t *testing.T) {
+	t.Run("UnmarshalJSON keeps produced floating point revisions stable", func(t *testing.T) {
+		for _, value := range []float64{0, -1.25, math.MaxFloat64, math.SmallestNonzeroFloat64, 1e18, 1e30} {
+			record := &contentv1.DataRecord{ID: ksid.ID(1), Data: map[string]any{"number": value}}
+			data, err := json.Marshal(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var loaded contentv1.DataRecord
+			if err := json.Unmarshal(data, &loaded); err != nil {
+				t.Fatal(err)
+			}
+			before, err := RecordRevision(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			after, err := RecordRevision(&loaded)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if before != after {
+				t.Fatalf("float %g changed revision after decode", value)
+			}
+		}
+	})
+	t.Run("UnmarshalJSON preserves large signed integer revisions", func(t *testing.T) {
+		for _, value := range []int64{9007199254740993, -9007199254740993, math.MaxInt64, math.MinInt64, 1000000000000000128} {
+			record := &contentv1.DataRecord{ID: ksid.ID(1), Data: map[string]any{"number": value, "nested": []any{value}}}
+			data, err := json.Marshal(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var loaded contentv1.DataRecord
+			if err := json.Unmarshal(data, &loaded); err != nil {
+				t.Fatal(err)
+			}
+			if loaded.Data["number"] != value {
+				t.Fatalf("lost integer %d: %#v", value, loaded.Data)
+			}
+			before, err := RecordRevision(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			after, err := RecordRevision(&loaded)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if before != after {
+				t.Fatalf("integer %d changed revision after decode", value)
+			}
+		}
+	})
 	t.Run("Clone", func(t *testing.T) {
 		t.Run("copies values", func(t *testing.T) {
 			original := &contentv1.DataRecord{

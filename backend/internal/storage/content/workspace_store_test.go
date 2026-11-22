@@ -26,6 +26,7 @@ import (
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -2007,6 +2008,51 @@ func TestWorkspaceFileStore(t *testing.T) {
 	})
 
 	t.Run("WorkspaceAdmission", func(t *testing.T) {
+		t.Run("returned large integer revision survives restart", func(t *testing.T) {
+			svc, ws, id := initWS(t)
+			node, err := ws.CreateTableUnderParent(t.Context(), 0, "Numbers", []contentv1.Property{{Name: "number", Type: contentv1.PropertyTypeNumber}}, author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			node, err = ws.ReadTable(node.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			record := &contentv1.DataRecord{ID: ksid.NewID(), Data: map[string]any{"number": "1"}, Created: storagev1.Now(), Modified: storagev1.Now()}
+			if err := ws.AppendRecord(t.Context(), node.ID, record, author); err != nil {
+				t.Fatal(err)
+			}
+			revision, err := RecordRevision(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			saved, err := ws.ReplaceRecord(t.Context(), node.ID, record.ID, map[string]any{"number": "9007199254740993"}, revision, node.SchemaRevision, author)
+			if err != nil {
+				t.Fatal(err)
+			}
+			revision, err = RecordRevision(saved)
+			if err != nil {
+				t.Fatal(err)
+			}
+			restarted, err := NewFileStoreService(svc.rootDir, git.NewManager(svc.rootDir, "Test", "test@example.com"), svc.wsSvc, svc.orgSvc, svc.settings)
+			if err != nil {
+				t.Fatal(err)
+			}
+			store, err := restarted.GetWorkspaceStore(t.Context(), id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows, err := store.ReadRecordsPage(node.ID, 0, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if rows[0].Data["number"] != int64(9007199254740993) {
+				t.Fatalf("lost persisted integer: %#v", rows[0].Data)
+			}
+			if _, err := store.ReplaceRecord(t.Context(), node.ID, record.ID, map[string]any{"number": "1"}, revision, node.SchemaRevision, author); err != nil {
+				t.Fatalf("returned revision rejected after restart: %v", err)
+			}
+		})
 		t.Run("serialized page replacements and recovery", func(t *testing.T) {
 			_, ws, _ := initWS(t)
 			n, err := ws.CreatePageUnderParent(t.Context(), 0, "Page", strings.Repeat("a", 200), author)
@@ -3110,6 +3156,37 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 		}
 	})
 
+	b.Run("RecordPage1000", func(b *testing.B) {
+		dir := b.TempDir()
+		repo, err := git.NewManager(dir, "bench", "bench@example.com").WorkspaceRepo(b.Context(), "workspace", true)
+		if err != nil {
+			b.Fatal(err)
+		}
+		q := storage.DefaultResourceQuotas()
+		ws := newWorkspaceFileStore(filepath.Join(dir, "workspace"), repo, &q)
+		node, err := ws.CreateTableUnderParent(b.Context(), 0, "Records", []contentv1.Property{{Name: "number", Type: contentv1.PropertyTypeNumber}}, git.Author{Name: "Bench", Email: "bench@example.com"})
+		if err != nil {
+			b.Fatal(err)
+		}
+		table, err := jsonldb.NewTable[*contentv1.DataRecord](ws.tableRecordsFile(node.ID, 0))
+		if err != nil {
+			b.Fatal(err)
+		}
+		for range 1000 {
+			r := &contentv1.DataRecord{ID: ksid.NewID(), Data: map[string]any{"name": "Representative record", "number": int64(9007199254740993)}, Created: storagev1.Now(), Modified: storagev1.Now()}
+			if err := table.Append(r, nil); err != nil {
+				b.Fatal(err)
+			}
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for range b.N {
+			rows, err := ws.ReadRecordsPage(node.ID, 500, 50)
+			if err != nil || len(rows) != 50 {
+				b.Fatalf("record page: %d rows, %v", len(rows), err)
+			}
+		}
+	})
 	b.Run("LargeWorkspacePageWrite", func(b *testing.B) {
 		dir := b.TempDir()
 		repo, err := git.NewManager(dir, "bench", "bench@example.com").WorkspaceRepo(b.Context(), "workspace", true)

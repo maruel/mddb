@@ -5,6 +5,8 @@
 package v1
 
 import (
+	"bytes"
+	"encoding/json"
 	"time"
 
 	"github.com/maruel/ksid"
@@ -17,6 +19,46 @@ type DataRecord struct {
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
 	Created  storagev1.Time `json:"created" jsonschema:"description=Record creation timestamp"`
 	Modified storagev1.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
+}
+
+// UnmarshalJSON preserves integer values that cannot round-trip through float64.
+// Integers within float64's exact range retain its normal JSON representation.
+// Persisted values, returned revisions and subsequent CAS reads therefore agree.
+func (r *DataRecord) UnmarshalJSON(data []byte) error {
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	if err := d.Decode((*recordJSON)(r)); err != nil {
+		return err
+	}
+	_, err := decodeRecordNumbers(r.Data)
+	return err
+}
+
+func decodeRecordNumbers(value any) (any, error) {
+	switch v := value.(type) {
+	case json.Number:
+		if i, err := v.Int64(); err == nil && (i < -(1<<53) || i > 1<<53) {
+			return i, nil
+		}
+		return v.Float64()
+	case map[string]any:
+		for k, item := range v {
+			n, err := decodeRecordNumbers(item)
+			if err != nil {
+				return nil, err
+			}
+			v[k] = n
+		}
+	case []any:
+		for i, item := range v {
+			n, err := decodeRecordNumbers(item)
+			if err != nil {
+				return nil, err
+			}
+			v[i] = n
+		}
+	}
+	return value, nil
 }
 
 // Clone returns a deep copy of the DataRecord.
@@ -79,10 +121,14 @@ func (r *DataRecord) GetString(name string) string {
 
 // GetNumber returns the numeric value for a property, or 0 if not found/wrong type.
 func (r *DataRecord) GetNumber(name string) float64 {
-	if v, ok := r.Data[name].(float64); ok {
+	switch v := r.Data[name].(type) {
+	case float64:
 		return v
+	case int64:
+		return float64(v)
+	default:
+		return 0
 	}
-	return 0
 }
 
 // GetBool returns the boolean value for a property, or false if not found/wrong type.
@@ -96,10 +142,14 @@ func (r *DataRecord) GetBool(name string) bool {
 // GetTime returns the time value for a date property (stored as epoch seconds).
 // Returns zero time if not found/wrong type.
 func (r *DataRecord) GetTime(name string) time.Time {
-	if v, ok := r.Data[name].(float64); ok {
+	switch v := r.Data[name].(type) {
+	case float64:
 		return time.Unix(int64(v), 0).UTC()
+	case int64:
+		return time.Unix(v, 0).UTC()
+	default:
+		return time.Time{}
 	}
-	return time.Time{}
 }
 
 // GetStrings returns the string slice value for a multi-select property.
@@ -138,3 +188,5 @@ func (r *DataRecord) SetValue(name string, value any) {
 func (r *DataRecord) SetTime(name string, t time.Time) {
 	r.SetValue(name, float64(t.Unix()))
 }
+
+type recordJSON DataRecord

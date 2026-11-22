@@ -66,6 +66,42 @@ func TestTableRevisionPreventsStaleSchemaReplacement(t *testing.T) {
 
 func TestRecordRevisionPreventsStaleReplacement(t *testing.T) {
 	t.Parallel()
+	t.Run("large integer returned revision survives read and immediate undo", func(t *testing.T) {
+		env := setupTestEnv(t)
+		token, wsID := setupGoModeWorkspace(t, env, "large-record-revision@example.com")
+		base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"
+		var table dto.CreateTableUnderParentResponse
+		if status := env.doJSON(t, http.MethodPost, base+"0/table/create", dto.CreateTableRequest{Title: "Numbers", Properties: []dto.Property{{Name: "number", Type: "number"}}}, &table, token); status != http.StatusOK {
+			t.Fatal(status)
+		}
+		path := base + table.ID.String()
+		var node dto.NodeResponse
+		if status := env.doJSON(t, http.MethodGet, path, nil, &node, token); status != http.StatusOK {
+			t.Fatal(status)
+		}
+		var created dto.CreateRecordResponse
+		if status := env.doJSON(t, http.MethodPost, path+"/table/records/create", dto.CreateRecordRequest{Data: map[string]any{"number": "1"}}, &created, token); status != http.StatusOK {
+			t.Fatal(status)
+		}
+		recordPath := path + "/table/records/" + created.ID.String()
+		var original dto.GetRecordResponse
+		if status := env.doJSON(t, http.MethodGet, recordPath, nil, &original, token); status != http.StatusOK {
+			t.Fatal(status)
+		}
+		var saved dto.UpdateRecordResponse
+		change := dto.UpdateRecordRequest{Data: map[string]any{"number": "9007199254740993"}, ExpectedRevision: original.Revision, ExpectedSchemaRevision: node.SchemaRevision}
+		if status := env.doJSON(t, http.MethodPost, recordPath, change, &saved, token); status != http.StatusOK {
+			t.Fatal(status)
+		}
+		var read dto.GetRecordResponse
+		if status := env.doJSON(t, http.MethodGet, recordPath, nil, &read, token); status != http.StatusOK || read.Revision != saved.Record.Revision {
+			t.Fatalf("write revision unusable after read: status=%d returned=%q read=%q", status, saved.Record.Revision, read.Revision)
+		}
+		change.Data, change.ExpectedRevision = map[string]any{"number": "1"}, saved.Record.Revision
+		if status := env.doJSON(t, http.MethodPost, recordPath, change, nil, token); status != http.StatusOK {
+			t.Fatalf("immediate undo rejected: %d", status)
+		}
+	})
 	env := setupTestEnv(t)
 	token, wsID := setupGoModeWorkspace(t, env, "record-revision@example.com")
 	base := "/api/v1/workspaces/" + wsID.String() + "/nodes/"

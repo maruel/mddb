@@ -159,6 +159,14 @@ func compareValues(a, b any) int {
 		return 1
 	}
 
+	// Precisely decoded large integers remain numbers when compared with JSON floats.
+	if _, ok := a.(int64); ok {
+		return CompareValues(a, b, affinityNUMERIC)
+	}
+	if _, ok := b.(int64); ok {
+		return CompareValues(a, b, affinityNUMERIC)
+	}
+
 	// Try type-specific comparisons
 	switch va := a.(type) {
 	case string:

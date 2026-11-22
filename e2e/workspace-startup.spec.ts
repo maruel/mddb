@@ -159,8 +159,10 @@ test("a successful deep-linked node cannot erase failed preparation or its user 
     await route.fulfill({ response });
   });
   let rootReads = 0;
+  let allowRecovery = false;
   await page.route("**/api/v1/workspaces/*/nodes/0/children", async (route) => {
-    if (++rootReads === 1) {
+    rootReads++;
+    if (!allowRecovery) {
       await route.fulfill({
         status: 404,
         json: { error: { code: "NOT_FOUND", message: "Initial roots unavailable" } },
@@ -177,9 +179,11 @@ test("a successful deep-linked node cannot erase failed preparation or its user 
   }
   await expect(page.getByTestId("wysiwyg-editor")).toContainText("Existing content");
   await expect(page.getByRole("alert")).toContainText("Initial roots unavailable");
+  const initialRootReads = rootReads;
+  allowRecovery = true;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByTestId(`sidebar-node-${node.id}`)).toBeVisible();
-  expect(rootReads).toBe(2);
+  expect(rootReads).toBe(initialRootReads + 1);
   expect((await client.ws(workspace.id).listNodeChildren("0")).nodes).toHaveLength(1);
 });

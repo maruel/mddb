@@ -1,4 +1,5 @@
 // Owns live editing, conflict recovery, and historical previews under their departure intent.
+import { APIError } from "../useApi";
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack, onCleanup } from "solid-js";
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
 import TableTable from "../components/TableTable";
@@ -44,6 +45,7 @@ export default function NodeView() {
     selectedNodeData,
     selectedDocument,
     updateSelectedNode,
+    refreshTableSchema,
     savingNodeId,
     setSavingNodeId,
     setLoadError,
@@ -241,7 +243,10 @@ export default function NodeView() {
       });
       setSaveError(null);
     } catch (err) {
-      if (ownsNode()) setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+      if (ownsNode()) {
+        setSaveError(`${t("errors.failedToSave")}: ${String(err)}`);
+        if (err instanceof APIError && err.status === 409) await refreshTableSchema();
+      }
     } finally {
       if (isCurrent() && savingNodeId() === nodeId) setSavingNodeId(null);
     }

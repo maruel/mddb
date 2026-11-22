@@ -255,13 +255,11 @@ test("approval cannot use a replacement session for the same account", async ({ 
   }
 });
 
-test("pairing failures offer explicit localized recovery without replaying decisions", async ({ browser, request }) => {
+test("display failures offer explicit localized recovery without replaying decisions", async ({ browser, request }) => {
   const { token } = await registerUser(request, "device-errors");
   const displayContext = await browser.newContext({ viewport: { width: 320, height: 960 } });
-  const approverContext = await browser.newContext({ viewport: { width: 320, height: 960 } });
   try {
     const display = await displayContext.newPage();
-    const approver = await approverContext.newPage();
     await display.route("**/auth/device/start", (route) =>
       route.fulfill({
         json: {
@@ -312,6 +310,19 @@ test("pairing failures offer explicit localized recovery without replaying decis
     ]);
     await display.getByRole("button", { name: "Check sign-in", exact: true }).click();
     await expect(display).toHaveURL(/\/w\/@/, { timeout: 15000 });
+  } finally {
+    await displayContext.close();
+  }
+});
+
+test("approval failures offer explicit localized recovery without replaying decisions", async ({
+  browser,
+  request,
+}) => {
+  const { token } = await registerUser(request, "device-approval-errors");
+  const approverContext = await browser.newContext({ viewport: { width: 320, height: 960 } });
+  try {
+    const approver = await approverContext.newPage();
     await gotoWithSession(approver, token, "/device");
     const details = {
       user_code: "BCDF-GHJK-MNPQ",
@@ -350,7 +361,6 @@ test("pairing failures offer explicit localized recovery without replaying decis
       await approver.unroute("**/auth/device/approve");
     }
   } finally {
-    await displayContext.close();
     await approverContext.close();
   }
 });

@@ -87,7 +87,12 @@ func CanonicalRecord(record *contentv1.DataRecord) (*contentv1.DataRecord, error
 		case nil, string, bool, float64:
 			canonical.Data[key] = v
 		case int64:
-			canonical.Data[key] = float64(v)
+			// Match UnmarshalJSON: only integers beyond float64's exact range stay int64.
+			if v < -(1<<53) || v > 1<<53 {
+				canonical.Data[key] = v
+			} else {
+				canonical.Data[key] = float64(v)
+			}
 		default:
 			// Preserve JSON semantics for nested values and less common Go types.
 			encoded, err := json.Marshal(record)

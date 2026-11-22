@@ -3,6 +3,7 @@
 package content
 
 import (
+	"cmp"
 	"math"
 	"strconv"
 
@@ -269,7 +270,7 @@ func CompareValues(a, b any, aff affinity) int {
 	case int64:
 		switch vb := cb.(type) {
 		case int64:
-			return compareNumbers(float64(va), float64(vb))
+			return cmp.Compare(va, vb)
 		case float64:
 			return compareNumbers(float64(va), vb)
 		case string:

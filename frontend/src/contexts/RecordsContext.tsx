@@ -101,7 +101,7 @@ export const RecordsContext = createContext<RecordsContextValue>();
 export const RecordsProvider: ParentComponent = (props) => {
   const { t, translateError } = useI18n();
   const { user, identity: authIdentity, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData } = useWorkspace();
+  const { selectedNodeId, selectedNodeData, refreshTableSchema } = useWorkspace();
 
   // Application-level undo stack for record CRUD operations.
   const undoActions = useUndo();
@@ -400,11 +400,13 @@ export const RecordsProvider: ParentComponent = (props) => {
   // Load records when selected node changes and has table content.
   // Track only the node ID to avoid re-running when other node data updates.
   let prevNodeId: string | undefined;
+  let prevHasTable: boolean | undefined;
   createEffect(() => {
     const node = selectedNodeData();
     const nodeId = node?.id;
-    if (nodeId === prevNodeId) return;
+    if (nodeId === prevNodeId && node?.has_table === prevHasTable) return;
     prevNodeId = nodeId;
+    prevHasTable = node?.has_table;
     undoActions.clear();
     clearRecords();
 
@@ -789,6 +791,10 @@ export const RecordsProvider: ParentComponent = (props) => {
       if (!committed) recordDrafts.add(owner, workspaceId, nodeId, recordId, rebased);
       else if (operationCurrent())
         setSaveError(`${t("errors.failedToSave")}: ${translateError(err instanceof APIError ? err.code : "unknown")}`);
+      if (operationCurrent() && err instanceof APIError && err.status === 409) {
+        await refreshTableSchema();
+        if (operationCurrent()) await loadRecords(nodeId);
+      }
     } finally {
       finish();
       setSavingRecordId(null);

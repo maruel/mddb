@@ -23,6 +23,8 @@ import { useEventSource } from "./EventSourceContext";
 import { useI18n } from "../i18n";
 import {
   EventAspectMetadata,
+  EventAspectSchema,
+  EventTableUpdated,
   EventNodeCreated,
   EventNodeDeleted,
   EventNodeMoved,
@@ -74,6 +76,7 @@ interface WorkspaceContextValue {
   selectedNodeId: Accessor<string | null>;
   selectedNodeData: Accessor<NodeResponse | null>;
   selectedDocument: Accessor<NodeResponse | null>;
+  refreshTableSchema: () => Promise<void>;
   updateSelectedNode: (node: NodeResponse) => void;
 
   // Breadcrumbs
@@ -128,6 +131,12 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   const rootData = useWorkspaceData();
   const { nodes, setNodesStore, loadingNodes } = rootData;
   const metadataRequests = new Map<string, AbortController>();
+  // Schema transport belongs to the selected document, not catalog replacement.
+  let schemaRequest: AbortController | null = null;
+  const retireSchema = () => {
+    schemaRequest?.abort();
+    schemaRequest = null;
+  };
   const retireMetadata = (id: string) => {
     metadataRequests.get(id)?.abort();
     metadataRequests.delete(id);
@@ -148,6 +157,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     disposed = true;
     deferredNodeRefresh = null;
     retireAllMetadata();
+    retireSchema();
     retireNodeRead();
   });
 
@@ -281,6 +291,42 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   );
 
   const workspaceIdentity = createMemo(() => `${authIdentity()}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`);
+  createComputed(on([selectedDocument, workspaceIdentity], retireSchema, { defer: true }));
+  const refreshTableSchema = async () => {
+    const document = selectedDocument();
+    const node = selectedNodeData();
+    const ws = wsApi();
+    if (!document || !node || !ws) return;
+    retireSchema();
+    const controller = new AbortController();
+    schemaRequest = controller;
+    const identity = workspaceIdentity();
+    try {
+      const next = await ws.getTable(node.id, controller.signal);
+      if (
+        controller.signal.aborted ||
+        disposed ||
+        identity !== workspaceIdentity() ||
+        selectedDocument() !== document ||
+        selectedNodeId() !== node.id
+      )
+        return;
+      const current = selectedNodeData();
+      if (!current) return;
+      updateSelectedNode({
+        ...current,
+        title: next.title,
+        properties: next.properties ?? undefined,
+        views: next.views ?? undefined,
+        schema_revision: next.schema_revision,
+        has_table: next.schema_revision !== "",
+      });
+    } catch (error) {
+      if (!controller.signal.aborted) throw error;
+    } finally {
+      if (schemaRequest === controller) schemaRequest = null;
+    }
+  };
   const captureWorkspace = () => {
     const initialIdentity = workspaceIdentity();
     return () => !disposed && initialIdentity === workspaceIdentity();
@@ -793,6 +839,14 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     on(lastEvent, (evt) => {
       if (!evt) return;
       if (evt.type === EventResync) streamEpoch++;
+      if (
+        ((evt.type === EventTableUpdated ||
+          (evt.type === EventNodeUpdated && evt.aspects?.includes(EventAspectSchema))) &&
+          evt.node_id === selectedNodeId()) ||
+        (evt.type === EventResync && selectedNodeData()?.has_table)
+      ) {
+        void refreshTableSchema().catch((error: unknown) => reportError(error));
+      }
       if (evt.type === EventNodeUpdated) {
         void refreshNodeMetadata(evt.node_id, evt.aspects?.includes(EventAspectMetadata) ?? false);
       } else if (
@@ -892,6 +946,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     selectedNodeId,
     selectedNodeData,
     selectedDocument,
+    refreshTableSchema,
     updateSelectedNode,
     breadcrumbPath,
     loadingNodes,
