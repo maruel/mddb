@@ -7,6 +7,7 @@ package v1
 import (
 	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -43,9 +44,19 @@ func (t Time) Before(u Time) bool {
 	return t < u
 }
 
-// MarshalJSON encodes the time as a float32 representing seconds.
+// MarshalJSON encodes the time as seconds with exactly three decimals. Quota admission
+// compares exact serialized sizes, so a rewritten timestamp keeps its width.
 func (t Time) MarshalJSON() ([]byte, error) {
-	return json.Marshal(float64(t) / 1000)
+	sec, ms := int64(t)/1000, int64(t)%1000
+	b := make([]byte, 0, 24)
+	if ms < 0 {
+		ms = -ms
+		if sec == 0 {
+			b = append(b, '-')
+		}
+	}
+	b = strconv.AppendInt(b, sec, 10)
+	return append(b, '.', byte('0'+ms/100), byte('0'+ms/10%10), byte('0'+ms%10)), nil
 }
 
 // UnmarshalJSON decodes JSON numbers as unix timestamps, converting float64 to int64 by rounding.

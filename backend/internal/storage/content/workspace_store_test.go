@@ -2376,6 +2376,47 @@ func TestWorkspaceFileStore(t *testing.T) {
 			})
 		})
 
+		t.Run("same-size rewrites keep metadata width", func(t *testing.T) {
+			// A millisecond ending in zero must not serialize shorter than a later one, and
+			// the first rewrite of a created table must keep its layout.
+			fixed := time.Now().Truncate(time.Second).Add(120 * time.Millisecond)
+			synctest.Test(t, func(t *testing.T) {
+				time.Sleep(time.Until(fixed))
+				_, ws, _ := initWS(t)
+				n, err := ws.CreateTableUnderParent(t.Context(), 0, "Before", []contentv1.Property{{Name: "text", Type: contentv1.PropertyTypeText}}, author)
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := &contentv1.DataRecord{ID: ksid.NewID(), Data: map[string]any{"text": "before"}, Created: storagev1.Now(), Modified: storagev1.Now()}
+				if err := ws.AppendRecord(t.Context(), n.ID, r, author); err != nil {
+					t.Fatal(err)
+				}
+				_, used, err := ws.GetWorkspaceUsage()
+				if err != nil {
+					t.Fatal(err)
+				}
+				q := ws.EffectiveQuotas()
+				q.MaxStorageBytes = used
+				ws.quotas = &q
+				time.Sleep(3 * time.Millisecond)
+				revision, err := RecordRevision(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				stored, err := ws.ReadTable(n.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ws.ReplaceRecord(t.Context(), n.ID, r.ID, map[string]any{"text": "latter"}, revision, stored.SchemaRevision, author); err != nil {
+					t.Fatalf("same-size record: %v", err)
+				}
+				n.Title = "Latter"
+				if err := ws.WriteTable(t.Context(), n, false, author); err != nil {
+					t.Fatalf("same-size title: %v", err)
+				}
+			})
+		})
+
 		t.Run("exact JSONL bytes and record recovery", func(t *testing.T) {
 			_, ws, _ := initWS(t)
 			n, err := ws.CreateTableUnderParent(t.Context(), 0, "Records", nil, author)

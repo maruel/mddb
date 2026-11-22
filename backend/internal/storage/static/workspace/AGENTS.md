@@ -27,7 +27,7 @@ workspace/
 ## Tables
 
 `metadata.json` holds the table title, its properties, and its views. Its `version` is `"1.0"`; readers accept any
-`1.x` and treat a missing version as `1.0`. Times are Unix seconds.
+`1.x` and treat a missing version as `1.0`. Times are Unix seconds written with three decimals.
 
 ```
 {"title":"People","version":"1.0","properties":[{"name":"name","type":"text"}],"created":1795114562.856,"modified":1795114562.856}

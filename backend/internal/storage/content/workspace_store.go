@@ -813,6 +813,29 @@ func checkTableMetadataVersion(v any) error {
 	return fmt.Errorf("unsupported table metadata version %v (expected 1.x)", v)
 }
 
+// marshalTableMetadata encodes metadata.json for every table writer, so a rewrite keeps the
+// layout and quota admission sees only content growth. A nil created is omitted, as are
+// empty views: readers treat a missing key as no views.
+func marshalTableMetadata(title string, created any, modified storagev1.Time, properties []contentv1.Property, views []contentv1.View) ([]byte, error) {
+	m := map[string]any{
+		"title":      title,
+		"version":    tableMetadataVersion,
+		"modified":   modified,
+		"properties": properties,
+	}
+	if created != nil {
+		m["created"] = created
+	}
+	if len(views) > 0 {
+		m["views"] = views
+	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	return data, nil
+}
+
 // writeTable writes table metadata without committing.
 func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 	if err := ws.checkTableShape(node.ID, node.Properties); err != nil {
@@ -821,31 +844,22 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 	parentID := node.ParentID
 	metadataFile := ws.tableMetadataFile(node.ID, parentID)
 
-	metadata := map[string]any{
-		"title":      node.Title,
-		"version":    tableMetadataVersion,
-		"modified":   storagev1.Now(),
-		"properties": node.Properties,
-		"views":      node.Views,
-	}
-
+	now := storagev1.Now()
+	var created any
 	if isNew {
-		metadata["created"] = storagev1.Now()
-	} else {
-		// For updates, preserve existing created time if possible
-		if oldData, err := os.ReadFile(metadataFile); err == nil { //nolint:gosec // G304: metadataFile is constructed from validated id
-			var oldMetadata map[string]any
-			if err := json.Unmarshal(oldData, &oldMetadata); err == nil {
-				if created, ok := oldMetadata["created"]; ok {
-					metadata["created"] = created
-				}
+		created = now
+	} else if oldData, err := os.ReadFile(metadataFile); err == nil { //nolint:gosec // G304: metadataFile is constructed from validated id
+		// Preserve the existing created bytes so a rewrite keeps their width.
+		var oldMetadata map[string]json.RawMessage
+		if err := json.Unmarshal(oldData, &oldMetadata); err == nil {
+			if c, ok := oldMetadata["created"]; ok {
+				created = c
 			}
 		}
 	}
-
-	data, err := json.Marshal(metadata)
+	data, err := marshalTableMetadata(node.Title, created, now, node.Properties, node.Views)
 	if err != nil {
-		return fmt.Errorf("failed to marshal metadata: %w", err)
+		return err
 	}
 
 	if err := ws.admitFile(metadataFile, int64(len(data))); err != nil {
@@ -1627,16 +1641,9 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 		id := ksid.NewID()
 		now := storagev1.Now()
 
-		metadata := map[string]any{
-			"title":      title,
-			"version":    "1.0",
-			"created":    now,
-			"modified":   now,
-			"properties": properties,
-		}
-		metadataData, err := json.Marshal(metadata)
+		metadataData, err := marshalTableMetadata(title, now, now, properties, nil)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to marshal metadata: %w", err)
+			return "", nil, err
 		}
 
 		if err := ws.checkStorageQuota(int64(len(metadataData))); err != nil {
