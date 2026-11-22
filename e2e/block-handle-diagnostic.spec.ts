@@ -140,7 +140,8 @@ test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ pag
       };
     });
     expect(styles.display).toBe("flex");
-    expect(styles.alignItems).toBe("flex-start");
+    // Chrome 158 serializes flex-start as its flow-start alias.
+    expect(["flex-start", "flow-start"]).toContain(styles.alignItems);
   }
 
   // Check numbered items - wait for them to load
