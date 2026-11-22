@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/maruel/ksid"
@@ -43,7 +45,7 @@ func setupTestServices(t *testing.T) (*Services, ksid.ID) {
 
 	gitMgr := git.NewManager(dir, "test", "test@test.com")
 	quotas := storage.DefaultResourceQuotas()
-	fileStore, err := content.NewFileStoreService(dir, gitMgr, wsSvc, orgSvc, &quotas)
+	fileStore, err := content.NewFileStoreService(dir, gitMgr, wsSvc, orgSvc, storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{ResourceQuotas: quotas}}))
 	if err != nil {
 		t.Fatal(err)
 	}

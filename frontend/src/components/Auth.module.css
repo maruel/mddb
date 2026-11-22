@@ -7,6 +7,12 @@
   background: var(--c-surface-page);
 }
 
+.embedded {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--s-4);
+}
+
 .authForm {
   width: 100%;
   max-width: 380px;

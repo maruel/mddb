@@ -5,6 +5,7 @@ declare const classes: {
   readonly "authForm": string;
   readonly "deviceLogin": string;
   readonly "divider": string;
+  readonly "embedded": string;
   readonly "error": string;
   readonly "formGroup": string;
   readonly "githubButton": string;

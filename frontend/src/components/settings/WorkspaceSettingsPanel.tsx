@@ -1,7 +1,8 @@
 // Workspace settings panel for managing workspace members, settings, and git sync.
-import { createSignal, createEffect, Show, For } from "solid-js";
+
+import { createSignal, createEffect, createMemo, Show, For } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { useAuth } from "../../contexts";
+import { useAuth, useAuthScope } from "../../contexts";
 import AddIcon from "@material-symbols/svg-400/outlined/add.svg?solid";
 import UploadIcon from "@material-symbols/svg-400/outlined/cloud_upload.svg?solid";
 import DownloadIcon from "@material-symbols/svg-400/outlined/cloud_download.svg?solid";
@@ -38,7 +39,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, orgApi, wsApi, api } = useAuth();
+  const { user, api } = useAuth();
+  const wsApi = createMemo(() => api().ws(props.wsId));
+  const captureScope = useAuthScope();
 
   const getInitialTab = (): Tab => {
     if (props.section === "settings") return "settings";
@@ -48,7 +51,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   };
 
   const [activeTab, setActiveTab] = createSignal<Tab>(getInitialTab());
-  const [members, setMembers] = createSignal<UserResponse[]>([]);
+  const [members, setMembers] = createSignal<Pick<UserResponse, "id" | "name" | "email" | "workspace_role">[]>([]);
   const [invitations, setInvitations] = createSignal<WSInvitationResponse[]>([]);
 
   // Git Remote state
@@ -92,7 +95,12 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  const isAdmin = () => user()?.workspace_role === WSRoleAdmin;
+  const isAdmin = () => {
+    const account = user();
+    const membership = account?.workspaces?.find((item) => item.workspace_id === props.wsId);
+    const organization = account?.organizations?.find((item) => item.organization_id === membership?.organization_id);
+    return membership?.role === WSRoleAdmin || organization?.role === "org:owner" || organization?.role === "org:admin";
+  };
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -101,9 +109,11 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   };
 
   const loadData = async () => {
+    setInvitations([]);
+    const isCurrent = captureScope();
+    const scopeID = props.wsId;
+    const current = () => isCurrent() && props.wsId === scopeID;
     const client = api();
-    const org = orgApi();
-    if (!org) return;
 
     try {
       setLoading(true);
@@ -111,17 +121,31 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
       const ws = wsApi();
       if (activeTab() === "members" && isAdmin()) {
-        const [membersData, invsData] = await Promise.all([
-          org.listUsers(),
-          ws ? ws.listWSInvitations() : Promise.resolve({ invitations: [] }),
+        const [membersResult, invitationResult] = await Promise.allSettled([
+          ws.listWorkspaceMembers(),
+          ws.listWSInvitations(),
         ]);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
-        setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
-        setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
+        if (!current()) return;
+        if (membersResult.status === "fulfilled") {
+          setMembers(
+            (membersResult.value.members || []).map((member) => ({
+              id: member.id,
+              name: member.name,
+              email: member.email,
+              workspace_role: member.role,
+            })),
+          );
+        } else {
+          setError(`${t("errors.failedToLoad")}: ${membersResult.reason}`);
+        }
+        if (invitationResult.status === "fulfilled") {
+          setInvitations(invitationResult.value.invitations || []);
+        } else {
+          setError(`${t("errors.failedToLoad")}: ${invitationResult.reason}`);
+        }
       }
 
-      if ((activeTab() === "settings" || activeTab() === "quotas") && ws) {
+      if (activeTab() === "settings" || activeTab() === "quotas") {
         const wsData = await ws.getWorkspace();
         setWsName(wsData.name);
         setOriginalWsName(wsData.name);
@@ -137,7 +161,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         setParentLimits(wsData.parent_resource_limits);
       }
 
-      if (activeTab() === "sync" && isAdmin() && ws) {
+      if (activeTab() === "sync" && isAdmin()) {
         try {
           const availResp = await client.isGitHubAppAvailable();
           setGitHubAppAvailable(availResp.available);
@@ -173,9 +197,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         }
       }
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
+      if (current()) setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
@@ -191,25 +215,47 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     else if (section === "members" || !section) setActiveTab("members");
   });
 
-  const handleInvite = async (email: string, role: WorkspaceRole) => {
+  const handleInvite = async (email: string, role: WorkspaceRole): Promise<boolean> => {
     const ws = wsApi();
-    if (!ws) return;
-
+    const isCurrent = captureScope();
+    const scopeID = props.wsId;
+    const current = () => isCurrent() && props.wsId === scopeID;
     try {
       setLoading(true);
-      await ws.createWSInvitation({ email, role });
-      setSuccess(t("success.invitationSent") || "Invitation sent successfully");
-      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
+      setError(null);
+      setSuccess(null);
+      const invitation = await ws.createWSInvitation({ email, role });
+      if (!current()) return false;
+      setInvitations((items) => [...items, invitation]);
+      return true;
     } catch (err) {
-      setError(`${t("errors.failedToInvite")}: ${String(err)}`);
+      if (current()) setError(`${t("errors.failedToInvite")}: ${String(err)}`);
+      return false;
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    const ws = wsApi();
+    const isCurrent = captureScope();
+    const scopeID = props.wsId;
+    const current = () => isCurrent() && props.wsId === scopeID;
+    try {
+      setLoading(true);
+      setError(null);
+      await ws.deleteWSInvitation(id);
+      if (!current()) return;
+      setInvitations((items) => items.filter((invitation) => invitation.id !== id));
+    } catch (err) {
+      if (current()) setError(`${t("errors.failedToSave")}: ${String(err)}`);
+    } finally {
+      if (current()) setLoading(false);
     }
   };
 
   const handleUpdateRole = async (userId: string, role: WorkspaceRole) => {
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -226,7 +272,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const saveWorkspaceSettings = async (e: Event) => {
     e.preventDefault();
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -249,7 +294,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const saveWorkspaceQuotas = async (e: Event) => {
     e.preventDefault();
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -268,7 +312,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const handleAddOrUpdateRemote = async (e: Event) => {
     e.preventDefault();
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -292,7 +335,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
   const handlePush = async () => {
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -310,7 +352,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
   const handlePull = async () => {
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -330,7 +371,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     if (!confirm(t("settings.confirmRemoveRemote") || "Are you sure you want to remove this remote?")) return;
 
     const ws = wsApi();
-    if (!ws) return;
 
     try {
       setLoading(true);
@@ -368,7 +408,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const handleSetupGitHubApp = async (e: Event) => {
     e.preventDefault();
     const ws = wsApi();
-    if (!ws) return;
 
     const selected = ghAppRepos().find((r) => r.full_name === ghSelectedRepo());
     if (!selected) return;
@@ -396,7 +435,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
   const handleToggleAutoPush = async () => {
     const ws = wsApi();
-    if (!ws) return;
 
     const newVal = !gitAutoPush();
     try {
@@ -433,13 +471,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     { value: WSRoleEditor, label: t("settings.roleEditor") },
     { value: WSRoleViewer, label: t("settings.roleViewer") },
   ];
-
-  const pendingInvitations = () =>
-    invitations().map((inv) => ({
-      email: inv.email,
-      role: inv.role,
-      created: inv.created,
-    }));
 
   return (
     <div class={styles.panel}>
@@ -482,8 +513,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
             <InviteForm
               roleOptions={wsRoleOptions}
               defaultRole={WSRoleViewer}
-              pendingInvitations={pendingInvitations()}
+              pendingInvitations={invitations()}
               onInvite={handleInvite}
+              onRevoke={handleRevoke}
               loading={loading()}
             />
           </Show>

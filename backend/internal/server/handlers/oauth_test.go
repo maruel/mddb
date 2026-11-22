@@ -169,7 +169,7 @@ func newOAuthTestEnv(t *testing.T, baseURL string) *oauthTestEnv {
 		t.Fatal(err)
 	}
 	svc := &Services{User: users, Session: sessions, RootRepo: root}
-	h := NewOAuthHandler(svc, &Config{ServerConfig: *serverCfg, BaseURL: baseURL})
+	h := NewOAuthHandler(svc, &Config{ServerSettings: storage.NewServerSettings(serverCfg), BaseURL: baseURL})
 	for _, p := range providers {
 		h.AddProvider(p, "client", "secret", baseURL+"/api/v1/auth/oauth/"+string(p)+"/callback")
 	}
@@ -307,7 +307,7 @@ func (e *oauthTestEnv) wantLoggedIn(t *testing.T, p identityv1.OAuthProvider, w 
 		t.Fatal("no browser session cookie")
 	}
 	claims := &SessionClaims{}
-	if _, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (any, error) { return e.h.cfg.JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired(), jwt.WithIssuedAt()); err != nil {
+	if _, err := jwt.ParseWithClaims(tokenString, claims, func(_ *jwt.Token) (any, error) { return e.h.cfg.Snapshot().JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired(), jwt.WithIssuedAt()); err != nil {
 		t.Fatal(err)
 	}
 	sid, err := ksid.Parse(claims.SessionID)
@@ -468,20 +468,22 @@ func TestOAuthHandler(t *testing.T) {
 		})
 		t.Run("destination", func(t *testing.T) {
 			for _, p := range providers {
-				t.Run(string(p), func(t *testing.T) {
-					e := newOAuthTestEnv(t, "https://mddb.example.com")
-					r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"?next=%2Fdevice", http.NoBody)
-					r.SetPathValue("provider", string(p))
-					w := httptest.NewRecorder()
-					e.h.LoginRedirect(w, r)
-					if w.Code != http.StatusTemporaryRedirect {
-						t.Fatalf("start = %d: %s", w.Code, w.Body)
-					}
-					state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
-					changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte("/device")), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
-					wantRedirect(t, e.callback(t, p, changed, cookie), "/login?oauth_error=EXPIRED")
-					wantRedirect(t, e.callback(t, p, state, cookie), "/device")
-				})
+				for _, returnPath := range []string{"/device", "/accept-invitation/org?token=organization-secret", "/accept-invitation/ws?token=workspace-secret"} {
+					t.Run(string(p)+returnPath, func(t *testing.T) {
+						e := newOAuthTestEnv(t, "https://mddb.example.com")
+						r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/"+string(p)+"?next="+url.QueryEscape(returnPath), http.NoBody)
+						r.SetPathValue("provider", string(p))
+						w := httptest.NewRecorder()
+						e.h.LoginRedirect(w, r)
+						if w.Code != http.StatusTemporaryRedirect {
+							t.Fatalf("start = %d: %s", w.Code, w.Body)
+						}
+						state, cookie := authorizeState(t, w.Header().Get("Location")), stateCookie(t, w)
+						changed := strings.Replace(state, base64.RawURLEncoding.EncodeToString([]byte(returnPath)), base64.RawURLEncoding.EncodeToString([]byte("/other")), 1)
+						wantRedirect(t, e.callback(t, p, changed, cookie), "/login?oauth_error=EXPIRED")
+						wantRedirect(t, e.callback(t, p, state, cookie), returnPath)
+					})
+				}
 			}
 			e := newOAuthTestEnv(t, "https://mddb.example.com")
 			for _, path := range []string{"https://evil.example/device", "//evil.example", "/\\evil", "/%5cevil", "/%2fevil", "/%252fevil", "/%00device", "/%0ddevice", "/%7fdevice", "/%", "device"} {
@@ -538,6 +540,172 @@ func TestOAuthHandler(t *testing.T) {
 		})
 	})
 	t.Run("Callback", func(t *testing.T) {
+		t.Run("returning identity refreshes exact primary proof", func(t *testing.T) {
+			for _, p := range providers {
+				t.Run(string(p), func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					e.linkIdentity(t, e.caller, p)
+					e.fake.setEmail(e.caller.Email, true)
+					e.wantLoggedIn(t, p, e.login(t, p))
+					if !e.get(t, e.caller).EmailVerified {
+						t.Fatal("fresh matching provider proof not published")
+					}
+					if e.svc.User.Count() != 2 {
+						t.Fatal("returning login created another account")
+					}
+				})
+			}
+		})
+		t.Run("returning identity ignores stale or unrelated proof", func(t *testing.T) {
+			for _, address := range []string{"other@example.com", "Caller@example.com", "unverified"} {
+				t.Run(address, func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					e.linkIdentity(t, e.caller, identityv1.OAuthProviderGitHub)
+					if _, err := e.svc.User.Modify(e.caller.ID, func(u *identityv1.User) error { u.OAuthIdentities[0].Email = u.Email; return nil }); err != nil {
+						t.Fatal(err)
+					}
+					if address == "unverified" {
+						e.fake.setEmail(e.caller.Email, false)
+					} else {
+						e.fake.setEmail(address, true)
+					}
+					e.wantLoggedIn(t, identityv1.OAuthProviderGitHub, e.login(t, identityv1.OAuthProviderGitHub))
+					if e.get(t, e.caller).EmailVerified {
+						t.Fatal("cached, nonmatching or unverified email proved primary")
+					}
+				})
+			}
+		})
+
+		t.Run("link verifies exact current primary address", func(t *testing.T) {
+			for _, p := range providers {
+				t.Run(string(p), func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					e.fake.setEmail(e.caller.Email, true)
+					state, c := e.startLink(t, p)
+					if w := e.callback(t, p, state, c); w.Code != http.StatusSeeOther {
+						t.Fatalf("link: %d %s", w.Code, w.Body)
+					}
+					stored, err := identity.NewUserService(filepath.Join(e.dir, "db", "users.jsonl"))
+					if err != nil {
+						t.Fatal(err)
+					}
+					u, err := stored.Get(e.caller.ID)
+					if err != nil || !u.EmailVerified || u.Email != e.caller.Email || len(u.OAuthIdentities) != 1 {
+						t.Fatalf("primary proof not persisted: %+v (%v)", u, err)
+					}
+					if e.svc.User.Count() != 2 || e.sessions(e.caller) != 0 || e.get(t, e.victim).EmailVerified {
+						t.Fatal("link changed account/session ownership")
+					}
+				})
+			}
+		})
+		t.Run("link cannot prove a different current address", func(t *testing.T) {
+			for _, address := range []string{"other@example.com", "Caller@example.com", "changed@example.com"} {
+				t.Run(address, func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					e.fake.setEmail(address, true)
+					state, c := e.startLink(t, identityv1.OAuthProviderGitHub)
+					if address == "changed@example.com" {
+						e.fake.setEmail(e.caller.Email, true)
+						if _, err := e.svc.User.Modify(e.caller.ID, func(u *identityv1.User) error { u.Email = address; return nil }); err != nil {
+							t.Fatal(err)
+						}
+					}
+					if w := e.callback(t, identityv1.OAuthProviderGitHub, state, c); w.Code != http.StatusSeeOther {
+						t.Fatalf("link: %d", w.Code)
+					}
+					if e.get(t, e.caller).EmailVerified {
+						t.Fatal("unrelated provider address verified primary")
+					}
+				})
+			}
+		})
+		t.Run("link returns to its signed invitation destination", func(t *testing.T) {
+			for _, kind := range []string{"org", "ws"} {
+				t.Run(kind, func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					next := "/accept-invitation/" + kind + "?token=secret"
+					body, err := json.Marshal(dto.LinkOAuthAccountRequest{Provider: dto.OAuthProviderGitHub, Next: next})
+					if err != nil {
+						t.Fatal(err)
+					}
+					w := e.linkOAuth(t, string(body))
+					if w.Code != http.StatusOK {
+						t.Fatalf("start: %d %s", w.Code, w.Body)
+					}
+					var out dto.LinkOAuthAccountResponse
+					if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+						t.Fatal(err)
+					}
+					callback := e.callback(t, identityv1.OAuthProviderGitHub, authorizeState(t, out.RedirectURL), stateCookie(t, w))
+					if callback.Code != http.StatusSeeOther || callback.Header().Get("Location") != next {
+						t.Fatalf("callback: %d %v", callback.Code, callback.Header())
+					}
+				})
+			}
+		})
+		t.Run("link recovery retains invitation on cancellation or claimed identity", func(t *testing.T) {
+			for _, failure := range []string{"cancelled", "identity_claimed"} {
+				t.Run(failure, func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					next := "/accept-invitation/ws?token=secret"
+					body, err := json.Marshal(dto.LinkOAuthAccountRequest{Provider: dto.OAuthProviderGitHub, Next: next})
+					if err != nil {
+						t.Fatal(err)
+					}
+					w := e.linkOAuth(t, string(body))
+					if w.Code != http.StatusOK {
+						t.Fatalf("start: %d %s", w.Code, w.Body)
+					}
+					var out dto.LinkOAuthAccountResponse
+					if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+						t.Fatal(err)
+					}
+					state, cookie := authorizeState(t, out.RedirectURL), stateCookie(t, w)
+					var callback *httptest.ResponseRecorder
+					want := "/accept-invitation/ws?oauth_error=CONFLICT&token=secret"
+					if failure == "cancelled" {
+						q := url.Values{"state": {state}, "error": {"access_denied"}}
+						r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/auth/oauth/github/callback?"+q.Encode(), http.NoBody)
+						r.SetPathValue("provider", "github")
+						r.AddCookie(cookie)
+						callback = httptest.NewRecorder()
+						e.h.Callback(callback, r)
+						want = next
+						if e.fake.exchanges.Load() != 0 {
+							t.Fatal("cancellation exchanged provider credentials")
+						}
+					} else {
+						e.linkIdentity(t, e.victim, identityv1.OAuthProviderGitHub)
+						callback = e.callback(t, identityv1.OAuthProviderGitHub, state, cookie)
+					}
+					if callback.Code != http.StatusSeeOther || callback.Header().Get("Location") != want {
+						t.Fatalf("recovery: %d %v", callback.Code, callback.Header())
+					}
+					if len(e.get(t, e.caller).OAuthIdentities) != 0 || e.get(t, e.caller).EmailVerified {
+						t.Fatal("failed link changed account proof")
+					}
+					wantCleared(t, callback)
+				})
+			}
+		})
+
+		t.Run("link rejects unsupported return destinations", func(t *testing.T) {
+			for _, next := range []string{"https://evil.test/accept-invitation/org?token=x", "//evil.test", "/", "/settings/user", "/accept-invitation/other?token=x", "/accept-invitation/org", "/accept-invitation/org?token=x&next=//evil.test", "/accept-invitation/org?token=x&token=y", "/accept-invitation/%6frg?token=x", "/accept-invitation/ws?token=x#fragment"} {
+				t.Run(next, func(t *testing.T) {
+					e := newOAuthTestEnv(t, "http://localhost:8080")
+					body, err := json.Marshal(dto.LinkOAuthAccountRequest{Provider: dto.OAuthProviderGitHub, Next: next})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if w := e.linkOAuth(t, string(body)); w.Code != http.StatusBadRequest || len(w.Result().Cookies()) != 0 {
+						t.Fatalf("unsafe start: %d %s", w.Code, w.Body)
+					}
+				})
+			}
+		})
+
 		t.Run("history failure preserves completed login", func(t *testing.T) {
 			e := newOAuthTestEnv(t, "http://localhost:8080")
 			if err := os.WriteFile(filepath.Join(e.dir, ".git", "index.lock"), []byte("test owns lock"), 0o600); err != nil {
@@ -562,7 +730,7 @@ func TestOAuthHandler(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			t.Run("sign-in at the session quota succeeds", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
-				limit := e.h.cfg.Quotas.MaxSessionsPerUser
+				limit := e.h.cfg.Snapshot().Quotas.MaxSessionsPerUser
 				var u *identityv1.User
 				for i := range limit + 1 {
 					w := e.login(t, identityv1.OAuthProviderGoogle)
@@ -855,7 +1023,7 @@ func TestOAuthHandler(t *testing.T) {
 			t.Run("linking state signed with the JWT secret", func(t *testing.T) {
 				e := newOAuthTestEnv(t, "http://localhost:8080")
 				forged := linkingStatePrefix + e.victim.ID.String() + ":github:x"
-				c := e.h.stateCookie(oauthserver.SignState(forged, e.h.cfg.JWTSecret), oauthStateMaxAge)
+				c := e.h.stateCookie(oauthserver.SignState(forged, e.h.cfg.Snapshot().JWTSecret), oauthStateMaxAge)
 				e.wantRejected(t, e.callback(t, identityv1.OAuthProviderGitHub, forged, c))
 			})
 		})

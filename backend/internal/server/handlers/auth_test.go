@@ -86,7 +86,7 @@ func TestAuthHandler(t *testing.T) {
 		gitMgr := git.NewManager(tempDir, "test", "test@test.com")
 
 		serverQuotas := storage.DefaultResourceQuotas()
-		fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService, &serverQuotas)
+		fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService, storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{ResourceQuotas: serverQuotas}}))
 		if err != nil {
 			t.Fatalf("NewFileStore failed: %v", err)
 		}
@@ -104,9 +104,9 @@ func TestAuthHandler(t *testing.T) {
 		}
 
 		cfg := &Config{
-			ServerConfig: storagev1.ServerConfig{
+			ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{
 				JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
-			},
+			}),
 			BaseURL: "http://localhost:8080",
 		}
 		authHandler := NewAuthHandler(svc, cfg)

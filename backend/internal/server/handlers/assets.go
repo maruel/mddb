@@ -59,7 +59,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Use the server-level MaxAssetSizeBytes as the upload limit.
-	maxBytes := h.Cfg.Quotas.MaxAssetSizeBytes
+	maxBytes := h.Cfg.Snapshot().Quotas.MaxAssetSizeBytes
 
 	// Fast pre-check via Content-Length before reading the body, so we can
 	// return a structured JSON error. (Browsers always send Content-Length for
@@ -107,7 +107,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Check server-wide storage quota before saving
-	maxStorage := h.Cfg.Quotas.MaxTotalStorageBytes
+	maxStorage := h.Cfg.Snapshot().Quotas.MaxTotalStorageBytes
 	if err := h.Svc.FileStore.CheckServerStorageQuota(int64(len(data)), maxStorage); err != nil {
 		if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
 			writeErrorResponse(w, dto.QuotaExceededInt64("total storage", maxStorage))

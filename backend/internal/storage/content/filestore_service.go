@@ -1,4 +1,4 @@
-// Manages workspace-scoped file storage and quotas.
+// Manages workspace storage and refreshes effective quota caches from published settings.
 
 // Package content provides versioned file storage for the mddb system.
 package content
@@ -24,12 +24,14 @@ import (
 // Each workspace has its own WorkspaceFileStore instance.
 // Global operations (org quotas, workspace initialization) are handled here.
 type FileStoreService struct {
-	rootDir      string
-	git          *git.Manager
-	wsSvc        *identity.WorkspaceService
-	orgSvc       *identity.OrganizationService
-	serverQuotas *storagev1.ResourceQuotas
+	rootDir  string
+	git      *git.Manager
+	wsSvc    *identity.WorkspaceService
+	orgSvc   *identity.OrganizationService
+	settings *storage.ServerSettings
+
 	mu           sync.RWMutex
+	serverQuotas storagev1.ResourceQuotas
 	stores       map[ksid.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
 }
 
@@ -37,8 +39,8 @@ type FileStoreService struct {
 // gitMgr is required - all operations are versioned.
 // wsSvc provides quota limits for workspaces.
 // orgSvc provides quota limits for organizations.
-// serverQuotas provides server-level resource quotas for effective quota computation.
-func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService, serverQuotas *storagev1.ResourceQuotas) (*FileStoreService, error) {
+// settings provides published server resource quotas for effective quota computation.
+func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService, settings *storage.ServerSettings) (*FileStoreService, error) {
 	if gitMgr == nil {
 		return nil, errors.New("git manager is required")
 	}
@@ -48,8 +50,8 @@ func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.Wo
 	if orgSvc == nil {
 		return nil, errors.New("organization service is required")
 	}
-	if serverQuotas == nil {
-		return nil, errors.New("server quotas is required")
+	if settings == nil {
+		return nil, errors.New("server settings is required")
 	}
 	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
@@ -60,7 +62,8 @@ func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.Wo
 		git:          gitMgr,
 		wsSvc:        wsSvc,
 		orgSvc:       orgSvc,
-		serverQuotas: serverQuotas,
+		settings:     settings,
+		serverQuotas: settings.Snapshot().Quotas.ResourceQuotas,
 		stores:       make(map[ksid.ID]*WorkspaceFileStore),
 	}, nil
 }
@@ -92,9 +95,11 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID
 		return nil, errWSIDRequired
 	}
 
-	// Fast path: check cache without lock
+	current := svc.settings.Snapshot().Quotas.ResourceQuotas
+
+	// Fast path: a quota change invalidates the cache before it can be reused.
 	svc.mu.RLock()
-	if store, ok := svc.stores[wsID]; ok {
+	if store, ok := svc.stores[wsID]; ok && svc.serverQuotas == current {
 		svc.mu.RUnlock()
 		return store, nil
 	}
@@ -103,6 +108,11 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID
 	// Slow path: load and cache
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
+
+	if svc.serverQuotas != current {
+		clear(svc.stores)
+		svc.serverQuotas = current
+	}
 
 	// Double-check after acquiring lock
 	if store, ok := svc.stores[wsID]; ok {
@@ -126,7 +136,7 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID
 	}
 
 	// Compute effective quotas from server, org, and workspace layers.
-	effective := storage.EffectiveQuotas(*svc.serverQuotas, org.Quotas.ResourceQuotas, ws.Quotas)
+	effective := storage.EffectiveQuotas(current, org.Quotas.ResourceQuotas, ws.Quotas)
 
 	wsDir := filepath.Join(svc.rootDir, wsID.String())
 	store := newWorkspaceFileStore(wsDir, repo, &effective)
@@ -143,14 +153,6 @@ func (svc *FileStoreService) InvalidateWorkspaceStore(wsID ksid.ID) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 	delete(svc.stores, wsID)
-}
-
-// InvalidateAllStores removes all cached workspace stores.
-// Use after server-level quota changes that affect all workspaces.
-func (svc *FileStoreService) InvalidateAllStores() {
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
-	svc.stores = make(map[ksid.ID]*WorkspaceFileStore)
 }
 
 // InitWorkspace initializes storage for a new workspace.

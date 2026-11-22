@@ -87,7 +87,7 @@ func (h *NotificationHandler) UpdateNotificationPrefs(_ context.Context, user *i
 
 // GetVAPIDPublicKey returns the server's VAPID public key for push subscription.
 func (h *NotificationHandler) GetVAPIDPublicKey(_ context.Context, user *identityv1.User, _ *dto.GetVAPIDKeyRequest) (*dto.VAPIDKeyResponse, error) {
-	return &dto.VAPIDKeyResponse{PublicKey: h.Cfg.VAPID.PublicKey}, nil
+	return &dto.VAPIDKeyResponse{PublicKey: h.Cfg.Snapshot().VAPID.PublicKey}, nil
 }
 
 // SubscribePush saves a push subscription for the authenticated user.

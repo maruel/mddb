@@ -12,8 +12,10 @@ interface RoleOption<T extends string> {
   label: string;
 }
 
+type Member = Pick<UserResponse, "id" | "name" | "email" | "workspace_role" | "org_role">;
+
 interface MembersTableProps<T extends string> {
-  members: UserResponse[];
+  members: Member[];
   currentUserId: string;
   roleOptions: readonly RoleOption<T>[];
   roleField: "workspace_role" | "org_role";
@@ -25,7 +27,7 @@ interface MembersTableProps<T extends string> {
 export default function MembersTable<T extends string>(props: MembersTableProps<T>) {
   const { t } = useI18n();
 
-  const getMemberRole = (member: UserResponse): string => {
+  const getMemberRole = (member: Member): string => {
     return (props.roleField === "workspace_role" ? member.workspace_role : member.org_role) || "";
   };
 

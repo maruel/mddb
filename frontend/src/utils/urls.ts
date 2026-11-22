@@ -144,3 +144,23 @@ export function settingsUrl(type?: "user" | "workspace" | "org" | "server", id?:
   const slug = slugify(name || type);
   return `/settings/${type}/@${id}+${slug}`;
 }
+
+/** Validates and canonicalizes an invitation destination carried through account settings. */
+export function invitationReturnPath(value: string | null): string | null {
+  if (!value?.startsWith("/") || value.startsWith("//")) return null;
+  let url: URL;
+  try {
+    url = new URL(value, "https://mddb.invalid");
+  } catch {
+    return null;
+  }
+  if (
+    url.origin !== "https://mddb.invalid" ||
+    url.hash ||
+    (url.pathname !== "/accept-invitation/org" && url.pathname !== "/accept-invitation/ws")
+  )
+    return null;
+  const tokens = url.searchParams.getAll("token");
+  if (tokens.length !== 1 || !tokens[0]) return null;
+  return `${url.pathname}?token=${encodeURIComponent(tokens[0])}`;
+}

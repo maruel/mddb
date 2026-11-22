@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/storage"
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
@@ -48,7 +49,7 @@ func TestSessionAssets(t *testing.T) {
 	if _, err := store.SaveAsset(t.Context(), page.ID, "photo #1.png", []byte("image data"), handlers.GitAuthor(user)); err != nil {
 		t.Fatal(err)
 	}
-	cfg := &handlers.Config{ServerConfig: storagev1.ServerConfig{JWTSecret: testJWTSecret}}
+	cfg := &handlers.Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret})}
 	request := func(method, path, body, token string, cookie bool) (int, []byte, http.Header) {
 		r, err := http.NewRequestWithContext(t.Context(), method, env.server.URL+path, strings.NewReader(body))
 		if err != nil {

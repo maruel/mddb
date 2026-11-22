@@ -1,15 +1,15 @@
 // User profile settings panel for personal preferences, linked accounts, and revocable sessions.
 
 import { accountTheme } from "../../theme";
-import { createSignal, createEffect, onMount, Show, For } from "solid-js";
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { createSignal, createEffect, createMemo, onMount, Show, For } from "solid-js";
+import { useNavigate, useSearchParams, useLocation, A } from "@solidjs/router";
 import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
 import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
 import { useAuth, useAuthScope } from "../../contexts";
 import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
 import { IconButton } from "../shared";
 import { useI18n, type Locale } from "../../i18n";
-import { settingsUrl } from "../../utils/urls";
+import { settingsUrl, invitationReturnPath } from "../../utils/urls";
 import { OAUTH_ERROR_PARAM, oauthErrorMessage } from "../../utils/oauthErrors";
 import LinkedAccountsSection from "./LinkedAccountsSection";
 import SessionsSection from "./SessionsSection";
@@ -20,6 +20,8 @@ import styles from "./ProfileSettings.module.css";
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
+  const invitationReturn = createMemo(() => invitationReturnPath(new URLSearchParams(location.search).get("next")));
   const { user, api, refreshUser } = useAuth();
   const captureScope = useAuthScope();
 
@@ -117,6 +119,8 @@ export default function ProfileSettings() {
         <div class={styles.success}>{success()}</div>
       </Show>
 
+      <Show when={invitationReturn()}>{(next) => <A href={next()}>{t("invitations.returnToInvitation")}</A>}</Show>
+
       <Show when={user()}>
         {(u) => (
           <>
@@ -212,6 +216,7 @@ export default function ProfileSettings() {
             </section>
 
             <LinkedAccountsSection
+              returnPath={invitationReturn()}
               oauthIdentities={u().oauth_identities}
               hasPassword={u().has_password ?? false}
               onSuccess={setSuccess}

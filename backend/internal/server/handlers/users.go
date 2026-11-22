@@ -149,6 +149,7 @@ func (h *UserHandler) ListWorkspaceMembers(_ context.Context, wsID ksid.ID, _ *i
 			continue
 		}
 		members = append(members, dto.WorkspaceMemberResponse{
+			Role:      dto.WorkspaceRole(m.Role),
 			ID:        u.ID,
 			Name:      u.Name,
 			Email:     u.Email,

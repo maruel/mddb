@@ -34,8 +34,8 @@ func mountDeviceLogin(mux *http.ServeMux, svc *handlers.Services, cfg *Config, h
 				return
 			}
 			r = r.WithContext(ctx)
-			if hcfg.Quotas.MaxRequestBodyBytes > 0 {
-				r.Body = http.MaxBytesReader(w, r.Body, hcfg.Quotas.MaxRequestBodyBytes)
+			if limit := hcfg.Snapshot().Quotas.MaxRequestBodyBytes; limit > 0 {
+				r.Body = http.MaxBytesReader(w, r.Body, limit)
 			}
 			route.handler(w, r)
 		})

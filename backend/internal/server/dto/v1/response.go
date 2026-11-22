@@ -174,10 +174,11 @@ type ListWSInvitationsResponse struct {
 // WorkspaceMemberResponse is a compact user representation for workspace member listings.
 // Used by the user column type to populate the picker and display names.
 type WorkspaceMemberResponse struct {
-	ID        ksid.ID `json:"id" jsonschema:"description=User identifier"`
-	Name      string  `json:"name" jsonschema:"description=Display name"`
-	Email     string  `json:"email" jsonschema:"description=Email address"`
-	AvatarURL string  `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+	Role      WorkspaceRole `json:"role" jsonschema:"description=Role in the listed workspace"`
+	ID        ksid.ID       `json:"id" jsonschema:"description=User identifier"`
+	Name      string        `json:"name" jsonschema:"description=Display name"`
+	Email     string        `json:"email" jsonschema:"description=Email address"`
+	AvatarURL string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
 }
 
 // ListWorkspaceMembersResponse is a response containing current workspace members.
@@ -305,7 +306,7 @@ type WSMembershipResponse struct {
 	Created        storagev1.Time              `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
 }
 
-// OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
+// OrgInvitationResponse is the API representation of an organization invitation with an administrator-copyable link.
 type OrgInvitationResponse struct {
 	ID             ksid.ID          `json:"id" jsonschema:"description=Unique invitation identifier"`
 	Email          string           `json:"email" jsonschema:"description=Email address of the invitee"`
@@ -314,9 +315,10 @@ type OrgInvitationResponse struct {
 	InvitedBy      ksid.ID          `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
 	ExpiresAt      storagev1.Time   `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
 	Created        storagev1.Time   `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
+	InviteURL      string           `json:"invite_url" jsonschema:"description=Copyable single-claim invitation link"`
 }
 
-// WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
+// WSInvitationResponse is the API representation of a workspace invitation with an administrator-copyable link.
 type WSInvitationResponse struct {
 	ID          ksid.ID        `json:"id" jsonschema:"description=Unique invitation identifier"`
 	Email       string         `json:"email" jsonschema:"description=Email address of the invitee"`
@@ -325,6 +327,7 @@ type WSInvitationResponse struct {
 	InvitedBy   ksid.ID        `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
 	ExpiresAt   storagev1.Time `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
 	Created     storagev1.Time `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
+	InviteURL   string         `json:"invite_url" jsonschema:"description=Copyable single-claim invitation link"`
 }
 
 // OrganizationResponse is the API representation of an organization.
@@ -627,4 +630,24 @@ type UnreadCountResponse struct {
 // VAPIDKeyResponse returns the server's VAPID public key.
 type VAPIDKeyResponse struct {
 	PublicKey string `json:"public_key"`
+}
+
+// OrgInvitationInfoResponse describes a token-selected organization grant.
+type OrgInvitationInfoResponse struct {
+	Email            string           `json:"email" jsonschema:"description=Required verified recipient; empty permits any authenticated claimant"`
+	Role             OrganizationRole `json:"role"`
+	OrganizationID   ksid.ID          `json:"organization_id"`
+	OrganizationName string           `json:"organization_name"`
+	ExpiresAt        storagev1.Time   `json:"expires_at"`
+}
+
+// WSInvitationInfoResponse describes a token-selected workspace grant.
+type WSInvitationInfoResponse struct {
+	Email            string         `json:"email" jsonschema:"description=Required verified recipient; empty permits any authenticated claimant"`
+	Role             WorkspaceRole  `json:"role"`
+	OrganizationID   ksid.ID        `json:"organization_id"`
+	OrganizationName string         `json:"organization_name"`
+	WorkspaceID      ksid.ID        `json:"workspace_id"`
+	WorkspaceName    string         `json:"workspace_name"`
+	ExpiresAt        storagev1.Time `json:"expires_at"`
 }

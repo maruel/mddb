@@ -30,7 +30,7 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID
 	}
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Snapshot().Quotas.ResourceQuotas), nil
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings and quotas.
@@ -57,7 +57,7 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ks
 
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Snapshot().Quotas.ResourceQuotas), nil
 }
 
 // UpdateOrganization updates organization details (name).
@@ -71,7 +71,7 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid
 	}
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Snapshot().Quotas.ResourceQuotas), nil
 }
 
 // CreateWorkspace creates a new workspace within an organization.
@@ -99,8 +99,8 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	}
 
 	// Check server-wide workspace quota
-	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
-		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
+	if limit := h.Cfg.Snapshot().Quotas.MaxWorkspaces; limit > 0 && h.Svc.Workspace.Count() >= limit {
+		return nil, dto.QuotaExceeded("workspaces", limit)
 	}
 
 	// Check org-level workspace quota
@@ -195,5 +195,5 @@ func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _
 // imposed by the server and organization layers (ignoring the workspace layer).
 // This is the ceiling that a workspace's resource quotas cannot exceed.
 func (h *OrganizationHandler) workspaceParentLimits(org *identityv1.Organization) storagev1.ResourceQuotas {
-	return storage.EffectiveQuotas(h.Cfg.Quotas.ResourceQuotas, org.Quotas.ResourceQuotas, storage.AllInheritResourceQuotas())
+	return storage.EffectiveQuotas(h.Cfg.Snapshot().Quotas.ResourceQuotas, org.Quotas.ResourceQuotas, storage.AllInheritResourceQuotas())
 }

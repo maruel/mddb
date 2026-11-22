@@ -136,6 +136,8 @@ func (r *RateLimits) Validate() error {
 // ServerQuotas defines server-wide resource limits.
 // ResourceQuotas fields are shared with org and workspace layers;
 // the effective quota is min(server, org, workspace) per field.
+// Other capacity fields use 0 for unlimited and never accept -1. Notification
+// limits instead control retention, not admission; zero disables that cleanup.
 type ServerQuotas struct {
 	ResourceQuotas
 
@@ -155,7 +157,8 @@ type ServerQuotas struct {
 	// MaxUsers limits total users on the server.
 	MaxUsers int `json:"max_users"`
 
-	// MaxTotalStorageBytes limits total storage across all workspaces.
+	// MaxTotalStorageBytes limits logical content bytes across all workspaces.
+	// Git history and temporary disk capacity have a separate physical policy.
 	MaxTotalStorageBytes int64 `json:"max_total_storage_bytes"`
 
 	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.

@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/storage"
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
@@ -364,7 +365,7 @@ type RateLimitsUpdater interface {
 
 // Config holds configuration values needed by handlers.
 type Config struct {
-	storagev1.ServerConfig
+	*storage.ServerSettings
 
 	BaseURL   string
 	Version   string
@@ -391,7 +392,7 @@ func (c *Config) GenerateSignedAssetURL(ctx context.Context, wsID, nodeID ksid.I
 // generateSignature creates an HMAC-SHA256 signature for asset access.
 func (c *Config) generateSignature(path, sid string, expiry int64) string {
 	data := fmt.Sprintf("mddb-asset-session-v1:%s:%s:%d", path, sid, expiry)
-	mac := hmac.New(sha256.New, c.JWTSecret)
+	mac := hmac.New(sha256.New, c.Snapshot().JWTSecret)
 	mac.Write([]byte(data))
 	return hex.EncodeToString(mac.Sum(nil))
 }
@@ -419,6 +420,7 @@ type SessionClaims struct {
 // A nonzero ID on error identifies partial creation that the caller must revoke.
 // Errors are dto API errors, so callers return them unchanged.
 func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identityv1.User, clientIP, userAgent, countryCode string) (credential string, id ksid.ID, err error) {
+	cfg := c.Snapshot()
 	now := time.Now().Truncate(time.Second)
 	expiresAt := now.Add(tokenExpiration)
 	sessionID := ksid.NewID()
@@ -434,14 +436,14 @@ func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identityv
 
 	// Generate the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
-	tokenString, err := token.SignedString(c.JWTSecret)
+	tokenString, err := token.SignedString(cfg.JWTSecret)
 	if err != nil {
 		return "", 0, dto.InternalWithError("token_generation", err)
 	}
 
 	// Create session with the pre-generated ID and token hash
 	deviceInfo := devicelogin.UserAgent(userAgent)
-	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storagev1.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
+	if created, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storagev1.ToTime(expiresAt), cfg.Quotas.MaxSessionsPerUser); err != nil {
 		err = dto.InternalWithError("session_creation", err)
 		if created != nil {
 			return tokenString, sessionID, err
@@ -454,10 +456,10 @@ func (c *Config) IssueToken(sessionSvc *identity.SessionService, user *identityv
 
 // VAPIDKeys returns a VAPIDKeys pair from the Config, or nil if unconfigured.
 func (c *Config) VAPIDKeys() *vapidKeys {
-	if c.VAPID.PublicKey == "" || c.VAPID.PrivateKey == "" {
+	if c.Snapshot().VAPID.PublicKey == "" || c.Snapshot().VAPID.PrivateKey == "" {
 		return nil
 	}
-	return &vapidKeys{Public: c.VAPID.PublicKey, Private: c.VAPID.PrivateKey}
+	return &vapidKeys{Public: c.Snapshot().VAPID.PublicKey, Private: c.Snapshot().VAPID.PrivateKey}
 }
 
 // SessionCookieName identifies the host-only HttpOnly browser credential.
@@ -467,7 +469,7 @@ const SessionCookieName = "__Host-mddb_session"
 // cookie. Local development uses localhost, which browsers treat as trustworthy.
 func (c *Config) WriteSessionCookie(w http.ResponseWriter, token string) error {
 	claims := &SessionClaims{}
-	if _, err := jwt.ParseWithClaims(token, claims, func(_ *jwt.Token) (any, error) { return c.JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired()); err != nil {
+	if _, err := jwt.ParseWithClaims(token, claims, func(_ *jwt.Token) (any, error) { return c.Snapshot().JWTSecret, nil }, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired()); err != nil {
 		return err
 	}
 	if claims.ExpiresAt == nil {

@@ -137,7 +137,9 @@ func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 		MaxTablesPerWorkspace: 10_000,
 		MaxColumnsPerTable:    1_000,
 	}
-	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService, &serverQuotas)
+	cfg := &storagev1.ServerConfig{JWTSecret: bytes.Repeat([]byte{1}, 32), Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
+	cfg.Quotas.ResourceQuotas = serverQuotas
+	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService, storage.NewServerSettings(cfg))
 	if err != nil {
 		t.Fatalf("failed to create FileStoreService: %v", err)
 	}
@@ -160,6 +162,41 @@ func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, ksid.ID) {
 }
 
 func TestFileStoreService(t *testing.T) {
+	t.Run("GetWorkspaceStore/lowered published quota", func(t *testing.T) {
+		t.Parallel()
+		svc, ws, id := initWS(t)
+		first, err := ws.CreatePageUnderParent(t.Context(), 0, "First", "original", git.Author{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		second, err := ws.CreatePageUnderParent(t.Context(), 0, "Second", "retained", git.Author{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir := t.TempDir()
+		if err := svc.settings.Update(dir, func(next *storagev1.ServerConfig) error { next.Quotas.MaxPages = 1; return nil }, nil); err != nil {
+			t.Fatal(err)
+		}
+		current, err := svc.GetWorkspaceStore(t.Context(), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if current == ws || current.EffectiveQuotas().MaxPages != 1 {
+			t.Fatal("published server limit reused a stale workspace store")
+		}
+		if _, err := current.CreatePageUnderParent(t.Context(), 0, "Rejected", "body", git.Author{}); err == nil {
+			t.Fatal("new page bypassed lowered limit")
+		}
+		if _, err := current.ReadNode(t.Context(), first.ID); err != nil {
+			t.Fatalf("over-quota read: %v", err)
+		}
+		if _, err := current.DeletePage(t.Context(), second.ID, git.Author{}); err != nil {
+			t.Fatalf("over-quota delete: %v", err)
+		}
+		if _, err := current.ReadNode(t.Context(), first.ID); err != nil {
+			t.Fatal(err)
+		}
+	})
 	t.Run("ColdDiscovery", func(t *testing.T) {
 		fs, ws, id := initWS(t)
 		node := ksid.NewID()
@@ -215,7 +252,7 @@ func TestFileStoreService(t *testing.T) {
 					if !svc.HasPendingHistory() {
 						t.Fatal("initial history failure hidden")
 					}
-					restarted, err := NewFileStoreService(svc.rootDir, git.NewManagerWithBackend(svc.rootDir, "Test", "test@example.com", backend), svc.wsSvc, svc.orgSvc, svc.serverQuotas)
+					restarted, err := NewFileStoreService(svc.rootDir, git.NewManagerWithBackend(svc.rootDir, "Test", "test@example.com", backend), svc.wsSvc, svc.orgSvc, svc.settings)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -2577,6 +2614,185 @@ func BenchmarkWorkspaceFileStore(b *testing.B) {
 			}
 			i++
 		}
+	})
+
+	b.Run("Tables", func(b *testing.B) {
+		tmpDir := b.TempDir()
+		ctx := b.Context()
+		author := git.Author{Name: "Benchmark", Email: "bench@test.com"}
+
+		gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
+
+		orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		wsService, err := identity.NewWorkspaceService(filepath.Join(tmpDir, "workspaces.jsonl"))
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		// Create a test organization with very high quotas (practically unlimited)
+		org, err := orgService.Create(ctx, "Benchmark Organization", "bench@test.com")
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, err = orgService.Modify(org.ID, func(o *identityv1.Organization) error {
+			o.Quotas.MaxWorkspacesPerOrg = 1_000
+			o.Quotas.MaxMembersPerOrg = 10_000
+			o.Quotas.MaxMembersPerWorkspace = 10_000
+			o.Quotas.MaxTotalStorageBytes = 1_000_000_000_000_000_000 // 1EB
+			return nil
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		// Create a test workspace with very high quotas (practically unlimited)
+		ws, err := wsService.Create(ctx, org.ID, "Benchmark Workspace")
+		if err != nil {
+			b.Fatal(err)
+		}
+		_, err = wsService.Modify(ws.ID, func(w *identityv1.Workspace) error {
+			w.Quotas.MaxPages = 1_000_000
+			w.Quotas.MaxStorageBytes = 1_000_000_000_000 // 1TB
+			w.Quotas.MaxRecordsPerTable = 1_000_000
+			w.Quotas.MaxAssetSizeBytes = 1024 * 1024 * 1024 // 1GB
+			return nil
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		serverQuotas := storagev1.ResourceQuotas{
+			MaxPages:              1_000_000,
+			MaxStorageBytes:       1_000_000_000_000, // 1TB
+			MaxRecordsPerTable:    1_000_000,
+			MaxAssetSizeBytes:     1024 * 1024 * 1024, // 1GB
+			MaxTablesPerWorkspace: 10_000,
+			MaxColumnsPerTable:    1_000,
+		}
+		fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService, storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{ResourceQuotas: serverQuotas}}))
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		wsID := ws.ID
+
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			b.Fatalf("failed to init workspace: %v", err)
+		}
+
+		// Get workspace store
+		wsStore, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			b.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		dbID := ksid.NewID()
+		node := &Node{
+			ID:       dbID,
+			Title:    "Benchmark Table",
+			Type:     NodeTypeTable,
+			Created:  storagev1.Now(),
+			Modified: storagev1.Now(),
+			Properties: []contentv1.Property{
+				{Name: "Title", Type: "text"},
+				{Name: "Value", Type: "number"},
+			},
+		}
+
+		if err := wsStore.WriteTable(ctx, node, true, author); err != nil {
+			b.Fatal(err)
+		}
+
+		// Benchmark Record Creation (Append)
+		b.Run("AppendRecord", func(b *testing.B) {
+			for i := range b.N {
+				record := &contentv1.DataRecord{
+					ID:       ksid.NewID(),
+					Created:  storagev1.Now(),
+					Modified: storagev1.Now(),
+					Data: map[string]any{
+						"c1": "Item",
+						"c2": i,
+					},
+				}
+				if err := wsStore.AppendRecord(ctx, dbID, record, author); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+
+		// Benchmark Reading All Records
+		// We need a fresh file store or just read from the existing one populated by previous step
+		// To make this isolated, we can pre-populate a DB with N records
+		b.Run("IterRecords", func(b *testing.B) {
+			// Prepare a table with 1000 records
+			readDBID := ksid.NewID()
+			readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storagev1.Now(), Modified: storagev1.Now()}
+			if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
+				b.Fatal(err)
+			}
+			for range 1000 {
+				record := &contentv1.DataRecord{
+					ID:       ksid.NewID(),
+					Data:     map[string]any{"c1": "test"},
+					Created:  storagev1.Now(),
+					Modified: storagev1.Now(),
+				}
+				if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
+					b.Fatal(err)
+				}
+			}
+
+			b.ResetTimer()
+			for range b.N {
+				it, err := wsStore.IterRecords(readDBID)
+				if err != nil {
+					b.Fatal(err)
+				}
+				records := slices.Collect(it)
+				if len(records) != 1000 {
+					b.Errorf("expected 1000 records, got %d", len(records))
+				}
+			}
+		})
+
+		// Benchmark Reading Page of Records
+		b.Run("ReadRecordsPage", func(b *testing.B) {
+			readDBID := ksid.ID(100)
+			readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storagev1.Now(), Modified: storagev1.Now()}
+			if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
+				b.Fatal(err)
+			}
+			// Write 10,000 records
+			for range 10000 {
+				record := &contentv1.DataRecord{
+					ID:       ksid.NewID(),
+					Data:     map[string]any{"c1": "test"},
+					Created:  storagev1.Now(),
+					Modified: storagev1.Now(),
+				}
+				if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
+					b.Fatal(err)
+				}
+			}
+
+			b.ResetTimer()
+			for range b.N {
+				// Read 50 records from middle
+				records, err := wsStore.ReadRecordsPage(readDBID, 5000, 50)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if len(records) != 50 {
+					b.Errorf("expected 50 records, got %d", len(records))
+				}
+			}
+		})
 	})
 
 	b.Run("Replace4MiB", func(b *testing.B) {

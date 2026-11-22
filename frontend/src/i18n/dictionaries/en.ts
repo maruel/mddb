@@ -147,6 +147,44 @@ export const dict: Dictionary = {
     },
   },
 
+  invitations: {
+    openWorkspace: "Open workspace",
+    organizationJoined: "You joined the organization, but workspace access is not complete. Try again.",
+    persistenceUncertain: "Some access changes are visible, but saving could not be confirmed. Try again.",
+    accessCheckFailed: "Current access could not be checked.",
+    returnToInvitation: "Return to invitation",
+    verifyWithProvider: "Verify address",
+    providerLinkFailed: "The provider could not be linked. Use account settings to choose another provider.",
+
+    loadFailed: "Could not load the invitation. Try again.",
+    retry: "Try again",
+
+    recipient: "Recipient email (optional)",
+    recipientHint:
+      "Leave blank for a link any signed-in account can claim once. An email restricts it to that verified address.",
+    anyoneWithLink: "Anyone with the link",
+    createLink: "Create invite link",
+    link: "Invite link",
+    copyLink: "Copy invite link",
+    revoke: "Revoke invite link",
+    copied: "Invite link copied",
+    copyManually: "Could not copy automatically. Select the link and copy it manually.",
+    expires: "Expires {{date}}",
+    title: "Invitation",
+    grantsRole: "This invitation grants {{role}} access.",
+    boundTo: "Only {{email}} can use this invitation.",
+    bearerHint: "Any signed-in account can claim this invitation once.",
+    unavailable: "This invitation is unavailable or expired.",
+    signedInAs: "Signed in as {{email}}",
+    verifiedRecipientRequired:
+      "Use an account with this independently verified email address. You can link a verifying provider in account settings.",
+    accept: "Join",
+    changeAccount: "Use another account",
+    manageAccount: "Account settings",
+    failedToAccept: "Could not accept the invitation. Try again.",
+    openFailed: "You joined, but the workspace could not open. Try again.",
+  },
+
   editor: {
     overlapNavigation: "Review overlaps",
     unresolvedOverlaps: "{{count}} unresolved overlaps",
@@ -309,7 +347,6 @@ export const dict: Dictionary = {
     inviteNewMember: "Invite new member",
     emailPlaceholder: "Email address",
     pendingInvitations: "Pending Invitations",
-    sentColumn: "Sent",
     // Personal tab
     personalSettings: "Personal Settings",
     theme: "Theme",
@@ -335,7 +372,6 @@ export const dict: Dictionary = {
     changeEmail: "Change Email",
     newEmail: "New Email Address",
     currentPassword: "Current Password",
-    emailChangeHint: "After changing your email, you will need to verify it.",
     emailVerified: "Verified",
     emailNotVerified: "Not verified",
     // Password management
@@ -559,7 +595,7 @@ export const dict: Dictionary = {
     failedToDelete: "Failed to delete",
     failedToCreate: "Failed to create",
     failedToSwitch: "Failed to switch workspace",
-    failedToInvite: "Failed to send invitation",
+    failedToInvite: "Could not create invitation",
     failedToUpdateRole: "Failed to update role",
     failedToAddRemote: "Failed to add remote",
     failedToRemoveRemote: "Failed to remove remote",
@@ -573,7 +609,6 @@ export const dict: Dictionary = {
   },
 
   success: {
-    invitationSent: "Invitation sent successfully",
     roleUpdated: "Role updated",
     personalSettingsSaved: "Personal settings saved successfully",
     workspaceSettingsSaved: "Workspace settings saved successfully",

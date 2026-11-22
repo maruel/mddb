@@ -1,4 +1,4 @@
-// Handles OAuth2 authentication with external providers.
+// Handles OAuth authentication, independent primary-address proof, and invitation-bound identity linking.
 
 package handlers
 
@@ -58,7 +58,7 @@ type OAuthHandler struct {
 func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
 	// Derive a dedicated state key so a state signature never doubles as a
 	// JWT or signed asset URL signature, which use the raw JWT secret.
-	mac := hmac.New(sha256.New, cfg.JWTSecret)
+	mac := hmac.New(sha256.New, cfg.Snapshot().JWTSecret)
 	mac.Write([]byte("mddb oauth state v1"))
 	return &OAuthHandler{
 		svc:       svc,
@@ -127,6 +127,11 @@ func (h *OAuthHandler) LinkOAuth(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, err)
 		return
 	}
+	next, err := invitationReturnPath(req.Next)
+	if err != nil {
+		writeErrorResponse(w, err)
+		return
+	}
 	provider := identityv1.OAuthProvider(req.Provider)
 	config, ok := h.providers[provider]
 	if !ok {
@@ -140,7 +145,7 @@ func (h *OAuthHandler) LinkOAuth(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	state, err := h.issueState(w, linkingStatePrefix+user.ID.String()+":"+string(provider)+":")
+	state, err := h.issueState(w, linkingStatePrefix+user.ID.String()+":"+string(provider)+":"+base64.RawURLEncoding.EncodeToString([]byte(next))+":")
 	if err != nil {
 		slog.ErrorContext(r.Context(), "Failed to generate OAuth state", "err", err)
 		writeErrorResponse(w, dto.Internal("state_generation"))
@@ -266,6 +271,30 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 		start = loginErrorPath(next)
 	}
+	if !linkingUserID.IsZero() {
+		if linkingProvider != provider {
+			redirectOAuthError(w, r, start, dto.BadRequest("Provider mismatch"))
+			return
+		}
+		parts := strings.SplitN(strings.TrimPrefix(state, linkingStatePrefix), ":", 4)
+		if len(parts) != 4 {
+			redirectOAuthError(w, r, start, dto.BadRequest("Invalid linking destination"))
+			return
+		}
+		decoded, decodeErr := base64.RawURLEncoding.DecodeString(parts[2])
+		if decodeErr != nil {
+			redirectOAuthError(w, r, start, dto.BadRequest("Invalid linking destination"))
+			return
+		}
+		next, err = invitationReturnPath(string(decoded))
+		if err != nil {
+			redirectOAuthError(w, r, start, err)
+			return
+		}
+		if next != "" {
+			start = next
+		}
+	}
 	q := r.URL.Query()
 	if e := q.Get("error"); e != "" {
 		// RFC 6749 section 4.1.2.1: the user declined, or the provider refused.
@@ -300,7 +329,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		err = dto.BadRequest("Provider mismatch")
 	default:
 		err = h.link(ctx, linkingUserID, provider, userInfo)
-		next = profileSettingsPath + "?oauth_linked=true"
+		if next == "" {
+			next = profileSettingsPath + "?oauth_linked=true"
+		}
 	}
 	if err != nil {
 		redirectOAuthError(w, r, start, err)
@@ -413,6 +444,9 @@ func (h *OAuthHandler) link(ctx context.Context, userID ksid.ID, provider identi
 		email = ""
 	}
 	if _, err := h.svc.User.Modify(userID, func(u *identityv1.User) error {
+		if email != "" && u.Email == email {
+			u.EmailVerified = true
+		}
 		u.OAuthIdentities = append(u.OAuthIdentities, identityv1.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: info.ID,
@@ -477,6 +511,26 @@ func loginStateReturnPath(state string) (string, error) {
 		return "", dto.BadRequest("Invalid login destination")
 	}
 	return loginReturnPath(string(decoded))
+}
+
+// invitationReturnPath permits only the supported invitation landing routes.
+// The token remains opaque; neither linking nor returning to the page claims it.
+func invitationReturnPath(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	if _, err := loginReturnPath(path); err != nil {
+		return "", err
+	}
+	u, err := url.Parse(path)
+	if err != nil || (u.Path != "/accept-invitation/org" && u.Path != "/accept-invitation/ws") || u.EscapedPath() != u.Path {
+		return "", dto.BadRequest("Invalid invitation destination")
+	}
+	q, err := url.ParseQuery(u.RawQuery)
+	if err != nil || len(q) != 1 || len(q["token"]) != 1 || q.Get("token") == "" {
+		return "", dto.BadRequest("Invalid invitation destination")
+	}
+	return path, nil
 }
 
 // loginReturnPath accepts only rooted same-origin paths. Check decoded forms too:
@@ -655,10 +709,18 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 			return dto.InternalWithError("oauth_link", err)
 		}
 	} else {
-		// Existing OAuth identity - update avatar URL and last login
+		// A known identity authenticates this account without email-based linking.
+		// Refresh proof independently; cached identity email is never evidence.
+		email, err := info.VerifiedEmail()
+		if err != nil {
+			email = ""
+		}
 		if _, err := svc.User.Modify(user.ID, func(u *identityv1.User) error {
 			for i := range u.OAuthIdentities {
 				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == info.ID {
+					if email != "" && u.Email == email {
+						u.EmailVerified = true
+					}
 					u.OAuthIdentities[i].AvatarURL = info.AvatarURL
 					u.OAuthIdentities[i].LastLogin = storagev1.Now()
 					break

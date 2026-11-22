@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/storage"
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
@@ -18,9 +19,9 @@ import (
 
 func TestAssetHandler(t *testing.T) {
 	cfg := &Config{
-		ServerConfig: storagev1.ServerConfig{
+		ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{
 			JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
-		},
+		}),
 		BaseURL: "http://localhost:8080",
 	}
 	ah := &AssetHandler{Svc: &Services{}, Cfg: cfg}

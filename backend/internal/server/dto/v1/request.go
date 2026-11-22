@@ -882,7 +882,7 @@ func (r *SearchRequest) Validate() error {
 // CreateOrgInvitationRequest is a request to create an organization invitation.
 type CreateOrgInvitationRequest struct {
 	OrgID  ksid.ID          `path:"orgID" json:"-"`
-	Email  string           `json:"email"`
+	Email  string           `json:"email,omitempty" jsonschema:"description=Optional verified recipient address; empty creates a bearer link"`
 	Role   OrganizationRole `json:"role"`
 	Locale string           `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
@@ -892,11 +892,15 @@ func (r *CreateOrgInvitationRequest) Validate() error {
 	if r.OrgID.IsZero() {
 		return MissingField("orgID")
 	}
-	if r.Email == "" {
-		return MissingField("email")
+	if r.Email != "" {
+		if err := validateEmail(r.Email); err != nil {
+			return err
+		}
 	}
-	if r.Role == "" {
-		return MissingField("role")
+	switch r.Role {
+	case OrgRoleOwner, OrgRoleAdmin, OrgRoleMember:
+	default:
+		return InvalidField("role", "invalid invitation role")
 	}
 	return nil
 }
@@ -904,7 +908,7 @@ func (r *CreateOrgInvitationRequest) Validate() error {
 // CreateWSInvitationRequest is a request to create a workspace invitation.
 type CreateWSInvitationRequest struct {
 	WsID   ksid.ID       `path:"wsID" json:"-"`
-	Email  string        `json:"email"`
+	Email  string        `json:"email,omitempty" jsonschema:"description=Optional verified recipient address; empty creates a bearer link"`
 	Role   WorkspaceRole `json:"role"`
 	Locale string        `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
@@ -914,11 +918,15 @@ func (r *CreateWSInvitationRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.Email == "" {
-		return MissingField("email")
+	if r.Email != "" {
+		if err := validateEmail(r.Email); err != nil {
+			return err
+		}
 	}
-	if r.Role == "" {
-		return MissingField("role")
+	switch r.Role {
+	case WSRoleAdmin, WSRoleEditor, WSRoleViewer:
+	default:
+		return InvalidField("role", "invalid invitation role")
 	}
 	return nil
 }
@@ -949,7 +957,8 @@ func (r *ListWSInvitationsRequest) Validate() error {
 	return nil
 }
 
-// AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+// AcceptInvitationRequest claims a grant for the authenticated account.
+// Recipient-bound invitations additionally require a matching verified address.
 // Invitation tokens never authenticate a user or issue a session.
 type AcceptInvitationRequest struct {
 	Token string `json:"token"`
@@ -1325,6 +1334,7 @@ func (r *VerifyEmailRequest) Validate() error {
 // LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.
 type LinkOAuthAccountRequest struct {
 	Provider OAuthProvider `json:"provider"`
+	Next     string        `json:"next,omitempty" jsonschema:"description=Optional invitation return path after authenticated provider linking"`
 }
 
 // Validate validates the link OAuth account request fields.
@@ -1750,6 +1760,60 @@ type ResolveUsersRequest struct {
 func (r *ResolveUsersRequest) Validate() error {
 	if len(r.IDs) == 0 {
 		return MissingField("ids")
+	}
+	return nil
+}
+
+// OrgInvitationInfoRequest previews a token-selected organization grant without claiming it.
+type OrgInvitationInfoRequest struct {
+	Token string `query:"token"`
+}
+
+// Validate requires a token.
+func (r *OrgInvitationInfoRequest) Validate() error {
+	if r.Token == "" {
+		return MissingField("token")
+	}
+	return nil
+}
+
+// WSInvitationInfoRequest previews a token-selected workspace grant without claiming it.
+type WSInvitationInfoRequest struct {
+	Token string `query:"token"`
+}
+
+// Validate requires a token.
+func (r *WSInvitationInfoRequest) Validate() error {
+	if r.Token == "" {
+		return MissingField("token")
+	}
+	return nil
+}
+
+// DeleteOrgInvitationRequest revokes one organization-scoped invitation.
+type DeleteOrgInvitationRequest struct {
+	OrgID        ksid.ID `path:"orgID" json:"-"`
+	InvitationID ksid.ID `path:"invitationID" json:"-"`
+}
+
+// Validate requires scoped invitation IDs.
+func (r *DeleteOrgInvitationRequest) Validate() error {
+	if r.OrgID.IsZero() || r.InvitationID.IsZero() {
+		return MissingField("invitationID or orgID")
+	}
+	return nil
+}
+
+// DeleteWSInvitationRequest revokes one workspace-scoped invitation.
+type DeleteWSInvitationRequest struct {
+	WsID         ksid.ID `path:"wsID" json:"-"`
+	InvitationID ksid.ID `path:"invitationID" json:"-"`
+}
+
+// Validate requires scoped invitation IDs.
+func (r *DeleteWSInvitationRequest) Validate() error {
+	if r.WsID.IsZero() || r.InvitationID.IsZero() {
+		return MissingField("invitationID or wsID")
 	}
 	return nil
 }

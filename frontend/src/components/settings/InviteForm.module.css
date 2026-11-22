@@ -1,4 +1,4 @@
-/* Invite form styles. */
+/* Responsive forms and pending links for recipient-bound and bearer invitations. */
 
 .inviteSection {
   margin-top: var(--s-5);
@@ -10,29 +10,41 @@
   border-radius: var(--radius-md);
 }
 
-.inviteForm h4 {
-  margin: 0 0 var(--s-3) 0;
+.inviteForm h4,
+.pendingSection h4 {
+  margin: 0 0 var(--s-3);
 }
 
 .formGroup {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-3);
+  align-items: end;
+}
+
+.recipient,
+.role {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.recipient {
+  flex: 1 1 12rem;
 }
 
 .formGroup input,
-.formGroup select {
+.formGroup select,
+.linkInput {
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
   padding: var(--s-2);
+  color: var(--c-text);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-}
-
-.formGroup input {
-  flex: 1 1 12rem;
-  min-width: 0;
 }
 
 .formGroup input:disabled,
@@ -41,7 +53,8 @@
   opacity: 0.6;
 }
 
-.formGroup button {
+.formGroup button,
+.linkRow button {
   flex-shrink: 0;
   padding: var(--s-3);
   color: var(--c-text-on-accent);
@@ -51,37 +64,56 @@
   border-radius: var(--radius-md);
 }
 
-.formGroup button:disabled {
+.formGroup button:disabled,
+.linkRow button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.formGroup button:hover:not(:disabled) {
+.formGroup button:hover:not(:disabled),
+.linkRow button:hover:not(:disabled) {
   background: var(--c-action-primary-hover);
+}
+
+.hint {
+  margin: var(--s-2) 0 0;
+  font-size: 0.875rem;
+  color: var(--c-text-muted);
 }
 
 .pendingSection {
   margin-top: var(--s-5);
 }
 
-.pendingSection h4 {
-  margin: 0 0 var(--s-3) 0;
+.pendingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: var(--s-3);
-  text-align: left;
+.invitation {
+  min-width: 0;
+  padding-block: var(--s-3);
   border-bottom: 1px solid var(--c-border);
 }
 
-.table th {
-  font-weight: 600;
-  color: var(--c-text-muted);
-  background: var(--c-surface-table-header);
+.invitationHeading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+  margin-bottom: var(--s-2);
+  overflow-wrap: anywhere;
+}
+
+.linkRow {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.linkInput {
+  flex: 1;
+  width: 0;
 }

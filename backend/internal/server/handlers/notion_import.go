@@ -54,8 +54,8 @@ func NewNotionImportHandler(svc *Services, cfg *Config) *NotionImportHandler {
 // StartImport creates a new workspace and starts an async Notion import.
 func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, user *identityv1.User, req *dto.NotionImportRequest) (*dto.NotionImportResponse, error) {
 	// Check server-wide workspace quota
-	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
-		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
+	if limit := h.Cfg.Snapshot().Quotas.MaxWorkspaces; limit > 0 && h.Svc.Workspace.Count() >= limit {
+		return nil, dto.QuotaExceeded("workspaces", limit)
 	}
 
 	// Validate token and get workspace name from Notion

@@ -11,12 +11,14 @@ import (
 type WorkspaceInvitation struct {
 	ID          ksid.ID        `json:"id" jsonschema:"description=Unique invitation identifier"`
 	WorkspaceID ksid.ID        `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
-	Email       string         `json:"email" jsonschema:"description=Email address of the invitee"`
+	Email       string         `json:"email" jsonschema:"description=Optional verified recipient address; empty permits any authenticated claimant"`
 	Role        WorkspaceRole  `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	Token       string         `json:"token" jsonschema:"description=Secret token for invitation verification"`
 	InvitedBy   ksid.ID        `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
 	ExpiresAt   storagev1.Time `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
 	Created     storagev1.Time `json:"created" jsonschema:"description=Invitation creation timestamp"`
+	ClaimedBy   ksid.ID        `json:"claimed_by,omitempty" jsonschema:"description=Account durably bound before membership creation"`
+	AcceptedAt  storagev1.Time `json:"accepted_at,omitempty" jsonschema:"description=Completed acceptance time"`
 }
 
 // Clone returns a copy of the WorkspaceInvitation.
@@ -37,9 +39,6 @@ func (i *WorkspaceInvitation) Validate() error {
 	}
 	if i.WorkspaceID.IsZero() {
 		return ErrWSIDEmpty
-	}
-	if i.Email == "" {
-		return ErrEmailEmpty
 	}
 	if !i.Role.IsValid() {
 		return ErrInvalidWSRole

@@ -19,7 +19,7 @@ import (
 
 	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
 
-	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	"github.com/maruel/mddb/backend/internal/storage"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/gomodedev/gomode"
@@ -35,7 +35,7 @@ import (
 
 // Config holds configuration for the router.
 type Config struct {
-	*storagev1.ServerConfig
+	*storage.ServerSettings
 
 	ConfigDir      string
 	BaseURL        string
@@ -95,25 +95,25 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 
 	// Create rate limiters from storage config
 	rlCfg := ratelimit.ConfigFromStorage(
-		cfg.RateLimits.AuthRatePerMin,
-		cfg.RateLimits.WriteRatePerMin,
-		cfg.RateLimits.ReadAuthRatePerMin,
-		cfg.RateLimits.ReadUnauthRatePerMin,
+		cfg.Snapshot().RateLimits.AuthRatePerMin,
+		cfg.Snapshot().RateLimits.WriteRatePerMin,
+		cfg.Snapshot().RateLimits.ReadAuthRatePerMin,
+		cfg.Snapshot().RateLimits.ReadUnauthRatePerMin,
 		cfg.FastRateLimits,
 	)
 	limiters := ratelimit.NewLimiters(rlCfg)
 
 	// Create bandwidth limiter
-	bandwidthLim := bandwidth.NewLimiter(cfg.Quotas.MaxEgressBandwidthBps)
+	bandwidthLim := bandwidth.NewLimiter(cfg.Snapshot().Quotas.MaxEgressBandwidthBps)
 
 	// Create handler config from server config
 	hcfg := &handlers.Config{
-		ServerConfig: *cfg.ServerConfig,
-		BaseURL:      cfg.BaseURL,
-		Version:      cfg.Version,
-		GoVersion:    cfg.GoVersion,
-		Revision:     cfg.Revision,
-		Dirty:        cfg.Dirty,
+		ServerSettings: cfg.ServerSettings,
+		BaseURL:        cfg.BaseURL,
+		Version:        cfg.Version,
+		GoVersion:      cfg.GoVersion,
+		Revision:       cfg.Revision,
+		Dirty:          cfg.Dirty,
 	}
 
 	// Auth handler (needs New* for map initialization)
@@ -184,7 +184,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("GET /api/v1/admin/server", WrapGlobalAdmin(adminh.GetServerDetail, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
-	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, ConfigDir: cfg.ConfigDir, FileStore: svc.FileStore, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
+	serverh := &handlers.ServerHandler{Settings: cfg.ServerSettings, ConfigDir: cfg.ConfigDir, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
 	mux.Handle("GET /api/v1/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 
@@ -224,6 +224,8 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("POST /api/v1/auth/browser/login", wrapBrowserLogin(authh.Login, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/browser/register", wrapBrowserLogin(authh.Register, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/browser/logout", wrapBrowserLogout(authh, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/auth/invitations/org", Wrap(ih.GetOrgInvitationInfo, hcfg, limiters))
+	mux.Handle("GET /api/v1/auth/invitations/ws", Wrap(ih.GetWSInvitationInfo, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/invitations/org/accept", WrapAuth(ih.AcceptOrgInvitation, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/auth/invitations/ws/accept", WrapAuth(ih.AcceptWSInvitation, svc, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/email/verify", authh.VerifyEmailRedirect)
@@ -256,6 +258,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("POST /api/v1/organizations/{orgID}/users/remove", WrapOrgAuth(uh.RemoveOrgMember, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
 	mux.Handle("GET /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.ListOrgInvitations, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/invitations/{invitationID}/delete", WrapOrgAuth(ih.DeleteOrgInvitation, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identityv1.OrgRoleAdmin, limiters))
 
 	// Notion import endpoints
@@ -288,6 +291,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	mux.Handle("POST /api/v1/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 	mux.Handle("GET /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.CreateWSInvitation, svc, hcfg, identityv1.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/invitations/{invitationID}/delete", WrapWSAuth(ih.DeleteWSInvitation, svc, hcfg, identityv1.WSRoleAdmin, limiters))
 	// Nodes (id=0 is valid for root node)
 	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/titles", WrapWSAuth(nh.GetNodeTitles, svc, hcfg, identityv1.WSRoleViewer, limiters))
 	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}", WrapWSAuth(nh.GetNode, svc, hcfg, identityv1.WSRoleViewer, limiters))

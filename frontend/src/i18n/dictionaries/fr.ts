@@ -149,6 +149,46 @@ export const dict: Dictionary = {
     },
   },
 
+  invitations: {
+    openWorkspace: "Ouvrir l’espace de travail",
+    organizationJoined:
+      "Vous avez rejoint l’organisation, mais l’accès à l’espace de travail reste incomplet. Réessayez.",
+    persistenceUncertain:
+      "Des changements d’accès sont visibles, mais leur enregistrement n’est pas confirmé. Réessayez.",
+    accessCheckFailed: "Impossible de vérifier l’accès actuel.",
+    returnToInvitation: "Revenir à l’invitation",
+    verifyWithProvider: "Vérifier l’adresse",
+    providerLinkFailed: "Impossible de lier ce fournisseur. Choisissez-en un autre dans les paramètres du compte.",
+
+    loadFailed: "Impossible de charger l’invitation. Réessayez.",
+    retry: "Réessayer",
+
+    recipient: "E-mail du destinataire (facultatif)",
+    recipientHint:
+      "Laissez vide pour un lien utilisable une fois par tout compte connecté. Une adresse le réserve au compte qui l’a vérifiée.",
+    anyoneWithLink: "Toute personne avec le lien",
+    createLink: "Créer un lien d’invitation",
+    link: "Lien d’invitation",
+    copyLink: "Copier le lien d’invitation",
+    revoke: "Révoquer le lien",
+    copied: "Lien d’invitation copié",
+    copyManually: "Copie automatique impossible. Sélectionnez le lien et copiez-le manuellement.",
+    expires: "Expire le {{date}}",
+    title: "Invitation",
+    grantsRole: "Cette invitation accorde le rôle {{role}}.",
+    boundTo: "Seul {{email}} peut utiliser cette invitation.",
+    bearerHint: "Tout compte connecté peut accepter cette invitation une fois.",
+    unavailable: "Cette invitation est indisponible ou expirée.",
+    signedInAs: "Connecté en tant que {{email}}",
+    verifiedRecipientRequired:
+      "Utilisez un compte ayant vérifié cette adresse indépendamment. Vous pouvez lier un fournisseur dans les paramètres du compte.",
+    accept: "Rejoindre",
+    changeAccount: "Utiliser un autre compte",
+    manageAccount: "Paramètres du compte",
+    failedToAccept: "Impossible d’accepter l’invitation. Réessayez.",
+    openFailed: "Vous avez rejoint, mais l’espace de travail ne s’ouvre pas. Réessayez.",
+  },
+
   editor: {
     overlapNavigation: "Examiner les chevauchements",
     unresolvedOverlaps: "{{count}} chevauchements non résolus",
@@ -311,7 +351,6 @@ export const dict: Dictionary = {
     inviteNewMember: "Inviter un nouveau membre",
     emailPlaceholder: "Adresse e-mail",
     pendingInvitations: "Invitations en attente",
-    sentColumn: "Envoyé",
     // Personal tab
     personalSettings: "Paramètres personnels",
     theme: "Thème",
@@ -337,7 +376,6 @@ export const dict: Dictionary = {
     changeEmail: "Changer l'e-mail",
     newEmail: "Nouvelle adresse e-mail",
     currentPassword: "Mot de passe actuel",
-    emailChangeHint: "Après avoir changé votre e-mail, vous devrez le vérifier.",
     emailVerified: "Vérifié",
     emailNotVerified: "Non vérifié",
     // Password management
@@ -563,7 +601,7 @@ export const dict: Dictionary = {
     failedToDelete: "Échec de la suppression",
     failedToCreate: "Échec de la création",
     failedToSwitch: "Échec du changement d'espace",
-    failedToInvite: "Échec de l'envoi de l'invitation",
+    failedToInvite: "Impossible de créer l’invitation",
     failedToUpdateRole: "Échec de la mise à jour du rôle",
     failedToAddRemote: "Échec de l'ajout du dépôt distant",
     failedToRemoveRemote: "Échec de la suppression du dépôt distant",
@@ -577,7 +615,6 @@ export const dict: Dictionary = {
   },
 
   success: {
-    invitationSent: "Invitation envoyée avec succès",
     roleUpdated: "Rôle mis à jour",
     personalSettingsSaved: "Paramètres personnels enregistrés",
     workspaceSettingsSaved: "Paramètres de l'espace enregistrés",

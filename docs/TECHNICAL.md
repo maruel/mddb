@@ -239,8 +239,11 @@ Supports Google and Microsoft OIDC flows.
 - **Account linking**: A new OAuth identity attaches to the account holding its email, or creates one, only when
   the provider verified the email: Google `verified_email`, a verified GitHub `/user/emails` entry, or a Microsoft
   ID-token `email` with `xms_edov` true. Otherwise the login fails with `EMAIL_NOT_VERIFIED`. A returning identity
-  signs in by provider ID.
-- **Explicit linking**: `POST /api/v1/auth/oauth/link` starts a flow bound to the signed-in user
+  signs in by provider ID and refreshes primary-address verification only from fresh provider proof of the
+  current exact primary address.
+- **Explicit linking**: `POST /api/v1/auth/oauth/link` starts a flow bound to the signed-in user. Independent
+  provider proof verifies the current exact primary address without merging accounts. Its optional `next`
+  preserves an invitation landing route and token through the signed OAuth state.
 - **CSRF protection**: The flow start sets an HttpOnly, SameSite=Lax cookie with the HMAC-signed state. The
   callback rejects a state that differs from the cookie, so a crafted state can neither log a browser in nor
   name another user to link. The browser must use the `server.base_url` host, which receives the callback.
@@ -323,17 +326,39 @@ A thread-safe, in-memory cache is used to store:
 - **Write-Through/Invalidation**: Cache is updated or invalidated on every write operation to ensure consistency with the on-disk storage.
 - **Lazy Loading**: Data is loaded into the cache on the first read request.
 
-## Invitation email ownership
+## Invitation links and account proof
 
-Invitation grants require a signed-in account whose verified email matches the
-recipient. Invitation links select a grant and never authenticate a user, create an
-account, or issue a session: inviters can read those links. Email-addressed in-app
-notifications are delivered only to accounts that already verified their address.
-Password registration and sign-in work without SMTP. To accept an invitation, use
-an address verified through email or a provider. A provider login cannot merge
-into an unverified password account: verify the existing account's email first,
-or move its claimed address and retry provider sign-in. This avoids sharing
-content, passwords, and active sessions with an unproven registrant.
+Organization and workspace administrators create copyable invitation links. A
+link with an email recipient requires a signed-in account with that exact verified
+address. A link without a recipient is a bearer grant: any signed-in account can
+claim it. Link possession never authenticates an account, verifies an address,
+or links identities. Password registration leaves the address unverified.
+Email verification (when SMTP is configured), provider proof, and explicit OAuth
+linking prove an address. An OAuth login cannot silently merge into an
+unverified password account.
+
+The secret-backed preview describes the scope, role, recipient restriction, and
+expiry without changing membership. Administrators can copy pending links again
+or revoke them within their owning organization/workspace. Existing membership
+roles remain unchanged when an invited account already belongs to the scope.
+Workspace acceptance also joins its organization as a member when needed.
+
+Each invitation service serializes acceptance and revocation. It persists the
+claimant before granting membership. A failed or interrupted membership grant
+can be retried only by that same account, including after restart. Partial
+organization membership from a workspace grant remains visible; retry completes
+the workspace grant. A failed workspace acceptance reports scope IDs, current
+organization/workspace membership presence, and retryability in structured error
+details. Failed membership writes mark persistence uncertainty; presence describes
+current server state rather than promising a transaction across files. Completion
+is persisted before invitation cleanup. If that cleanup fails, a completed retry does not run membership grants again. Revoking
+a pending claim prevents further acceptance; removing granted access uses the
+normal membership controls. This is single-process file-backed coordination,
+not a transaction across all membership and invitation files.
+
+When SMTP is configured, a recipient-bound invitation is also emailed with the
+same link; bearer links are never emailed. In-app invitation notifications target
+only an existing account that independently verified the named address.
 
 ## MCP notification scope
 
@@ -346,3 +371,58 @@ The transport session is bound to that workspace and persisted login session.
 Changing the account's active workspace does not retarget it. Unscoped GET remains
 generic and sessionless; unscoped conversation/document subscription requests fail
 with scope guidance instead of silently selecting an account-global workspace.
+
+## Resource policy and settings publication
+
+One server process owns a data directory. External tools can edit files out of
+band. Application admission cannot constrain those writes. The server does not yet reject a second process or reconcile all external
+usage changes. Atomic application snapshots exclude
+arbitrary external in-place writers, as defined by the saved-file transaction
+contract in `storage/git`.
+
+The organization owns its workspace content. A workspace resource limit is a
+ceiling, not a reserved share of organization or server capacity. Administrators
+use the same resource protection as other callers. Increasing an applicable
+limit is an explicit settings change; administrative authority does not bypass it.
+
+| Limit family              | Units and scope                                                                                         | Inheritance and zero                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ResourceQuotas`          | Pages and tables per workspace; records and columns per table; bytes per asset or workspace             | Server values are positive. Organization/workspace `-1` inherits, `0` permits none, positive values tighten. The smallest applicable value wins. |
+| Organization count quotas | Workspaces and organization/workspace memberships                                                       | Positive values only; no inheritance. User organization-count quotas are also positive.                                                          |
+| Server count quotas       | Users, organizations, workspaces, active sessions per user                                              | Non-negative; `0` is unlimited, no inheritance. Expired/revoked sessions do not consume active-session capacity.                                 |
+| Pooled storage            | Sum of logical content bytes in an organization or across the server's workspaces                       | Organization values are positive. Server `0` is unlimited. Independent of per-workspace ceilings.                                                |
+| Request body and egress   | Bytes per request; bytes per second across server responses                                             | Non-negative; `0` is unlimited. These are transport limits, not stored bytes.                                                                    |
+| Request rates             | Requests per minute and the configured token-bucket burst, per authenticated user or unauthenticated IP | Non-negative; `0` is unlimited, no inheritance. HTTP/MCP write-rate parity is not yet complete.                                                  |
+| Notifications             | Retention age in days and retained count per user                                                       | Non-negative; `0` disables that cleanup. Retention can remove old notifications; it is not an admission quota.                                   |
+
+Logical storage includes the current serialized content: page headers and body,
+table schemas and records, and retained assets. Git objects, administrative
+configuration, and temporary staging belong to physical disk policy instead.
+Replacement charges the difference between old and new stored content, not the
+full incoming payload. Deletion releases logical capacity; retained Git history
+can continue consuming physical disk. Enforcement does not yet cover every mutation or atomically reserve pooled
+capacity across workspaces.
+
+Lowering an admission limit does not delete content, cancel admitted work, or
+revoke existing sessions. New growth must fit every applicable ceiling. Reads,
+deletion, and changes that do not increase the exceeded resource remain allowed;
+another exceeded ceiling can still reject growth. This rule applies to inherited
+zero limits as well. Rate and bandwidth changes apply to subsequent checks;
+already admitted work can finish under its previous allowance. Logical limits do not cap filesystem growth from Git history or temporary files.
+
+`storage.ServerSettings` owns one immutable published settings snapshot. Updates
+are serialized: edit a candidate, validate it completely, save it, update the
+infallible runtime rate/bandwidth controls, then publish it atomically. Failed
+validation or persistence changes no live configuration. Each snapshot is a
+complete old or new configuration; an operation can finish with an earlier
+snapshot. Workspace stores refresh their cached effective quotas on their next
+lookup after a server resource-quota change. Notification cleanup also reads
+the published settings instead of retaining a startup copy.
+
+`settings.json` retains its serialized format and lives in the instance config
+directory. A save writes and syncs a private same-directory temporary file, then
+renames it over the published file. Interrupted staging leaves the old complete
+file. A process restart after replacement loads the new complete file; it ignores
+abandoned staging files. This is a single-file publication guarantee, not a
+transaction with content or Git history. Filesystem power-loss durability depends
+on the host filesystem.

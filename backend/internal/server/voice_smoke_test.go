@@ -95,7 +95,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	t.Logf("voice bridge setup time, excluded from turn latency: %s", time.Since(started))
 
 	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	router := NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "smoke", VoiceBridge: bridge})
+	router := NewRouter(env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "smoke", VoiceBridge: bridge})
 	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)

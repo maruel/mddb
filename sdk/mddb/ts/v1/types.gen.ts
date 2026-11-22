@@ -435,8 +435,39 @@ export interface AuthResponse {
   user: UserResponse | null;
 }
 
+/** OrgInvitationInfoRequest previews a token-selected organization grant without claiming it. */
+export interface OrgInvitationInfoRequest {
+  Token: string;
+}
+
+/** OrgInvitationInfoResponse describes a token-selected organization grant. */
+export interface OrgInvitationInfoResponse {
+  email: string;
+  role: OrganizationRole;
+  organization_id: string;
+  organization_name: string;
+  expires_at: number;
+}
+
+/** WSInvitationInfoRequest previews a token-selected workspace grant without claiming it. */
+export interface WSInvitationInfoRequest {
+  Token: string;
+}
+
+/** WSInvitationInfoResponse describes a token-selected workspace grant. */
+export interface WSInvitationInfoResponse {
+  email: string;
+  role: WorkspaceRole;
+  organization_id: string;
+  organization_name: string;
+  workspace_id: string;
+  workspace_name: string;
+  expires_at: number;
+}
+
 /**
- * AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+ * AcceptInvitationRequest claims a grant for the authenticated account.
+ * Recipient-bound invitations additionally require a matching verified address.
  * Invitation tokens never authenticate a user or issue a session.
  */
 export interface AcceptInvitationRequest {
@@ -525,6 +556,7 @@ export interface SetPasswordRequest {
 /** LinkOAuthAccountRequest is a request to initiate linking an OAuth provider. */
 export interface LinkOAuthAccountRequest {
   provider: OAuthProvider;
+  next?: string;
 }
 
 /** LinkOAuthAccountResponse is a response from initiating OAuth linking. */
@@ -620,7 +652,7 @@ export interface RemoveOrgMemberRequest {
   user_id: string;
 }
 
-/** OrgInvitationResponse is the API representation of an organization invitation (excludes Token). */
+/** OrgInvitationResponse is the API representation of an organization invitation with an administrator-copyable link. */
 export interface OrgInvitationResponse {
   id: string;
   email: string;
@@ -629,6 +661,7 @@ export interface OrgInvitationResponse {
   invited_by: string;
   expires_at: number;
   created: number;
+  invite_url: string;
 }
 
 /** ListOrgInvitationsResponse is a response containing a list of organization invitations. */
@@ -638,7 +671,7 @@ export interface ListOrgInvitationsResponse {
 
 /** CreateOrgInvitationRequest is a request to create an organization invitation. */
 export interface CreateOrgInvitationRequest {
-  email: string;
+  email?: string;
   role: OrganizationRole;
   /** Optional: language for invitation email (en, fr, de, es) */
   locale?: string;
@@ -794,6 +827,7 @@ export interface GitHubAppAvailableResponse {
  * Used by the user column type to populate the picker and display names.
  */
 export interface WorkspaceMemberResponse {
+  role: WorkspaceRole;
   id: string;
   name: string;
   email: string;
@@ -833,7 +867,7 @@ export interface UpdateWSMemberRoleRequest {
   role: WorkspaceRole;
 }
 
-/** WSInvitationResponse is the API representation of a workspace invitation (excludes Token). */
+/** WSInvitationResponse is the API representation of a workspace invitation with an administrator-copyable link. */
 export interface WSInvitationResponse {
   id: string;
   email: string;
@@ -842,6 +876,7 @@ export interface WSInvitationResponse {
   invited_by: string;
   expires_at: number;
   created: number;
+  invite_url: string;
 }
 
 /** ListWSInvitationsResponse is a response containing a list of workspace invitations. */
@@ -851,7 +886,7 @@ export interface ListWSInvitationsResponse {
 
 /** CreateWSInvitationRequest is a request to create a workspace invitation. */
 export interface CreateWSInvitationRequest {
-  email: string;
+  email?: string;
   role: WorkspaceRole;
   /** Optional: language for invitation email (en, fr, de, es) */
   locale?: string;

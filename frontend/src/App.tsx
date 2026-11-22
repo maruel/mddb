@@ -12,6 +12,7 @@ import { WorkspaceNavigationProvider } from "./contexts/WorkspaceNavigationConte
 import { GoModeProvider } from "./gomode/GoMode";
 import PWAInstallBanner from "./components/PWAInstallBanner";
 import Auth from "./components/Auth";
+import AcceptInvitation from "./components/AcceptInvitation";
 import { DeviceLoginRoute, DeviceApprovalRoute } from "./gomode/DeviceLogin";
 import Privacy from "./components/Privacy";
 import Terms from "./components/Terms";
@@ -191,6 +192,7 @@ function AppRoutes() {
     >
       {/* Public routes */}
       <Route path="/login" component={AuthRoute} />
+      <Route path="/accept-invitation/:kind" component={AcceptInvitation} />
       <Route path="/device-login" component={DeviceLoginRoute} />
       <Route path="/device" component={DeviceApprovalRoute} />
       <Route

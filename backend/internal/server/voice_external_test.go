@@ -68,7 +68,7 @@ func TestExternalVoiceGateway(t *testing.T) {
 					t.Fatal(err)
 				}
 				cfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-				h = NewRouter(env.services, &Config{ServerConfig: cfg, Version: "test", BaseURL: ts.URL, ExternalVoice: gateway, VoiceBridge: &testVoiceBridge{}})
+				h = NewRouter(env.services, &Config{ServerSettings: storage.NewServerSettings(cfg), Version: "test", BaseURL: ts.URL, ExternalVoice: gateway, VoiceBridge: &testVoiceBridge{}})
 				request := func(method, path, token string) *http.Response {
 					r, err := http.NewRequestWithContext(t.Context(), method, ts.URL+path, http.NoBody)
 					if err != nil {

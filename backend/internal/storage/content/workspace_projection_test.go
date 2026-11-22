@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -472,7 +474,7 @@ func BenchmarkColdWorkspaceDiscovery(b *testing.B) {
 		b.Fatal(err)
 	}
 	quotas := storage.DefaultResourceQuotas()
-	fs, err := NewFileStoreService(dir, git.NewManager(dir, "bench", "bench@example.com"), workspaces, orgs, &quotas)
+	fs, err := NewFileStoreService(dir, git.NewManager(dir, "bench", "bench@example.com"), workspaces, orgs, storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{ResourceQuotas: quotas}}))
 	if err != nil {
 		b.Fatal(err)
 	}

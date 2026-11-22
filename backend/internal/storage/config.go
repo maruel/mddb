@@ -1,4 +1,4 @@
-// Manages server settings stored in settings.json in the config directory.
+// Validates and atomically persists server settings in the instance config directory.
 
 package storage
 
@@ -58,16 +58,14 @@ func LoadServerConfig(cfgDir string, e2e bool) (*storagev1.ServerConfig, error) 
 		modified = true
 	}
 
-	// Save if we created defaults or generated a secret
+	// Validate the loaded configuration
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid settings.json: %w", err)
+	}
 	if modified || errors.Is(err, os.ErrNotExist) {
 		if err := SaveServerConfig(&cfg, cfgDir); err != nil {
 			return nil, err
 		}
-	}
-
-	// Validate the loaded configuration
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid settings.json: %w", err)
 	}
 
 	return &cfg, nil
@@ -77,7 +75,7 @@ func LoadServerConfig(cfgDir string, e2e bool) (*storagev1.ServerConfig, error) 
 //
 // The file holds the JWT secret and the VAPID key pair, so it is written mode
 // 0600, like the onboarding wizard does for config.toml.
-func SaveServerConfig(c *storagev1.ServerConfig, cfgDir string) error {
+func SaveServerConfig(c *storagev1.ServerConfig, cfgDir string) (err error) {
 	if err := c.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -92,7 +90,24 @@ func SaveServerConfig(c *storagev1.ServerConfig, cfgDir string) error {
 	if err := os.MkdirAll(cfgDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(cfgDir, "settings.json"), data, 0o600); err != nil {
+	f, err := os.CreateTemp(cfgDir, ".settings-*")
+	if err != nil {
+		return fmt.Errorf("failed to stage settings.json: %w", err)
+	}
+	name := f.Name()
+	defer func() {
+		if e := os.Remove(name); e != nil && !os.IsNotExist(e) {
+			err = errors.Join(err, e)
+		}
+	}()
+	if _, err = f.Write(data); err == nil {
+		err = f.Sync()
+	}
+	err = errors.Join(err, f.Close())
+	if err != nil {
+		return fmt.Errorf("failed to stage settings.json: %w", err)
+	}
+	if err := os.Rename(name, filepath.Join(cfgDir, "settings.json")); err != nil {
 		return fmt.Errorf("failed to write settings.json: %w", err)
 	}
 	return nil

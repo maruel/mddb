@@ -1,4 +1,4 @@
-// Tests router request policies, session metadata, bandwidth and worker ownership.
+// Tests router request policies, live settings, metadata, bandwidth and worker ownership.
 
 package server
 
@@ -39,7 +39,7 @@ func TestRouter(t *testing.T) {
 				t.Run(tc.name, func(t *testing.T) {
 					env := setupTestEnv(t)
 					cfg := &Config{
-						ServerConfig:   &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
+						ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}),
 						BaseURL:        "https://configured.example.com",
 						TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")},
 					}
@@ -87,7 +87,7 @@ func TestRouter(t *testing.T) {
 				}
 				t.Cleanup(func() { _ = checker.Close() })
 				router := NewRouter(env.services, &Config{
-					ServerConfig:   &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
+					ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}),
 					IPGeo:          checker,
 					TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32")},
 				})
@@ -126,8 +126,8 @@ func TestRouter(t *testing.T) {
 		t.Run("host and cross-origin policies", func(t *testing.T) {
 			env := setupTestEnv(t)
 			cfg := &Config{
-				ServerConfig: &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()},
-				BaseURL:      "https://configured.example.com",
+				ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}),
+				BaseURL:        "https://configured.example.com",
 			}
 			router := NewRouter(env.services, cfg)
 			t.Cleanup(router.Close)
@@ -150,12 +150,13 @@ func TestRouter(t *testing.T) {
 		})
 		t.Run("cancels bandwidth wait", func(t *testing.T) {
 			env := setupTestEnv(t)
-			cfg := &Config{ServerConfig: &storagev1.ServerConfig{
+			settings := &storagev1.ServerConfig{
 				JWTSecret:  testJWTSecret,
 				Quotas:     storage.DefaultServerQuotas(false),
 				RateLimits: storage.DefaultRateLimits(),
-			}}
-			cfg.Quotas.MaxEgressBandwidthBps = 1
+			}
+			settings.Quotas.MaxEgressBandwidthBps = 1
+			cfg := &Config{ServerSettings: storage.NewServerSettings(settings)}
 			synctest.Test(t, func(t *testing.T) {
 				router := NewRouter(env.services, cfg)
 				t.Cleanup(router.Close)
@@ -188,13 +189,40 @@ func TestRouter(t *testing.T) {
 		})
 	})
 
+	t.Run("published settings reach authenticated handlers", func(t *testing.T) {
+		t.Parallel()
+		env := setupTestEnv(t)
+		var login dto.AuthResponse
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "admin@example.com", Password: "Pass1234", Name: "Admin"}, &login, ""); status != http.StatusOK {
+			t.Fatalf("register admin: %d", status)
+		}
+		var current dto.ServerConfigResponse
+		if status := env.doJSON(t, http.MethodGet, "/api/v1/server/config", nil, &current, login.Token); status != http.StatusOK {
+			t.Fatalf("read settings: %d", status)
+		}
+		data, err := json.Marshal(current.Quotas)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var quotas dto.QuotasConfigUpdate
+		if err := json.Unmarshal(data, &quotas); err != nil {
+			t.Fatal(err)
+		}
+		quotas.MaxUsers = 1
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/server/config", dto.UpdateServerConfigRequest{Quotas: &quotas}, nil, login.Token); status != http.StatusOK {
+			t.Fatalf("update settings: %d", status)
+		}
+		if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{Email: "member@example.com", Password: "Pass1234", Name: "Member"}, nil, ""); status != http.StatusTooManyRequests {
+			t.Fatalf("registration ignored the published user quota: %d", status)
+		}
+	})
 	t.Run("Close", func(t *testing.T) {
 		env := setupTestEnv(t)
-		cfg := &Config{ServerConfig: &storagev1.ServerConfig{
+		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{
 			JWTSecret:  testJWTSecret,
 			Quotas:     storage.DefaultServerQuotas(false),
 			RateLimits: storage.DefaultRateLimits(),
-		}}
+		})}
 		synctest.Test(t, func(t *testing.T) {
 			r := NewRouter(env.services, cfg)
 			var wg sync.WaitGroup

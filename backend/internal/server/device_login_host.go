@@ -35,7 +35,7 @@ type deviceLoginHost struct {
 }
 
 func (h *deviceLoginHost) Enabled() bool {
-	return len(h.config.JWTSecret) >= 32 && h.services.User != nil && h.services.Session != nil && h.config.ConfigDir != ""
+	return len(h.config.Snapshot().JWTSecret) >= 32 && h.services.User != nil && h.services.Session != nil && h.config.ConfigDir != ""
 }
 
 func (h *deviceLoginHost) ClientIP(r *http.Request) netip.Addr {
@@ -48,7 +48,7 @@ func (h *deviceLoginHost) VerificationURL(_ *http.Request) string {
 }
 
 func (h *deviceLoginHost) Identify(r *http.Request) (string, error) {
-	u, sid, _, err := validateJWTAndSession(r, h.services.User, h.services.Session, h.config.JWTSecret)
+	u, sid, _, err := validateJWTAndSession(r, h.services.User, h.services.Session, h.config.Snapshot().JWTSecret)
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +79,7 @@ func (h *deviceLoginHost) CreateSession(r *http.Request, subject string) (device
 	if sid == 0 {
 		return nil, err
 	}
-	return &deviceSession{response: response, id: sid, services: h.services, request: r, user: user, config: &handlers.Config{ServerConfig: *h.config.ServerConfig, BaseURL: h.config.BaseURL}}, err
+	return &deviceSession{response: response, id: sid, services: h.services, request: r, user: user, config: &handlers.Config{ServerSettings: h.config.ServerSettings, BaseURL: h.config.BaseURL}}, err
 }
 
 func (h *deviceLoginHost) Audit(_ context.Context, event *devicelogin.AuditEvent) error {

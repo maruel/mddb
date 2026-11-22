@@ -149,6 +149,47 @@ export const dict: Dictionary = {
     },
   },
 
+  invitations: {
+    openWorkspace: "Arbeitsbereich öffnen",
+    organizationJoined:
+      "Sie sind der Organisation beigetreten, aber der Arbeitsbereichszugriff ist unvollständig. Erneut versuchen.",
+    persistenceUncertain:
+      "Zugriffsänderungen sind sichtbar, aber das Speichern wurde nicht bestätigt. Erneut versuchen.",
+    accessCheckFailed: "Der aktuelle Zugriff konnte nicht geprüft werden.",
+    returnToInvitation: "Zur Einladung zurück",
+    verifyWithProvider: "Adresse bestätigen",
+    providerLinkFailed:
+      "Der Anbieter konnte nicht verknüpft werden. Wählen Sie in den Kontoeinstellungen einen anderen Anbieter.",
+
+    loadFailed: "Einladung konnte nicht geladen werden. Erneut versuchen.",
+    retry: "Erneut versuchen",
+
+    recipient: "Empfänger-E-Mail (optional)",
+    recipientHint:
+      "Leer lassen für einen Link, den ein angemeldetes Konto einmal einlösen kann. Eine E-Mail beschränkt ihn auf das Konto mit dieser bestätigten Adresse.",
+    anyoneWithLink: "Jede Person mit dem Link",
+    createLink: "Einladungslink erstellen",
+    link: "Einladungslink",
+    copyLink: "Einladungslink kopieren",
+    revoke: "Einladungslink widerrufen",
+    copied: "Einladungslink kopiert",
+    copyManually: "Automatisches Kopieren fehlgeschlagen. Link auswählen und manuell kopieren.",
+    expires: "Gültig bis {{date}}",
+    title: "Einladung",
+    grantsRole: "Diese Einladung gewährt die Rolle {{role}}.",
+    boundTo: "Nur {{email}} kann diese Einladung verwenden.",
+    bearerHint: "Jedes angemeldete Konto kann diese Einladung einmal einlösen.",
+    unavailable: "Diese Einladung ist nicht verfügbar oder abgelaufen.",
+    signedInAs: "Angemeldet als {{email}}",
+    verifiedRecipientRequired:
+      "Verwenden Sie ein Konto mit dieser unabhängig bestätigten E-Mail-Adresse. In den Kontoeinstellungen können Sie einen bestätigenden Anbieter verknüpfen.",
+    accept: "Beitreten",
+    changeAccount: "Anderes Konto verwenden",
+    manageAccount: "Kontoeinstellungen",
+    failedToAccept: "Einladung konnte nicht angenommen werden. Erneut versuchen.",
+    openFailed: "Sie sind beigetreten, aber der Arbeitsbereich lässt sich nicht öffnen. Erneut versuchen.",
+  },
+
   editor: {
     overlapNavigation: "Überschneidungen prüfen",
     unresolvedOverlaps: "{{count}} ungelöste Überschneidungen",
@@ -311,7 +352,6 @@ export const dict: Dictionary = {
     inviteNewMember: "Neues Mitglied einladen",
     emailPlaceholder: "E-Mail-Adresse",
     pendingInvitations: "Ausstehende Einladungen",
-    sentColumn: "Gesendet",
     // Personal tab
     personalSettings: "Persönliche Einstellungen",
     theme: "Design",
@@ -337,7 +377,6 @@ export const dict: Dictionary = {
     changeEmail: "E-Mail ändern",
     newEmail: "Neue E-Mail-Adresse",
     currentPassword: "Aktuelles Passwort",
-    emailChangeHint: "Nach der E-Mail-Änderung müssen Sie diese verifizieren.",
     emailVerified: "Verifiziert",
     emailNotVerified: "Nicht verifiziert",
     // Password management
@@ -565,7 +604,7 @@ export const dict: Dictionary = {
     failedToDelete: "Löschen fehlgeschlagen",
     failedToCreate: "Erstellen fehlgeschlagen",
     failedToSwitch: "Arbeitsbereichswechsel fehlgeschlagen",
-    failedToInvite: "Einladung senden fehlgeschlagen",
+    failedToInvite: "Einladung konnte nicht erstellt werden",
     failedToUpdateRole: "Rollenaktualisierung fehlgeschlagen",
     failedToAddRemote: "Remote hinzufügen fehlgeschlagen",
     failedToRemoveRemote: "Remote entfernen fehlgeschlagen",
@@ -579,7 +618,6 @@ export const dict: Dictionary = {
   },
 
   success: {
-    invitationSent: "Einladung erfolgreich gesendet",
     roleUpdated: "Rolle aktualisiert",
     personalSettingsSaved: "Persönliche Einstellungen gespeichert",
     workspaceSettingsSaved: "Arbeitsbereich-Einstellungen gespeichert",

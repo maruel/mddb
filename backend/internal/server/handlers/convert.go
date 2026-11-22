@@ -3,6 +3,9 @@
 package handlers
 
 import (
+	"net/url"
+	"strings"
+
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -60,9 +63,10 @@ func wsMembershipToResponse(m *identityv1.WorkspaceMembership) *dto.WSMembership
 	}
 }
 
-func orgInvitationToResponse(i *identityv1.OrganizationInvitation) *dto.OrgInvitationResponse {
+func orgInvitationToResponse(i *identityv1.OrganizationInvitation, baseURL string) *dto.OrgInvitationResponse {
 	return &dto.OrgInvitationResponse{
 		ID:             i.ID,
+		InviteURL:      strings.TrimRight(baseURL, "/") + "/accept-invitation/org?token=" + url.QueryEscape(i.Token),
 		Email:          i.Email,
 		OrganizationID: i.OrganizationID,
 		Role:           dto.OrganizationRole(i.Role),
@@ -72,9 +76,10 @@ func orgInvitationToResponse(i *identityv1.OrganizationInvitation) *dto.OrgInvit
 	}
 }
 
-func wsInvitationToResponse(i *identityv1.WorkspaceInvitation) *dto.WSInvitationResponse {
+func wsInvitationToResponse(i *identityv1.WorkspaceInvitation, baseURL string) *dto.WSInvitationResponse {
 	return &dto.WSInvitationResponse{
 		ID:          i.ID,
+		InviteURL:   strings.TrimRight(baseURL, "/") + "/accept-invitation/ws?token=" + url.QueryEscape(i.Token),
 		Email:       i.Email,
 		WorkspaceID: i.WorkspaceID,
 		Role:        dto.WorkspaceRole(i.Role),

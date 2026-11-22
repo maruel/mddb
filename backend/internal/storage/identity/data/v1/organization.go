@@ -65,7 +65,9 @@ type OrganizationSettings struct {
 }
 
 // OrganizationQuotas defines limits for an organization.
-// ResourceQuotas fields are content limits applied per-workspace (0 = no org-level restriction).
+// ResourceQuotas fields apply per workspace: -1 inherits, 0 blocks the resource,
+// and positive values tighten the server ceiling. Organization count and pooled
+// storage fields must be positive and do not inherit.
 type OrganizationQuotas struct {
 	storagev1.ResourceQuotas
 

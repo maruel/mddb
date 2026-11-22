@@ -23,6 +23,8 @@
 
 .providerRow {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
   align-items: center;
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
@@ -36,6 +38,7 @@
   flex-wrap: wrap;
   gap: var(--s-3);
   align-items: center;
+  min-width: 0;
 }
 
 .providerIcon {
@@ -68,16 +71,24 @@
 .linkedEmail {
   font-size: 0.85rem;
   color: var(--c-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .providerActions {
+  display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .linkButton {
+  display: inline-block;
   padding: var(--s-2) var(--s-4);
   font-size: 0.85rem;
   color: var(--c-text-on-accent);
+  text-decoration: none;
   cursor: pointer;
   background: var(--c-action-primary);
   border: none;

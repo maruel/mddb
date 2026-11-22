@@ -15,7 +15,9 @@ type ResourceQuotas struct {
 	// MaxPages limits the number of pages per workspace.
 	MaxPages int `json:"max_pages" jsonschema:"description=Maximum pages per workspace (-1=inherit, 0=disabled, positive=limit)"`
 
-	// MaxStorageBytes limits storage per workspace.
+	// MaxStorageBytes limits current logical content bytes per workspace, including
+	// serialized headers, schemas, records, and retained assets. Git history,
+	// administrative settings, and temporary staging are not logical content.
 	MaxStorageBytes int64 `json:"max_storage_bytes" jsonschema:"description=Maximum storage per workspace in bytes (-1=inherit, 0=disabled, positive=limit)"`
 
 	// MaxRecordsPerTable limits records per table.

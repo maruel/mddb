@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+
 	contentv1 "github.com/maruel/mddb/backend/internal/storage/content/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
@@ -57,7 +59,7 @@ func testServices(t *testing.T) (*Services, ksid.ID) {
 	})
 
 	serverQuotas := storage.DefaultResourceQuotas()
-	fs, err := content.NewFileStoreService(tmpDir, gitMgr, wsService, orgService, &serverQuotas)
+	fs, err := content.NewFileStoreService(tmpDir, gitMgr, wsService, orgService, storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{ResourceQuotas: serverQuotas}}))
 	if err != nil {
 		t.Fatalf("failed to create FileStoreService: %v", err)
 	}

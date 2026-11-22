@@ -1,11 +1,13 @@
-// Tests for server settings persistence in the config directory.
+// Tests server settings persistence and quota/rate value contracts.
 
 package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
@@ -13,6 +15,47 @@ import (
 
 func TestServerConfig(t *testing.T) {
 	t.Parallel()
+	t.Run("LoadExistingSettings", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		cfg, err := LoadServerConfig(dir, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var document map[string]json.RawMessage
+		if err := json.Unmarshal(data, &document); err != nil {
+			t.Fatal(err)
+		}
+		// Existing settings can contain retired optional fields. Loading them
+		// must retain the supported settings and must not overwrite live files.
+		document["retired_option"] = json.RawMessage(`{"enabled":true}`)
+		data, err = json.Marshal(document)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, "settings.json")
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := LoadServerConfig(dir, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(loaded, cfg) {
+			t.Fatal("existing settings lost supported values")
+		}
+		unchanged, err := os.ReadFile(path) //nolint:gosec // G304: isolated test settings file.
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(unchanged, data) {
+			t.Fatal("loading existing settings rewrote the file")
+		}
+	})
 
 	t.Run("LoadWritesSettingsFile", func(t *testing.T) {
 		t.Parallel()
@@ -98,5 +141,59 @@ func TestServerConfig(t *testing.T) {
 		if perm := fi.Mode().Perm(); perm != 0o600 {
 			t.Errorf("settings.json mode is %o, want 600", perm)
 		}
+	})
+}
+
+func TestServerQuotas(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			q := storagev1.ServerQuotas{ResourceQuotas: DefaultResourceQuotas()}
+			if err := q.Validate(); err != nil {
+				t.Fatalf("zero non-resource capacities should be unlimited: %v", err)
+			}
+			q = DefaultServerQuotas(false)
+			if err := q.Validate(); err != nil {
+				t.Fatal(err)
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			for _, field := range []string{"MaxRequestBodyBytes", "MaxSessionsPerUser", "MaxOrganizations", "MaxWorkspaces", "MaxUsers", "MaxTotalStorageBytes", "MaxEgressBandwidthBps", "NotificationRetentionDays", "MaxNotificationsPerUser"} {
+				t.Run(field, func(t *testing.T) {
+					q := DefaultServerQuotas(false)
+					reflect.ValueOf(&q).Elem().FieldByName(field).SetInt(-1)
+					if err := q.Validate(); err == nil {
+						t.Fatal("non-resource quota inherited -1")
+					}
+				})
+			}
+			q := DefaultServerQuotas(false)
+			q.MaxPages = 0
+			if err := q.Validate(); err == nil {
+				t.Fatal("server resource floor accepted zero")
+			}
+		})
+	})
+}
+
+func TestRateLimits(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			for _, r := range []storagev1.RateLimits{{}, DefaultRateLimits()} {
+				if err := r.Validate(); err != nil {
+					t.Fatal(err)
+				}
+			}
+		})
+		t.Run("error", func(t *testing.T) {
+			for _, field := range []string{"AuthRatePerMin", "WriteRatePerMin", "ReadAuthRatePerMin", "ReadUnauthRatePerMin"} {
+				t.Run(field, func(t *testing.T) {
+					r := DefaultRateLimits()
+					reflect.ValueOf(&r).Elem().FieldByName(field).SetInt(-1)
+					if err := r.Validate(); err == nil {
+						t.Fatal("rate inherited -1")
+					}
+				})
+			}
+		})
 	})
 }

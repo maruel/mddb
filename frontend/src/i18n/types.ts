@@ -148,6 +148,41 @@ export interface Dictionary {
     };
   };
 
+  invitations: {
+    openWorkspace: string;
+    organizationJoined: string;
+    persistenceUncertain: string;
+    accessCheckFailed: string;
+    returnToInvitation: string;
+    verifyWithProvider: string;
+    providerLinkFailed: string;
+
+    loadFailed: string;
+    retry: string;
+    recipient: string;
+    recipientHint: string;
+    anyoneWithLink: string;
+    createLink: string;
+    link: string;
+    copyLink: string;
+    revoke: string;
+    copied: string;
+    copyManually: string;
+    expires: string;
+    title: string;
+    grantsRole: string;
+    boundTo: string;
+    bearerHint: string;
+    unavailable: string;
+    signedInAs: string;
+    verifiedRecipientRequired: string;
+    accept: string;
+    changeAccount: string;
+    manageAccount: string;
+    failedToAccept: string;
+    openFailed: string;
+  };
+
   editor: {
     overlapNavigation: string;
     unresolvedOverlaps: string;
@@ -299,7 +334,6 @@ export interface Dictionary {
     inviteNewMember: string;
     emailPlaceholder: string;
     pendingInvitations: string;
-    sentColumn: string;
     // Personal tab
     personalSettings: string;
     theme: string;
@@ -325,7 +359,6 @@ export interface Dictionary {
     changeEmail: string;
     newEmail: string;
     currentPassword: string;
-    emailChangeHint: string;
     emailVerified: string;
     emailNotVerified: string;
     // Password management
@@ -562,7 +595,6 @@ export interface Dictionary {
   };
 
   success: {
-    invitationSent: string;
     roleUpdated: string;
     personalSettingsSaved: string;
     workspaceSettingsSaved: string;

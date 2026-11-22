@@ -148,6 +148,45 @@ export const dict: Dictionary = {
     },
   },
 
+  invitations: {
+    openWorkspace: "Abrir espacio de trabajo",
+    organizationJoined:
+      "Se ha unido a la organización, pero el acceso al espacio de trabajo no está completo. Inténtelo de nuevo.",
+    persistenceUncertain: "Hay cambios de acceso visibles, pero no se pudo confirmar su guardado. Inténtelo de nuevo.",
+    accessCheckFailed: "No se pudo comprobar el acceso actual.",
+    returnToInvitation: "Volver a la invitación",
+    verifyWithProvider: "Verificar dirección",
+    providerLinkFailed: "No se pudo vincular el proveedor. Elija otro en los ajustes de la cuenta.",
+
+    loadFailed: "No se pudo cargar la invitación. Inténtelo de nuevo.",
+    retry: "Reintentar",
+
+    recipient: "Correo del destinatario (opcional)",
+    recipientHint:
+      "Déjelo vacío para que cualquier cuenta conectada pueda usar el enlace una vez. Un correo lo limita a la cuenta que verificó esa dirección.",
+    anyoneWithLink: "Cualquiera con el enlace",
+    createLink: "Crear enlace de invitación",
+    link: "Enlace de invitación",
+    copyLink: "Copiar enlace de invitación",
+    revoke: "Revocar enlace de invitación",
+    copied: "Enlace de invitación copiado",
+    copyManually: "No se pudo copiar automáticamente. Seleccione el enlace y cópielo manualmente.",
+    expires: "Caduca el {{date}}",
+    title: "Invitación",
+    grantsRole: "Esta invitación concede el rol {{role}}.",
+    boundTo: "Solo {{email}} puede usar esta invitación.",
+    bearerHint: "Cualquier cuenta conectada puede aceptar esta invitación una vez.",
+    unavailable: "Esta invitación no está disponible o ha caducado.",
+    signedInAs: "Sesión iniciada como {{email}}",
+    verifiedRecipientRequired:
+      "Use una cuenta con esta dirección verificada de forma independiente. Puede vincular un proveedor que la verifique en los ajustes de la cuenta.",
+    accept: "Unirse",
+    changeAccount: "Usar otra cuenta",
+    manageAccount: "Ajustes de la cuenta",
+    failedToAccept: "No se pudo aceptar la invitación. Inténtelo de nuevo.",
+    openFailed: "Se ha unido, pero no se pudo abrir el espacio de trabajo. Inténtelo de nuevo.",
+  },
+
   editor: {
     overlapNavigation: "Revisar coincidencias",
     unresolvedOverlaps: "{{count}} coincidencias sin resolver",
@@ -309,7 +348,6 @@ export const dict: Dictionary = {
     inviteNewMember: "Invitar nuevo miembro",
     emailPlaceholder: "Dirección de correo",
     pendingInvitations: "Invitaciones pendientes",
-    sentColumn: "Enviado",
     // Personal tab
     personalSettings: "Configuración personal",
     theme: "Tema",
@@ -335,7 +373,6 @@ export const dict: Dictionary = {
     changeEmail: "Cambiar correo",
     newEmail: "Nueva dirección de correo",
     currentPassword: "Contraseña actual",
-    emailChangeHint: "Después de cambiar tu correo, deberás verificarlo.",
     emailVerified: "Verificado",
     emailNotVerified: "No verificado",
     // Password management
@@ -561,7 +598,7 @@ export const dict: Dictionary = {
     failedToDelete: "Error al eliminar",
     failedToCreate: "Error al crear",
     failedToSwitch: "Error al cambiar de espacio",
-    failedToInvite: "Error al enviar invitación",
+    failedToInvite: "No se pudo crear la invitación",
     failedToUpdateRole: "Error al actualizar rol",
     failedToAddRemote: "Error al agregar remoto",
     failedToRemoveRemote: "Error al eliminar remoto",
@@ -575,7 +612,6 @@ export const dict: Dictionary = {
   },
 
   success: {
-    invitationSent: "Invitación enviada correctamente",
     roleUpdated: "Rol actualizado",
     personalSettingsSaved: "Configuración personal guardada",
     workspaceSettingsSaved: "Configuración del espacio guardada",

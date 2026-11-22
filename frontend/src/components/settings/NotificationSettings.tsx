@@ -142,6 +142,7 @@ export default function NotificationSettings() {
                       <input
                         type="checkbox"
                         checked={channels().email}
+                        aria-label={`${t(TYPE_LABEL_KEYS[type] ?? type)}: ${t("notifications.channelEmail")}`}
                         onChange={(e) => setChannel(type, "email", e.currentTarget.checked)}
                         disabled={saving()}
                       />
@@ -150,6 +151,7 @@ export default function NotificationSettings() {
                       <input
                         type="checkbox"
                         checked={channels().web}
+                        aria-label={`${t(TYPE_LABEL_KEYS[type] ?? type)}: ${t("notifications.channelWeb")}`}
                         onChange={(e) => setChannel(type, "web", e.currentTarget.checked)}
                         disabled={saving()}
                       />

@@ -1,7 +1,7 @@
-// Linked accounts section for managing OAuth provider connections.
+// Manages explicit OAuth links and preserves validated invitation recovery destinations.
 
 import { createSignal, createEffect, Show, For } from "solid-js";
-import type { OAuthIdentity, OAuthProvider, LinkOAuthAccountResponse, ErrorResponse } from "@sdk/types.gen";
+import type { OAuthIdentity, OAuthProvider } from "@sdk/types.gen";
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
 import { useAuth, useAuthScope } from "../../contexts";
 import { useI18n } from "../../i18n";
@@ -11,6 +11,7 @@ import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "../OAuthIcons";
 import type { JSX } from "solid-js";
 
 interface Props {
+  returnPath: string | null;
   oauthIdentities: OAuthIdentity[] | undefined;
   hasPassword: boolean;
   onSuccess: (message: string) => void;
@@ -37,24 +38,6 @@ export default function LinkedAccountsSection(props: Props) {
   const [availableProviders, setAvailableProviders] = createSignal<OAuthProvider[]>([]);
   const [loading, setLoading] = createSignal<OAuthProvider | null>(null);
 
-  // Helper to make authenticated fetch calls for OAuth endpoints (not in generated SDK)
-  const authFetch = async (url: string, body: object) => {
-    const sid = user()?.session_id;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(sid ? { "X-MDDB-Session": sid } : {}),
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const error = (await res.json()) as ErrorResponse;
-      throw new Error(error.error.message);
-    }
-    return (await res.json()) as unknown;
-  };
-
   // Fetch available providers on mount
   createEffect(() => {
     api()
@@ -79,7 +62,7 @@ export default function LinkedAccountsSection(props: Props) {
     const isCurrent = captureScope();
     setLoading(providerId);
     try {
-      const resp = (await authFetch("/api/v1/auth/oauth/link", { provider: providerId })) as LinkOAuthAccountResponse;
+      const resp = await api().linkOAuth({ provider: providerId, next: props.returnPath || undefined });
       if (!isCurrent()) return;
       // Redirect to OAuth provider
       window.location.href = resp.redirect_url;
@@ -99,7 +82,7 @@ export default function LinkedAccountsSection(props: Props) {
 
     setLoading(providerId);
     try {
-      await authFetch("/api/v1/auth/oauth/unlink", { provider: providerId });
+      await api().unlinkOAuth({ provider: providerId });
       if (!isCurrent()) return;
       props.onSuccess(t("settings.accountUnlinked"));
       // Refresh user data
@@ -125,7 +108,7 @@ export default function LinkedAccountsSection(props: Props) {
 
             return (
               <Show when={isAvailable()}>
-                <div class={styles.providerRow}>
+                <section class={styles.providerRow} aria-label={provider.name}>
                   <div class={styles.providerInfo}>
                     <provider.icon class={styles.providerIcon} />
                     <span class={styles.providerName}>{provider.name}</span>
@@ -154,6 +137,14 @@ export default function LinkedAccountsSection(props: Props) {
                         </button>
                       }
                     >
+                      <Show when={props.returnPath && !user()?.email_verified}>
+                        <a
+                          class={styles.linkButton}
+                          href={`/api/v1/auth/oauth/${provider.id}?next=${encodeURIComponent(props.returnPath || "")}`}
+                        >
+                          {t("invitations.verifyWithProvider")}
+                        </a>
+                      </Show>
                       <button
                         class={styles.unlinkButton}
                         onClick={() => handleUnlink(provider.id)}
@@ -164,7 +155,7 @@ export default function LinkedAccountsSection(props: Props) {
                       </button>
                     </Show>
                   </div>
-                </div>
+                </section>
               </Show>
             );
           }}

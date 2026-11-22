@@ -31,7 +31,7 @@ test("member invitation forms send the API role values", async ({ page, request 
   const orgForm = page.locator('form[class*="inviteForm"]');
   await orgForm.locator('input[type="email"]').fill(invitee.email);
   await orgForm.locator("select").selectOption("org:admin");
-  const invite = orgForm.getByRole("button", { name: "Invite", exact: true });
+  const invite = orgForm.getByRole("button", { name: "Create invite link", exact: true });
   await expect(invite.locator('svg[aria-hidden="true"]')).toBeVisible();
   for (const width of [390, 195]) {
     await page.setViewportSize({ width, height: 900 });

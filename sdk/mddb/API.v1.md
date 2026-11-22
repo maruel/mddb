@@ -19,6 +19,8 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/auth/browser/logout` |  |  | `OkResponse` |
 | POST | `/api/v1/auth/login` |  | `LoginRequest` | `AuthResponse` |
 | POST | `/api/v1/auth/register` |  | `RegisterRequest` | `AuthResponse` |
+| GET | `/api/v1/auth/invitations/org` |  | Query: `OrgInvitationInfoRequestQuery` | `OrgInvitationInfoResponse` |
+| GET | `/api/v1/auth/invitations/ws` |  | Query: `WSInvitationInfoRequestQuery` | `WSInvitationInfoResponse` |
 | POST | `/api/v1/auth/invitations/org/accept` |  | `AcceptInvitationRequest` | `UserResponse` |
 | POST | `/api/v1/auth/invitations/ws/accept` |  | `AcceptInvitationRequest` | `UserResponse` |
 | GET | `/api/v1/auth/providers` |  |  | `ProvidersResponse` |
@@ -43,6 +45,7 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/organizations/{orgID}/users/role` |  | `UpdateOrgMemberRoleRequest` | `UserResponse` |
 | POST | `/api/v1/organizations/{orgID}/users/remove` |  | `RemoveOrgMemberRequest` | `OkResponse` |
 | GET | `/api/v1/organizations/{orgID}/invitations` |  |  | `ListOrgInvitationsResponse` |
+| POST | `/api/v1/organizations/{orgID}/invitations/{invitationID}/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/organizations/{orgID}/invitations` |  | `CreateOrgInvitationRequest` | `OrgInvitationResponse` |
 | POST | `/api/v1/organizations/{orgID}/workspaces` |  | `CreateWorkspaceRequest` | `WorkspaceResponse` |
 | POST | `/api/v1/organizations/{orgID}/notion/import` |  | `NotionImportRequest` | `NotionImportResponse` |
@@ -65,6 +68,7 @@ Type notation: `JSONValue` means any valid JSON value.
 | POST | `/api/v1/workspaces/{wsID}/users/resolve` |  | `ResolveUsersRequest` | `ResolveUsersResponse` |
 | POST | `/api/v1/workspaces/{wsID}/users/role` |  | `UpdateWSMemberRoleRequest` | `UserResponse` |
 | GET | `/api/v1/workspaces/{wsID}/invitations` |  |  | `ListWSInvitationsResponse` |
+| POST | `/api/v1/workspaces/{wsID}/invitations/{invitationID}/delete` |  |  | `OkResponse` |
 | POST | `/api/v1/workspaces/{wsID}/invitations` |  | `CreateWSInvitationRequest` | `WSInvitationResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/titles` |  | Query: `GetNodeTitlesRequestQuery` | `GetNodeTitlesResponse` |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}` |  |  | `NodeResponse` |
@@ -105,6 +109,18 @@ Type notation: `JSONValue` means any valid JSON value.
 | GET | `/api/v1/notifications/vapid-key` |  |  | `VAPIDKeyResponse` |
 | POST | `/api/v1/notifications/subscribe` |  | `PushSubscribeRequest` | `OkResponse` |
 | POST | `/api/v1/notifications/unsubscribe` |  | `PushUnsubscribeRequest` | `OkResponse` |
+
+### OrgInvitationInfoRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `token` | `string` | yes |
+
+### WSInvitationInfoRequestQuery parameters
+
+| Parameter | Type | Required |
+|-----------|------|----------|
+| `token` | `string` | yes |
 
 ### GetNodeTitlesRequestQuery parameters
 
@@ -591,9 +607,52 @@ Used by API login and registration endpoints.
 | `token` | `string` |  | yes |
 | `user` | `UserResponse \| null` |  | yes |
 
+### OrgInvitationInfoRequest
+
+OrgInvitationInfoRequest previews a token-selected organization grant without claiming it.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `Token` | `string` | Query parameter: `token`. | yes |
+
+### OrgInvitationInfoResponse
+
+OrgInvitationInfoResponse describes a token-selected organization grant.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `email` | `string` |  | yes |
+| `role` | `OrganizationRole` |  | yes |
+| `organization_id` | `string` |  | yes |
+| `organization_name` | `string` |  | yes |
+| `expires_at` | `number` |  | yes |
+
+### WSInvitationInfoRequest
+
+WSInvitationInfoRequest previews a token-selected workspace grant without claiming it.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `Token` | `string` | Query parameter: `token`. | yes |
+
+### WSInvitationInfoResponse
+
+WSInvitationInfoResponse describes a token-selected workspace grant.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `email` | `string` |  | yes |
+| `role` | `WorkspaceRole` |  | yes |
+| `organization_id` | `string` |  | yes |
+| `organization_name` | `string` |  | yes |
+| `workspace_id` | `string` |  | yes |
+| `workspace_name` | `string` |  | yes |
+| `expires_at` | `number` |  | yes |
+
 ### AcceptInvitationRequest
 
-AcceptInvitationRequest accepts a grant for the signed-in account with a matching, independently verified email.
+AcceptInvitationRequest claims a grant for the authenticated account.
+Recipient-bound invitations additionally require a matching verified address.
 Invitation tokens never authenticate a user or issue a session.
 
 | Field | Type | Description | Required |
@@ -723,6 +782,7 @@ LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `provider` | `OAuthProvider` |  | yes |
+| `next` | `string` |  |  |
 
 ### LinkOAuthAccountResponse
 
@@ -849,7 +909,7 @@ RemoveOrgMemberRequest is a request to remove a user from an organization.
 
 ### OrgInvitationResponse
 
-OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
+OrgInvitationResponse is the API representation of an organization invitation with an administrator-copyable link.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -860,6 +920,7 @@ OrgInvitationResponse is the API representation of an organization invitation (e
 | `invited_by` | `string` |  | yes |
 | `expires_at` | `number` |  | yes |
 | `created` | `number` |  | yes |
+| `invite_url` | `string` |  | yes |
 
 ### ListOrgInvitationsResponse
 
@@ -875,7 +936,7 @@ CreateOrgInvitationRequest is a request to create an organization invitation.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `email` | `string` |  | yes |
+| `email` | `string` |  |  |
 | `role` | `OrganizationRole` |  | yes |
 | `locale` | `string` | Optional: language for invitation email (en, fr, de, es) |  |
 
@@ -1078,6 +1139,7 @@ Used by the user column type to populate the picker and display names.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
+| `role` | `WorkspaceRole` |  | yes |
 | `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `email` | `string` |  | yes |
@@ -1131,7 +1193,7 @@ UpdateWSMemberRoleRequest is a request to update a user's workspace role.
 
 ### WSInvitationResponse
 
-WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
+WSInvitationResponse is the API representation of a workspace invitation with an administrator-copyable link.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -1142,6 +1204,7 @@ WSInvitationResponse is the API representation of a workspace invitation (exclud
 | `invited_by` | `string` |  | yes |
 | `expires_at` | `number` |  | yes |
 | `created` | `number` |  | yes |
+| `invite_url` | `string` |  | yes |
 
 ### ListWSInvitationsResponse
 
@@ -1157,7 +1220,7 @@ CreateWSInvitationRequest is a request to create a workspace invitation.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `email` | `string` |  | yes |
+| `email` | `string` |  |  |
 | `role` | `WorkspaceRole` |  | yes |
 | `locale` | `string` | Optional: language for invitation email (en, fr, de, es) |  |
 

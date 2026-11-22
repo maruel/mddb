@@ -34,9 +34,10 @@ mddb is a local-first markdown document and database system. The architecture fo
 - [x] **Multi-Provider Accounts**: Users can link multiple OAuth providers to one account.
 - [x] **Account Reconciliation**: Auto-link accounts by verified email; manual linking for mismatched emails.
 - [x] **Email Verification**: Magic link verification for password-based accounts (when SMTP configured).
-- [x] **Email Change**: Users can change their primary email (triggers re-verification when SMTP configured).
-- [x] **Invitation Emails**: Localized email notifications for organization and workspace invitations.
-- **Note**: OAuth logins trust only emails the provider verified. Email features require SMTP configuration.
+- [x] **Email Change**: Password-authorized changes reset address verification (and trigger re-verification when SMTP configured).
+- [x] **Invitation Links**: Copyable recipient-bound or bearer grants with scoped roles, expiry, revocation, and one durable claimant.
+- [x] **Invitation Emails**: Localized email delivery of recipient-bound organization and workspace invitations (when SMTP configured).
+- **Note**: OAuth logins trust only provider-verified addresses. Password registration does not verify an address by itself. Email features require SMTP configuration.
 
 ### 4. Local-First & Versioned
 

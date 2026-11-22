@@ -104,7 +104,7 @@ func TestWorkspaceHistory(t *testing.T) {
 	if failure.Error.Message != "Storage history is pending recovery" {
 		t.Fatalf("unsanitized health=%+v", failure)
 	}
-	env.fileStore.InvalidateAllStores()
+	env.fileStore.InvalidateWorkspaceStore(ws.ID)
 	if !env.fileStore.HasPendingHistory() {
 		t.Fatal("cache invalidation lost pending history")
 	}

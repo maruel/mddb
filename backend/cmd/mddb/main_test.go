@@ -1,4 +1,4 @@
-// Tests automatic-update shutdown decisions and production HTTP draining.
+// Tests update shutdown decisions, HTTP draining, and disabled notification cleanup.
 
 package main
 
@@ -15,12 +15,42 @@ import (
 	"testing/synctest"
 	"time"
 
+	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 
 	"github.com/gomodedev/gomode/autoupdate"
 	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
+
+func TestRunNotificationCleanup(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "notifications.jsonl")
+	table, err := jsonldb.NewTable[*identityv1.Notification](path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := ksid.NewID()
+	if err := table.Append(&identityv1.Notification{ID: ksid.NewID(), UserID: user, Type: identityv1.NotifOrgInvite, Title: "Retained", Created: storagev1.ToTime(time.Now().AddDate(-1, 0, 0))}); err != nil {
+		t.Fatal(err)
+	}
+	svc, err := identity.NewNotificationService(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings := storage.NewServerSettings(&storagev1.ServerConfig{Quotas: storagev1.ServerQuotas{NotificationRetentionDays: 0, MaxNotificationsPerUser: 0}})
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	// The initial pass runs before observing cancellation. Disabled cleanup must
+	// neither delete old notifications nor attempt a Git commit.
+	runNotificationCleanup(ctx, svc, nil, settings)
+	if svc.CountByUser(user) != 1 {
+		t.Fatal("zero retention deleted existing notifications")
+	}
+}
 
 func TestRunAutoUpdate(t *testing.T) {
 	for _, version := range []string{"devel", "1.0.0+dirty", "0.0.0-20261109120000-abcdef123456", "1.0.0"} {

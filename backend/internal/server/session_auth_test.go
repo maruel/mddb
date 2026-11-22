@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/storage"
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
@@ -40,7 +41,7 @@ func TestValidateJWTAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := &handlers.Config{ServerConfig: storagev1.ServerConfig{JWTSecret: testJWTSecret}}
+	cfg := &handlers.Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret})}
 	request := func(token string) *http.Request {
 		r := httptest.NewRequestWithContext(t.Context(), "GET", "/", http.NoBody)
 		r.Header.Set("Authorization", "Bearer "+token)

@@ -89,8 +89,8 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// Check server-wide user quota
-	if h.cfg.Quotas.MaxUsers > 0 && h.svc.User.Count() >= h.cfg.Quotas.MaxUsers {
-		return nil, dto.QuotaExceeded("users", h.cfg.Quotas.MaxUsers)
+	if limit := h.cfg.Snapshot().Quotas.MaxUsers; limit > 0 && h.svc.User.Count() >= limit {
+		return nil, dto.QuotaExceeded("users", limit)
 	}
 
 	// Check if user already exists
@@ -164,13 +164,13 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identityv1.U
 			}
 			memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
 			workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
-			return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Quotas.ResourceQuotas), nil
+			return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Snapshot().Quotas.ResourceQuotas), nil
 		}
 	}
 
 	// Check server-wide organization quota
-	if h.cfg.Quotas.MaxOrganizations > 0 && h.svc.Organization.Count() >= h.cfg.Quotas.MaxOrganizations {
-		return nil, dto.QuotaExceeded("organizations", h.cfg.Quotas.MaxOrganizations)
+	if limit := h.cfg.Snapshot().Quotas.MaxOrganizations; limit > 0 && h.svc.Organization.Count() >= limit {
+		return nil, dto.QuotaExceeded("organizations", limit)
 	}
 
 	// Create the organization
@@ -189,7 +189,7 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identityv1.U
 
 	memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
 	workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
-	return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Quotas.ResourceQuotas), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Snapshot().Quotas.ResourceQuotas), nil
 }
 
 // Logout revokes the current session.

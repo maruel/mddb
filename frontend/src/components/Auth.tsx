@@ -1,4 +1,4 @@
-// Authentication component handling login and registration forms.
+// Standalone and embedded sign-in forms preserving invite and device return paths.
 
 import { createSignal, createResource, createMemo, onMount, Show, For, type JSX } from "solid-js";
 import { A, useSearchParams } from "@solidjs/router";
@@ -18,6 +18,7 @@ import { useI18n } from "../i18n";
 import { OAUTH_ERROR_PARAM, oauthErrorMessage } from "../utils/oauthErrors";
 
 interface AuthProps {
+  embedded?: boolean;
   hideDeviceLogin?: boolean;
   returnPath?: string;
   onLogin: (user: UserResponse) => void;
@@ -120,7 +121,7 @@ export default function Auth(props: AuthProps) {
   };
 
   return (
-    <div class={styles.authContainer}>
+    <div class={props.embedded ? styles.embedded : styles.authContainer}>
       <form class={styles.authForm} onSubmit={handleSubmit}>
         <h2>{isRegister() ? t("auth.createAccount") : t("auth.loginTitle")}</h2>
         <Show when={!props.hideDeviceLogin}>

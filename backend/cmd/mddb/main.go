@@ -197,6 +197,7 @@ Flags:
 	if err != nil {
 		return fmt.Errorf("failed to load settings.json: %w", err)
 	}
+	settings := storage.NewServerSettings(serverCfg)
 
 	// Normalize addr: ":8080" becomes "localhost:8080"
 	addr := cfg.HTTP
@@ -260,7 +261,7 @@ Flags:
 		return fmt.Errorf("failed to initialize root repo: %w", err)
 	}
 
-	fileStore, err := content.NewFileStoreService(cfg.DataDir, gitMgr, wsService, orgService, &serverCfg.Quotas.ResourceQuotas)
+	fileStore, err := content.NewFileStoreService(cfg.DataDir, gitMgr, wsService, orgService, settings)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
@@ -409,7 +410,7 @@ Flags:
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	routerCfg := &server.Config{
-		ServerConfig:   serverCfg,
+		ServerSettings: settings,
 		ConfigDir:      cfg.ConfigDir,
 		BaseURL:        cfg.BaseURL,
 		Version:        buildVersion,
@@ -456,7 +457,7 @@ Flags:
 
 	// Start notification cleanup goroutine (runs once on startup, then daily).
 	workers.Go(func() error {
-		runNotificationCleanup(workerCtx, notificationService, rootRepo, &serverCfg.Quotas)
+		runNotificationCleanup(workerCtx, notificationService, rootRepo, settings)
 		return nil
 	})
 	workers.Go(func() error {
@@ -675,32 +676,30 @@ func runOnboarding(cfgDir string, defaults *mddbv1.Server) error {
 }
 
 // runNotificationCleanup periodically deletes old notifications and caps per-user counts.
-func runNotificationCleanup(ctx context.Context, notifSvc *identity.NotificationService, rootRepo *git.RootRepo, quotas *storagev1.ServerQuotas) {
+func runNotificationCleanup(ctx context.Context, notifSvc *identity.NotificationService, rootRepo *git.RootRepo, settings *storage.ServerSettings) {
 	cleanup := func() {
+		quotas := settings.Snapshot().Quotas
 		retentionDays := quotas.NotificationRetentionDays
-		if retentionDays <= 0 {
-			retentionDays = 90
-		}
+
 		maxPerUser := quotas.MaxNotificationsPerUser
-		if maxPerUser <= 0 {
-			maxPerUser = 500
-		}
 
 		cutoff := storagev1.ToTime(time.Now().AddDate(0, 0, -retentionDays))
 		var totalDeleted int
 
-		if count, err := notifSvc.DeleteOlderThan(cutoff); err != nil {
-			slog.WarnContext(ctx, "Failed to delete old notifications", "error", err)
-		} else {
-			totalDeleted += count
+		if retentionDays > 0 {
+			if count, err := notifSvc.DeleteOlderThan(cutoff); err != nil {
+				slog.WarnContext(ctx, "Failed to delete old notifications", "error", err)
+			} else {
+				totalDeleted += count
+			}
 		}
-
-		if count, err := notifSvc.DeleteExcessPerUser(maxPerUser); err != nil {
-			slog.WarnContext(ctx, "Failed to cap notifications per user", "error", err)
-		} else {
-			totalDeleted += count
+		if maxPerUser > 0 {
+			if count, err := notifSvc.DeleteExcessPerUser(maxPerUser); err != nil {
+				slog.WarnContext(ctx, "Failed to cap notifications per user", "error", err)
+			} else {
+				totalDeleted += count
+			}
 		}
-
 		if totalDeleted > 0 {
 			slog.InfoContext(ctx, "Notification cleanup", "deleted", totalDeleted)
 			if err := rootRepo.CommitDBChanges(ctx, git.Author{}, fmt.Sprintf("cleanup %d notifications", totalDeleted)); err != nil {

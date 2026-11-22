@@ -1,7 +1,7 @@
 // Organization settings panel for managing organization members and preferences.
 import { createSignal, createEffect, createMemo, Show } from "solid-js";
 import { useNavigate, useLocation } from "@solidjs/router";
-import { useAuth } from "../../contexts";
+import { useAuth, useAuthScope } from "../../contexts";
 import SaveIcon from "@material-symbols/svg-400/outlined/save.svg?solid";
 import { IconButton } from "../shared";
 import { useI18n } from "../../i18n";
@@ -24,6 +24,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, api } = useAuth();
+  const captureScope = useAuthScope();
 
   const getInitialTab = (): Tab => {
     if (props.section === "settings") return "settings";
@@ -100,6 +101,10 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   };
 
   const loadData = async () => {
+    setInvitations([]);
+    const isCurrent = captureScope();
+    const scopeID = props.orgId;
+    const current = () => isCurrent() && props.orgId === scopeID;
     const org = orgApi();
 
     try {
@@ -108,8 +113,8 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
       if (activeTab() === "members" && isAdmin()) {
         const [membersData, invsData] = await Promise.all([org.listUsers(), org.listOrgInvitations()]);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
-        setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
+        if (!current()) return;
+        setMembers(membersData.users || []);
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- API or persisted data can omit fields despite the generated types.
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
@@ -118,9 +123,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         await loadOrgData();
       }
     } catch (err) {
-      setError(`${t("errors.failedToLoad")}: ${String(err)}`);
+      if (current()) setError(`${t("errors.failedToLoad")}: ${String(err)}`);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
@@ -135,18 +140,42 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     else if (section === "members" || !section) setActiveTab("members");
   });
 
-  const handleInvite = async (email: string, role: OrganizationRole) => {
+  const handleInvite = async (email: string, role: OrganizationRole): Promise<boolean> => {
     const org = orgApi();
-
+    const isCurrent = captureScope();
+    const scopeID = props.orgId;
+    const current = () => isCurrent() && props.orgId === scopeID;
     try {
       setLoading(true);
-      await org.createOrgInvitation({ email, role });
-      setSuccess(t("success.invitationSent") || "Invitation sent successfully");
-      void loadData().catch((backgroundError: unknown) => reportError(backgroundError));
+      setError(null);
+      setSuccess(null);
+      const invitation = await org.createOrgInvitation({ email, role });
+      if (!current()) return false;
+      setInvitations((items) => [...items, invitation]);
+      return true;
     } catch (err) {
-      setError(`${t("errors.failedToInvite")}: ${String(err)}`);
+      if (current()) setError(`${t("errors.failedToInvite")}: ${String(err)}`);
+      return false;
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    const org = orgApi();
+    const isCurrent = captureScope();
+    const scopeID = props.orgId;
+    const current = () => isCurrent() && props.orgId === scopeID;
+    try {
+      setLoading(true);
+      setError(null);
+      await org.deleteOrgInvitation(id);
+      if (!current()) return;
+      setInvitations((items) => items.filter((invitation) => invitation.id !== id));
+    } catch (err) {
+      if (current()) setError(`${t("errors.failedToSave")}: ${String(err)}`);
+    } finally {
+      if (current()) setLoading(false);
     }
   };
 
@@ -241,13 +270,6 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     { value: OrgRoleMember, label: t("settings.roleMember") },
   ];
 
-  const pendingInvitations = () =>
-    invitations().map((inv) => ({
-      email: inv.email,
-      role: inv.role,
-      created: inv.created,
-    }));
-
   return (
     <div class={styles.panel}>
       <div class={styles.tabs}>
@@ -285,8 +307,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
             <InviteForm
               roleOptions={inviteRoleOptions}
               defaultRole={OrgRoleMember}
-              pendingInvitations={pendingInvitations()}
+              pendingInvitations={invitations()}
               onInvite={handleInvite}
+              onRevoke={handleRevoke}
               loading={loading()}
             />
           </Show>

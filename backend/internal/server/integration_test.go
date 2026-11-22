@@ -93,8 +93,13 @@ func setupTestEnv(t testing.TB) *testEnv {
 
 	gitMgr := git.NewManager(tempDir, "test", "test@example.com")
 
-	serverQuotas := storage.DefaultResourceQuotas()
-	fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService, &serverQuotas)
+	serverCfg := &storagev1.ServerConfig{
+		JWTSecret:  testJWTSecret,
+		Quotas:     storage.DefaultServerQuotas(false),
+		RateLimits: storage.DefaultRateLimits(),
+	}
+	settings := storage.NewServerSettings(serverCfg)
+	fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService, settings)
 	if err != nil {
 		t.Fatalf("NewFileStore: %v", err)
 	}
@@ -132,20 +137,16 @@ func setupTestEnv(t testing.TB) *testEnv {
 			t.Errorf("stop background work: %v", err)
 		}
 	})
-	serverCfg := &storagev1.ServerConfig{
-		JWTSecret:  testJWTSecret,
-		Quotas:     storage.DefaultServerQuotas(false),
-		RateLimits: storage.DefaultRateLimits(),
-	}
+
 	cfg := &Config{
-		ServerConfig: serverCfg,
-		ConfigDir:    t.TempDir(),
-		BaseURL:      "http://localhost:8080",
-		Version:      "test",
-		GoVersion:    "go1.24.0",
-		Revision:     "abc1234",
-		Dirty:        false,
-		OAuth:        OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
+		ServerSettings: settings,
+		ConfigDir:      t.TempDir(),
+		BaseURL:        "http://localhost:8080",
+		Version:        "test",
+		GoVersion:      "go1.24.0",
+		Revision:       "abc1234",
+		Dirty:          false,
+		OAuth:          OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
 	}
 	router := NewRouter(svc, cfg)
 	t.Cleanup(router.Close)

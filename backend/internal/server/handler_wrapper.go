@@ -85,8 +85,10 @@ func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier stri
 // Returns false if an error occurred and was written to the response.
 func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *http.Request, input *In, cfg *handlers.Config) bool {
 	// Limit request body size
-	if cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
-		r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
+	if cfg != nil {
+		if limit := cfg.Snapshot().Quotas.MaxRequestBodyBytes; limit > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
+		}
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -153,7 +155,7 @@ func getRateLimitIdentifier(tier *ratelimit.Tier, user *identityv1.User, r *http
 
 // validateAuthWithContext validates JWT and session, updating context with session info.
 func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers.Services, cfg *handlers.Config) (*authResult, context.Context, error) {
-	user, sessionID, tokenString, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
+	user, sessionID, tokenString, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.Snapshot().JWTSecret)
 	if err != nil {
 		return nil, ctx, err
 	}
@@ -603,8 +605,10 @@ func wrapAuthRaw(
 		// uploads enforce their own per-quota limit in the asset handler.
 		ct := r.Header.Get("Content-Type")
 		isMultipart := len(ct) >= 9 && ct[:9] == "multipart"
-		if (!mutating || !isMultipart) && cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
+		if (!mutating || !isMultipart) && cfg != nil {
+			if limit := cfg.Snapshot().Quotas.MaxRequestBodyBytes; limit > 0 {
+				r.Body = http.MaxBytesReader(w, r.Body, limit)
+			}
 		}
 
 		// Store user in context for raw handlers
