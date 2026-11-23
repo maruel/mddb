@@ -369,7 +369,7 @@ Flags:
 		if err != nil {
 			return fmt.Errorf("create voice activity directory: %w", err)
 		}
-		bridge, err := voicertc.NewBridge(ctx, &voiceCfg, cfg.VoiceWebRTC, activityDir)
+		bridge, err := voicertc.NewBridge(ctx, logger, &voiceCfg, cfg.VoiceWebRTC, activityDir)
 		if err != nil {
 			return errors.Join(fmt.Errorf("start embedded voice gateway: %w", err), os.RemoveAll(activityDir))
 		}
