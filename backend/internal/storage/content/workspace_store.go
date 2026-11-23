@@ -561,31 +561,15 @@ func (ws *WorkspaceFileStore) readNodeFromPath(path string, id, parentID ksid.ID
 	}
 
 	if hasMetadata {
-		var metadata map[string]any
+		var metadata contentv1.Table
 		if err := json.Unmarshal(metadataData, &metadata); err != nil {
 			return nil, nil, fmt.Errorf("failed to parse table metadata: %w", err)
 		}
-		if title, ok := metadata["title"].(string); ok {
-			node.Title = title
+		if metadata.Title != "" {
+			node.Title = metadata.Title
 		}
-		if props, ok := metadata["properties"]; ok {
-			propsData, err := json.Marshal(props)
-			if err != nil {
-				return nil, nil, fmt.Errorf("encode table properties: %w", err)
-			}
-			if err := json.Unmarshal(propsData, &node.Properties); err != nil {
-				return nil, nil, fmt.Errorf("decode table properties: %w", err)
-			}
-		}
-		if views, ok := metadata["views"]; ok {
-			viewsData, err := json.Marshal(views)
-			if err != nil {
-				return nil, nil, fmt.Errorf("encode table views: %w", err)
-			}
-			if err := json.Unmarshal(viewsData, &node.Views); err != nil {
-				return nil, nil, fmt.Errorf("decode table views: %w", err)
-			}
-		}
+		node.Properties = metadata.Properties
+		node.Views = metadata.Views
 		var err error
 		node.SchemaRevision, err = tableSchemaRevision(node.Properties)
 		if err != nil {
@@ -628,54 +612,23 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 		return nil, fmt.Errorf("failed to read table metadata: %w", err)
 	}
 
-	var metadata map[string]any
+	var metadata contentv1.Table
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse table metadata: %w", err)
 	}
-	if err := checkTableMetadataVersion(metadata["version"]); err != nil {
+	if err := checkTableMetadataVersion(metadata.Version); err != nil {
 		return nil, err
 	}
 
 	node := &Node{
-		ID:       id,
-		ParentID: parentID,
-		Type:     NodeTypeTable,
-	}
-
-	if title, ok := metadata["title"].(string); ok {
-		node.Title = title
-	}
-
-	if created, ok := metadata["created"].(string); ok {
-		if t, err := time.Parse(time.RFC3339, created); err == nil {
-			node.Created = storagev1.ToTime(t)
-		}
-	}
-
-	if modified, ok := metadata["modified"].(string); ok {
-		if t, err := time.Parse(time.RFC3339, modified); err == nil {
-			node.Modified = storagev1.ToTime(t)
-		}
-	}
-
-	if props, ok := metadata["properties"]; ok {
-		propsData, err := json.Marshal(props)
-		if err != nil {
-			return nil, fmt.Errorf("encode table properties: %w", err)
-		}
-		if err := json.Unmarshal(propsData, &node.Properties); err != nil {
-			return nil, fmt.Errorf("decode table properties: %w", err)
-		}
-	}
-
-	if views, ok := metadata["views"]; ok {
-		viewsData, err := json.Marshal(views)
-		if err != nil {
-			return nil, fmt.Errorf("encode table views: %w", err)
-		}
-		if err := json.Unmarshal(viewsData, &node.Views); err != nil {
-			return nil, fmt.Errorf("decode table views: %w", err)
-		}
+		ID:         id,
+		ParentID:   parentID,
+		Type:       NodeTypeTable,
+		Title:      metadata.Title,
+		Created:    metadata.Created.Time(),
+		Modified:   metadata.Modified.Time(),
+		Properties: metadata.Properties,
+		Views:      metadata.Views,
 	}
 	node.SchemaRevision, err = tableSchemaRevision(node.Properties)
 	if err != nil {
@@ -796,40 +749,27 @@ func (ws *WorkspaceFileStore) MutateTable(ctx context.Context, id ksid.ID, autho
 	return node, nil
 }
 
-// tableMetadataVersion is the metadata.json format that writeTable emits.
-const tableMetadataVersion = "1.0"
-
 // checkTableMetadataVersion accepts any 1.x metadata.json version. A missing version is
 // 1.0: the Notion importer and hand-edited workspaces omit it.
-func checkTableMetadataVersion(v any) error {
-	switch v := v.(type) {
-	case nil:
+func checkTableMetadataVersion(v string) error {
+	if v == "" || strings.HasPrefix(v, "1.") {
 		return nil
-	case string:
-		if strings.HasPrefix(v, "1.") {
-			return nil
-		}
 	}
-	return fmt.Errorf("unsupported table metadata version %v (expected 1.x)", v)
+	return fmt.Errorf("unsupported table metadata version %q (expected 1.x)", v)
 }
 
 // marshalTableMetadata encodes metadata.json for every table writer, so a rewrite keeps the
 // layout and quota admission sees only content growth. A nil created is omitted, as are
 // empty views: readers treat a missing key as no views.
-func marshalTableMetadata(title string, created any, modified storagev1.Time, properties []contentv1.Property, views []contentv1.View) ([]byte, error) {
-	m := map[string]any{
-		"title":      title,
-		"version":    tableMetadataVersion,
-		"modified":   modified,
-		"properties": properties,
-	}
-	if created != nil {
-		m["created"] = created
-	}
-	if len(views) > 0 {
-		m["views"] = views
-	}
-	data, err := json.Marshal(m)
+func marshalTableMetadata(title string, created contentv1.Timestamp, modified storagev1.Time, properties []contentv1.Property, views []contentv1.View) ([]byte, error) {
+	data, err := json.Marshal(&contentv1.Table{
+		Created:    created,
+		Modified:   contentv1.NewTimestamp(modified),
+		Properties: properties,
+		Title:      title,
+		Version:    contentv1.TableVersion,
+		Views:      views,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
 	}
@@ -845,16 +785,14 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 	metadataFile := ws.tableMetadataFile(node.ID, parentID)
 
 	now := storagev1.Now()
-	var created any
+	var created contentv1.Timestamp
 	if isNew {
-		created = now
+		created = contentv1.NewTimestamp(now)
 	} else if oldData, err := os.ReadFile(metadataFile); err == nil { //nolint:gosec // G304: metadataFile is constructed from validated id
 		// Preserve the existing created bytes so a rewrite keeps their width.
-		var oldMetadata map[string]json.RawMessage
-		if err := json.Unmarshal(oldData, &oldMetadata); err == nil {
-			if c, ok := oldMetadata["created"]; ok {
-				created = c
-			}
+		var old contentv1.Table
+		if err := json.Unmarshal(oldData, &old); err == nil {
+			created = old.Created
 		}
 	}
 	data, err := marshalTableMetadata(node.Title, created, now, node.Properties, node.Views)
@@ -1381,17 +1319,10 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 	}
 
 	if nodeType == NodeTypeTable || nodeType == NodeTypeHybrid {
-		metadata := map[string]any{
-			"title":      title,
-			"version":    "1.0",
-			"created":    now,
-			"modified":   now,
-			"properties": []contentv1.Property{},
-		}
 		var err error
-		metadataData, err = json.Marshal(metadata)
+		metadataData, err = marshalTableMetadata(title, contentv1.NewTimestamp(now), now, []contentv1.Property{}, nil)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to marshal metadata: %w", err)
+			return nil, nil, err
 		}
 		totalSize += int64(len(metadataData))
 	}
@@ -1641,7 +1572,7 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 		id := ksid.NewID()
 		now := storagev1.Now()
 
-		metadataData, err := marshalTableMetadata(title, now, now, properties, nil)
+		metadataData, err := marshalTableMetadata(title, contentv1.NewTimestamp(now), now, properties, nil)
 		if err != nil {
 			return "", nil, err
 		}
@@ -2134,34 +2065,18 @@ func (ws *WorkspaceFileStore) readSummary(ctx context.Context, dir string, id, p
 		if len(data) > MaxSnapshotMetadataBytes {
 			return nil, nil, errors.New("table metadata exceeds snapshot limit")
 		}
-		var m map[string]json.RawMessage
+		var m contentv1.Table
 		if e := json.Unmarshal(data, &m); e != nil {
 			return nil, nil, e
 		}
-		if b := m["version"]; b != nil {
-			var v any
-			if e := json.Unmarshal(b, &v); e != nil {
-				return nil, nil, e
-			}
-			if e := checkTableMetadataVersion(v); e != nil {
-				return nil, nil, e
-			}
+		if e := checkTableMetadataVersion(m.Version); e != nil {
+			return nil, nil, e
 		}
-		if b := m["title"]; b != nil {
-			if e := json.Unmarshal(b, &n.Title); e != nil {
-				return nil, nil, e
-			}
+		if m.Title != "" {
+			n.Title = m.Title
 		}
-		if b := m["properties"]; b != nil {
-			if e := json.Unmarshal(b, &n.Properties); e != nil {
-				return nil, nil, e
-			}
-		}
-		if b := m["views"]; b != nil {
-			if e := json.Unmarshal(b, &n.Views); e != nil {
-				return nil, nil, e
-			}
-		}
+		n.Properties = m.Properties
+		n.Views = m.Views
 		n.SchemaRevision, e = tableSchemaRevision(n.Properties)
 		if e != nil {
 			return nil, nil, e

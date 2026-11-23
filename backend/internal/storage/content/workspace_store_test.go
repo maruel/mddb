@@ -776,6 +776,54 @@ func TestWorkspaceFileStore(t *testing.T) {
 		}
 	})
 
+	t.Run("TableTimestamps", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		a := git.Author{Name: "Test", Email: "test@example.com"}
+		t.Run("written", func(t *testing.T) {
+			table, err := ws.CreateTableUnderParent(t.Context(), 0, "Table", nil, a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			created, err := ws.ReadTable(table.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if created.Created.IsZero() || created.Modified != created.Created {
+				t.Fatalf("new table created %d, modified %d; want equal nonzero times", created.Created, created.Modified)
+			}
+			if _, err := ws.MutateTable(t.Context(), table.ID, a, func(n *Node) error {
+				n.Title = "Renamed"
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			renamed, err := ws.ReadTable(table.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if renamed.Created != created.Created || renamed.Modified.Before(created.Modified) {
+				t.Fatalf("rewrite created %d, modified %d; want created %d and no earlier modified", renamed.Created, renamed.Modified, created.Created)
+			}
+		})
+		t.Run("RFC 3339 before 2026-01-24", func(t *testing.T) {
+			leaf, err := ws.CreatePageUnderParent(t.Context(), 0, "Leaf", "", a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(ws.tableMetadataFile(leaf.ID, 0), []byte(`{"title":"Legacy","created":"2026-01-20T10:00:00Z","modified":"2026-01-21T10:00:00.5Z"}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := ws.ReadTable(leaf.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := storagev1.ToTime(time.Date(2026, 1, 20, 10, 0, 0, 0, time.UTC))
+			if got.Created != want || got.Modified != want+86400500 {
+				t.Fatalf("created %d, modified %d; want %d and %d", got.Created, got.Modified, want, want+86400500)
+			}
+		})
+	})
+
 	t.Run("UnchangedTableSchema", func(t *testing.T) {
 		// Stored metadata decodes omitted slices as nil; clients resubmit them empty.
 		_, ws, _ := initWS(t)

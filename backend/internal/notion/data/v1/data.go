@@ -23,7 +23,7 @@ type IDMapping struct {
 const IDMappingVersion = 1
 
 // TableMetadata is the views-only metadata.json the importer writes; the store reads it
-// alongside the complete form that it writes itself.
+// as content/data/v1 Table.
 type TableMetadata struct {
 	Views []contentv1.View `json:"views,omitempty"`
 }
