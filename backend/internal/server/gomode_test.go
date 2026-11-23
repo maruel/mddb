@@ -19,6 +19,7 @@ import (
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/coder/websocket"
 	"github.com/gomodedev/gomode"
@@ -108,7 +109,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	}
 	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	bridge := &testVoiceChoiceBridge{testVoiceBridge: testVoiceBridge{rtcErrors: map[string]string{"session-1": "provider disconnected"}}}
-	router := NewRouter(env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "test", VoiceBridge: bridge})
+	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "test", VoiceBridge: bridge})
 	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
@@ -860,7 +861,7 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 		t.Fatalf("register: %d", status)
 	}
 	cfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	router := NewRouter(env.services, &Config{ServerSettings: storage.NewServerSettings(cfg), Version: "test", VoiceBridge: &websocketVoiceBridge{}})
+	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(cfg), Version: "test", VoiceBridge: &websocketVoiceBridge{}})
 	t.Cleanup(router.Close)
 	ts := httptest.NewServer(router)
 	t.Cleanup(ts.Close)

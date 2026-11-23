@@ -3,6 +3,7 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gomodedev/gomode/devicelogin"
@@ -13,8 +14,8 @@ import (
 
 const deviceLoginPrefix = "/api/v1/auth/device/"
 
-func mountDeviceLogin(mux *http.ServeMux, svc *handlers.Services, cfg *Config, hcfg *handlers.Config, authh *handlers.AuthHandler, limiters *ratelimit.Limiters) {
-	core := devicelogin.New(&deviceLoginHost{services: svc, config: cfg, auth: authh})
+func mountDeviceLogin(log *slog.Logger, mux *http.ServeMux, svc *handlers.Services, cfg *Config, hcfg *handlers.Config, authh *handlers.AuthHandler, limiters *ratelimit.Limiters) {
+	core := devicelogin.New(log, &deviceLoginHost{services: svc, config: cfg, auth: authh})
 	for _, route := range []struct {
 		path    string
 		handler http.HandlerFunc

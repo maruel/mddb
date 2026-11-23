@@ -80,7 +80,8 @@ type Router struct {
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // Services.Email and Services.EmailVerif may be nil if SMTP is not configured.
-func NewRouter(svc *handlers.Services, cfg *Config) *Router {
+// log receives router setup and transport diagnostics.
+func NewRouter(log *slog.Logger, svc *handlers.Services, cfg *Config) *Router {
 	mux := &http.ServeMux{}
 	settings := goModeSettings(cfg.Version, cfg.VoiceBridge != nil)
 	if cfg.ExternalVoice != nil {
@@ -88,7 +89,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	}
 	goModeHandler, err := gomode.NewHandler(&settings)
 	if err != nil {
-		slog.Error("Go Mode discovery disabled", "err", err)
+		log.Error("Go Mode discovery disabled", "err", err)
 	} else {
 		mux.Handle("GET /.well-known/gomode.json", goModeHandler)
 	}
@@ -118,7 +119,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
-	mountDeviceLogin(mux, svc, cfg, hcfg, authh, limiters)
+	mountDeviceLogin(log, mux, svc, cfg, hcfg, authh, limiters)
 	if cfg.ExternalVoice != nil {
 		// The Go Mode Android shell uses GET; browser clients use POST.
 		token := WrapAuthReadRaw(cfg.ExternalVoice.serveToken, svc, hcfg, identityv1.WSRoleViewer, limiters)
@@ -129,7 +130,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 			mux.HandleFunc("GET /oauth/jwks", cfg.ExternalVoice.serveJWKS)
 		}
 	} else if cfg.VoiceBridge != nil {
-		voice := newVoiceGateway(cfg.VoiceBridge)
+		voice := newVoiceGateway(log, cfg.VoiceBridge)
 		for _, version := range voiceapi.ProtocolVersions() {
 			prefix := "/api/voicegateway/" + version.String() + "/voice"
 			mux.HandleFunc("GET "+prefix+"/text/browser", withVoiceProtocol(version, voice.serveBrowserText))
@@ -155,9 +156,9 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	focus := newVoiceFocusState()
 	mux.Handle("POST /api/v1/workspaces/{wsID}/gomode/focus", WrapAuthReadRaw(goModeFocus(svc, hcfg, focus), svc, hcfg, identityv1.WSRoleViewer, limiters))
 	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
-		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
+		log.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
 	} else {
-		mcpHandler := WrapAuthReadRaw(goModeMCP(svc, hcfg, nh, focus), svc, hcfg, identityv1.WSRoleViewer, limiters)
+		mcpHandler := WrapAuthReadRaw(goModeMCP(log, svc, hcfg, nh, focus), svc, hcfg, identityv1.WSRoleViewer, limiters)
 		mux.Handle("POST "+goModeMCPEndpoint, mcpHandler)
 		mux.Handle("GET "+goModeMCPEndpoint, mcpHandler)
 		mux.Handle("DELETE "+goModeMCPEndpoint, mcpHandler)
@@ -205,9 +206,9 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 		providers = append(providers, identityv1.OAuthProviderGitHub)
 	}
 	if len(providers) > 0 {
-		slog.Info("OAuth providers initialized", "providers", providers)
+		log.Info("OAuth providers initialized", "providers", providers)
 	} else {
-		slog.Info("No OAuth providers configured")
+		log.Info("No OAuth providers configured")
 	}
 
 	// In an e2e build, use a fake handler that bypasses real OAuth providers.
@@ -376,7 +377,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 
 	// Wrap mux with compression middleware chain.
 	var inner http.Handler = mux
-	inner = compressMiddleware(inner)
+	inner = compressMiddleware(log, inner)
 	inner = decompressMiddleware(inner)
 	inner = http.NewCrossOriginProtection().Handler(inner)
 
@@ -386,7 +387,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) *Router {
 	})
 	opts := httpserver.Options{
 		TrustedProxies: cfg.TrustedProxies,
-		Logger:         slog.Default(),
+		Logger:         log,
 	}
 	if cfg.IPGeo != nil {
 		opts.GeoIP = cfg.IPGeo

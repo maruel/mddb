@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -78,7 +79,7 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 // one accessible workspace binds it implicitly. Every workspace member sees
 // readSpecs; editors and admins also see writeSpecs. Each write is a commit in
 // the workspace's git history, like any other edit.
-func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
+func goModeMCP(log *slog.Logger, svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.NodeHandler, focus *voiceFocusState) http.HandlerFunc {
 	sessions := mcp.NewSessionStore(goModeSessionOwner)
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !validGoModeOrigin(r, cfg.BaseURL) {
@@ -126,7 +127,7 @@ func goModeMCP(svc *handlers.Services, cfg *handlers.Config, nodeH *handlers.Nod
 			ctx = bound
 		}
 		registry := &workspaceRegistry{svc: svc, nodeH: nodeH, user: u, wsID: wsID, role: role, focus: focus, released: r.Method != http.MethodPost || r.Header.Get("Mcp-Method") == ""}
-		h := &mcp.Handler{Registry: registry, Sessions: sessions, ServerInfo: mcp.Implementation{Name: "mddb", Version: cfg.Version}}
+		h := &mcp.Handler{Log: log, Registry: registry, Sessions: sessions, ServerInfo: mcp.Implementation{Name: "mddb", Version: cfg.Version}}
 		h.HandleMCP(w, r.WithContext(ctx))
 	}
 }

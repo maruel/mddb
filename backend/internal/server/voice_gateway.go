@@ -55,6 +55,7 @@ type voicePendingSession struct {
 }
 
 type voiceGateway struct {
+	log     *slog.Logger
 	bridge  voicegateway.MediaBridge
 	handler http.Handler
 
@@ -70,8 +71,9 @@ type voiceGateway struct {
 	tickets      map[string]voiceTextTicket
 }
 
-func newVoiceGateway(bridge voicegateway.MediaBridge) *voiceGateway {
+func newVoiceGateway(log *slog.Logger, bridge voicegateway.MediaBridge) *voiceGateway {
 	g := &voiceGateway{
+		log:          log,
 		bridge:       bridge,
 		sessions:     make(map[string]voiceSession),
 		pending:      make(map[string]*voicePendingSession),
@@ -89,7 +91,7 @@ func newVoiceGateway(bridge voicegateway.MediaBridge) *voiceGateway {
 	if backend, ok := bridge.(voiceTextBackend); ok {
 		text = &voiceTextGateway{gateway: g, backend: backend}
 	}
-	g.handler = voicegateway.NewEmbeddedHandler(func() voicegateway.MediaBridge { return media }, text)
+	g.handler = voicegateway.NewEmbeddedHandler(log, func() voicegateway.MediaBridge { return media }, text)
 	if lifecycle, ok := bridge.(voiceSessionLifecycle); ok {
 		lifecycle.SetOnSessionClosed(g.onSessionClosed)
 	}
@@ -203,7 +205,7 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	if err := json.NewEncoder(w).Encode(voicev2.VoiceTextTicketResp{Ticket: ticket}); err != nil {
-		slog.WarnContext(r.Context(), "write voice ticket", "err", err)
+		g.log.WarnContext(r.Context(), "write voice ticket", "err", err)
 	}
 }
 

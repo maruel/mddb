@@ -356,7 +356,7 @@ Flags:
 		}
 	}
 	if cfg.VoiceMode == mddbv1.VoiceGatewayEmbedded {
-		voiceCfg = voiceCfg.Available(ctx)
+		voiceCfg = voiceCfg.Available(ctx, logger)
 		if ctx.Err() != nil {
 			return context.Cause(ctx)
 		}
@@ -434,7 +434,7 @@ Flags:
 		GitHubApp: ghAppConfig,
 	}
 
-	router := server.NewRouter(svc, routerCfg)
+	router := server.NewRouter(logger, svc, routerCfg)
 	defer router.Close()
 
 	httpServer := &http.Server{

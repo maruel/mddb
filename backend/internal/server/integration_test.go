@@ -20,6 +20,7 @@ import (
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
@@ -149,7 +150,7 @@ func setupTestEnv(t testing.TB) *testEnv {
 		Dirty:          false,
 		OAuth:          OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
 	}
-	router := NewRouter(svc, cfg)
+	router := NewRouter(testlog.New(t), svc, cfg)
 	t.Cleanup(router.Close)
 
 	server := httptest.NewServer(router)

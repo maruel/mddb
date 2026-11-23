@@ -15,6 +15,7 @@ import (
 	"time"
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
@@ -129,7 +130,7 @@ func (b *testTextVoiceBridge) ServeTextChoice(ctx context.Context, w http.Respon
 func TestVoiceGateway(t *testing.T) {
 	t.Run("admission", func(t *testing.T) {
 		t.Parallel()
-		g := newVoiceGateway(&testVoiceBridge{})
+		g := newVoiceGateway(testlog.New(t), &testVoiceBridge{})
 		now := time.Unix(1000, 0)
 		for i := 1; i <= voiceMaxGlobal; i++ {
 			if !admitVoiceAt(g, ksid.ID(i), now) {
@@ -156,7 +157,7 @@ func TestVoiceGateway(t *testing.T) {
 
 	t.Run("concurrent offers", func(t *testing.T) {
 		t.Parallel()
-		g := newVoiceGateway(&testVoiceBridge{})
+		g := newVoiceGateway(testlog.New(t), &testVoiceBridge{})
 		var accepted atomic.Int32
 		var wg sync.WaitGroup
 		for range 32 {
@@ -176,7 +177,7 @@ func TestVoiceGateway(t *testing.T) {
 	t.Run("close during replacement", func(t *testing.T) {
 		t.Parallel()
 		bridge := &blockingVoiceBridge{started: make(chan struct{}), proceed: make(chan struct{})}
-		g := newVoiceGateway(bridge)
+		g := newVoiceGateway(testlog.New(t), bridge)
 		if !g.admit(1) {
 			t.Fatal("initial offer denied")
 		}
@@ -233,7 +234,7 @@ func TestVoiceGateway(t *testing.T) {
 		t.Parallel()
 		now := time.Unix(1000, 0)
 		t.Run("per user", func(t *testing.T) {
-			g := newVoiceGateway(&testVoiceBridge{})
+			g := newVoiceGateway(testlog.New(t), &testVoiceBridge{})
 			for range voiceOffersUser {
 				if !admitVoiceAt(g, 1, now) {
 					t.Fatal("offer denied before per-user minute cap")
@@ -249,7 +250,7 @@ func TestVoiceGateway(t *testing.T) {
 			g.release(1)
 		})
 		t.Run("global", func(t *testing.T) {
-			g := newVoiceGateway(&testVoiceBridge{})
+			g := newVoiceGateway(testlog.New(t), &testVoiceBridge{})
 			for i := 1; i <= voiceOffersAll; i++ {
 				id := ksid.ID(i)
 				if !admitVoiceAt(g, id, now) {
@@ -271,7 +272,7 @@ func TestVoiceGateway(t *testing.T) {
 	t.Run("media hangup", func(t *testing.T) {
 		t.Parallel()
 		bridge := &lifecycleVoiceBridge{sessions: make(map[string]struct{})}
-		g := newVoiceGateway(bridge)
+		g := newVoiceGateway(testlog.New(t), bridge)
 		now := time.Unix(1000, 0)
 		for i := range 10 {
 			if !admitVoiceAt(g, 1, now.Add(time.Duration(i)*time.Minute)) {
@@ -296,7 +297,7 @@ func TestVoiceGateway(t *testing.T) {
 	t.Run("early media close", func(t *testing.T) {
 		t.Parallel()
 		bridge := &lifecycleVoiceBridge{sessions: make(map[string]struct{})}
-		g := newVoiceGateway(bridge)
+		g := newVoiceGateway(testlog.New(t), bridge)
 		if !g.admit(1) {
 			t.Fatal("initial offer denied")
 		}
@@ -333,7 +334,7 @@ func TestVoiceGateway(t *testing.T) {
 	t.Run("capacity after hangup", func(t *testing.T) {
 		t.Parallel()
 		bridge := &lifecycleVoiceBridge{sessions: make(map[string]struct{})}
-		g := newVoiceGateway(bridge)
+		g := newVoiceGateway(testlog.New(t), bridge)
 		var firstID string
 		for i := 1; i <= voiceMaxGlobal; i++ {
 			owner := ksid.ID(i)
@@ -363,7 +364,7 @@ func TestVoiceGateway(t *testing.T) {
 	t.Run("text sessions", func(t *testing.T) {
 		t.Parallel()
 		b := &testTextVoiceBridge{started: make(chan ksid.ID, 2)}
-		g := newVoiceGateway(b)
+		g := newVoiceGateway(testlog.New(t), b)
 		owner := &identityv1.User{ID: ksid.NewID()}
 		ticket := func() string {
 			r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), owner), http.MethodPost, "/api/voicegateway/v2/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))

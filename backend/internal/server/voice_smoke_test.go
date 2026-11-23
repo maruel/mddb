@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -24,6 +23,7 @@ import (
 	voicegatewayv1 "github.com/gomodedev/gomode/voicegateway/data/v1"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/gomodedev/gomode/voicegateway"
@@ -88,7 +88,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	bridgeCtx, bridgeCancel := context.WithCancel(context.WithoutCancel(t.Context()))
 	t.Cleanup(bridgeCancel)
 	started := time.Now()
-	bridge, err := voicertc.NewBridge(bridgeCtx, slog.New(slog.NewTextHandler(t.Output(), nil)), &voiceCfg, voicegatewayv1.WebRTC{}, t.TempDir())
+	bridge, err := voicertc.NewBridge(bridgeCtx, testlog.New(t), &voiceCfg, voicegatewayv1.WebRTC{}, t.TempDir())
 	if err != nil {
 		t.Fatalf("start voice bridge: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 	t.Logf("voice bridge setup time, excluded from turn latency: %s", time.Since(started))
 
 	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
-	router := NewRouter(env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "smoke", VoiceBridge: bridge})
+	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "smoke", VoiceBridge: bridge})
 	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)

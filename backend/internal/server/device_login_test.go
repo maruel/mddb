@@ -20,6 +20,7 @@ import (
 	"time"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 
@@ -50,7 +51,7 @@ func TestDeviceLogin(t *testing.T) {
 			t.Fatalf("register = %d", status)
 		}
 		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}), ConfigDir: dir, BaseURL: "https://mddb.example", FastRateLimits: true, VoiceBridge: &testVoiceBridge{}, OAuth: OAuthConfig{GoogleClientID: "client", GoogleClientSecret: "secret"}}
-		h := NewRouter(env.services, cfg)
+		h := NewRouter(testlog.New(t), env.services, cfg)
 		t.Cleanup(h.Close)
 		return env, h, dir, auth
 	}
@@ -131,7 +132,7 @@ func TestDeviceLogin(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
 				host := &deviceCompletionHost{Host: &deviceLoginHost{services: env.services, config: hostcfg, auth: handlers.NewAuthHandler(env.services, hcfg)}, failure: failure, cancel: cancel, ip: netip.MustParseAddr("192.0.2.123")}
-				core := devicelogin.New(host)
+				core := devicelogin.New(testlog.New(t), host)
 				mux := http.NewServeMux()
 				mux.HandleFunc("POST "+deviceLoginPrefix+"start", core.Start)
 				mux.HandleFunc("POST "+deviceLoginPrefix+"lookup", core.Lookup)
@@ -151,7 +152,7 @@ func TestDeviceLogin(t *testing.T) {
 						if failure == "write" {
 							w = &deviceFailedWriter{w}
 						}
-						compressMiddleware(http.HandlerFunc(core.Poll)).ServeHTTP(w, r)
+						compressMiddleware(testlog.New(t), http.HandlerFunc(core.Poll)).ServeHTTP(w, r)
 					}
 					if failure == "concurrent" {
 						var wg sync.WaitGroup
@@ -433,7 +434,7 @@ func TestDeviceLogin(t *testing.T) {
 					cfg.ServerSettings = storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()})
 					cfg.ConfigDir = ""
 				}
-				h := NewRouter(env.services, cfg)
+				h := NewRouter(testlog.New(t), env.services, cfg)
 				t.Cleanup(h.Close)
 				for _, name := range []string{"start", "poll", "lookup", "approve"} {
 					if w := post(h, name, "{}", "", ""); w.Code != 404 {
@@ -446,7 +447,7 @@ func TestDeviceLogin(t *testing.T) {
 	t.Run("host rate tiers", func(t *testing.T) {
 		env, _, dir, _ := setup(t)
 		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}), ConfigDir: dir}
-		h := NewRouter(env.services, cfg)
+		h := NewRouter(testlog.New(t), env.services, cfg)
 		t.Cleanup(h.Close)
 		for range 5 {
 			start(t, h)

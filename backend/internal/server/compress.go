@@ -20,8 +20,8 @@ import (
 )
 
 // compressMiddleware returns a handler that compresses responses based on
-// the client's Accept-Encoding header.
-func compressMiddleware(next http.Handler) http.Handler {
+// the client's Accept-Encoding header. log receives finalization failures.
+func compressMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Completion must observe every fallible body write before recording its outcome.
 		// Only compression is bypassed; all request protections remain in the outer stack.
@@ -49,7 +49,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 			if err := cw.finish(); err != nil {
 				// The status may already be committed; report the transport
 				// failure without rewriting it.
-				slog.ErrorContext(ctx, "response compression finalization failed", "m", r.Method, "p", r.URL.Path, "encoding", cw.encoding, "err", err)
+				log.ErrorContext(ctx, "response compression finalization failed", "m", r.Method, "p", r.URL.Path, "encoding", cw.encoding, "err", err)
 			}
 		}()
 		next.ServeHTTP(cw, r)

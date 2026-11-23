@@ -19,6 +19,7 @@ import (
 	"time"
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/gomodedev/gomode/mcp"
 	"github.com/maruel/ksid"
@@ -81,7 +82,7 @@ func BenchmarkWorkspaceInvalidations(b *testing.B) {
 				nodeH := &handlers.NodeHandler{Svc: env.services}
 				reg := &invalidationMeasuredRegistry{workspaceRegistry: &workspaceRegistry{svc: env.services, nodeH: nodeH, user: user, wsID: wsID, role: identityv1.WSRoleAdmin, focus: newVoiceFocusState()}}
 				uri := reg.nodeURI(watched.ID)
-				h := &mcp.Handler{Registry: reg, Sessions: mcp.NewSessionStore(func(context.Context) (string, error) { return "benchmark-owner", nil })}
+				h := &mcp.Handler{Log: testlog.New(b), Registry: reg, Sessions: mcp.NewSessionStore(func(context.Context) (string, error) { return "benchmark-owner", nil })}
 				ctx, cancel := context.WithCancel(b.Context())
 				var wg sync.WaitGroup
 				b.Cleanup(func() { cancel(); wg.Wait() })

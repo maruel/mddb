@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/maruel/mddb/backend/internal/testlog"
 )
 
 // failingWriter is a ResponseWriter whose connection fails every write and
@@ -31,7 +33,7 @@ func (f *failingWriter) SetWriteDeadline(t time.Time) error {
 
 func TestCompressMiddleware(t *testing.T) {
 	t.Run("compresses", func(t *testing.T) {
-		h := compressMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		h := compressMiddleware(testlog.New(t), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("hello"))
 		}))
 		r := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
@@ -47,7 +49,7 @@ func TestCompressMiddleware(t *testing.T) {
 	})
 
 	t.Run("compresses after early hints", func(t *testing.T) {
-		srv := httptest.NewServer(compressMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		srv := httptest.NewServer(compressMiddleware(testlog.New(t), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Add("Link", "</app.js>; rel=preload")
 			w.WriteHeader(http.StatusEarlyHints)
 			_, _ = w.Write([]byte("hello"))
@@ -85,7 +87,7 @@ func TestCompressMiddleware(t *testing.T) {
 		}
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
-				h := compressMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				h := compressMiddleware(testlog.New(t), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(tc.status)
 				}))
 				r := httptest.NewRequest(tc.method, "/", http.NoBody)
@@ -133,12 +135,9 @@ func TestCompressWriter(t *testing.T) {
 	t.Run("finish", func(t *testing.T) {
 		t.Run("logs a failure closing the compressor", func(t *testing.T) {
 			var logs bytes.Buffer
-			prev := slog.Default()
-			slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
-			t.Cleanup(func() { slog.SetDefault(prev) })
 
 			errConn := errors.New("connection reset")
-			h := compressMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			h := compressMiddleware(slog.New(slog.NewTextHandler(&logs, nil)), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte("hello"))
 			}))
 			r := httptest.NewRequest(http.MethodGet, "/secret?token=abc", http.NoBody)

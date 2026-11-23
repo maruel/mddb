@@ -11,6 +11,7 @@ import (
 	"testing/fstest"
 
 	"github.com/andybalholm/brotli"
+	"github.com/maruel/mddb/backend/internal/testlog"
 )
 
 func brotliCompress(t *testing.T, content string) []byte {
@@ -99,7 +100,7 @@ func TestEncodingNegotiation(t *testing.T) {
 		tie     string
 	}{
 		{name: "static", handler: newStaticHandler(dist), tie: "br"},
-		{name: "dynamic", handler: compressMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		{name: "dynamic", handler: compressMiddleware(testlog.New(t), http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("test payload"))
 		})), tie: "zstd"},
 	}

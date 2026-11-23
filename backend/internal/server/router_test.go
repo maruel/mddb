@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
@@ -45,14 +45,14 @@ func TestRouter(t *testing.T) {
 					}
 					if tc.geo {
 						// A CIDR-only checker exercises enrichment without a country DB.
-						checker, err := geoip.NewChecker(t.Context(), slog.New(slog.DiscardHandler), "0.0.0.0/0,::/0", "", "")
+						checker, err := geoip.NewChecker(t.Context(), testlog.New(t), "0.0.0.0/0,::/0", "", "")
 						if err != nil {
 							t.Fatal(err)
 						}
 						t.Cleanup(func() { _ = checker.Close() })
 						cfg.IPGeo = checker
 					}
-					router := NewRouter(env.services, cfg)
+					router := NewRouter(testlog.New(t), env.services, cfg)
 					t.Cleanup(router.Close)
 					req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://other.example.com/api/v1/auth/register", strings.NewReader(`{"email":"metadata@example.com","password":"password123","name":"Metadata"}`))
 					req.RemoteAddr = tc.peer
@@ -81,12 +81,12 @@ func TestRouter(t *testing.T) {
 			request := func(t *testing.T, peer, forwarded string) (*httptest.ResponseRecorder, *testEnv) {
 				env := setupTestEnv(t)
 				geo := geoip.Config{AllowOrigins: []string{"local", "203.0.113.0/24"}}
-				checker, err := geo.Open(t.Context(), slog.New(slog.DiscardHandler), "")
+				checker, err := geo.Open(t.Context(), testlog.New(t), "")
 				if err != nil {
 					t.Fatal(err)
 				}
 				t.Cleanup(func() { _ = checker.Close() })
-				router := NewRouter(env.services, &Config{
+				router := NewRouter(testlog.New(t), env.services, &Config{
 					ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}),
 					IPGeo:          checker,
 					TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32")},
@@ -129,7 +129,7 @@ func TestRouter(t *testing.T) {
 				ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}),
 				BaseURL:        "https://configured.example.com",
 			}
-			router := NewRouter(env.services, cfg)
+			router := NewRouter(testlog.New(t), env.services, cfg)
 			t.Cleanup(router.Close)
 			for _, host := range []string{"first.example.com", "second.example.com"} {
 				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://"+host+"/api/v1/health", http.NoBody)
@@ -158,7 +158,7 @@ func TestRouter(t *testing.T) {
 			settings.Quotas.MaxEgressBandwidthBps = 1
 			cfg := &Config{ServerSettings: storage.NewServerSettings(settings)}
 			synctest.Test(t, func(t *testing.T) {
-				router := NewRouter(env.services, cfg)
+				router := NewRouter(testlog.New(t), env.services, cfg)
 				t.Cleanup(router.Close)
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
@@ -224,7 +224,7 @@ func TestRouter(t *testing.T) {
 			RateLimits: storage.DefaultRateLimits(),
 		})}
 		synctest.Test(t, func(t *testing.T) {
-			r := NewRouter(env.services, cfg)
+			r := NewRouter(testlog.New(t), env.services, cfg)
 			var wg sync.WaitGroup
 			wg.Go(r.Close)
 			t.Cleanup(wg.Wait)

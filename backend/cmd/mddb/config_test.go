@@ -22,6 +22,7 @@ import (
 	"github.com/gomodedev/gomode/httpserver/geoip"
 	"github.com/gomodedev/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/internal/server"
+	"github.com/maruel/mddb/backend/internal/testlog"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -847,7 +848,7 @@ func TestResolvedConfig(t *testing.T) {
 		t.Setenv("XDG_CACHE_HOME", "")
 		t.Setenv("LocalAppData", "")
 		t.Setenv("home", "")
-		log := slog.New(slog.DiscardHandler)
+		log := testlog.New(t)
 		t.Run("disabled", func(t *testing.T) {
 			c := resolvedConfig{}
 			checker, err := c.openGeoIP(t.Context(), log)

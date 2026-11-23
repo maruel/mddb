@@ -16,6 +16,7 @@ import (
 	"time"
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
+	"github.com/maruel/mddb/backend/internal/testlog"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 
@@ -59,6 +60,7 @@ func TestRunAutoUpdate(t *testing.T) {
 				u, err := autoupdate.New(autoupdate.Config{
 					Repository: "maruel/mddb", CurrentVersion: version, Binary: "mddb",
 					ArchiveName: func(string) string { return "mddb_linux_amd64.tar.gz" },
+					Log:         testlog.New(t),
 				})
 				if err != nil {
 					t.Fatal(err)
