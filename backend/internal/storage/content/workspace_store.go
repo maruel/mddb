@@ -760,8 +760,11 @@ func checkTableMetadataVersion(v string) error {
 
 // marshalTableMetadata encodes metadata.json for every table writer, so a rewrite keeps the
 // layout and quota admission sees only content growth. A nil created is omitted, as are
-// empty views: readers treat a missing key as no views.
+// empty views: readers treat a missing key as no views. No properties is always [].
 func marshalTableMetadata(title string, created contentv1.Timestamp, modified storagev1.Time, properties []contentv1.Property, views []contentv1.View) ([]byte, error) {
+	if properties == nil {
+		properties = []contentv1.Property{}
+	}
 	data, err := json.Marshal(&contentv1.Table{
 		Created:    created,
 		Modified:   contentv1.NewTimestamp(modified),
@@ -1320,7 +1323,7 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 
 	if nodeType == NodeTypeTable || nodeType == NodeTypeHybrid {
 		var err error
-		metadataData, err = marshalTableMetadata(title, contentv1.NewTimestamp(now), now, []contentv1.Property{}, nil)
+		metadataData, err = marshalTableMetadata(title, contentv1.NewTimestamp(now), now, nil, nil)
 		if err != nil {
 			return nil, nil, err
 		}

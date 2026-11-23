@@ -824,6 +824,33 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("EmptyTableProperties", func(t *testing.T) {
+		// Both table creators write no properties as [], so their files agree.
+		_, ws, _ := initWS(t)
+		a := git.Author{Name: "Test", Email: "test@example.com"}
+		created, err := ws.CreateTableUnderParent(t.Context(), 0, "Created", nil, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		node, err := ws.CreateNode(t.Context(), "Node", NodeTypeTable, 0, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, id := range []ksid.ID{created.ID, node.ID} {
+			data, err := os.ReadFile(ws.tableMetadataFile(id, 0))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(data, &raw); err != nil {
+				t.Fatal(err)
+			}
+			if got := string(raw["properties"]); got != "[]" {
+				t.Errorf("%s: properties = %s, want []", data, got)
+			}
+		}
+	})
+
 	t.Run("UnchangedTableSchema", func(t *testing.T) {
 		// Stored metadata decodes omitted slices as nil; clients resubmit them empty.
 		_, ws, _ := initWS(t)
