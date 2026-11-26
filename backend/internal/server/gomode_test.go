@@ -475,16 +475,17 @@ func TestMCPToolSchemas(t *testing.T) {
 	// Every advertised tool carries no header-mirrored parameters; the empty
 	// expectations catch an accidental x-mcp-header or a renamed tool.
 	expectedHeaders := map[string]map[string]string{
-		"workspaces_list":  {},
-		"workspace_select": {},
-		"nodes_list":       {},
-		"node_read":        {},
-		"node_update":      {},
-		"page_create":      {},
-		"table_create":     {},
-		"node_append":      {},
-		"record_read":      {},
-		"records_query":    {},
+		"workspaces_list":      {},
+		"workspace_select":     {},
+		"nodes_list":           {},
+		"node_read":            {},
+		"node_show_on_glasses": {},
+		"node_update":          {},
+		"page_create":          {},
+		"table_create":         {},
+		"node_append":          {},
+		"record_read":          {},
+		"records_query":        {},
 	}
 	specs := registry.allSpecs()
 	if len(specs) != len(expectedHeaders) {

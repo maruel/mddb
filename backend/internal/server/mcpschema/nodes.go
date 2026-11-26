@@ -16,6 +16,11 @@ type ReadNodeInput struct {
 	NodeID        string `json:"nodeId" jsonschema:"description=Node ID to read"`
 }
 
+// ShowNodeOnGlassesInput defines the node_show_on_glasses input wire contract.
+type ShowNodeOnGlassesInput struct {
+	NodeID string `json:"nodeId" jsonschema:"description=ID of the page to show"`
+}
+
 // NodeSummary defines the node summary wire contract.
 type NodeSummary struct {
 	ID          string `json:"id"`

@@ -212,11 +212,13 @@ func (m *workspaceRegistry) readSpecs() []mcp.ToolSpec {
 	workspaces := mcp.NewToolSpec("workspaces_list", "List workspaces", "List accessible workspaces. Select one explicitly when using an unscoped native connection.", m.listWorkspaces)
 	selectSpec := mcp.NewToolSpec("workspace_select", "Select workspace", "Choose a workspace for this conversation, independently of other tabs and conversations.", m.selectWorkspace)
 	workspaces.Annotations = annotations
+	glasses := mcp.NewToolSpec("node_show_on_glasses", "Show page on glasses", "Show a page's text on the user's connected glasses, from its start. Call when the user asks to see a page. Returns which page the glasses show; do not read it out. Fails when no glasses are connected or the page has no text.", m.showNodeOnGlasses)
+	glasses.Annotations = annotations
 	record := mcp.NewToolSpec("record_read", "Read record", "Read one table record's actual data and watch it independently of the node schema.", m.readRecord)
 	query := mcp.NewToolSpec("records_query", "Query records", "Read a bounded data window, optionally using a saved view's filters and ordering. Follow nextURI for more rows; absent records may be outside this window.", m.queryRecords)
 	record.Annotations = annotations
 	query.Annotations = annotations
-	return []mcp.ToolSpec{workspaces, selectSpec, list, read, record, query}
+	return []mcp.ToolSpec{workspaces, selectSpec, list, read, glasses, record, query}
 }
 
 // writeSpecs lists the mutating tools. They require editor access, and viewers
@@ -1671,4 +1673,48 @@ func contextResource(uri string, projection gomode.ConversationContext) (mcp.Res
 	projection.Content = nil
 	result.Meta = mcp.MetaObject{gomode.ConversationContextMetaKey: projection}
 	return result, err
+}
+
+// showNodeOnGlasses shows a page's title and text on the glasses the client
+// declares, as gomode.DisplayExtension documents, and tells the model which
+// page the glasses show. It sends text on every display, images included: the
+// client lays text out and pages it for each one. A malformed declaration
+// counts as no glasses, as that contract requires.
+func (m *workspaceRegistry) showNodeOnGlasses(ctx context.Context, req *mcp.ToolRequest[mcpschema.ShowNodeOnGlassesInput]) mcp.ToolResult[mcp.TextOutput] {
+	if _, ok, err := mcp.ClientDisplay(&req.Params.Meta); !ok || err != nil {
+		return mcp.ToolError[mcp.TextOutput]("No glasses are connected.")
+	}
+	id, err := ksid.Parse(req.Arguments.NodeID)
+	if err != nil || id.IsZero() {
+		return mcp.ToolError[mcp.TextOutput]("invalid nodeId")
+	}
+	read, err := m.beginResourceRead(ctx, m.nodeURI(id), id, 0, watchNode)
+	if err != nil {
+		return mcp.ToolError[mcp.TextOutput](err.Error())
+	}
+	store, err := m.svc.FileStore.GetWorkspaceStore(ctx, m.wsID)
+	if err != nil {
+		return mcp.ToolError[mcp.TextOutput](err.Error())
+	}
+	snap, err := store.ReadPageSnapshot(ctx, id, 0, glassesContentBytes)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			m.finishResourceRead(ctx, read, "", true)
+		}
+		return mcp.ToolError[mcp.TextOutput](err.Error())
+	}
+	m.finishResourceRead(ctx, read, snap.Revision, false)
+	m.publishNode(ctx, id)
+	cut := snap.NextOffset < snap.ContentBytes
+	body := glassesText(snap.Node.Content, cut)
+	if body == "" {
+		return mcp.ToolError[mcp.TextOutput](fmt.Sprintf("%q has no text to show on the glasses.", snap.Node.Title))
+	}
+	summary := fmt.Sprintf("The glasses show the page %q.", snap.Node.Title)
+	if cut {
+		summary = fmt.Sprintf("The glasses show the start of the page %q.", snap.Node.Title)
+	}
+	res := mcp.TypedToolResult(mcp.TextOutput{Result: summary})
+	res.Content = []mcp.ContentBlock{mcp.GlassesText(snap.Node.Title + "\n\n" + body)}
+	return res
 }
