@@ -8,10 +8,10 @@ import (
 	"unicode"
 )
 
-// glassesContentBytes bounds the Markdown read for the glasses. The client
-// shows at most 20 screens of a text and drops the rest without a marker, so a
-// longer page costs bandwidth the glasses never show.
-const glassesContentBytes = 4 << 10
+// glassesContentBytes bounds the Markdown read for the glasses to the window
+// node_read returns. The client scrolls the text a line per swipe and shows at
+// most 65536 characters of it.
+const glassesContentBytes = mcpContentPageSize
 
 // mdLink matches a Markdown link or image; the glasses show its text alone.
 var mdLink = regexp.MustCompile(`!?\[([^\]]*)\]\([^)]*\)`)
