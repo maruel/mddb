@@ -107,7 +107,8 @@ if ((${#format_files[@]} > 0)); then
 fi
 
 if ((${#eslint_files[@]} > 0)); then
-  run_check eslint pnpm exec eslint -- "${eslint_files[@]}"
+  # eslint.config.js ignores generated files such as sdk/mddb; staged paths include them.
+  run_check eslint pnpm exec eslint --no-warn-ignored -- "${eslint_files[@]}"
 fi
 
 if ((${#go_files[@]} > 0)); then
