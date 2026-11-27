@@ -1,0 +1,7225 @@
+{
+  "openapi": "3.2.0",
+  "info": {
+    "title": "mddb API Reference",
+    "version": "v1",
+    "description": "RESTful JSON API for mddb at `/api/v1/`."
+  },
+  "paths": {
+    "/api/v1/admin/server": {
+      "get": {
+        "operationId": "getServerDetail",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminServerDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/browser/login": {
+      "post": {
+        "operationId": "browserLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/browser/logout": {
+      "post": {
+        "operationId": "browserLogout",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/browser/register": {
+      "post": {
+        "operationId": "browserRegister",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email": {
+      "post": {
+        "operationId": "changeEmail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeEmailResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email/send-verification": {
+      "post": {
+        "operationId": "sendVerificationEmail",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendVerificationEmailResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/invitations/org": {
+      "get": {
+        "operationId": "getOrgInvitationInfo",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgInvitationInfoResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/invitations/org/accept": {
+      "post": {
+        "operationId": "acceptOrgInvitation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/invitations/ws": {
+      "get": {
+        "operationId": "getWSInvitationInfo",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WSInvitationInfoResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/invitations/ws/accept": {
+      "post": {
+        "operationId": "acceptWSInvitation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oauth/link": {
+      "post": {
+        "operationId": "linkOAuth",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkOAuthAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkOAuthAccountResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oauth/unlink": {
+      "post": {
+        "operationId": "unlinkOAuth",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkOAuthAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "setPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/providers": {
+      "get": {
+        "operationId": "listProviders",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionUserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "operationId": "listSessions",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSessionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions/revoke": {
+      "post": {
+        "operationId": "revokeSession",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions/revoke-all": {
+      "post": {
+        "operationId": "revokeAllSessions",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeAllSessionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/settings": {
+      "post": {
+        "operationId": "updateUserSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/switch-workspace": {
+      "post": {
+        "operationId": "switchWorkspace",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchWorkspaceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/github-app/available": {
+      "get": {
+        "operationId": "isGitHubAppAvailable",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubAppAvailableResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/github-app/installations": {
+      "get": {
+        "operationId": "listGitHubAppInstallations",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListGitHubAppInstallationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/github-app/repos": {
+      "post": {
+        "operationId": "listGitHubAppRepos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListGitHubAppReposRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListGitHubAppReposResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNotificationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/preferences": {
+      "get": {
+        "operationId": "getNotificationPrefs",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPrefsDTO"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateNotificationPrefs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPrefsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPrefsDTO"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "markAllNotificationsRead",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/subscribe": {
+      "post": {
+        "operationId": "subscribePush",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscribeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "getUnreadCount",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unsubscribe": {
+      "post": {
+        "operationId": "unsubscribePush",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushUnsubscribeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/vapid-key": {
+      "get": {
+        "operationId": "getVAPIDPublicKey",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VAPIDKeyResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/delete": {
+      "post": {
+        "operationId": "deleteNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "operationId": "markNotificationRead",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations": {
+      "post": {
+        "operationId": "createOrganization",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}": {
+      "get": {
+        "operationId": "getOrganization",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/invitations": {
+      "get": {
+        "operationId": "listOrgInvitations",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOrgInvitationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOrgInvitation",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgInvitationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/invitations/{invitationID}/delete": {
+      "post": {
+        "operationId": "deleteOrgInvitation",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitationID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/notion/import": {
+      "post": {
+        "operationId": "startImport",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotionImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotionImportResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/notion/import/{importWsID}/status": {
+      "get": {
+        "operationId": "getStatus",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "importWsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotionImportStatusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/settings": {
+      "post": {
+        "operationId": "updateOrgPreferences",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgPreferencesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/users": {
+      "get": {
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUsersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/users/remove": {
+      "post": {
+        "operationId": "removeOrgMember",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveOrgMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/users/role": {
+      "post": {
+        "operationId": "updateOrgMemberRole",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgMemberRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{orgID}/workspaces": {
+      "post": {
+        "operationId": "createWorkspace",
+        "parameters": [
+          {
+            "name": "orgID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/server/config": {
+      "get": {
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerConfigResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateConfig",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateServerConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}": {
+      "get": {
+        "operationId": "getWorkspace",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateWorkspace",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/gomode/focus": {
+      "post": {
+        "operationId": "updateVoiceFocus",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVoiceFocusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateVoiceFocusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/invitations": {
+      "get": {
+        "operationId": "listWSInvitations",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListWSInvitationsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWSInvitation",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWSInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WSInvitationResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/invitations/{invitationID}/delete": {
+      "post": {
+        "operationId": "deleteWSInvitation",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitationID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/members": {
+      "get": {
+        "operationId": "listWorkspaceMembers",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListWorkspaceMembersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/titles": {
+      "get": {
+        "operationId": "getNodeTitles",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Comma-separated node IDs",
+            "required": true,
+            "schema": {
+              "description": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetNodeTitlesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}": {
+      "get": {
+        "operationId": "getNode",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/assets": {
+      "get": {
+        "operationId": "listNodeAssets",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNodeAssetsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete": {
+      "post": {
+        "operationId": "deleteNodeAsset",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/children": {
+      "get": {
+        "operationId": "listNodeChildren",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNodeChildrenResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/delete": {
+      "post": {
+        "operationId": "deleteNode",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/history": {
+      "get": {
+        "operationId": "listNodeVersions",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max commits to return (1-1000, default 1000).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNodeVersionsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}": {
+      "get": {
+        "operationId": "getNodeVersion",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetNodeVersionResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/move": {
+      "post": {
+        "operationId": "moveNode",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/page": {
+      "get": {
+        "operationId": "getPage",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPageResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updatePage",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePageResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/page/append": {
+      "post": {
+        "operationId": "appendPage",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendPageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePageResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/page/create": {
+      "post": {
+        "operationId": "createPage",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePageResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/page/delete": {
+      "post": {
+        "operationId": "deletePage",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter": {
+      "post": {
+        "operationId": "updatePageFrontmatter",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePageFrontmatterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatePageFrontmatterResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table": {
+      "get": {
+        "operationId": "getTable",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTableSchemaResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateTable",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTableRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateTableResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/create": {
+      "post": {
+        "operationId": "createTable",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTableRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTableUnderParentResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/delete": {
+      "post": {
+        "operationId": "deleteTable",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/records": {
+      "get": {
+        "operationId": "listRecords",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "view_id",
+            "in": "query",
+            "description": "Optional: apply saved view configuration",
+            "required": true,
+            "schema": {
+              "description": "string"
+            }
+          },
+          {
+            "name": "filters",
+            "in": "query",
+            "description": "Optional: JSON-encoded ad-hoc filters",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sorts",
+            "in": "query",
+            "description": "Optional: JSON-encoded ad-hoc sorts",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListRecordsResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/records/create": {
+      "post": {
+        "operationId": "createRecord",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRecordResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}": {
+      "get": {
+        "operationId": "getRecord",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRecordResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateRecord",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateRecordResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete": {
+      "post": {
+        "operationId": "deleteRecord",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteRecordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/views/create": {
+      "post": {
+        "operationId": "createView",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateViewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateViewResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}": {
+      "post": {
+        "operationId": "updateView",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "viewID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateViewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateViewResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete": {
+      "post": {
+        "operationId": "deleteView",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "viewID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteViewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/notion/import/cancel": {
+      "post": {
+        "operationId": "cancelImport",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/search": {
+      "post": {
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git": {
+      "get": {
+        "operationId": "getGitRemote",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitRemoteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "updateGitRemote",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGitRemoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitRemoteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git/delete": {
+      "post": {
+        "operationId": "deleteGitRemote",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git/github-app": {
+      "post": {
+        "operationId": "setupGitHubAppRemote",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupGitHubAppRemoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitRemoteResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git/pull": {
+      "post": {
+        "operationId": "pullGit",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git/push": {
+      "post": {
+        "operationId": "pushGit",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/git/status": {
+      "get": {
+        "operationId": "getSyncStatus",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitSyncStatusResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/settings/membership": {
+      "post": {
+        "operationId": "updateWSMembershipSettings",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWSMembershipSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WSMembershipResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/users/resolve": {
+      "post": {
+        "operationId": "resolveUsers",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveUsersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveUsersResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{wsID}/users/role": {
+      "post": {
+        "operationId": "updateWSMemberRole",
+        "parameters": [
+          {
+            "name": "wsID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWSMemberRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcceptInvitationRequest": {
+        "type": "object",
+        "description": "AcceptInvitationRequest claims a grant for the authenticated account.\nRecipient-bound invitations additionally require a matching verified address.\nInvitation tokens never authenticate a user or issue a session.",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "AdminOrgDetail": {
+        "type": "object",
+        "description": "AdminOrgDetail contains organization details for the admin dashboard.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "member_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "workspace_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workspaces": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AdminWorkspaceDetail"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "member_count",
+          "workspace_count",
+          "created",
+          "workspaces"
+        ]
+      },
+      "AdminRequestMetrics": {
+        "type": "object",
+        "description": "AdminRequestMetrics contains request throughput metrics.",
+        "properties": {
+          "auth_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_auth_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_unauth_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "server_start_time": {
+            "type": "number",
+            "format": "double"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "format": "double"
+          },
+          "write_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "server_start_time",
+          "uptime_seconds",
+          "auth_count",
+          "write_count",
+          "read_auth_count",
+          "read_unauth_count"
+        ]
+      },
+      "AdminServerDetail": {
+        "type": "object",
+        "description": "AdminServerDetail contains server-wide dashboard data.",
+        "properties": {
+          "active_sessions": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "org_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "organizations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AdminOrgDetail"
+            }
+          },
+          "request_metrics": {
+            "$ref": "#/components/schemas/AdminRequestMetrics"
+          },
+          "total_storage": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "user_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workspace_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "user_count",
+          "org_count",
+          "workspace_count",
+          "total_storage",
+          "active_sessions",
+          "organizations",
+          "request_metrics"
+        ]
+      },
+      "AdminWorkspaceDetail": {
+        "type": "object",
+        "description": "AdminWorkspaceDetail contains workspace details for the admin dashboard.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "git_commits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "description": "string"
+          },
+          "member_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "org_id": {
+            "description": "string"
+          },
+          "page_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "name",
+          "member_count",
+          "page_count",
+          "storage_bytes",
+          "git_commits",
+          "created"
+        ]
+      },
+      "AppendPageRequest": {
+        "type": "object",
+        "description": "AppendPageRequest appends markdown against a previously read content revision.",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "expected_revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "expected_revision"
+        ]
+      },
+      "AssetSummary": {
+        "type": "object",
+        "description": "AssetSummary is a brief representation of an asset for list responses.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mime_type",
+          "created",
+          "url"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "description": "AuthResponse is a response containing authentication token and user info.\nUsed by API login and registration endpoints.",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "token",
+          "user"
+        ]
+      },
+      "BacklinkInfo": {
+        "type": "object",
+        "description": "BacklinkInfo represents a page that links to this page.",
+        "properties": {
+          "node_id": {
+            "description": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "title"
+        ]
+      },
+      "ChangeEmailRequest": {
+        "type": "object",
+        "description": "ChangeEmailRequest is a request to change the user's email address.",
+        "properties": {
+          "new_email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "description": "Required for security verification"
+          }
+        },
+        "required": [
+          "new_email",
+          "password"
+        ]
+      },
+      "ChangeEmailResponse": {
+        "type": "object",
+        "description": "ChangeEmailResponse is a response from changing email.",
+        "properties": {
+          "email_verified": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "email_verified"
+        ]
+      },
+      "ChannelSetDTO": {
+        "type": "object",
+        "description": "ChannelSetDTO indicates which delivery channels are enabled.",
+        "properties": {
+          "email": {
+            "type": "boolean"
+          },
+          "web": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email",
+          "web"
+        ]
+      },
+      "Commit": {
+        "type": "object",
+        "description": "Commit represents a commit in git history.",
+        "properties": {
+          "author_email": {
+            "type": "string"
+          },
+          "author_name": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "number"
+          }
+        },
+        "required": [
+          "hash",
+          "message",
+          "author_name",
+          "author_email",
+          "timestamp"
+        ]
+      },
+      "CreateOrgInvitationRequest": {
+        "type": "object",
+        "description": "CreateOrgInvitationRequest is a request to create an organization invitation.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "description": "Optional: language for invitation email (en, fr, de, es)"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "CreateOrganizationRequest": {
+        "type": "object",
+        "description": "CreateOrganizationRequest is a request to create a new organization.",
+        "properties": {
+          "ensure_first": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreatePageRequest": {
+        "type": "object",
+        "description": "CreatePageRequest is a request to create a page under a parent node.\nThe parent ID is in the path ({id}); use \"0\" for root.",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "ensure_root_if_empty": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "CreatePageResponse": {
+        "type": "object",
+        "description": "CreatePageResponse is a response from creating a page.",
+        "properties": {
+          "id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "CreateRecordRequest": {
+        "type": "object",
+        "description": "CreateRecordRequest is a request to create a record.\nNow used for /nodes/{id}/table/records/create endpoint.",
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "description": "JSONValue"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CreateRecordResponse": {
+        "type": "object",
+        "description": "CreateRecordResponse is a response from creating a record.",
+        "properties": {
+          "id": {
+            "description": "string"
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revision"
+        ]
+      },
+      "CreateTableRequest": {
+        "type": "object",
+        "description": "CreateTableRequest is a request to create a table under a parent node.\nThe parent ID is in the path ({id}); use \"0\" for root.",
+        "properties": {
+          "properties": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "properties"
+        ]
+      },
+      "CreateTableUnderParentResponse": {
+        "type": "object",
+        "description": "CreateTableUnderParentResponse is a response from creating a table under a parent.",
+        "properties": {
+          "id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "CreateViewRequest": {
+        "type": "object",
+        "description": "CreateViewRequest is a request to create a new view for a table.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ViewType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "CreateViewResponse": {
+        "type": "object",
+        "description": "CreateViewResponse is a response from creating a view.",
+        "properties": {
+          "view": {
+            "$ref": "#/components/schemas/View"
+          }
+        },
+        "required": [
+          "view"
+        ]
+      },
+      "CreateWSInvitationRequest": {
+        "type": "object",
+        "description": "CreateWSInvitationRequest is a request to create a workspace invitation.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "description": "Optional: language for invitation email (en, fr, de, es)"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "CreateWorkspaceRequest": {
+        "type": "object",
+        "description": "CreateWorkspaceRequest is a request to create a new workspace within an organization.",
+        "properties": {
+          "ensure_first": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "DataRecordResponse": {
+        "type": "object",
+        "description": "DataRecordResponse is the API representation of a data record.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "description": "JSONValue"
+            }
+          },
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "id",
+          "data",
+          "created",
+          "modified"
+        ]
+      },
+      "DeleteRecordRequest": {
+        "type": "object",
+        "description": "DeleteRecordRequest is a request to delete a record.\nNow used for /nodes/{id}/table/records/{rid}/delete endpoint.",
+        "properties": {
+          "expected_revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ]
+      },
+      "DeleteViewRequest": {
+        "type": "object",
+        "description": "DeleteViewRequest is a request to delete a view.",
+        "properties": {
+          "expected_revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ]
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "VALIDATION_FAILED",
+          "MISSING_FIELD",
+          "INVALID_FORMAT",
+          "NOT_FOUND",
+          "NODE_NOT_FOUND",
+          "TABLE_NOT_FOUND",
+          "FILE_NOT_FOUND",
+          "STORAGE_ERROR",
+          "INTERNAL_ERROR",
+          "NOT_IMPLEMENTED",
+          "CONFLICT",
+          "UNAUTHORIZED",
+          "FORBIDDEN",
+          "INVALID_PROVIDER",
+          "OAUTH_ERROR",
+          "EXPIRED",
+          "RATE_LIMIT_EXCEEDED",
+          "CANNOT_UNLINK_ONLY_AUTH",
+          "PROVIDER_ALREADY_LINKED",
+          "PROVIDER_NOT_LINKED",
+          "EMAIL_IN_USE",
+          "EMAIL_NOT_VERIFIED",
+          "QUOTA_EXCEEDED",
+          "PAYLOAD_TOO_LARGE"
+        ],
+        "description": "ErrorCode defines specific error types for the API.\n\n- `VALIDATION_FAILED`: ErrorCodeValidationFailed is returned when input data fails validation.\n- `MISSING_FIELD`: ErrorCodeMissingField is returned when a required field is missing.\n- `INVALID_FORMAT`: ErrorCodeInvalidFormat is returned when a field has an invalid format.\n- `NOT_FOUND`: ErrorCodeNotFound is returned when a resource is not found.\n- `NODE_NOT_FOUND`: ErrorCodeNodeNotFound is returned when a node is not found.\n- `TABLE_NOT_FOUND`: ErrorCodeTableNotFound is returned when a table is not found.\n- `FILE_NOT_FOUND`: ErrorCodeFileNotFound is returned when a file is not found.\n- `STORAGE_ERROR`: ErrorCodeStorageError is returned when a storage operation fails.\n- `INTERNAL_ERROR`: ErrorCodeInternal is returned when an unexpected server error occurs.\n- `NOT_IMPLEMENTED`: ErrorCodeNotImplemented is returned when a feature is not implemented.\n- `CONFLICT`: ErrorCodeConflict is returned when there is a resource conflict.\n- `UNAUTHORIZED`: ErrorCodeUnauthorized is returned when authentication is missing or invalid.\n- `FORBIDDEN`: ErrorCodeForbidden is returned when a user has insufficient permissions.\n- `INVALID_PROVIDER`: ErrorCodeInvalidProvider is returned when an OAuth provider is unknown.\n- `OAUTH_ERROR`: ErrorCodeOAuthError is returned when an OAuth operation fails.\n- `EXPIRED`: ErrorCodeExpired is returned when a resource has expired.\n- `RATE_LIMIT_EXCEEDED`: ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.\n- `CANNOT_UNLINK_ONLY_AUTH`: ErrorCodeCannotUnlinkOnlyAuth is returned when trying to unlink the only authentication method.\n- `PROVIDER_ALREADY_LINKED`: ErrorCodeProviderAlreadyLinked is returned when trying to link an already linked provider.\n- `PROVIDER_NOT_LINKED`: ErrorCodeProviderNotLinked is returned when trying to unlink a provider that is not linked.\n- `EMAIL_IN_USE`: ErrorCodeEmailInUse is returned when an email is already in use by another account.\n- `EMAIL_NOT_VERIFIED`: ErrorCodeEmailNotVerified is returned when independent proof of email ownership is missing for an invitation or account link.\n- `QUOTA_EXCEEDED`: ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded.\n- `PAYLOAD_TOO_LARGE`: ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit."
+      },
+      "ErrorDetails": {
+        "type": "object",
+        "description": "ErrorDetails defines the structured error information in a response.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "ErrorResponse is the standard API error response.",
+        "properties": {
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "description": "JSONValue"
+            }
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetails"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "EventAspect": {
+        "type": "string",
+        "enum": [
+          "assets",
+          "body",
+          "catalog",
+          "hierarchy",
+          "metadata",
+          "records",
+          "schema",
+          "summary"
+        ],
+        "description": "EventAspect identifies a changed projection independently of canonical CAS."
+      },
+      "EventType": {
+        "type": "string",
+        "enum": [
+          "node_created",
+          "node_updated",
+          "node_deleted",
+          "node_moved",
+          "records_changed",
+          "table_updated",
+          "resync"
+        ],
+        "description": "EventType identifies the kind of workspace event sent via SSE.\n\n- `node_created`: EventNodeCreated is sent when a new node (page or table) is created.\n- `node_updated`: EventNodeUpdated is sent when a node's content or title changes.\n- `node_deleted`: EventNodeDeleted is sent when a node is removed.\n- `node_moved`: EventNodeMoved is sent when a node is moved to a new parent.\n- `records_changed`: EventRecordsChanged is sent when a table record is created, updated, or deleted.\n- `table_updated`: EventTableUpdated is sent when a table schema or view changes.\n- `resync`: EventResync requires an authorized refresh after an event delivery gap."
+      },
+      "Filter": {
+        "type": "object",
+        "description": "Filter defines a condition for filtering records.",
+        "properties": {
+          "and": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "operator": {
+            "$ref": "#/components/schemas/FilterOp"
+          },
+          "or": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "property": {
+            "type": "string"
+          },
+          "value": {
+            "description": "JSONValue"
+          }
+        }
+      },
+      "FilterOp": {
+        "type": "string",
+        "enum": [
+          "equals",
+          "not_equals",
+          "contains",
+          "not_contains",
+          "starts_with",
+          "ends_with",
+          "gt",
+          "lt",
+          "gte",
+          "lte",
+          "is_empty",
+          "is_not_empty"
+        ],
+        "description": "FilterOp defines the comparison operator for a filter.\n\n- `equals`: FilterOpEquals matches if value equals the filter value.\n- `not_equals`: FilterOpNotEquals matches if value does not equal the filter value.\n- `contains`: FilterOpContains matches if value contains the filter value (text).\n- `not_contains`: FilterOpNotContains matches if value does not contain the filter value.\n- `starts_with`: FilterOpStartsWith matches if value starts with the filter value.\n- `ends_with`: FilterOpEndsWith matches if value ends with the filter value.\n- `gt`: FilterOpGreaterThan matches if value is greater than the filter value.\n- `lt`: FilterOpLessThan matches if value is less than the filter value.\n- `gte`: FilterOpGreaterEqual matches if value is greater than or equal to the filter value.\n- `lte`: FilterOpLessEqual matches if value is less than or equal to the filter value.\n- `is_empty`: FilterOpIsEmpty matches if value is empty/null.\n- `is_not_empty`: FilterOpIsNotEmpty matches if value is not empty/null."
+      },
+      "GetNodeTitlesRequest": {
+        "type": "object",
+        "description": "GetNodeTitlesRequest is a request to get titles for multiple nodes.",
+        "properties": {
+          "IDs": {
+            "description": "Comma-separated node IDs",
+            "allOf": [
+              {
+                "description": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "IDs"
+        ]
+      },
+      "GetNodeTitlesResponse": {
+        "type": "object",
+        "description": "GetNodeTitlesResponse is a response containing a map of node IDs to titles.",
+        "properties": {
+          "titles": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "titles"
+        ]
+      },
+      "GetNodeVersionResponse": {
+        "type": "object",
+        "description": "GetNodeVersionResponse is a response containing node content at a version.",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "GetPageResponse": {
+        "type": "object",
+        "description": "GetPageResponse is a response containing page content.",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "id",
+          "title",
+          "content",
+          "created",
+          "modified"
+        ]
+      },
+      "GetRecordResponse": {
+        "type": "object",
+        "description": "GetRecordResponse is a response containing a record.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "description": "JSONValue"
+            }
+          },
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "id",
+          "data",
+          "created",
+          "modified"
+        ]
+      },
+      "GetTableSchemaResponse": {
+        "type": "object",
+        "description": "GetTableSchemaResponse is a response containing table schema.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "properties": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "schema_revision": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "views": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/View"
+            }
+          }
+        },
+        "required": [
+          "schema_revision",
+          "id",
+          "title",
+          "properties",
+          "created",
+          "modified"
+        ]
+      },
+      "GitHubAppAvailableResponse": {
+        "type": "object",
+        "description": "GitHubAppAvailableResponse indicates whether GitHub App is configured.",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available"
+        ]
+      },
+      "GitHubAppInstallationResponse": {
+        "type": "object",
+        "description": "GitHubAppInstallationResponse represents a GitHub App installation.",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "id",
+          "account"
+        ]
+      },
+      "GitHubAppRepoResponse": {
+        "type": "object",
+        "description": "GitHubAppRepoResponse represents a GitHub repository from App installation.",
+        "properties": {
+          "full_name": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "private": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "full_name",
+          "owner",
+          "name",
+          "private",
+          "html_url"
+        ]
+      },
+      "GitRemoteResponse": {
+        "type": "object",
+        "description": "GitRemoteResponse is the API representation of a git remote.",
+        "properties": {
+          "auth_type": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "created": {
+            "description": "number"
+          },
+          "installation_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "last_sync": {
+            "description": "number"
+          },
+          "last_sync_error": {
+            "type": "string"
+          },
+          "repo_name": {
+            "type": "string"
+          },
+          "repo_owner": {
+            "type": "string"
+          },
+          "sync_status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "url",
+          "type",
+          "auth_type",
+          "created"
+        ]
+      },
+      "GitSyncStatusResponse": {
+        "type": "object",
+        "description": "GitSyncStatusResponse is a response containing sync status.",
+        "properties": {
+          "last_sync": {
+            "description": "number"
+          },
+          "last_sync_error": {
+            "type": "string"
+          },
+          "sync_status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sync_status"
+        ]
+      },
+      "Group": {
+        "type": "object",
+        "description": "Group defines how to group records by a property.",
+        "properties": {
+          "hidden": {
+            "type": "array",
+            "items": {
+              "description": "JSONValue"
+            }
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "property"
+        ]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "description": "HealthResponse is a response from a health check.",
+        "properties": {
+          "dirty": {
+            "type": "boolean"
+          },
+          "go_version": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "go_version",
+          "revision",
+          "dirty"
+        ]
+      },
+      "LinkOAuthAccountRequest": {
+        "type": "object",
+        "description": "LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.",
+        "properties": {
+          "next": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OAuthProvider"
+          }
+        },
+        "required": [
+          "provider"
+        ]
+      },
+      "LinkOAuthAccountResponse": {
+        "type": "object",
+        "description": "LinkOAuthAccountResponse is a response from initiating OAuth linking.",
+        "properties": {
+          "redirect_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_url"
+        ]
+      },
+      "ListGitHubAppInstallationsResponse": {
+        "type": "object",
+        "description": "ListGitHubAppInstallationsResponse is a response containing GitHub App installations.",
+        "properties": {
+          "installations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GitHubAppInstallationResponse"
+            }
+          }
+        },
+        "required": [
+          "installations"
+        ]
+      },
+      "ListGitHubAppReposRequest": {
+        "type": "object",
+        "description": "ListGitHubAppReposRequest is a request to list repos for a GitHub App installation.",
+        "properties": {
+          "installation_id": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "installation_id"
+        ]
+      },
+      "ListGitHubAppReposResponse": {
+        "type": "object",
+        "description": "ListGitHubAppReposResponse is a response containing GitHub App repos.",
+        "properties": {
+          "repos": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GitHubAppRepoResponse"
+            }
+          }
+        },
+        "required": [
+          "repos"
+        ]
+      },
+      "ListNodeAssetsResponse": {
+        "type": "object",
+        "description": "ListNodeAssetsResponse is a response containing a list of assets.",
+        "properties": {
+          "assets": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AssetSummary"
+            }
+          }
+        },
+        "required": [
+          "assets"
+        ]
+      },
+      "ListNodeChildrenResponse": {
+        "type": "object",
+        "description": "ListNodeChildrenResponse is a response containing children of a node.",
+        "properties": {
+          "nodes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NodeResponse"
+            }
+          }
+        },
+        "required": [
+          "nodes"
+        ]
+      },
+      "ListNodeVersionsRequest": {
+        "type": "object",
+        "description": "ListNodeVersionsRequest is a request to list node version history.",
+        "properties": {
+          "Limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Max commits to return (1-1000, default 1000)."
+          }
+        },
+        "required": [
+          "Limit"
+        ]
+      },
+      "ListNodeVersionsResponse": {
+        "type": "object",
+        "description": "ListNodeVersionsResponse is a response containing node version history.",
+        "properties": {
+          "history": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Commit"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "history"
+        ]
+      },
+      "ListNotificationsRequest": {
+        "type": "object",
+        "description": "ListNotificationsRequest is a request to list notifications for the authenticated user.",
+        "properties": {
+          "Limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "Offset": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "UnreadOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "Limit",
+          "Offset",
+          "UnreadOnly"
+        ]
+      },
+      "ListNotificationsResponse": {
+        "type": "object",
+        "description": "ListNotificationsResponse is a response containing paginated notifications.",
+        "properties": {
+          "notifications": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NotificationDTO"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unread_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "notifications",
+          "total",
+          "unread_count"
+        ]
+      },
+      "ListOrgInvitationsResponse": {
+        "type": "object",
+        "description": "ListOrgInvitationsResponse is a response containing a list of organization invitations.",
+        "properties": {
+          "invitations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/OrgInvitationResponse"
+            }
+          }
+        },
+        "required": [
+          "invitations"
+        ]
+      },
+      "ListRecordsRequest": {
+        "type": "object",
+        "description": "ListRecordsRequest is a request to list records in a table.\nNow used for /nodes/{id}/table/records endpoint.",
+        "properties": {
+          "Filters": {
+            "type": "string",
+            "description": "Optional: JSON-encoded ad-hoc filters"
+          },
+          "Limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "Offset": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "Sorts": {
+            "type": "string",
+            "description": "Optional: JSON-encoded ad-hoc sorts"
+          },
+          "ViewID": {
+            "description": "Optional: apply saved view configuration",
+            "allOf": [
+              {
+                "description": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ViewID",
+          "Filters",
+          "Sorts",
+          "Offset",
+          "Limit"
+        ]
+      },
+      "ListRecordsResponse": {
+        "type": "object",
+        "description": "ListRecordsResponse is a response containing a list of records.",
+        "properties": {
+          "records": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DataRecordResponse"
+            }
+          }
+        },
+        "required": [
+          "records"
+        ]
+      },
+      "ListSessionsResponse": {
+        "type": "object",
+        "description": "ListSessionsResponse is a response containing user's sessions.",
+        "properties": {
+          "sessions": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SessionResponse"
+            }
+          }
+        },
+        "required": [
+          "sessions"
+        ]
+      },
+      "ListUsersResponse": {
+        "type": "object",
+        "description": "ListUsersResponse is a response containing a list of users.",
+        "properties": {
+          "users": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UserResponse"
+            }
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
+      "ListWSInvitationsResponse": {
+        "type": "object",
+        "description": "ListWSInvitationsResponse is a response containing a list of workspace invitations.",
+        "properties": {
+          "invitations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WSInvitationResponse"
+            }
+          }
+        },
+        "required": [
+          "invitations"
+        ]
+      },
+      "ListWorkspaceMembersResponse": {
+        "type": "object",
+        "description": "ListWorkspaceMembersResponse is a response containing current workspace members.",
+        "properties": {
+          "members": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMemberResponse"
+            }
+          }
+        },
+        "required": [
+          "members"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "LoginRequest is a request to log in.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "MoveNodeRequest": {
+        "type": "object",
+        "description": "MoveNodeRequest is a request to move a node to a new parent.",
+        "properties": {
+          "new_parent_id": {
+            "description": "New parent node ID; 0 = root",
+            "allOf": [
+              {
+                "description": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "new_parent_id"
+        ]
+      },
+      "NodeResponse": {
+        "type": "object",
+        "description": "NodeResponse is the API representation of a node.",
+        "properties": {
+          "asset_urls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "backlinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BacklinkInfo"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeResponse"
+            }
+          },
+          "content": {
+            "type": "string"
+          },
+          "cover": {
+            "type": "string"
+          },
+          "created": {
+            "description": "number"
+          },
+          "favicon_url": {
+            "type": "string"
+          },
+          "has_children": {
+            "type": "boolean"
+          },
+          "has_page": {
+            "type": "boolean"
+          },
+          "has_table": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "parent_id": {
+            "description": "string"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "revision": {
+            "type": "string"
+          },
+          "schema_revision": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "views": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/View"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created",
+          "modified",
+          "has_page",
+          "has_table"
+        ]
+      },
+      "NotificationDTO": {
+        "type": "object",
+        "description": "NotificationDTO is the API representation of a notification.",
+        "properties": {
+          "actor_id": {
+            "description": "string"
+          },
+          "actor_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "read",
+          "created_at"
+        ]
+      },
+      "NotificationPrefsDTO": {
+        "type": "object",
+        "description": "NotificationPrefsDTO holds user notification preferences.",
+        "properties": {
+          "defaults": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ChannelSetDTO"
+            }
+          },
+          "overrides": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ChannelSetDTO"
+            }
+          }
+        },
+        "required": [
+          "defaults",
+          "overrides"
+        ]
+      },
+      "NotionImportRequest": {
+        "type": "object",
+        "description": "NotionImportRequest is a request to start a Notion import into a new workspace.",
+        "properties": {
+          "notion_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notion_token"
+        ]
+      },
+      "NotionImportResponse": {
+        "type": "object",
+        "description": "NotionImportResponse is a response from starting a Notion import.",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "description": "string"
+          },
+          "workspace_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "workspace_name",
+          "status"
+        ]
+      },
+      "NotionImportStatusResponse": {
+        "type": "object",
+        "description": "NotionImportStatusResponse is a response containing import status.",
+        "properties": {
+          "assets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "databases": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "errors": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string"
+          },
+          "pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "progress": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "status",
+          "progress",
+          "total"
+        ]
+      },
+      "OAuthIdentity": {
+        "type": "object",
+        "description": "OAuthIdentity represents a link between a local user and an OAuth2 provider.",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "last_login": {
+            "description": "number"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/OAuthProvider"
+          },
+          "provider_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "provider_id",
+          "email",
+          "last_login"
+        ]
+      },
+      "OAuthProvider": {
+        "type": "string",
+        "enum": [
+          "google",
+          "microsoft",
+          "github"
+        ],
+        "description": "OAuthProvider represents a supported OAuth2 provider.\n\n- `google`: OAuthProviderGoogle represents Google OAuth.\n- `microsoft`: OAuthProviderMicrosoft represents Microsoft OAuth.\n- `github`: OAuthProviderGitHub represents GitHub OAuth."
+      },
+      "OkResponse": {
+        "type": "object",
+        "description": "OkResponse is a simple success response.",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "OrgInvitationInfoRequest": {
+        "type": "object",
+        "description": "OrgInvitationInfoRequest previews a token-selected organization grant without claiming it.",
+        "properties": {
+          "Token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Token"
+        ]
+      },
+      "OrgInvitationInfoResponse": {
+        "type": "object",
+        "description": "OrgInvitationInfoResponse describes a token-selected organization grant.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "number"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          }
+        },
+        "required": [
+          "email",
+          "role",
+          "organization_id",
+          "organization_name",
+          "expires_at"
+        ]
+      },
+      "OrgInvitationResponse": {
+        "type": "object",
+        "description": "OrgInvitationResponse is the API representation of an organization invitation with an administrator-copyable link.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "invite_url": {
+            "type": "string"
+          },
+          "invited_by": {
+            "description": "string"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "organization_id",
+          "role",
+          "invited_by",
+          "expires_at",
+          "created",
+          "invite_url"
+        ]
+      },
+      "OrgMembershipResponse": {
+        "type": "object",
+        "description": "OrgMembershipResponse is the API representation of an organization membership.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          },
+          "user_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "organization_id",
+          "role",
+          "created"
+        ]
+      },
+      "OrganizationQuotas": {
+        "type": "object",
+        "description": "OrganizationQuotas defines limits for an organization.",
+        "properties": {
+          "max_asset_size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_columns_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_members_per_org": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_members_per_workspace": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_records_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tables_per_workspace": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_total_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_workspaces_per_org": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "max_pages",
+          "max_storage_bytes",
+          "max_records_per_table",
+          "max_asset_size_bytes",
+          "max_tables_per_workspace",
+          "max_columns_per_table",
+          "max_workspaces_per_org",
+          "max_members_per_org",
+          "max_members_per_workspace",
+          "max_total_storage_bytes"
+        ]
+      },
+      "OrganizationResponse": {
+        "type": "object",
+        "description": "OrganizationResponse is the API representation of an organization.",
+        "properties": {
+          "billing_email": {
+            "type": "string"
+          },
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "member_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quotas": {
+            "$ref": "#/components/schemas/OrganizationQuotas"
+          },
+          "server_resource_limits": {
+            "$ref": "#/components/schemas/ResourceQuotas",
+            "description": "ServerResourceLimits shows the server-imposed upper bound for each resource quota.\nThe organization's resource quotas cannot exceed these server-level limits."
+          },
+          "settings": {
+            "$ref": "#/components/schemas/OrganizationSettings"
+          },
+          "workspace_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "quotas",
+          "settings",
+          "member_count",
+          "workspace_count",
+          "created",
+          "server_resource_limits"
+        ]
+      },
+      "OrganizationRole": {
+        "type": "string",
+        "enum": [
+          "org:owner",
+          "org:admin",
+          "org:member"
+        ],
+        "description": "OrganizationRole defines the role of a user within an organization.\n\n- `org:owner`: OrgRoleOwner has full control including billing.\n- `org:admin`: OrgRoleAdmin can manage workspaces and members.\n- `org:member`: OrgRoleMember can only access granted workspaces."
+      },
+      "OrganizationSettings": {
+        "type": "object",
+        "description": "OrganizationSettings represents organization-wide settings.",
+        "properties": {
+          "default_workspace_quotas": {
+            "$ref": "#/components/schemas/ResourceQuotas"
+          }
+        },
+        "required": [
+          "default_workspace_quotas"
+        ]
+      },
+      "Property": {
+        "type": "object",
+        "description": "Property represents a table column with its configuration.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "description": "Options contains the allowed values for select and multi_select properties.\nEach option has an ID (used in storage), name (display), and optional color.",
+            "items": {
+              "$ref": "#/components/schemas/SelectOption"
+            }
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PropertyType"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "PropertyType": {
+        "type": "string",
+        "enum": [
+          "text",
+          "number",
+          "checkbox",
+          "date",
+          "select",
+          "multi_select",
+          "user",
+          "url",
+          "email",
+          "phone"
+        ],
+        "description": "PropertyType represents the type of a table property.\n\n- `text`: PropertyTypeText stores plain text values.\n- `number`: PropertyTypeNumber stores numeric values (integer or float).\n- `checkbox`: PropertyTypeCheckbox stores boolean values.\n- `date`: PropertyTypeDate stores ISO8601 date strings.\n- `select`: PropertyTypeSelect stores a single selection from predefined options.\n- `multi_select`: PropertyTypeMultiSelect stores multiple selections from predefined options.\n- `user`: PropertyTypeUser stores a reference to a workspace member by user ID.\n- `url`: PropertyTypeURL stores URLs with validation.\n- `email`: PropertyTypeEmail stores email addresses with validation.\n- `phone`: PropertyTypePhone stores phone numbers with validation."
+      },
+      "ProvidersResponse": {
+        "type": "object",
+        "description": "ProvidersResponse is a response containing the list of configured OAuth providers.",
+        "properties": {
+          "providers": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/OAuthProvider"
+            }
+          }
+        },
+        "required": [
+          "providers"
+        ]
+      },
+      "PushSubscribeRequest": {
+        "type": "object",
+        "description": "PushSubscribeRequest saves a push subscription.",
+        "properties": {
+          "auth": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "p256dh": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint",
+          "p256dh",
+          "auth"
+        ]
+      },
+      "PushUnsubscribeRequest": {
+        "type": "object",
+        "description": "PushUnsubscribeRequest removes a push subscription.",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint"
+        ]
+      },
+      "QuotasConfigResponse": {
+        "type": "object",
+        "description": "QuotasConfigResponse contains quota configuration for the response.",
+        "properties": {
+          "max_asset_size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_columns_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_egress_bandwidth_bps": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_organizations": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_records_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_request_body_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_sessions_per_user": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tables_per_workspace": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_total_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_users": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_workspaces": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "max_pages",
+          "max_storage_bytes",
+          "max_records_per_table",
+          "max_asset_size_bytes",
+          "max_tables_per_workspace",
+          "max_columns_per_table",
+          "max_request_body_bytes",
+          "max_sessions_per_user",
+          "max_organizations",
+          "max_workspaces",
+          "max_users",
+          "max_total_storage_bytes",
+          "max_egress_bandwidth_bps"
+        ]
+      },
+      "QuotasConfigUpdate": {
+        "type": "object",
+        "description": "QuotasConfigUpdate contains quota configuration fields for updates.",
+        "properties": {
+          "max_asset_size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_columns_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_egress_bandwidth_bps": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_organizations": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_records_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_request_body_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_sessions_per_user": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tables_per_workspace": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_total_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_users": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_workspaces": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "max_pages",
+          "max_storage_bytes",
+          "max_records_per_table",
+          "max_asset_size_bytes",
+          "max_tables_per_workspace",
+          "max_columns_per_table",
+          "max_request_body_bytes",
+          "max_sessions_per_user",
+          "max_organizations",
+          "max_workspaces",
+          "max_users",
+          "max_total_storage_bytes",
+          "max_egress_bandwidth_bps"
+        ]
+      },
+      "RateLimitsConfigResponse": {
+        "type": "object",
+        "description": "RateLimitsConfigResponse contains rate limit configuration for the response.",
+        "properties": {
+          "auth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_auth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_unauth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "write_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "auth_rate_per_min",
+          "write_rate_per_min",
+          "read_auth_rate_per_min",
+          "read_unauth_rate_per_min"
+        ]
+      },
+      "RateLimitsConfigUpdate": {
+        "type": "object",
+        "description": "RateLimitsConfigUpdate contains rate limit configuration fields for updates.",
+        "properties": {
+          "auth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_auth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "read_unauth_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "write_rate_per_min": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "auth_rate_per_min",
+          "write_rate_per_min",
+          "read_auth_rate_per_min",
+          "read_unauth_rate_per_min"
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "description": "RegisterRequest is a request to register a new user.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "name"
+        ]
+      },
+      "RemoveOrgMemberRequest": {
+        "type": "object",
+        "description": "RemoveOrgMemberRequest is a request to remove a user from an organization.",
+        "properties": {
+          "user_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "ResolveUsersRequest": {
+        "type": "object",
+        "description": "ResolveUsersRequest is a request to resolve user IDs to display info.",
+        "properties": {
+          "ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "ResolveUsersResponse": {
+        "type": "object",
+        "description": "ResolveUsersResponse is a response containing resolved user details.",
+        "properties": {
+          "users": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ResolvedUser"
+            }
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
+      "ResolvedUser": {
+        "type": "object",
+        "description": "ResolvedUser represents a resolved user reference from a user-type column value.\nIsGhost is true when the user ID is valid but the user is no longer a member.",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "description": "string"
+          },
+          "is_ghost": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "ResourceQuotas": {
+        "type": "object",
+        "description": "ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.\nAt org and workspace layers: -1 means \"inherit from parent\", 0 means \"disabled\", positive means a limit.\nAt server layer all fields must be strictly positive.",
+        "properties": {
+          "max_asset_size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_columns_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_pages": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_records_per_table": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_tables_per_workspace": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "max_pages",
+          "max_storage_bytes",
+          "max_records_per_table",
+          "max_asset_size_bytes",
+          "max_tables_per_workspace",
+          "max_columns_per_table"
+        ]
+      },
+      "RevokeAllSessionsResponse": {
+        "type": "object",
+        "description": "RevokeAllSessionsResponse is a response from revoking all sessions.",
+        "properties": {
+          "revoked_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "revoked_count"
+        ]
+      },
+      "RevokeSessionRequest": {
+        "type": "object",
+        "description": "RevokeSessionRequest is a request to revoke a specific session.",
+        "properties": {
+          "session_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "SMTPConfigResponse": {
+        "type": "object",
+        "description": "SMTPConfigResponse contains SMTP configuration for the response (password masked).",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "username",
+          "from"
+        ]
+      },
+      "SMTPConfigUpdate": {
+        "type": "object",
+        "description": "SMTPConfigUpdate contains SMTP configuration fields for updates.",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "description": "Empty preserves existing"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "username",
+          "password",
+          "from"
+        ]
+      },
+      "SearchRequest": {
+        "type": "object",
+        "description": "SearchRequest is a request to search pages and tables.",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "match_body": {
+            "type": "boolean"
+          },
+          "match_fields": {
+            "type": "boolean"
+          },
+          "match_title": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "description": "SearchResponse is the response to a search request.",
+        "properties": {
+          "results": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            }
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "SearchResult": {
+        "type": "object",
+        "description": "SearchResult represents a single search result.",
+        "properties": {
+          "matches": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "modified": {
+            "description": "number"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "description": "\"page\" or \"record\""
+          }
+        },
+        "required": [
+          "type",
+          "node_id",
+          "title",
+          "snippet",
+          "score",
+          "matches",
+          "modified"
+        ]
+      },
+      "SelectOption": {
+        "type": "object",
+        "description": "SelectOption represents an option for select/multi_select properties.",
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "SendVerificationEmailResponse": {
+        "type": "object",
+        "description": "SendVerificationEmailResponse is a response from sending a verification email.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "ServerConfigResponse": {
+        "type": "object",
+        "description": "ServerConfigResponse is a response containing server configuration.",
+        "properties": {
+          "quotas": {
+            "$ref": "#/components/schemas/QuotasConfigResponse"
+          },
+          "rate_limits": {
+            "$ref": "#/components/schemas/RateLimitsConfigResponse"
+          },
+          "smtp": {
+            "$ref": "#/components/schemas/SMTPConfigResponse"
+          }
+        },
+        "required": [
+          "smtp",
+          "quotas",
+          "rate_limits"
+        ]
+      },
+      "SessionResponse": {
+        "type": "object",
+        "description": "SessionResponse is the API representation of a session.",
+        "properties": {
+          "country_code": {
+            "type": "string"
+          },
+          "created": {
+            "description": "number"
+          },
+          "device_info": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "is_current": {
+            "type": "boolean"
+          },
+          "last_used": {
+            "description": "number"
+          }
+        },
+        "required": [
+          "expires_at",
+          "id",
+          "device_info",
+          "ip_address",
+          "created",
+          "last_used",
+          "is_current"
+        ]
+      },
+      "SessionUserResponse": {
+        "type": "object",
+        "description": "SessionUserResponse reports the account of the request's session.",
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "SetPasswordRequest": {
+        "type": "object",
+        "description": "SetPasswordRequest is a request to set or change the user's password.",
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "description": "Required if user has a password"
+          },
+          "new_password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_password"
+        ]
+      },
+      "SetupGitHubAppRemoteRequest": {
+        "type": "object",
+        "description": "SetupGitHubAppRemoteRequest is a request to configure a GitHub App-based remote.",
+        "properties": {
+          "branch": {
+            "type": "string"
+          },
+          "installation_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "repo_name": {
+            "type": "string"
+          },
+          "repo_owner": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "installation_id",
+          "repo_owner",
+          "repo_name",
+          "branch"
+        ]
+      },
+      "Sort": {
+        "type": "object",
+        "description": "Sort defines the sort order for a property.",
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/SortDir"
+          },
+          "property": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "property",
+          "direction"
+        ]
+      },
+      "SortDir": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "description": "SortDir defines the sort direction.\n\n- `asc`: SortAsc sorts in ascending order (A-Z, 0-9, oldest-newest).\n- `desc`: SortDesc sorts in descending order (Z-A, 9-0, newest-oldest)."
+      },
+      "SwitchWorkspaceRequest": {
+        "type": "object",
+        "description": "SwitchWorkspaceRequest is a request to switch active workspace.",
+        "properties": {
+          "ws_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "ws_id"
+        ]
+      },
+      "SwitchWorkspaceResponse": {
+        "type": "object",
+        "description": "SwitchWorkspaceResponse is a response from switching workspace.",
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "UnlinkOAuthAccountRequest": {
+        "type": "object",
+        "description": "UnlinkOAuthAccountRequest is a request to unlink an OAuth provider.",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/OAuthProvider"
+          }
+        },
+        "required": [
+          "provider"
+        ]
+      },
+      "UnreadCountResponse": {
+        "type": "object",
+        "description": "UnreadCountResponse returns the unread notification count.",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "UpdateGitRemoteRequest": {
+        "type": "object",
+        "description": "UpdateGitRemoteRequest is a request to set (create or update) the git remote for a workspace.",
+        "properties": {
+          "auth_type": {
+            "type": "string",
+            "description": "token, ssh"
+          },
+          "token": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "description": "github, gitlab, custom"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "type",
+          "auth_type"
+        ]
+      },
+      "UpdateNotificationPrefsRequest": {
+        "type": "object",
+        "description": "UpdateNotificationPrefsRequest updates notification channel preferences.",
+        "properties": {
+          "overrides": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ChannelSetDTO"
+            }
+          }
+        },
+        "required": [
+          "overrides"
+        ]
+      },
+      "UpdateOrgMemberRoleRequest": {
+        "type": "object",
+        "description": "UpdateOrgMemberRoleRequest is a request to update a user's organization role.",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          },
+          "user_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "role"
+        ]
+      },
+      "UpdateOrgPreferencesRequest": {
+        "type": "object",
+        "description": "UpdateOrgPreferencesRequest is a request to update organization-wide preferences.",
+        "properties": {
+          "quotas": {
+            "$ref": "#/components/schemas/OrganizationQuotas"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/OrganizationSettings"
+          }
+        }
+      },
+      "UpdateOrganizationRequest": {
+        "type": "object",
+        "description": "UpdateOrganizationRequest is a request to update organization details.",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdatePageFrontmatterRequest": {
+        "type": "object",
+        "description": "UpdatePageFrontmatterRequest is a request to update a page's icon and cover image.\nPass an empty string to clear a field.",
+        "properties": {
+          "cover": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "cover"
+        ]
+      },
+      "UpdatePageFrontmatterResponse": {
+        "type": "object",
+        "description": "UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.",
+        "properties": {
+          "id": {
+            "description": "string"
+          },
+          "modified": {
+            "description": "number"
+          }
+        },
+        "required": [
+          "id",
+          "modified"
+        ]
+      },
+      "UpdatePageRequest": {
+        "type": "object",
+        "description": "UpdatePageRequest is a request to update a page's content.",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "expected_revision": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "title",
+          "content"
+        ]
+      },
+      "UpdatePageResponse": {
+        "type": "object",
+        "description": "UpdatePageResponse is a response from updating a page.",
+        "properties": {
+          "node": {
+            "$ref": "#/components/schemas/NodeResponse"
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "UpdateRecordRequest": {
+        "type": "object",
+        "description": "UpdateRecordRequest is a request to update a record.\nNow used for /nodes/{id}/table/records/{rid} endpoint.",
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "description": "JSONValue"
+            }
+          },
+          "expected_revision": {
+            "type": "string"
+          },
+          "expected_schema_revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "expected_revision",
+          "expected_schema_revision"
+        ]
+      },
+      "UpdateRecordResponse": {
+        "type": "object",
+        "description": "UpdateRecordResponse is a response from updating a record.",
+        "properties": {
+          "record": {
+            "$ref": "#/components/schemas/DataRecordResponse"
+          }
+        },
+        "required": [
+          "record"
+        ]
+      },
+      "UpdateServerConfigRequest": {
+        "type": "object",
+        "description": "UpdateServerConfigRequest is a request to update server configuration.",
+        "properties": {
+          "quotas": {
+            "$ref": "#/components/schemas/QuotasConfigUpdate"
+          },
+          "rate_limits": {
+            "$ref": "#/components/schemas/RateLimitsConfigUpdate"
+          },
+          "smtp": {
+            "$ref": "#/components/schemas/SMTPConfigUpdate"
+          }
+        }
+      },
+      "UpdateTableRequest": {
+        "type": "object",
+        "description": "UpdateTableRequest is a request to update a table.\nNow used for /nodes/{id}/table endpoint.",
+        "properties": {
+          "expected_schema_revision": {
+            "type": "string"
+          },
+          "expected_title": {
+            "type": "string"
+          },
+          "properties": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "properties",
+          "expected_title",
+          "expected_schema_revision"
+        ]
+      },
+      "UpdateTableResponse": {
+        "type": "object",
+        "description": "UpdateTableResponse is a response from updating a table.",
+        "properties": {
+          "id": {
+            "description": "string"
+          },
+          "properties": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "schema_revision": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "views": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/View"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "properties",
+          "views",
+          "schema_revision"
+        ]
+      },
+      "UpdateUserSettingsRequest": {
+        "type": "object",
+        "description": "UpdateUserSettingsRequest is a request to update user global settings.",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/UserSettings"
+          }
+        },
+        "required": [
+          "settings"
+        ]
+      },
+      "UpdateViewRequest": {
+        "type": "object",
+        "description": "UpdateViewRequest is a request to update an existing view.",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewColumn"
+            }
+          },
+          "expected_revision": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "sorts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sort"
+            }
+          },
+          "type": {
+            "$ref": "#/components/schemas/ViewType"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ]
+      },
+      "UpdateViewResponse": {
+        "type": "object",
+        "description": "UpdateViewResponse is a response from updating a view.",
+        "properties": {
+          "view": {
+            "$ref": "#/components/schemas/View"
+          }
+        },
+        "required": [
+          "view"
+        ]
+      },
+      "UpdateVoiceFocusRequest": {
+        "type": "object",
+        "description": "UpdateVoiceFocusRequest publishes a validated selection for one conversation.",
+        "properties": {
+          "browserSelection": {
+            "type": "boolean",
+            "description": "BrowserSelection reserves focus for the validated screen selection."
+          },
+          "nodeId": {
+            "description": "string"
+          },
+          "openai/session": {
+            "type": "string"
+          },
+          "release": {
+            "type": "boolean",
+            "description": "Release clears this publisher's focus and relinquishes screen ownership."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "openai/session",
+          "nodeId",
+          "version"
+        ]
+      },
+      "UpdateVoiceFocusResponse": {
+        "type": "object",
+        "description": "UpdateVoiceFocusResponse returns the current publication lease.",
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "version",
+          "applied"
+        ]
+      },
+      "UpdateWSMemberRoleRequest": {
+        "type": "object",
+        "description": "UpdateWSMemberRoleRequest is a request to update a user's workspace role.",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "user_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "role"
+        ]
+      },
+      "UpdateWSMembershipSettingsRequest": {
+        "type": "object",
+        "description": "UpdateWSMembershipSettingsRequest is a request to update user preferences within a workspace.",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/WorkspaceMembershipSettings"
+          }
+        },
+        "required": [
+          "settings"
+        ]
+      },
+      "UpdateWorkspaceRequest": {
+        "type": "object",
+        "description": "UpdateWorkspaceRequest is a request to update workspace details.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quotas": {
+            "$ref": "#/components/schemas/ResourceQuotas"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/WorkspaceSettings"
+          }
+        }
+      },
+      "UploadNodeAssetResponse": {
+        "type": "object",
+        "description": "UploadNodeAssetResponse is a response from uploading an asset.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size",
+          "mime_type",
+          "url"
+        ]
+      },
+      "UserResponse": {
+        "type": "object",
+        "description": "UserResponse is the API representation of a user.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "has_password": {
+            "type": "boolean"
+          },
+          "id": {
+            "description": "string"
+          },
+          "is_global_admin": {
+            "type": "boolean"
+          },
+          "modified": {
+            "description": "number"
+          },
+          "name": {
+            "type": "string"
+          },
+          "oauth_identities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthIdentity"
+            }
+          },
+          "org_role": {
+            "$ref": "#/components/schemas/OrganizationRole"
+          },
+          "organization_id": {
+            "description": "Current context",
+            "allOf": [
+              {
+                "description": "string"
+              }
+            ]
+          },
+          "organizations": {
+            "type": "array",
+            "description": "All memberships",
+            "items": {
+              "$ref": "#/components/schemas/OrgMembershipResponse"
+            }
+          },
+          "session_id": {
+            "description": "SessionID identifies the current session when returning the authenticated caller; it is not a credential.",
+            "allOf": [
+              {
+                "description": "string"
+              }
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/UserSettings"
+          },
+          "workspace_id": {
+            "description": "string"
+          },
+          "workspace_name": {
+            "type": "string"
+          },
+          "workspace_role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WSMembershipResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "settings",
+          "created",
+          "modified"
+        ]
+      },
+      "UserSettings": {
+        "type": "object",
+        "description": "UserSettings represents global user preferences.",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "last_active_workspaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "theme": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "theme",
+          "language"
+        ]
+      },
+      "VAPIDKeyResponse": {
+        "type": "object",
+        "description": "VAPIDKeyResponse returns the server's VAPID public key.",
+        "properties": {
+          "public_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "public_key"
+        ]
+      },
+      "View": {
+        "type": "object",
+        "description": "View represents a saved table view configuration.",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewColumn"
+            }
+          },
+          "default": {
+            "type": "boolean"
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          },
+          "id": {
+            "description": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "sorts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sort"
+            }
+          },
+          "type": {
+            "$ref": "#/components/schemas/ViewType"
+          }
+        },
+        "required": [
+          "revision",
+          "id",
+          "name",
+          "type"
+        ]
+      },
+      "ViewColumn": {
+        "type": "object",
+        "description": "ViewColumn defines the visibility and width of a property column.",
+        "properties": {
+          "property": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "property",
+          "visible"
+        ]
+      },
+      "ViewType": {
+        "type": "string",
+        "enum": [
+          "table",
+          "board",
+          "gallery",
+          "list",
+          "calendar"
+        ],
+        "description": "ViewType defines the layout type for a view.\n\n- `table`: ViewTypeTable displays records in a spreadsheet-like table.\n- `board`: ViewTypeBoard displays records in a kanban board grouped by a property.\n- `gallery`: ViewTypeGallery displays records as cards in a grid.\n- `list`: ViewTypeList displays records in a simple list.\n- `calendar`: ViewTypeCalendar displays records on a calendar by date property."
+      },
+      "WSInvitationInfoRequest": {
+        "type": "object",
+        "description": "WSInvitationInfoRequest previews a token-selected workspace grant without claiming it.",
+        "properties": {
+          "Token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Token"
+        ]
+      },
+      "WSInvitationInfoResponse": {
+        "type": "object",
+        "description": "WSInvitationInfoResponse describes a token-selected workspace grant.",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "number"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "workspace_id": {
+            "description": "string"
+          },
+          "workspace_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role",
+          "organization_id",
+          "organization_name",
+          "workspace_id",
+          "workspace_name",
+          "expires_at"
+        ]
+      },
+      "WSInvitationResponse": {
+        "type": "object",
+        "description": "WSInvitationResponse is the API representation of a workspace invitation with an administrator-copyable link.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "invite_url": {
+            "type": "string"
+          },
+          "invited_by": {
+            "description": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "workspace_id": {
+            "description": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "workspace_id",
+          "role",
+          "invited_by",
+          "expires_at",
+          "created",
+          "invite_url"
+        ]
+      },
+      "WSMembershipResponse": {
+        "type": "object",
+        "description": "WSMembershipResponse is the API representation of a workspace membership.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "id": {
+            "description": "string"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/WorkspaceMembershipSettings"
+          },
+          "user_id": {
+            "description": "string"
+          },
+          "workspace_id": {
+            "description": "string"
+          },
+          "workspace_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "workspace_id",
+          "organization_id",
+          "role",
+          "settings",
+          "created"
+        ]
+      },
+      "WorkspaceEvent": {
+        "type": "object",
+        "description": "WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates.",
+        "properties": {
+          "actor_id": {
+            "description": "string"
+          },
+          "affected_ids": {
+            "type": "array",
+            "items": {
+              "description": "string"
+            }
+          },
+          "aspects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventAspect"
+            }
+          },
+          "change_id": {
+            "type": "string",
+            "description": "ChangeID is an opaque process-epoch invalidation watermark, not a read\nsnapshot revision. Reconnection or a delivery gap requires resynchronization."
+          },
+          "modified": {
+            "description": "number"
+          },
+          "node_id": {
+            "description": "string"
+          },
+          "old_parent_id": {
+            "description": "string"
+          },
+          "parent_id": {
+            "description": "string"
+          },
+          "record_id": {
+            "description": "string"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "RequestID correlates a change with an individual HTTP write, not authorization."
+          },
+          "revision": {
+            "type": "string",
+            "description": "Revision identifies canonical title/body CAS, not full resource freshness."
+          },
+          "summary_parents": {
+            "type": "array",
+            "description": "SummaryParents identifies at most two listings whose returned child summaries\nmay change HasChildren after a committed hierarchy mutation.",
+            "items": {
+              "description": "string"
+            }
+          },
+          "type": {
+            "$ref": "#/components/schemas/EventType"
+          }
+        },
+        "required": [
+          "type",
+          "node_id",
+          "actor_id",
+          "modified"
+        ]
+      },
+      "WorkspaceMemberResponse": {
+        "type": "object",
+        "description": "WorkspaceMemberResponse is a compact user representation for workspace member listings.\nUsed by the user column type to populate the picker and display names.",
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "description": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          }
+        },
+        "required": [
+          "role",
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "WorkspaceMembershipSettings": {
+        "type": "object",
+        "description": "WorkspaceMembershipSettings represents user preferences within a specific workspace.",
+        "properties": {
+          "notifications": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "notifications"
+        ]
+      },
+      "WorkspaceResponse": {
+        "type": "object",
+        "description": "WorkspaceResponse is the API representation of a workspace.",
+        "properties": {
+          "created": {
+            "description": "number"
+          },
+          "git_remote": {
+            "$ref": "#/components/schemas/GitRemoteResponse"
+          },
+          "id": {
+            "description": "string"
+          },
+          "member_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organization_id": {
+            "description": "string"
+          },
+          "parent_resource_limits": {
+            "$ref": "#/components/schemas/ResourceQuotas",
+            "description": "ParentResourceLimits shows the effective upper bound imposed by the server and organization.\nThe workspace's resource quotas cannot exceed these combined limits.\nZero means unlimited at the parent level."
+          },
+          "quotas": {
+            "$ref": "#/components/schemas/ResourceQuotas"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/WorkspaceSettings"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "name",
+          "quotas",
+          "settings",
+          "member_count",
+          "created",
+          "parent_resource_limits"
+        ]
+      },
+      "WorkspaceRole": {
+        "type": "string",
+        "enum": [
+          "ws:admin",
+          "ws:editor",
+          "ws:viewer"
+        ],
+        "description": "WorkspaceRole defines the permissions for a user within a workspace.\n\n- `ws:admin`: WSRoleAdmin has full workspace control.\n- `ws:editor`: WSRoleEditor can create and modify content.\n- `ws:viewer`: WSRoleViewer can only read content."
+      },
+      "WorkspaceSettings": {
+        "type": "object",
+        "description": "WorkspaceSettings represents workspace-wide settings.",
+        "properties": {
+          "allowed_domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "git_auto_push": {
+            "type": "boolean"
+          },
+          "public_access": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "public_access",
+          "git_auto_push"
+        ]
+      }
+    },
+    "responses": {
+      "error": {
+        "description": "API error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}

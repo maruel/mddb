@@ -10,11 +10,11 @@ require (
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gomodedev/gomode v0.5.1-0.20261126214742-f2f083aad09f
+	github.com/gomodedev/gomode v0.5.1-0.20261127195603-4db9d3e1ba00
 	github.com/invopop/jsonschema v0.14.0
 	github.com/klauspost/compress v1.20.5
 	github.com/lmittmann/tint v1.2.1
-	github.com/maruel/apisdkgen v0.3.1
+	github.com/maruel/apisdkgen v0.3.2-0.20261127194345-55c02fe2657b
 	github.com/maruel/ksid v0.1.2
 	github.com/mattn/go-colorable v0.1.16
 	github.com/mattn/go-isatty v0.0.24
