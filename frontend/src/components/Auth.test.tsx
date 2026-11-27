@@ -6,17 +6,12 @@ import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
 import Auth from "./Auth";
 import { I18nProvider } from "../i18n";
-import type { UserResponse, ErrorResponse } from "@sdk/types.gen";
+import type { UserResponse, ErrorResponse, ProvidersResponse } from "@sdk/types.gen";
 
-// Mock CSS module
-// Mock response for providers endpoint
-const mockProvidersResponse = {
-  ok: true,
-  json: () => Promise.resolve({ providers: ["google", "microsoft"] }),
-};
+const providers: ProvidersResponse = { providers: ["google", "microsoft"] };
 
 // Mock fetch
-const mockFetch = vi.fn();
+const mockFetch = vi.fn<typeof globalThis.fetch>();
 globalThis.fetch = mockFetch;
 
 // Note: @solidjs/router uses browser's History API directly.
@@ -40,11 +35,11 @@ describe("Auth", () => {
     mockFetch.mockReset();
     historyPushStateSpy.mockClear();
     // Default mock for providers endpoint (called on component mount)
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
-      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+      throw new Error(`Unexpected fetch to ${String(url)}`);
     });
   });
 
@@ -97,19 +92,14 @@ describe("Auth", () => {
       modified: 1704067200,
     };
 
-    const mockResponse: UserResponse = mockUser;
-
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
       if (url === "/api/v1/auth/browser/login") {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockResponse),
-        });
+        return Response.json(mockUser);
       }
-      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+      throw new Error(`Unexpected fetch to ${String(url)}`);
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
@@ -152,17 +142,14 @@ describe("Auth", () => {
       },
     };
 
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
       if (url === "/api/v1/auth/browser/login") {
-        return Promise.resolve({
-          ok: false,
-          json: () => Promise.resolve(errorResponse),
-        });
+        return Response.json(errorResponse, { status: 401 });
       }
-      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+      throw new Error(`Unexpected fetch to ${String(url)}`);
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
@@ -189,11 +176,11 @@ describe("Auth", () => {
   });
 
   it("handles network error", async () => {
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
-      return Promise.reject(new Error("Network error"));
+      throw new Error("Network error");
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
@@ -220,9 +207,10 @@ describe("Auth", () => {
   });
 
   describe("registration rejection", () => {
-    const cases: Array<{ name: string; body: ErrorResponse; want: string }> = [
+    const cases: Array<{ name: string; status: number; body: ErrorResponse; want: string }> = [
       {
         name: "explains the password rules",
+        status: 400,
         body: {
           error: { code: "INVALID_FORMAT", message: "password: must contain at least one letter and one digit" },
           details: { field: "password" },
@@ -231,18 +219,19 @@ describe("Auth", () => {
       },
       {
         name: "explains an email already in use",
+        status: 409,
         body: { error: { code: "EMAIL_IN_USE", message: "User already exists" } },
         want: "An account already uses this email.",
       },
     ];
     for (const tc of cases) {
       it(tc.name, async () => {
-        mockFetch.mockImplementation((url: string) => {
-          if (url === "/api/v1/auth/providers") return Promise.resolve(mockProvidersResponse);
+        mockFetch.mockImplementation(async (url) => {
+          if (url === "/api/v1/auth/providers") return Response.json(providers);
           if (url === "/api/v1/auth/browser/register") {
-            return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve(tc.body) });
+            return Response.json(tc.body, { status: tc.status });
           }
-          return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+          throw new Error(`Unexpected fetch to ${String(url)}`);
         });
         renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
         await waitFor(() => {
@@ -275,19 +264,14 @@ describe("Auth", () => {
       modified: 1704067200,
     };
 
-    const mockResponse: UserResponse = mockUser;
-
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
       if (url === "/api/v1/auth/browser/register") {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockResponse),
-        });
+        return Response.json(mockUser);
       }
-      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+      throw new Error(`Unexpected fetch to ${String(url)}`);
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
@@ -385,9 +369,9 @@ describe("Auth", () => {
 
     it("clears the explanation on the next attempt", async () => {
       window.history.replaceState(null, "", "/login?oauth_error=OAUTH_ERROR");
-      mockFetch.mockImplementation((url: string) => {
+      mockFetch.mockImplementation(async (url) => {
         if (url === "/api/v1/auth/providers") {
-          return Promise.resolve(mockProvidersResponse);
+          return Response.json(providers);
         }
         return new Promise(() => {});
       });
@@ -421,12 +405,12 @@ describe("Auth", () => {
 
   it("disables submit button while loading", async () => {
     // Make login fetch hang
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
       // Make login request hang
-      return new Promise((resolve) => setTimeout(resolve, 10000));
+      return new Promise(() => {});
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
@@ -451,17 +435,14 @@ describe("Auth", () => {
   });
 
   it("handles response without token or user", async () => {
-    mockFetch.mockImplementation((url: string) => {
+    mockFetch.mockImplementation(async (url) => {
       if (url === "/api/v1/auth/providers") {
-        return Promise.resolve(mockProvidersResponse);
+        return Response.json(providers);
       }
       if (url === "/api/v1/auth/browser/login") {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({}), // Empty response
-        });
+        return Response.json({});
       }
-      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+      throw new Error(`Unexpected fetch to ${String(url)}`);
     });
 
     renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
