@@ -10,7 +10,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gomodedev/gomode v0.5.1-0.20261127214156-dedbe0e67479
+	github.com/gomodedev/gomode v0.5.1-0.20261127221433-8de2f68d251c
 	github.com/invopop/jsonschema v0.14.0
 	github.com/klauspost/compress v1.20.5
 	github.com/lmittmann/tint v1.2.1
