@@ -1,6 +1,6 @@
 // Tests rate limit tier configuration, request routing, and bucket keys.
 
-package ratelimit
+package ratetier
 
 import (
 	"testing"

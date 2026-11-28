@@ -14,13 +14,13 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestServerHandler(t *testing.T) {
 	t.Parallel()
-	setup := func(t *testing.T) (*ServerHandler, *bandwidth.Limiter, *ratelimit.Limiters) {
+	setup := func(t *testing.T) (*ServerHandler, *bandwidth.Limiter, *ratetier.Limiters) {
 		dir := t.TempDir()
 		cfg, err := storage.LoadServerConfig(dir, false)
 		if err != nil {
@@ -32,7 +32,7 @@ func TestServerHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 		bw := bandwidth.NewLimiter(0)
-		rl := ratelimit.NewLimiters(storage.DefaultRateLimits(), false)
+		rl := ratetier.NewLimiters(storage.DefaultRateLimits(), false)
 		return &ServerHandler{Settings: storage.NewServerSettings(cfg), ConfigDir: dir, BandwidthLimiter: bw, RateLimiters: rl}, bw, rl
 	}
 	t.Run("UpdateConfig/valid", func(t *testing.T) {

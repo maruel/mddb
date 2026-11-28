@@ -521,3 +521,31 @@ func TestVoiceGateway(t *testing.T) {
 		}
 	})
 }
+
+func TestWriteVoiceError(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		status int
+		v1, v2 voiceapi.ErrorCode
+	}{
+		{http.StatusBadRequest, voiceapi.CodeBadRequest, voiceapi.CodeBadRequest},
+		{http.StatusUnauthorized, voiceapi.CodeBadRequest, voiceapi.CodeUnauthorized},
+		{http.StatusNotFound, voiceapi.CodeNotFound, voiceapi.CodeNotFound},
+		{http.StatusRequestEntityTooLarge, voiceapi.CodeBadRequest, voiceapi.CodeBadRequest},
+		{http.StatusTooManyRequests, voiceapi.CodeBadRequest, voiceapi.CodeRateLimited},
+		{http.StatusServiceUnavailable, voiceapi.CodeBadRequest, voiceapi.CodeVoiceBridgeUnavailable},
+	} {
+		for version, want := range map[voiceapi.ProtocolVersion]voiceapi.ErrorCode{voiceapi.ProtocolV1: tc.v1, voiceapi.ProtocolV2: tc.v2} {
+			r := httptest.NewRequestWithContext(voiceapi.WithSessionProtocol(t.Context(), voiceapi.SessionProtocol{Version: version}), http.MethodPost, "/", http.NoBody)
+			w := httptest.NewRecorder()
+			writeVoiceError(w, r, tc.status, "message")
+			var body voiceapi.ErrorResponse
+			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if w.Code != tc.status || body.Error.Code != want {
+				t.Errorf("%s %d: got %d %s, want %s", version, tc.status, w.Code, body.Error.Code, want)
+			}
+		}
+	}
+}

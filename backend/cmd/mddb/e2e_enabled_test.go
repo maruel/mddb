@@ -9,7 +9,7 @@ import (
 
 	mddbv1 "github.com/maruel/mddb/backend/cmd/mddb/data/v1"
 
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -17,7 +17,7 @@ func TestE2ERateLimits(t *testing.T) {
 	if !e2eBuild {
 		t.Error("an e2e build must select the e2e behavior")
 	}
-	if got := ratelimit.NewLimiters(storage.DefaultRateLimits(), e2eBuild).Auth.Limiter.Allow("k").Limit; got != 50000 {
+	if got := ratetier.NewLimiters(storage.DefaultRateLimits(), e2eBuild).Auth.Limiter.Allow("k").Limit; got != 50000 {
 		t.Errorf("got auth rate %d, want the e2e 50000", got)
 	}
 }

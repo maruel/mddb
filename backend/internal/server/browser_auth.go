@@ -11,7 +11,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 )
 
 const browserDevicePoll = "/api/v1/auth/browser/device/poll"
@@ -19,7 +19,7 @@ const browserDevicePoll = "/api/v1/auth/browser/device/poll"
 func wrapBrowserLogin[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}](fn func(context.Context, PtrIn) (*dto.AuthResponse, error), svc *handlers.Services, cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
+}](fn func(context.Context, PtrIn) (*dto.AuthResponse, error), svc *handlers.Services, cfg *handlers.Config, limiters *ratetier.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		WrapWithSvc(func(ctx context.Context, req PtrIn) (*dto.UserResponse, error) {
 			response, err := fn(ctx, req)
@@ -34,7 +34,7 @@ func wrapBrowserLogin[In any, PtrIn interface {
 	})
 }
 
-func wrapBrowserLogout(authh *handlers.AuthHandler, svc *handlers.Services, cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
+func wrapBrowserLogout(authh *handlers.AuthHandler, svc *handlers.Services, cfg *handlers.Config, limiters *ratetier.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		WrapAuth(func(ctx context.Context, u *identityv1.User, req *dto.LogoutRequest) (*dto.OkResponse, error) {
 			out, err := authh.Logout(ctx, u, req)

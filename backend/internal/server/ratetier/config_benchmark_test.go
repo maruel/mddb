@@ -1,6 +1,6 @@
 // Benchmarks authenticated route classification for read-only MCP POST requests.
 
-package ratelimit
+package ratetier
 
 import (
 	"testing"

@@ -21,11 +21,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/httpserver"
-	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+	"github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -68,12 +68,12 @@ type authResult struct {
 
 // checkRateLimit consumes one request from identifier's budget in tier and reports whether the
 // request proceeds. Every limited response carries the budget headers; a rejection is written here.
-func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier string) bool {
+func checkRateLimit(w http.ResponseWriter, tier *ratetier.Tier, identifier string) bool {
 	if tier == nil {
 		return true
 	}
-	result := tier.Limiter.Allow(ratelimit.BuildKey(tier.Scope, identifier, tier.Name))
-	gmratelimit.WriteHeaders(w.Header(), result)
+	result := tier.Limiter.Allow(ratetier.BuildKey(tier.Scope, identifier, tier.Name))
+	ratelimit.WriteHeaders(w.Header(), result)
 	if !result.Allowed {
 		writeRateLimitError(w, result)
 	}
@@ -146,8 +146,8 @@ func writeJSONResponse[Out any](ctx context.Context, w http.ResponseWriter, outp
 }
 
 // getRateLimitIdentifier returns the appropriate identifier for rate limiting based on scope.
-func getRateLimitIdentifier(tier *ratelimit.Tier, user *identityv1.User, r *http.Request) string {
-	if tier.Scope == ratelimit.ScopeUser && user != nil {
+func getRateLimitIdentifier(tier *ratetier.Tier, user *identityv1.User, r *http.Request) string {
+	if tier.Scope == ratetier.ScopeUser && user != nil {
 		return user.ID.String()
 	}
 	return httpserver.ClientIP(r.Context())
@@ -203,7 +203,7 @@ func checkWSMembership(
 func Wrap[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}, Out any](fn func(context.Context, PtrIn) (*Out, error), cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), cfg *handlers.Config, limiters *ratetier.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
@@ -236,7 +236,7 @@ func Wrap[In any, PtrIn interface {
 func WrapWithSvc[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}, Out any](fn func(context.Context, PtrIn) (*Out, error), svc *handlers.Services, cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), svc *handlers.Services, cfg *handlers.Config, limiters *ratetier.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
@@ -286,7 +286,7 @@ func WrapAuth[In any, PtrIn interface {
 	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -334,7 +334,7 @@ func WrapOptionalAuth[In any, PtrIn interface {
 	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -381,7 +381,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identityv1.OrganizationRole,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -456,7 +456,7 @@ func WrapWSAuth[In any, PtrIn interface {
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identityv1.WorkspaceRole,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -527,7 +527,7 @@ func WrapAuthRaw(
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identityv1.WorkspaceRole,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, true)
 }
@@ -539,7 +539,7 @@ func WrapAuthReadRaw(
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identityv1.WorkspaceRole,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, false)
 }
@@ -549,7 +549,7 @@ func wrapAuthRaw(
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identityv1.WorkspaceRole,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 	mutating bool,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -621,7 +621,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	fn func(context.Context, *identityv1.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
-	limiters *ratelimit.Limiters,
+	limiters *ratetier.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -890,8 +890,8 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.
 }
 
 // writeRateLimitError writes a 429 rate limit error response.
-func writeRateLimitError(w http.ResponseWriter, result gmratelimit.Result) {
-	writeAPIError(w, dto.RateLimitExceeded(gmratelimit.RetryAfterSeconds(result.RetryAfter)))
+func writeRateLimitError(w http.ResponseWriter, result ratelimit.Result) {
+	writeAPIError(w, dto.RateLimitExceeded(ratelimit.RetryAfterSeconds(result.RetryAfter)))
 }
 
 // writeAPIError writes e as the JSON error body that SDK clients decode.

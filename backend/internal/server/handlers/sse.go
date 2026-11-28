@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+	"github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/gomodedev/gomode/sse"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -47,7 +47,7 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, workspacefeed.ErrTooManyConnections) {
 		slog.WarnContext(r.Context(), "SSE subscribe failed", "ws", wsID, "user", user.ID, "err", err)
 		// A connection whose client left frees its slot when the next keep-alive write fails.
-		gmratelimit.SetRetryAfter(w.Header(), sseKeepAliveInterval)
+		ratelimit.SetRetryAfter(w.Header(), sseKeepAliveInterval)
 		http.Error(w, err.Error(), http.StatusTooManyRequests)
 		return
 	}

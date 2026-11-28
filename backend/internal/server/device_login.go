@@ -9,17 +9,17 @@ import (
 	"github.com/gomodedev/gomode/devicelogin"
 	"github.com/gomodedev/gomode/httpserver"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 )
 
 const deviceLoginPrefix = "/api/v1/auth/device/"
 
-func mountDeviceLogin(log *slog.Logger, mux *http.ServeMux, svc *handlers.Services, cfg *Config, hcfg *handlers.Config, authh *handlers.AuthHandler, limiters *ratelimit.Limiters) {
+func mountDeviceLogin(log *slog.Logger, mux *http.ServeMux, svc *handlers.Services, cfg *Config, hcfg *handlers.Config, authh *handlers.AuthHandler, limiters *ratetier.Limiters) {
 	core := devicelogin.New(log, &deviceLoginHost{services: svc, config: cfg, auth: authh})
 	for _, route := range []struct {
 		path    string
 		handler http.HandlerFunc
-		tier    *ratelimit.Tier
+		tier    *ratetier.Tier
 	}{
 		{deviceLoginPrefix + "start", core.Start, &limiters.Auth},
 		// Polling is a read despite its private JSON body. The auth tier permits only five requests/minute.

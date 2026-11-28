@@ -19,7 +19,7 @@ import (
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
-	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+	"github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/gomodedev/gomode/voicegateway"
 	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
@@ -201,7 +201,7 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 	}
 	if len(g.tickets) >= 1024 {
 		g.mu.Unlock()
-		gmratelimit.SetRetryAfter(w.Header(), wait)
+		ratelimit.SetRetryAfter(w.Header(), wait)
 		writeVoiceError(w, r, http.StatusTooManyRequests, "too many pending voice tickets")
 		return
 	}
@@ -270,14 +270,25 @@ func voiceProtocol(r *http.Request) voiceapi.ProtocolVersion {
 	return voiceapi.SessionProtocolFromContext(r.Context()).Version
 }
 
-// writeVoiceError writes a gateway error body in the code set of r's wire version.
+// writeVoiceError writes a gateway error body whose code names status. v1 answered BAD_REQUEST for
+// every status but 404.
 func writeVoiceError(w http.ResponseWriter, r *http.Request, status int, message string) {
-	code := voiceapi.CodeBadRequest
+	var code voiceapi.ErrorCode
 	switch status {
+	case http.StatusUnauthorized:
+		code = voiceapi.CodeUnauthorized
 	case http.StatusNotFound:
 		code = voiceapi.CodeNotFound
 	case http.StatusTooManyRequests:
-		code = voiceProtocol(r).RateLimitedCode()
+		code = voiceapi.CodeRateLimited
+	case http.StatusServiceUnavailable:
+		code = voiceapi.CodeVoiceBridgeUnavailable
+	default:
+		code = voiceapi.CodeBadRequest
+	}
+	// TODO(2026-12-04): delete v1 once this date has passed and two release tags contain v2.
+	if voiceProtocol(r) == voiceapi.ProtocolV1 && code != voiceapi.CodeNotFound {
+		code = voiceapi.CodeBadRequest
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -330,7 +341,7 @@ func (g *voiceGateway) admitLocked(id ksid.ID, now time.Time) (time.Duration, bo
 // own backoff in charge.
 func setVoiceRetryAfter(w http.ResponseWriter, wait time.Duration) {
 	if wait > 0 {
-		gmratelimit.SetRetryAfter(w.Header(), wait)
+		ratelimit.SetRetryAfter(w.Header(), wait)
 	}
 }
 

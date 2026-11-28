@@ -1,13 +1,13 @@
 // Defines rate limit tiers and routing rules.
 
-// Package ratelimit routes mddb requests to configurable rate limit tiers.
-package ratelimit
+// Package ratetier routes mddb requests to configurable rate limit tiers.
+package ratetier
 
 import (
 	"strings"
 	"time"
 
-	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+	"github.com/gomodedev/gomode/httpserver/ratelimit"
 
 	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
@@ -51,7 +51,7 @@ func tierConfigs(limits storagev1.RateLimits, fastLimits bool) (auth, write, rea
 type Tier struct {
 	Name    string
 	Scope   Scope
-	Limiter *gmratelimit.Limiter
+	Limiter *ratelimit.Limiter
 }
 
 // Limiters holds active rate limiters.
@@ -68,10 +68,10 @@ type Limiters struct {
 func NewLimiters(limits storagev1.RateLimits, fastLimits bool) *Limiters {
 	auth, write, readAuth, readUnauth := tierConfigs(limits, fastLimits)
 	return &Limiters{
-		Auth:       Tier{Name: "auth", Scope: ScopeIP, Limiter: gmratelimit.New(auth.rate, time.Minute, auth.burst)},
-		Write:      Tier{Name: "write", Scope: ScopeUser, Limiter: gmratelimit.New(write.rate, time.Minute, write.burst)},
-		ReadAuth:   Tier{Name: "read", Scope: ScopeUser, Limiter: gmratelimit.New(readAuth.rate, time.Minute, readAuth.burst)},
-		ReadUnauth: Tier{Name: "read", Scope: ScopeIP, Limiter: gmratelimit.New(readUnauth.rate, time.Minute, readUnauth.burst)},
+		Auth:       Tier{Name: "auth", Scope: ScopeIP, Limiter: ratelimit.New(auth.rate, time.Minute, auth.burst)},
+		Write:      Tier{Name: "write", Scope: ScopeUser, Limiter: ratelimit.New(write.rate, time.Minute, write.burst)},
+		ReadAuth:   Tier{Name: "read", Scope: ScopeUser, Limiter: ratelimit.New(readAuth.rate, time.Minute, readAuth.burst)},
+		ReadUnauth: Tier{Name: "read", Scope: ScopeIP, Limiter: ratelimit.New(readUnauth.rate, time.Minute, readUnauth.burst)},
 		fastLimits: fastLimits,
 		startTime:  time.Now(),
 	}

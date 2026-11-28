@@ -12,7 +12,7 @@ import (
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/gomodedev/gomode/httpserver"
-	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+	"github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
@@ -26,7 +26,7 @@ type AuthHandler struct {
 	cfg *Config
 
 	// verifyRateLimit allows one verification email per 10 s per user.
-	verifyRateLimit *gmratelimit.Limiter
+	verifyRateLimit *ratelimit.Limiter
 }
 
 // NewAuthHandler creates a new auth handler.
@@ -34,7 +34,7 @@ func NewAuthHandler(svc *Services, cfg *Config) *AuthHandler {
 	return &AuthHandler{
 		svc:             svc,
 		cfg:             cfg,
-		verifyRateLimit: gmratelimit.New(1, 10*time.Second, 1),
+		verifyRateLimit: ratelimit.New(1, 10*time.Second, 1),
 	}
 }
 
@@ -318,7 +318,7 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identityv
 	}
 
 	if result := h.verifyRateLimit.Allow(user.ID.String()); !result.Allowed {
-		return nil, dto.RateLimitExceeded(gmratelimit.RetryAfterSeconds(result.RetryAfter))
+		return nil, dto.RateLimitExceeded(ratelimit.RetryAfterSeconds(result.RetryAfter))
 	}
 
 	// Create verification token

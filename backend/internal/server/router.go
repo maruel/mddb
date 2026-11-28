@@ -30,7 +30,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/server/ratetier"
 )
 
 // Config holds configuration for the router.
@@ -74,7 +74,7 @@ type OAuthConfig struct {
 // Construct it with NewRouter and close it when the HTTP server shuts down.
 type Router struct {
 	handler  http.Handler
-	limiters *ratelimit.Limiters
+	limiters *ratetier.Limiters
 }
 
 // NewRouter creates and configures the HTTP router.
@@ -94,7 +94,7 @@ func NewRouter(log *slog.Logger, svc *handlers.Services, cfg *Config) *Router {
 		mux.Handle("GET /.well-known/gomode.json", goModeHandler)
 	}
 
-	limiters := ratelimit.NewLimiters(cfg.Snapshot().RateLimits, cfg.FastRateLimits)
+	limiters := ratetier.NewLimiters(cfg.Snapshot().RateLimits, cfg.FastRateLimits)
 
 	// Create bandwidth limiter
 	bandwidthLim := bandwidth.NewLimiter(cfg.Snapshot().Quotas.MaxEgressBandwidthBps)
