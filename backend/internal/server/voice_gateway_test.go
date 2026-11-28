@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,6 +18,7 @@ import (
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 	"github.com/maruel/mddb/backend/internal/testlog"
 
+	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -369,6 +371,26 @@ func TestVoiceGateway(t *testing.T) {
 			t.Fatal("offer denied after media hangup freed capacity")
 		}
 		g.release(ksid.ID(voiceMaxGlobal + 1))
+	})
+
+	t.Run("a full ticket table reports when the earliest ticket expires", func(t *testing.T) {
+		t.Parallel()
+		g := newVoiceGateway(testlog.New(t), &testTextVoiceBridge{})
+		now := time.Now()
+		for i := range 1024 {
+			g.tickets[strconv.Itoa(i)] = voiceTextTicket{expiry: now.Add(30 * time.Second)}
+		}
+		g.tickets["0"] = voiceTextTicket{expiry: now.Add(5 * time.Second)}
+		r := httptest.NewRequestWithContext(reqctx.WithUser(t.Context(), &identityv1.User{ID: ksid.NewID()}), http.MethodPost, "/api/voicegateway/v2/voice/text/ticket", strings.NewReader(`{"choiceID":"text"}`))
+		w := httptest.NewRecorder()
+		g.ServeHTTP(w, r)
+		var body voiceapi.ErrorResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != http.StatusTooManyRequests || body.Error.Code != voiceapi.CodeRateLimited || w.Header().Get("Retry-After") != "5" {
+			t.Fatalf("got %d %s Retry-After %q, want 429 RATE_LIMITED after 5 s", w.Code, body.Error.Code, w.Header().Get("Retry-After"))
+		}
 	})
 
 	t.Run("text sessions", func(t *testing.T) {

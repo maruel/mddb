@@ -30,6 +30,22 @@ it("backs off failed requests without Retry-After and stops after three retries"
   expect((await pending).status).toBe(503);
 });
 
+it("retries a rate limit rejection after Retry-After but returns a quota rejection at once", async () => {
+  vi.useFakeTimers();
+  const fetch = vi
+    .fn<typeof globalThis.fetch>()
+    .mockResolvedValueOnce(new Response(null, { status: 429, headers: { "Retry-After": "2" } }))
+    .mockResolvedValueOnce(new Response(null, { status: 429 }));
+  vi.stubGlobal("fetch", fetch);
+
+  const pending = createAuthFetch()("/quota");
+  await vi.advanceTimersByTimeAsync(1999);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(1);
+  expect((await pending).status).toBe(429);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
 describe("request cancellation", () => {
   it("cancels retry backoff before another transport attempt", async () => {
     vi.useFakeTimers();

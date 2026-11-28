@@ -215,7 +215,8 @@ func EmailNotVerified() *APIError {
 		"The provider did not verify your email address. Sign in another way, then link this provider in your profile settings")
 }
 
-// QuotaExceeded creates a 429 error for server-wide quota violations.
+// QuotaExceeded creates a 429 error for server-wide quota violations. Unlike RateLimitExceeded, it
+// carries no Retry-After: a retry fails until usage drops or an administrator raises the quota.
 func QuotaExceeded(resource string, limit int) *APIError {
 	return NewAPIError(http.StatusTooManyRequests, ErrorCodeQuotaExceeded,
 		fmt.Sprintf("Quota exceeded: maximum %d %s allowed", limit, resource)).
@@ -223,7 +224,7 @@ func QuotaExceeded(resource string, limit int) *APIError {
 		WithDetail("limit", limit)
 }
 
-// QuotaExceededInt64 creates a 429 error for server-wide quota violations with int64 limit.
+// QuotaExceededInt64 is QuotaExceeded for an int64 limit.
 func QuotaExceededInt64(resource string, limit int64) *APIError {
 	return NewAPIError(http.StatusTooManyRequests, ErrorCodeQuotaExceeded,
 		fmt.Sprintf("Quota exceeded: maximum %d %s allowed", limit, resource)).

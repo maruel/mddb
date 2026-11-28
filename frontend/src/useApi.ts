@@ -39,9 +39,13 @@ const RETRY_CONFIG = {
   maxDelayMs: 30000,
 };
 
-/** Checks if the status code should trigger a retry */
-function isRetryableStatus(status: number): boolean {
-  return status === 429 || (status >= 500 && status < 600);
+/**
+ * Retries a server error, and a 429 only when it says when to retry: rate limit rejections carry
+ * Retry-After, while a quota rejection has none and fails again until the quota changes.
+ */
+function isRetryable(response: Response): boolean {
+  if (response.status === 429) return response.headers.has("Retry-After");
+  return response.status >= 500 && response.status < 600;
 }
 
 /** Parses Retry-After header value (seconds or HTTP date) */
@@ -70,7 +74,7 @@ function getRetryDelay(attempt: number, retryAfterMs: number | null): number {
   return Math.min(delay, RETRY_CONFIG.maxDelayMs);
 }
 
-/** Wraps a fetch function with retry logic for 429 and 5xx errors */
+/** Wraps a fetch function with retry logic for rate limit and 5xx errors */
 function withRetry(fetchFn: FetchFn): FetchFn {
   return async (url: string, init?: RequestInit): Promise<Response> => {
     const signal = init?.signal;
@@ -79,7 +83,7 @@ function withRetry(fetchFn: FetchFn): FetchFn {
       signal?.throwIfAborted();
       const response = await fetchFn(url, init);
       signal?.throwIfAborted();
-      if (!isRetryableStatus(response.status) || attempt >= RETRY_CONFIG.maxRetries) {
+      if (!isRetryable(response) || attempt >= RETRY_CONFIG.maxRetries) {
         return response;
       }
       const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));

@@ -123,22 +123,22 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// not evict a call that is still working.
 		body, err := io.ReadAll(io.LimitReader(r.Body, voiceMaxOffer+1))
 		if err != nil {
-			writeVoiceError(w, http.StatusBadRequest, "cannot read voice offer")
+			writeVoiceError(w, r, http.StatusBadRequest, "cannot read voice offer")
 			return
 		}
 		if len(body) > voiceMaxOffer {
-			writeVoiceError(w, http.StatusRequestEntityTooLarge, "voice offer is too large")
+			writeVoiceError(w, r, http.StatusRequestEntityTooLarge, "voice offer is too large")
 			return
 		}
 		var offer voicev2.VoiceRTCOfferReq
 		if err := json.Unmarshal(body, &offer); err != nil || offer.SDP == "" {
-			writeVoiceError(w, http.StatusBadRequest, "invalid voice offer")
+			writeVoiceError(w, r, http.StatusBadRequest, "invalid voice offer")
 			return
 		}
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		if wait, ok := g.admit(u.ID); !ok {
 			setVoiceRetryAfter(w, wait)
-			writeVoiceError(w, http.StatusTooManyRequests, "voice session limit reached")
+			writeVoiceError(w, r, http.StatusTooManyRequests, "voice session limit reached")
 			return
 		}
 		reservation := &voiceReservation{gateway: g, owner: u.ID}
@@ -151,7 +151,7 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	session, ok := g.sessions[id]
 	g.mu.Unlock()
 	if !ok || session.owner != u.ID {
-		writeVoiceError(w, http.StatusNotFound, "voice session not found")
+		writeVoiceError(w, r, http.StatusNotFound, "voice session not found")
 		return
 	}
 	g.handler.ServeHTTP(w, r)
@@ -161,12 +161,12 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u *identityv1.User) {
 	var in voicev2.VoiceTextTicketReq
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&in); err != nil {
-		writeVoiceError(w, http.StatusBadRequest, "invalid text ticket request")
+		writeVoiceError(w, r, http.StatusBadRequest, "invalid text ticket request")
 		return
 	}
 	choices, ok := g.bridge.(voicegateway.ChoiceTextSessionServer)
 	if !ok {
-		writeVoiceError(w, http.StatusServiceUnavailable, "text voice sessions unavailable")
+		writeVoiceError(w, r, http.StatusServiceUnavailable, "text voice sessions unavailable")
 		return
 	}
 	catalog := choices.VoiceChoices()
@@ -185,19 +185,24 @@ func (g *voiceGateway) serveTextTicket(w http.ResponseWriter, r *http.Request, u
 		}
 	}
 	if !valid {
-		writeVoiceError(w, http.StatusBadRequest, "choice does not support text sessions")
+		writeVoiceError(w, r, http.StatusBadRequest, "choice does not support text sessions")
 		return
 	}
 	now := time.Now()
 	g.mu.Lock()
+	// The earliest remaining expiry frees the next slot when the table is full.
+	var wait time.Duration
 	for id, entry := range g.tickets {
-		if !now.Before(entry.expiry) {
+		if d := entry.expiry.Sub(now); d <= 0 {
 			delete(g.tickets, id)
+		} else if wait == 0 || d < wait {
+			wait = d
 		}
 	}
 	if len(g.tickets) >= 1024 {
 		g.mu.Unlock()
-		writeVoiceError(w, http.StatusTooManyRequests, "too many pending voice tickets")
+		gmratelimit.SetRetryAfter(w.Header(), wait)
+		writeVoiceError(w, r, http.StatusTooManyRequests, "too many pending voice tickets")
 		return
 	}
 	ticket := rand.Text()
@@ -223,7 +228,7 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 			}
 			if value, ok := strings.CutPrefix(protocol, "gomode.ticket."); ok {
 				if ticket != "" {
-					writeVoiceError(w, http.StatusUnauthorized, "invalid voice ticket")
+					writeVoiceError(w, r, http.StatusUnauthorized, "invalid voice ticket")
 					return
 				}
 				ticket = value
@@ -235,7 +240,7 @@ func (g *voiceGateway) serveBrowserText(w http.ResponseWriter, r *http.Request) 
 	delete(g.tickets, ticket)
 	g.mu.Unlock()
 	if !valid || !ok || entry.protocol != version || !time.Now().Before(entry.expiry) || entry.origin != r.Header.Get("Origin") {
-		writeVoiceError(w, http.StatusUnauthorized, "invalid or expired voice ticket")
+		writeVoiceError(w, r, http.StatusUnauthorized, "invalid or expired voice ticket")
 		return
 	}
 	ctx := reqctx.WithUser(r.Context(), &identityv1.User{ID: entry.owner})
@@ -265,10 +270,14 @@ func voiceProtocol(r *http.Request) voiceapi.ProtocolVersion {
 	return voiceapi.SessionProtocolFromContext(r.Context()).Version
 }
 
-func writeVoiceError(w http.ResponseWriter, status int, message string) {
+// writeVoiceError writes a gateway error body in the code set of r's wire version.
+func writeVoiceError(w http.ResponseWriter, r *http.Request, status int, message string) {
 	code := voiceapi.CodeBadRequest
-	if status == http.StatusNotFound {
+	switch status {
+	case http.StatusNotFound:
 		code = voiceapi.CodeNotFound
+	case http.StatusTooManyRequests:
+		code = voiceProtocol(r).RateLimitedCode()
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -546,13 +555,13 @@ func (g *voiceTextGateway) ServeTextChoice(ctx context.Context, w http.ResponseW
 	origin, originErr := url.Parse(r.Header.Get("Origin"))
 	originAllowed := r.Header.Get("Origin") == "" || (originErr == nil && strings.EqualFold(origin.Host, r.Host))
 	if !r.ProtoAtLeast(1, 1) || !originAllowed || len(r.Header.Values("Sec-WebSocket-Key")) != 1 || r.Method != http.MethodGet || !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") || !upgrade || r.Header.Get("Sec-WebSocket-Version") != "13" || err != nil || len(key) != 16 || !protocol {
-		writeVoiceError(w, http.StatusBadRequest, "invalid text WebSocket upgrade")
+		writeVoiceError(w, r, http.StatusBadRequest, "invalid text WebSocket upgrade")
 		return nil
 	}
 	owner := reqctx.User(ctx).ID
 	if wait, ok := g.gateway.admit(owner); !ok {
 		setVoiceRetryAfter(w, wait)
-		writeVoiceError(w, http.StatusTooManyRequests, "voice session limit reached")
+		writeVoiceError(w, r, http.StatusTooManyRequests, "voice session limit reached")
 		return nil
 	}
 	reservation := &voiceReservation{gateway: g.gateway, owner: owner}
@@ -563,7 +572,7 @@ func (g *voiceTextGateway) ServeTextChoice(ctx context.Context, w http.ResponseW
 	ctx = context.WithValue(ctx, voiceTextCancelKey{}, cancel)
 	id := rand.Text()
 	if _, _, err := g.gateway.acceptOffer(ctx, "", id, nil); err != nil {
-		writeVoiceError(w, http.StatusServiceUnavailable, "text session unavailable")
+		writeVoiceError(w, r, http.StatusServiceUnavailable, "text session unavailable")
 		return err
 	}
 	defer g.gateway.Close(id)

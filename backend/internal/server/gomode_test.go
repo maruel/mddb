@@ -286,7 +286,7 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		status      int
 		code        voiceapi.ErrorCode
 	}{
-		{path: offer, token: auth.Token, status: http.StatusTooManyRequests, code: voiceapi.CodeBadRequest},
+		{path: offer, token: auth.Token, status: http.StatusTooManyRequests, code: voiceapi.CodeRateLimited},
 		{path: diagnostics, token: other.Token, status: http.StatusNotFound, code: voiceapi.CodeNotFound},
 	} {
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+tc.path, strings.NewReader(`{"sdp":"m=audio 9"}`))
