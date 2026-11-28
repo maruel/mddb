@@ -174,24 +174,19 @@ test.describe("Page CRUD Operations", () => {
     await page.route(`**/nodes/${pageData.id}/page`, async (route) => {
       if (route.request().method() === "POST") {
         attempts++;
-        await route.fulfill({ status: 500, json: { error: { code: "INTERNAL_ERROR", message: "save failed" } } });
+        // Exercise retry exhaustion with no server-requested delay between responses.
+        await route.fulfill({
+          status: 500,
+          headers: { "Retry-After": "0" },
+          json: { error: { code: "INTERNAL_ERROR", message: "save failed" } },
+        });
         return;
       }
       await route.continue();
     });
     await page.clock.install();
-    await page.clock.pauseAt(new Date());
     await fillEditorContent(page, "Unsaved after failed autosave");
     await page.clock.runFor(2100);
-    await expect.poll(() => attempts).toBe(1);
-    for (const [delay, expected] of [
-      [1000, 2],
-      [2000, 3],
-      [4000, 4],
-    ] as const) {
-      await page.clock.runFor(delay);
-      await expect.poll(() => attempts).toBe(expected);
-    }
 
     const feedback = page.getByTestId("workspace-feedback");
     await expect(feedback).toBeVisible({ timeout: 10000 });
@@ -199,6 +194,7 @@ test.describe("Page CRUD Operations", () => {
     await expect(feedback).toHaveCSS("position", "fixed");
     await expect(page.locator('[class*="saveErrorIndicator"]')).toContainText("Auto-save failed");
     await expect(page.getByRole("button", { name: "Copy draft", exact: true })).toBeVisible();
+    expect(attempts).toBe(4);
   });
 });
 

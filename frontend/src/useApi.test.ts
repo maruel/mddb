@@ -1,4 +1,4 @@
-// Tests transport cancellation and UI write correlation across retries and independent MCP calls.
+// Tests transport retry timing, cancellation, and UI write correlation across retries and independent MCP calls.
 
 import { afterEach, describe, it } from "node:test";
 import { expect, vi } from "@tests/expect";
@@ -7,6 +7,27 @@ import { createApi, createAuthFetch, isLocalWriteRequest, localWriteHeaders } fr
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+it("backs off failed requests without Retry-After and stops after three retries", async () => {
+  vi.useFakeTimers();
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(null, { status: 503 }));
+  vi.stubGlobal("fetch", fetch);
+
+  const pending = createAuthFetch()("/retry");
+  for (const [delay, attempts] of [
+    [1000, 1],
+    [2000, 2],
+    [4000, 3],
+  ] as const) {
+    await vi.advanceTimersByTimeAsync(delay - 1);
+    expect(fetch).toHaveBeenCalledTimes(attempts);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(attempts + 1);
+  }
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(fetch).toHaveBeenCalledTimes(4);
+  expect((await pending).status).toBe(503);
 });
 
 describe("request cancellation", () => {

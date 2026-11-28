@@ -44,8 +44,8 @@ A breaking change ships as version N+1 beside version N:
 ## Roll Go Mode
 
 Pick a Git commit and roll both the `github.com/gomodedev/gomode` Go module and the `@gomodedev/gomode` package in
-`package.json` to it. Run `make frontend-build` and commit `backend/frontend/dist`: `make fix` does not rebuild
-the embedded bundle.
+`package.json` to it. Run `make test-e2e SPEC=e2e/voice-context-health.spec.ts` to rebuild the embedded frontend and
+check browser and native voice recovery. Commit the updated `backend/frontend/dist`.
 
 ## Python tools
 

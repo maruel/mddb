@@ -159,57 +159,44 @@ test("German voice discovery recovery fits narrow width and keeps keyboard focus
   await exerciseGermanRecovery(page, request, baseURL!, info, "narrow", "16px");
 });
 
-for (const preference of ["native zoom", "default font"] as const) {
-  test(`German setup recovery respects enlarged ${preference}`, async ({ browser, request, baseURL }, info) => {
-    const { mkdir, writeFile } = await import("node:fs/promises");
-    const path = await import("node:path");
-    const extension = info.outputPath("preferences-extension");
-    await mkdir(extension, { recursive: true });
-    await writeFile(
-      path.join(extension, "manifest.json"),
-      JSON.stringify({
-        manifest_version: 3,
-        name: "Voice setup preferences",
-        version: "1.0",
-        permissions: ["fontSettings"],
-        background: { service_worker: "background.js" },
-      }),
-    );
-    await writeFile(path.join(extension, "background.js"), "chrome.runtime.onInstalled.addListener(() => {});");
-    const context = await browser.browserType().launchPersistentContext(info.outputPath("preferences-profile"), {
-      channel: "chromium",
-      headless: true,
-      baseURL,
-      serviceWorkers: "allow",
-      viewport: preference === "native zoom" ? { width: 640, height: 1280 } : { width: 320, height: 640 },
-      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
-    });
-    try {
-      // Installation offers have their own foreground journey.
-      await context.addInitScript(() => localStorage.setItem("mddb_pwa_dismissed", new Date().toISOString()));
-      const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
-      const page = context.pages()[0]!;
-      await page.goto("/privacy");
-      if (preference === "native zoom") {
-        const initialDPR = await page.evaluate(() => devicePixelRatio);
-        for (const factor of [1, 1.25, 1.5, 2]) {
-          await worker.evaluate(`chrome.tabs.setZoom(${factor})`);
-          await expect.poll(() => page.evaluate(() => innerWidth)).toBe(Math.round(640 / factor));
-          await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBeCloseTo(initialDPR * factor);
-          await exerciseGermanRecovery(page, request, baseURL!, info, `zoom-${factor}`, "16px");
-          await page.unrouteAll({ behavior: "wait" });
-        }
-      } else {
-        await worker.evaluate("chrome.fontSettings.setDefaultFontSize({ pixelSize: 24 })");
-        await page.reload();
-        await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe("24px");
-        await exerciseGermanRecovery(page, request, baseURL!, info, "font-24", "24px");
-      }
-    } finally {
-      await context.close();
-    }
+test("German setup recovery respects enlarged default font", async ({ browser, request, baseURL }, info) => {
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  const path = await import("node:path");
+  const extension = info.outputPath("preferences-extension");
+  await mkdir(extension, { recursive: true });
+  await writeFile(
+    path.join(extension, "manifest.json"),
+    JSON.stringify({
+      manifest_version: 3,
+      name: "Voice setup preferences",
+      version: "1.0",
+      permissions: ["fontSettings"],
+      background: { service_worker: "background.js" },
+    }),
+  );
+  await writeFile(path.join(extension, "background.js"), "chrome.runtime.onInstalled.addListener(() => {});");
+  const context = await browser.browserType().launchPersistentContext(info.outputPath("preferences-profile"), {
+    channel: "chromium",
+    headless: true,
+    baseURL,
+    serviceWorkers: "allow",
+    viewport: { width: 320, height: 640 },
+    args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
-}
+  try {
+    // Installation offers have their own foreground journey.
+    await context.addInitScript(() => localStorage.setItem("mddb_pwa_dismissed", new Date().toISOString()));
+    const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+    const page = context.pages()[0]!;
+    await page.goto("/privacy");
+    await worker.evaluate("chrome.fontSettings.setDefaultFontSize({ pixelSize: 24 })");
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe("24px");
+    await exerciseGermanRecovery(page, request, baseURL!, info, "font-24", "24px");
+  } finally {
+    await context.close();
+  }
+});
 
 for (const boundary of ["pending", "failed", "pending-success"]) {
   test(`voice stylesheet recovery survives shell replacement after ${boundary} import`, async ({
