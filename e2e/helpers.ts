@@ -18,7 +18,7 @@ import type {
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import type { DeviceLoginCode, DeviceLoginRequest } from "@gomodedev/gomode/web/DeviceLogin";
-import { APIError, createApiClient, type APIClient } from "../sdk/mddb/ts/v1/api.gen";
+import { APIError, createApiClient, type APIClient, type FetchFn } from "../sdk/mddb/ts/v1/api.gen";
 
 // Install the asynchronous native auth bridge used by host journeys.
 export interface AuthBridgeOptions {
@@ -74,13 +74,10 @@ export async function installAuthBridge(target: Page | BrowserContext, options: 
 
 // Helper to create a typed API client from Playwright's request context
 export function createClient(request: APIRequestContext, token?: string): APIClient {
-  const fetchFn = async (url: string, init?: RequestInit) => {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-    if (init?.headers) {
-      Object.assign(headers, init.headers);
+  const fetchFn: FetchFn = async (url, init) => {
+    const headers = new Headers(init?.headers);
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
     }
 
     // Playwright's fetch expects 'data' for the body, not 'body'
@@ -88,17 +85,21 @@ export function createClient(request: APIRequestContext, token?: string): APICli
     const response = await request.fetch(url, {
       method: init?.method || "GET",
       data: init?.body,
-      headers,
+      headers: Object.fromEntries(headers),
     });
 
-    // Adapt Playwright APIResponse to standard Response-like object expected by SDK
-    // SDK uses .ok (property) and .status (property), but Playwright has .ok() and .status() methods
-    return {
-      ok: response.ok(),
-      status: response.status(),
-      json: async () => response.json(),
-      text: async () => response.text(),
-    } as unknown as Response;
+    try {
+      const status = response.status();
+      // Fetch forbids bodies for these statuses, even an empty buffer.
+      const body = status === 204 || status === 205 || status === 304 ? null : new Uint8Array(await response.body());
+      return new Response(body, {
+        status,
+        statusText: response.statusText(),
+        headers: response.headersArray().map(({ name, value }) => [name, value]),
+      });
+    } finally {
+      await response.dispose();
+    }
   };
 
   return createApiClient(fetchFn);

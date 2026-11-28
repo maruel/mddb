@@ -1,13 +1,13 @@
-// Verifies isolated account identities and fail-fast authentication fixture responses.
+// Verifies isolated account identities, authentication fixture failures, and SDK response adaptation.
 
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { APIRequestContext } from "@playwright/test";
-import { test, expect, registerUser, readDeviceLoginCode, readDeviceLoginProof } from "./helpers";
+import { test, expect, createClient, registerUser, readDeviceLoginCode, readDeviceLoginProof } from "./helpers";
 
 interface FixtureAPI {
   request: APIRequestContext;
-  replies: { status: number; body: unknown }[];
+  replies: { status: number; body: unknown; headers?: Record<string, string> }[];
   calls: unknown[];
 }
 
@@ -21,10 +21,9 @@ const fixtureTest = test.extend<{ fixtureAPI: FixtureAPI }>({
         for await (const chunk of req) body += String(chunk);
         calls.push(body ? (JSON.parse(body) as unknown) : null);
         const reply = replies.shift();
-        res.writeHead(reply?.status ?? 500, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify(reply ? reply.body : { error: { code: "UNEXPECTED_REQUEST", message: "Unexpected request" } }),
-        );
+        const bodyOut = reply ? reply.body : { error: { code: "UNEXPECTED_REQUEST", message: "Unexpected request" } };
+        res.writeHead(reply?.status ?? 500, { "Content-Type": "application/json", ...reply?.headers });
+        res.end(typeof bodyOut === "string" ? bodyOut : JSON.stringify(bodyOut));
       })().catch((error: unknown) => res.destroy(error instanceof Error ? error : new Error(String(error))));
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -104,6 +103,19 @@ fixtureTest("registration rejects malformed retry delays without another request
     message: "Registration rate limit returned an invalid retry delay",
   });
   expect(fixtureAPI.calls).toHaveLength(1);
+});
+
+fixtureTest("SDK client preserves the retry header and plain-text error body", async ({ fixtureAPI }) => {
+  fixtureAPI.replies.push({
+    status: 429,
+    headers: { "Content-Type": "text/plain", "Retry-After": "3" },
+    body: "Too many requests",
+  });
+  await expect(createClient(fixtureAPI.request).getHealth()).rejects.toMatchObject({
+    status: 429,
+    retryAfter: "3",
+    message: "Too many requests",
+  });
 });
 
 for (const [operation, read] of [
