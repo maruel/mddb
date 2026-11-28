@@ -47,7 +47,7 @@ async function exerciseRecovery(
   if (native) await waitNativeReady(page);
   else await page.getByRole("button", { name: "Connect voice assistant", exact: true }).click();
   const notice = page
-    .getByRole("status")
+    .getByRole("alert")
     .filter({ hasText: german ? "Der Sprachkontext" : "Voice context could not update" });
   await expect(notice).toHaveCount(1);
   await expect(notice).toBeVisible();
@@ -60,9 +60,7 @@ async function exerciseRecovery(
   } else {
     await expect(page.getByRole("button", { name: "End voice session", exact: true })).toBeVisible();
     expect(runtimeRequests.some((url) => url.endsWith(".js"))).toBe(true);
-    const panel = await page.getByTestId("voice-overlay").boundingBox();
-    const panelNotice = await notice.boundingBox();
-    expect(panelNotice!.y + panelNotice!.height).toBeLessThanOrEqual(panel!.y + 1);
+    await expect(page.getByTestId("voice-overlay").locator(notice)).toBeVisible();
   }
   const box = (await notice.boundingBox())!;
   const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
