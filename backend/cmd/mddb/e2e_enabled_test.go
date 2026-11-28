@@ -17,7 +17,8 @@ func TestE2ERateLimits(t *testing.T) {
 	if !e2eBuild {
 		t.Error("an e2e build must select the e2e behavior")
 	}
-	if got := ratelimit.DefaultConfig(e2eBuild).Auth.Rate; got != 50000 {
+	limits := storage.DefaultRateLimits()
+	if got := ratelimit.ConfigFromStorage(limits.AuthRatePerMin, limits.WriteRatePerMin, limits.ReadAuthRatePerMin, limits.ReadUnauthRatePerMin, e2eBuild).Auth.Rate; got != 50000 {
 		t.Errorf("got auth rate %d, want the e2e 50000", got)
 	}
 }

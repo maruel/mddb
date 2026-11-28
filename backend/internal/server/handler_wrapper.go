@@ -66,20 +66,18 @@ type authResult struct {
 	tokenString string
 }
 
-// checkRateLimit checks rate limit and wraps the response writer if needed.
-// Returns the (possibly wrapped) writer and whether the request should proceed.
-func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier string) (http.ResponseWriter, bool) {
+// checkRateLimit consumes one request from identifier's budget in tier and reports whether the
+// request proceeds. Every limited response carries the budget headers; a rejection is written here.
+func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier string) bool {
 	if tier == nil {
-		return w, true
+		return true
 	}
-	key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
-	result := tier.Limiter.Allow(key)
-	w = ratelimit.NewResponseWriter(w, result)
+	result := tier.Limiter.Allow(ratelimit.BuildKey(tier.Scope, identifier, tier.Name))
+	gmratelimit.WriteHeaders(w.Header(), result)
 	if !result.Allowed {
 		writeRateLimitError(w, result)
-		return w, false
 	}
-	return w, true
+	return result.Allowed
 }
 
 // readAndDecodeBody reads the request body with size limit and decodes JSON into input.
@@ -210,10 +208,8 @@ func Wrap[In any, PtrIn interface {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		// Rate limit check for unauthenticated endpoints
-		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, httpserver.ClientIP(ctx))
-			if !ok {
+			if !checkRateLimit(w, tier, httpserver.ClientIP(ctx)) {
 				return
 			}
 		}
@@ -245,10 +241,8 @@ func WrapWithSvc[In any, PtrIn interface {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		// Rate limit check for unauthenticated endpoints
-		var ok bool
 		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			w, ok = checkRateLimit(w, tier, httpserver.ClientIP(ctx))
-			if !ok {
+			if !checkRateLimit(w, tier, httpserver.ClientIP(ctx)) {
 				return
 			}
 		}
@@ -306,9 +300,7 @@ func WrapAuth[In any, PtrIn interface {
 
 		// Rate limit check for authenticated endpoints
 		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var ok bool
-			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
-			if !ok {
+			if !checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r)) {
 				return
 			}
 		}
@@ -356,8 +348,7 @@ func WrapOptionalAuth[In any, PtrIn interface {
 			}
 		}
 		if tier != nil {
-			var ok bool
-			if w, ok = checkRateLimit(w, tier, limitKey); !ok {
+			if !checkRateLimit(w, tier, limitKey) {
 				return
 			}
 		}
@@ -404,9 +395,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 
 		// Rate limit check for authenticated endpoints
 		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var ok bool
-			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
-			if !ok {
+			if !checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r)) {
 				return
 			}
 		}
@@ -481,9 +470,7 @@ func WrapWSAuth[In any, PtrIn interface {
 
 		// Rate limit check
 		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var ok bool
-			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
-			if !ok {
+			if !checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r)) {
 				return
 			}
 		}
@@ -579,9 +566,7 @@ func wrapAuthRaw(
 
 		// Rate limit check for authenticated endpoints
 		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var ok bool
-			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r))
-			if !ok {
+			if !checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r)) {
 				return
 			}
 		}
@@ -658,9 +643,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 
 		// Rate limit check for admin endpoints
 		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var ok bool
-			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r))
-			if !ok {
+			if !checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r)) {
 				return
 			}
 		}

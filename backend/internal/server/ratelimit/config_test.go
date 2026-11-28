@@ -1,4 +1,4 @@
-// Tests for rate limit configuration.
+// Tests rate limit tier configuration, request routing, and bucket keys.
 
 package ratelimit
 
@@ -6,38 +6,14 @@ import (
 	"testing"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	t.Run("production limits", func(t *testing.T) {
-		cfg := DefaultConfig(false)
-
-		// Verify scopes
-		if cfg.Auth.Scope != ScopeIP {
-			t.Error("Auth tier should have IP scope")
-		}
-		if cfg.Write.Scope != ScopeUser {
-			t.Error("Write tier should have User scope")
-		}
-		if cfg.ReadAuth.Scope != ScopeUser {
-			t.Error("ReadAuth tier should have User scope")
-		}
-		if cfg.ReadUnauth.Scope != ScopeIP {
-			t.Error("ReadUnauth tier should have IP scope")
-		}
-	})
-
-	t.Run("fast limits scale the defaults 10000x", func(t *testing.T) {
-		cfg := DefaultConfig(true)
-		if cfg.Auth.Rate != 50000 || cfg.Write.Rate != 600000 || cfg.ReadAuth.Rate != 300000000 || cfg.ReadUnauth.Rate != 60000000 {
-			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
-		}
-	})
-}
-
 func TestConfigFromStorage(t *testing.T) {
-	t.Run("production limits keep the stored rates", func(t *testing.T) {
+	t.Run("production limits keep the stored rates and scope each tier", func(t *testing.T) {
 		cfg := ConfigFromStorage(5, 60, 30000, 6000, false)
 		if cfg.Auth.Rate != 5 || cfg.Write.Rate != 60 || cfg.ReadAuth.Rate != 30000 || cfg.ReadUnauth.Rate != 6000 {
 			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+		}
+		if cfg.Auth.Scope != ScopeIP || cfg.Write.Scope != ScopeUser || cfg.ReadAuth.Scope != ScopeUser || cfg.ReadUnauth.Scope != ScopeIP {
+			t.Errorf("got scopes %v, %v, %v, %v", cfg.Auth.Scope, cfg.Write.Scope, cfg.ReadAuth.Scope, cfg.ReadUnauth.Scope)
 		}
 	})
 
@@ -51,7 +27,7 @@ func TestConfigFromStorage(t *testing.T) {
 
 func TestLimiters(t *testing.T) {
 	t.Run("NewLimiters", func(t *testing.T) {
-		cfg := DefaultConfig(false)
+		cfg := ConfigFromStorage(5, 60, 30000, 6000, false)
 		limiters := NewLimiters(cfg)
 
 		// Verify limiters are initialized
@@ -78,7 +54,7 @@ func TestLimiters(t *testing.T) {
 	})
 
 	t.Run("MatchUnauth", func(t *testing.T) {
-		limiters := NewLimiters(DefaultConfig(false))
+		limiters := NewLimiters(ConfigFromStorage(5, 60, 30000, 6000, false))
 
 		tests := []struct {
 			method   string
@@ -114,7 +90,7 @@ func TestLimiters(t *testing.T) {
 	})
 
 	t.Run("MatchAuth", func(t *testing.T) {
-		limiters := NewLimiters(DefaultConfig(false))
+		limiters := NewLimiters(ConfigFromStorage(5, 60, 30000, 6000, false))
 
 		tests := []struct {
 			method   string
@@ -174,6 +150,29 @@ func TestIsAuthEndpoint(t *testing.T) {
 			got := isAuthEndpoint(tt.method, tt.path)
 			if got != tt.want {
 				t.Errorf("isAuthEndpoint(%s, %s) = %v, want %v", tt.method, tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildKey(t *testing.T) {
+	tests := []struct {
+		scope      Scope
+		identifier string
+		tierName   string
+		want       string
+	}{
+		{ScopeIP, "192.168.1.1", "auth", "ip:192.168.1.1:auth"},
+		{ScopeUser, "user-123", "write", "user:user-123:write"},
+		{ScopeUser, "abc", "read", "user:abc:read"},
+		{ScopeIP, "10.0.0.1", "read", "ip:10.0.0.1:read"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := BuildKey(tt.scope, tt.identifier, tt.tierName)
+			if got != tt.want {
+				t.Errorf("BuildKey() = %s, want %s", got, tt.want)
 			}
 		})
 	}

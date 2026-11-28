@@ -57,26 +57,6 @@ func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int, fa
 	}
 }
 
-// DefaultConfig returns default rate limit settings per the design doc:
-//   - Auth: 5 req/min, IP scope
-//   - Write: 60 req/min, User scope
-//   - Read (auth): 30,000 req/min, User scope
-//   - Read (unauth): 6,000 req/min, IP scope.
-//
-// fastLimits multiplies every rate by fastRateMultiplier.
-func DefaultConfig(fastLimits bool) *Config {
-	m := 1 // multiplier
-	if fastLimits {
-		m = fastRateMultiplier
-	}
-	return &Config{
-		Auth:       TierConfig{Name: "auth", Rate: 5 * m, Window: time.Minute, Burst: 5 * m, Scope: ScopeIP},
-		Write:      TierConfig{Name: "write", Rate: 60 * m, Window: time.Minute, Burst: 10 * m, Scope: ScopeUser},
-		ReadAuth:   TierConfig{Name: "read", Rate: 30000 * m, Window: time.Minute, Burst: 5000 * m, Scope: ScopeUser},
-		ReadUnauth: TierConfig{Name: "read", Rate: 6000 * m, Window: time.Minute, Burst: 1000 * m, Scope: ScopeIP},
-	}
-}
-
 // Tier is a live rate limiter with its config.
 type Tier struct {
 	TierConfig
@@ -211,4 +191,18 @@ func isAuthEndpoint(method, path string) bool {
 	}
 
 	return false
+}
+
+// BuildKey creates a rate limit bucket key from scope, identifier, and tier name.
+func BuildKey(scope Scope, identifier, tierName string) string {
+	var prefix string
+	switch scope {
+	case ScopeIP:
+		prefix = "ip"
+	case ScopeUser:
+		prefix = "user"
+	default:
+		prefix = "unknown"
+	}
+	return prefix + ":" + identifier + ":" + tierName
 }

@@ -30,8 +30,7 @@ func mountDeviceLogin(log *slog.Logger, mux *http.ServeMux, svc *handlers.Servic
 	} {
 		mux.HandleFunc("POST "+route.path, func(w http.ResponseWriter, r *http.Request) {
 			ctx := addRequestMetadataToContext(r.Context(), r)
-			w, ok := checkRateLimit(w, route.tier, httpserver.ClientIP(ctx))
-			if !ok {
+			if !checkRateLimit(w, route.tier, httpserver.ClientIP(ctx)) {
 				return
 			}
 			r = r.WithContext(ctx)

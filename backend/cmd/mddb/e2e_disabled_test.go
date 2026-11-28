@@ -15,7 +15,8 @@ func TestProductionRateLimits(t *testing.T) {
 	if e2eBuild {
 		t.Error("a production build must not select the e2e behavior")
 	}
-	if got := ratelimit.DefaultConfig(e2eBuild).Auth.Rate; got != 5 {
+	limits := storage.DefaultRateLimits()
+	if got := ratelimit.ConfigFromStorage(limits.AuthRatePerMin, limits.WriteRatePerMin, limits.ReadAuthRatePerMin, limits.ReadUnauthRatePerMin, e2eBuild).Auth.Rate; got != 5 {
 		t.Errorf("got auth rate %d, want the production 5", got)
 	}
 }

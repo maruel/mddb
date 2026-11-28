@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -221,11 +222,14 @@ func TestRouter(t *testing.T) {
 		// The bubble cannot complete if the router leaves a goroutine running.
 		synctest.Test(t, func(t *testing.T) {
 			r := NewRouter(testlog.New(t), env.services, cfg)
-			for range 5 {
+			for i := range 5 {
 				w := httptest.NewRecorder()
 				r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader("{}")))
 				if w.Code != http.StatusBadRequest {
 					t.Fatalf("login status = %d", w.Code)
+				}
+				if got, want := w.Header().Get("X-RateLimit-Remaining"), strconv.Itoa(4-i); got != want {
+					t.Errorf("login %d X-RateLimit-Remaining = %q, want %q", i+1, got, want)
 				}
 			}
 			w := httptest.NewRecorder()

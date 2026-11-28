@@ -8,7 +8,7 @@ var benchmarkMatchAuthTier *Tier
 var benchmarkMatchAuthPath = "/api/v1/gomode/mcp"
 
 func BenchmarkMatchAuthMCP(b *testing.B) {
-	limiters := NewLimiters(DefaultConfig(false))
+	limiters := NewLimiters(ConfigFromStorage(5, 60, 30000, 6000, false))
 	b.ReportAllocs()
 	for b.Loop() {
 		benchmarkMatchAuthTier = limiters.MatchAuth("POST", benchmarkMatchAuthPath)
