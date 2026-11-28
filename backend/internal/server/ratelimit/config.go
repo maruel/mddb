@@ -8,6 +8,8 @@ import (
 	"time"
 
 	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
+
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
 
 // fastRateMultiplier multiplies every rate limit for an e2e server, whose
@@ -24,43 +26,31 @@ const (
 	ScopeUser
 )
 
-// TierConfig holds settings for a rate limit tier (pure data).
-type TierConfig struct {
-	Name   string
-	Rate   int // requests per window
-	Window time.Duration
-	Burst  int
-	Scope  Scope
+// tierConfig is one tier's limiter settings.
+type tierConfig struct {
+	rate  int // requests per minute
+	burst int
 }
 
-// Config holds rate limit settings (pure data).
-type Config struct {
-	Auth       TierConfig
-	Write      TierConfig
-	ReadAuth   TierConfig // authenticated read
-	ReadUnauth TierConfig // unauthenticated read
-}
-
-// ConfigFromStorage creates a rate limit Config from storage.RateLimits values.
-// fastLimits multiplies every rate by fastRateMultiplier; it is set only for an
-// e2e server that runs without the production limits the suite would trip.
-func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int, fastLimits bool) *Config {
-	m := 1 // multiplier
+// tierConfigs derives every tier's settings from the stored rates. fastLimits multiplies every
+// rate by fastRateMultiplier; it is set only for an e2e server that runs without the production
+// limits the suite would trip.
+func tierConfigs(limits storagev1.RateLimits, fastLimits bool) (auth, write, readAuth, readUnauth tierConfig) {
+	m := 1
 	if fastLimits {
 		m = fastRateMultiplier
 	}
-	return &Config{
-		Auth:       TierConfig{Name: "auth", Rate: authRate * m, Window: time.Minute, Burst: max(authRate*m, 1), Scope: ScopeIP},
-		Write:      TierConfig{Name: "write", Rate: writeRate * m, Window: time.Minute, Burst: max(writeRate*m/6, 1), Scope: ScopeUser},
-		ReadAuth:   TierConfig{Name: "read", Rate: readAuthRate * m, Window: time.Minute, Burst: max(readAuthRate*m/6, 1), Scope: ScopeUser},
-		ReadUnauth: TierConfig{Name: "read", Rate: readUnauthRate * m, Window: time.Minute, Burst: max(readUnauthRate*m/6, 1), Scope: ScopeIP},
-	}
+	// Auth allows its whole minute at once; the other tiers allow a sixth of it.
+	return tierConfig{limits.AuthRatePerMin * m, max(limits.AuthRatePerMin*m, 1)},
+		tierConfig{limits.WriteRatePerMin * m, max(limits.WriteRatePerMin*m/6, 1)},
+		tierConfig{limits.ReadAuthRatePerMin * m, max(limits.ReadAuthRatePerMin*m/6, 1)},
+		tierConfig{limits.ReadUnauthRatePerMin * m, max(limits.ReadUnauthRatePerMin*m/6, 1)}
 }
 
-// Tier is a live rate limiter with its config.
+// Tier names a rate limit tier, how it keys requests, and the limiter that owns its rate.
 type Tier struct {
-	TierConfig
-
+	Name    string
+	Scope   Scope
 	Limiter *gmratelimit.Limiter
 }
 
@@ -70,16 +60,19 @@ type Limiters struct {
 	Write      Tier
 	ReadAuth   Tier
 	ReadUnauth Tier
+	fastLimits bool
 	startTime  time.Time
 }
 
-// NewLimiters creates limiters from config.
-func NewLimiters(cfg *Config) *Limiters {
+// NewLimiters creates the tiers from the stored rates; see tierConfigs for fastLimits.
+func NewLimiters(limits storagev1.RateLimits, fastLimits bool) *Limiters {
+	auth, write, readAuth, readUnauth := tierConfigs(limits, fastLimits)
 	return &Limiters{
-		Auth:       Tier{TierConfig: cfg.Auth, Limiter: gmratelimit.New(cfg.Auth.Rate, cfg.Auth.Window, cfg.Auth.Burst)},
-		Write:      Tier{TierConfig: cfg.Write, Limiter: gmratelimit.New(cfg.Write.Rate, cfg.Write.Window, cfg.Write.Burst)},
-		ReadAuth:   Tier{TierConfig: cfg.ReadAuth, Limiter: gmratelimit.New(cfg.ReadAuth.Rate, cfg.ReadAuth.Window, cfg.ReadAuth.Burst)},
-		ReadUnauth: Tier{TierConfig: cfg.ReadUnauth, Limiter: gmratelimit.New(cfg.ReadUnauth.Rate, cfg.ReadUnauth.Window, cfg.ReadUnauth.Burst)},
+		Auth:       Tier{Name: "auth", Scope: ScopeIP, Limiter: gmratelimit.New(auth.rate, time.Minute, auth.burst)},
+		Write:      Tier{Name: "write", Scope: ScopeUser, Limiter: gmratelimit.New(write.rate, time.Minute, write.burst)},
+		ReadAuth:   Tier{Name: "read", Scope: ScopeUser, Limiter: gmratelimit.New(readAuth.rate, time.Minute, readAuth.burst)},
+		ReadUnauth: Tier{Name: "read", Scope: ScopeIP, Limiter: gmratelimit.New(readUnauth.rate, time.Minute, readUnauth.burst)},
+		fastLimits: fastLimits,
 		startTime:  time.Now(),
 	}
 }
@@ -94,29 +87,14 @@ func (l *Limiters) StartTime() time.Time {
 	return l.startTime
 }
 
-// Update changes the rate limits at runtime. 0 means unlimited.
-func (l *Limiters) Update(authRate, writeRate, readAuthRate, readUnauthRate int) {
-	window := time.Minute
-
-	// Update Auth tier
-	l.Auth.Rate = authRate
-	l.Auth.Burst = max(authRate, 1)
-	l.Auth.Limiter.Update(authRate, window, l.Auth.Burst)
-
-	// Update Write tier
-	l.Write.Rate = writeRate
-	l.Write.Burst = max(writeRate/6, 1) // burst = rate/6 like default
-	l.Write.Limiter.Update(writeRate, window, l.Write.Burst)
-
-	// Update ReadAuth tier
-	l.ReadAuth.Rate = readAuthRate
-	l.ReadAuth.Burst = max(readAuthRate/6, 1)
-	l.ReadAuth.Limiter.Update(readAuthRate, window, l.ReadAuth.Burst)
-
-	// Update ReadUnauth tier
-	l.ReadUnauth.Rate = readUnauthRate
-	l.ReadUnauth.Burst = max(readUnauthRate/6, 1)
-	l.ReadUnauth.Limiter.Update(readUnauthRate, window, l.ReadUnauth.Burst)
+// Update applies newly stored rates at runtime, with the multiplier the limiters were created with.
+// 0 means unlimited.
+func (l *Limiters) Update(limits storagev1.RateLimits) {
+	auth, write, readAuth, readUnauth := tierConfigs(limits, l.fastLimits)
+	l.Auth.Limiter.Update(auth.rate, time.Minute, auth.burst)
+	l.Write.Limiter.Update(write.rate, time.Minute, write.burst)
+	l.ReadAuth.Limiter.Update(readAuth.rate, time.Minute, readAuth.burst)
+	l.ReadUnauth.Limiter.Update(readUnauth.rate, time.Minute, readUnauth.burst)
 }
 
 // MatchUnauth returns the tier for unauthenticated requests.
@@ -148,8 +126,8 @@ func (l *Limiters) MatchAuth(method, path string) *Tier {
 		return nil
 	}
 
-	// Search, MCP, ephemeral selection, and voice signaling have their own access controls, so they
-	// share the generous authenticated read tier.
+	// Search, MCP, ephemeral selection, and voice signaling have their own access controls. Voice
+	// offers also pass voiceGateway.admit, a per-user and global offer and session limit.
 	if method == "POST" && (path == "/api/v1/gomode/mcp" || (strings.HasPrefix(path, "/api/v1/workspaces/") && strings.HasSuffix(path, "/gomode/focus")) || strings.HasSuffix(path, "/search") || strings.HasPrefix(path, "/api/voicegateway/v1/voice/rtc/") || strings.HasPrefix(path, "/api/voicegateway/v2/voice/rtc/")) {
 		return &l.ReadAuth
 	}

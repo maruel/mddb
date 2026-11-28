@@ -94,15 +94,7 @@ func NewRouter(log *slog.Logger, svc *handlers.Services, cfg *Config) *Router {
 		mux.Handle("GET /.well-known/gomode.json", goModeHandler)
 	}
 
-	// Create rate limiters from storage config
-	rlCfg := ratelimit.ConfigFromStorage(
-		cfg.Snapshot().RateLimits.AuthRatePerMin,
-		cfg.Snapshot().RateLimits.WriteRatePerMin,
-		cfg.Snapshot().RateLimits.ReadAuthRatePerMin,
-		cfg.Snapshot().RateLimits.ReadUnauthRatePerMin,
-		cfg.FastRateLimits,
-	)
-	limiters := ratelimit.NewLimiters(rlCfg)
+	limiters := ratelimit.NewLimiters(cfg.Snapshot().RateLimits, cfg.FastRateLimits)
 
 	// Create bandwidth limiter
 	bandwidthLim := bandwidth.NewLimiter(cfg.Snapshot().Quotas.MaxEgressBandwidthBps)

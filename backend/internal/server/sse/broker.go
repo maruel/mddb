@@ -5,6 +5,7 @@ package sse
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"sync"
@@ -12,6 +13,9 @@ import (
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 )
+
+// ErrTooManyConnections rejects a subscription past the per-user, per-workspace connection cap.
+var ErrTooManyConnections = errors.New("too many SSE connections")
 
 const (
 	// subscriberBufSize is the channel buffer for each subscriber.
@@ -177,7 +181,7 @@ func (b *Broker) Subscribe(ctx context.Context, wsID, screenUser ksid.ID, intere
 			}
 		}
 		if count >= maxConnsPerUser {
-			return nil, fmt.Errorf("too many SSE connections (max %d per user per workspace)", maxConnsPerUser)
+			return nil, fmt.Errorf("%w (max %d per user per workspace)", ErrTooManyConnections, maxConnsPerUser)
 		}
 	}
 	if subs == nil {

@@ -19,6 +19,7 @@ import (
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/gomodedev/gomode/voicegateway"
 	voiceapi "github.com/gomodedev/gomode/voicegateway/api"
 	voicev2 "github.com/gomodedev/gomode/voicegateway/api/v2"
@@ -135,8 +136,8 @@ func (g *voiceGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		r.Body = io.NopCloser(bytes.NewReader(body))
-		if !g.admit(u.ID) {
-			w.Header().Set("Retry-After", "60")
+		if wait, ok := g.admit(u.ID); !ok {
+			setVoiceRetryAfter(w, wait)
 			writeVoiceError(w, http.StatusTooManyRequests, "voice session limit reached")
 			return
 		}
@@ -278,15 +279,17 @@ func writeVoiceError(w http.ResponseWriter, status int, message string) {
 	}
 }
 
-func (g *voiceGateway) admit(id ksid.ID) bool {
+// admit reserves an offer for id. A rejection over an offer rate reports how long until its oldest
+// counted offer leaves the minute; a rejection at a concurrency limit reports 0, since no wait is known.
+func (g *voiceGateway) admit(id ksid.ID) (time.Duration, bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.admitLocked(id, time.Now())
 }
 
-func (g *voiceGateway) admitLocked(id ksid.ID, now time.Time) bool {
+func (g *voiceGateway) admitLocked(id ksid.ID, now time.Time) (time.Duration, bool) {
 	if g.inFlightUser[id] || g.active+g.inFlight >= voiceMaxGlobal {
-		return false
+		return 0, false
 	}
 	g.globalOffers = recentVoiceOffers(g.globalOffers, now)
 	for user, offers := range g.offersByUser {
@@ -297,14 +300,29 @@ func (g *voiceGateway) admitLocked(id ksid.ID, now time.Time) bool {
 			g.offersByUser[user] = offers
 		}
 	}
-	if len(g.offersByUser[id]) >= voiceOffersUser || len(g.globalOffers) >= voiceOffersAll {
-		return false
+	var wait time.Duration
+	if offers := g.offersByUser[id]; len(offers) >= voiceOffersUser {
+		wait = offers[0].Add(time.Minute).Sub(now)
+	}
+	if len(g.globalOffers) >= voiceOffersAll {
+		wait = max(wait, g.globalOffers[0].Add(time.Minute).Sub(now))
+	}
+	if wait > 0 {
+		return wait, false
 	}
 	g.offersByUser[id] = append(g.offersByUser[id], now)
 	g.globalOffers = append(g.globalOffers, now)
 	g.inFlight++
 	g.inFlightUser[id] = true
-	return true
+	return 0, true
+}
+
+// setVoiceRetryAfter sends wait when admission knows it; a concurrency rejection leaves the client's
+// own backoff in charge.
+func setVoiceRetryAfter(w http.ResponseWriter, wait time.Duration) {
+	if wait > 0 {
+		gmratelimit.SetRetryAfter(w.Header(), wait)
+	}
 }
 
 func recentVoiceOffers(offers []time.Time, now time.Time) []time.Time {
@@ -532,7 +550,8 @@ func (g *voiceTextGateway) ServeTextChoice(ctx context.Context, w http.ResponseW
 		return nil
 	}
 	owner := reqctx.User(ctx).ID
-	if !g.gateway.admit(owner) {
+	if wait, ok := g.gateway.admit(owner); !ok {
+		setVoiceRetryAfter(w, wait)
 		writeVoiceError(w, http.StatusTooManyRequests, "voice session limit reached")
 		return nil
 	}

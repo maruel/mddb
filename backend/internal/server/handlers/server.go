@@ -110,8 +110,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identityv1.User, re
 			h.BandwidthLimiter.Update(next.Quotas.MaxEgressBandwidthBps)
 		}
 		if req.RateLimits != nil && h.RateLimiters != nil {
-			r := next.RateLimits
-			h.RateLimiters.Update(r.AuthRatePerMin, r.WriteRatePerMin, r.ReadAuthRatePerMin, r.ReadUnauthRatePerMin)
+			h.RateLimiters.Update(next.RateLimits)
 		}
 	})
 	if err != nil {

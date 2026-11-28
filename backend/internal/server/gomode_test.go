@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -299,6 +300,10 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		}
 		if resp.StatusCode != tc.status || !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
 			t.Fatalf("error response status/content-type = %d/%q", resp.StatusCode, resp.Header.Get("Content-Type"))
+		}
+		// The offers counted this minute are seconds old, so the wait rounds up to most of a minute.
+		if retry, err := strconv.Atoi(resp.Header.Get("Retry-After")); tc.status == http.StatusTooManyRequests && (err != nil || retry < 50 || retry > 60) {
+			t.Fatalf("offer Retry-After = %q, want the rest of the minute", resp.Header.Get("Retry-After"))
 		}
 		var got voiceapi.ErrorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {

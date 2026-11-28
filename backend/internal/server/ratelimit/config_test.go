@@ -4,57 +4,40 @@ package ratelimit
 
 import (
 	"testing"
+
+	storagev1 "github.com/maruel/mddb/backend/internal/storage/data/v1"
 )
 
-func TestConfigFromStorage(t *testing.T) {
+func TestNewLimiters(t *testing.T) {
+	limits := storagev1.RateLimits{AuthRatePerMin: 1, WriteRatePerMin: 2, ReadAuthRatePerMin: 3, ReadUnauthRatePerMin: 4}
+	rates := func(l *Limiters) [4]int {
+		return [4]int{l.Auth.Limiter.Allow("k").Limit, l.Write.Limiter.Allow("k").Limit, l.ReadAuth.Limiter.Allow("k").Limit, l.ReadUnauth.Limiter.Allow("k").Limit}
+	}
 	t.Run("production limits keep the stored rates and scope each tier", func(t *testing.T) {
-		cfg := ConfigFromStorage(5, 60, 30000, 6000, false)
-		if cfg.Auth.Rate != 5 || cfg.Write.Rate != 60 || cfg.ReadAuth.Rate != 30000 || cfg.ReadUnauth.Rate != 6000 {
-			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+		l := NewLimiters(limits, false)
+		if got := rates(l); got != [4]int{1, 2, 3, 4} {
+			t.Errorf("got rates %v", got)
 		}
-		if cfg.Auth.Scope != ScopeIP || cfg.Write.Scope != ScopeUser || cfg.ReadAuth.Scope != ScopeUser || cfg.ReadUnauth.Scope != ScopeIP {
-			t.Errorf("got scopes %v, %v, %v, %v", cfg.Auth.Scope, cfg.Write.Scope, cfg.ReadAuth.Scope, cfg.ReadUnauth.Scope)
+		if l.Auth.Scope != ScopeIP || l.Write.Scope != ScopeUser || l.ReadAuth.Scope != ScopeUser || l.ReadUnauth.Scope != ScopeIP {
+			t.Errorf("got scopes %v, %v, %v, %v", l.Auth.Scope, l.Write.Scope, l.ReadAuth.Scope, l.ReadUnauth.Scope)
 		}
 	})
-
-	t.Run("fast limits scale the stored rates 10000x", func(t *testing.T) {
-		cfg := ConfigFromStorage(1, 2, 3, 4, true)
-		if cfg.Auth.Rate != 10000 || cfg.Write.Rate != 20000 || cfg.ReadAuth.Rate != 30000 || cfg.ReadUnauth.Rate != 40000 {
-			t.Errorf("got rates %d, %d, %d, %d", cfg.Auth.Rate, cfg.Write.Rate, cfg.ReadAuth.Rate, cfg.ReadUnauth.Rate)
+	t.Run("an update keeps the e2e multiplier", func(t *testing.T) {
+		l := NewLimiters(limits, true)
+		if got := rates(l); got != [4]int{10000, 20000, 30000, 40000} {
+			t.Errorf("got rates %v", got)
+		}
+		l.Update(storagev1.RateLimits{AuthRatePerMin: 5, WriteRatePerMin: 6, ReadAuthRatePerMin: 7, ReadUnauthRatePerMin: 8})
+		if got := rates(l); got != [4]int{50000, 60000, 70000, 80000} {
+			t.Errorf("after Update got rates %v", got)
 		}
 	})
 }
 
 func TestLimiters(t *testing.T) {
-	t.Run("NewLimiters", func(t *testing.T) {
-		cfg := ConfigFromStorage(5, 60, 30000, 6000, false)
-		limiters := NewLimiters(cfg)
-
-		// Verify limiters are initialized
-		if limiters.Auth.Limiter == nil {
-			t.Error("Auth limiter should not be nil")
-		}
-		if limiters.Write.Limiter == nil {
-			t.Error("Write limiter should not be nil")
-		}
-		if limiters.ReadAuth.Limiter == nil {
-			t.Error("ReadAuth limiter should not be nil")
-		}
-		if limiters.ReadUnauth.Limiter == nil {
-			t.Error("ReadUnauth limiter should not be nil")
-		}
-
-		// Verify tier config is preserved
-		if limiters.Auth.Scope != ScopeIP {
-			t.Error("Auth tier should have IP scope")
-		}
-		if limiters.Write.Scope != ScopeUser {
-			t.Error("Write tier should have User scope")
-		}
-	})
-
+	limits := storagev1.RateLimits{AuthRatePerMin: 5, WriteRatePerMin: 60, ReadAuthRatePerMin: 30000, ReadUnauthRatePerMin: 6000}
 	t.Run("MatchUnauth", func(t *testing.T) {
-		limiters := NewLimiters(ConfigFromStorage(5, 60, 30000, 6000, false))
+		limiters := NewLimiters(limits, false)
 
 		tests := []struct {
 			method   string
@@ -90,7 +73,7 @@ func TestLimiters(t *testing.T) {
 	})
 
 	t.Run("MatchAuth", func(t *testing.T) {
-		limiters := NewLimiters(ConfigFromStorage(5, 60, 30000, 6000, false))
+		limiters := NewLimiters(limits, false)
 
 		tests := []struct {
 			method   string

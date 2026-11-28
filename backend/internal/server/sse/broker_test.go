@@ -127,8 +127,8 @@ func TestBroker(t *testing.T) {
 				}
 				screens = append(screens, events.Events)
 			}
-			if _, err := broker.Subscribe(ctx, ws, user, &EventInterest{All: true}); err == nil {
-				t.Fatal("screen admission exceeded")
+			if _, err := broker.Subscribe(ctx, ws, user, &EventInterest{All: true}); !errors.Is(err, ErrTooManyConnections) {
+				t.Fatalf("screen admission past the cap: %v", err)
 			}
 			// MCP admission is owned by its authenticated transport, not screen slots.
 			internal, err := broker.Subscribe(ctx, ws, 0, &EventInterest{All: true})

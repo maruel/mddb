@@ -95,9 +95,19 @@ func (b *lifecycleVoiceBridge) Close(id string) {
 }
 
 func admitVoiceAt(g *voiceGateway, id ksid.ID, now time.Time) bool {
+	_, ok := admitVoiceWait(g, id, now)
+	return ok
+}
+
+func admitVoiceWait(g *voiceGateway, id ksid.ID, now time.Time) (time.Duration, bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.admitLocked(id, now)
+}
+
+func admitVoice(g *voiceGateway, id ksid.ID) bool {
+	_, ok := g.admit(id)
+	return ok
 }
 
 type testTextVoiceBridge struct {
@@ -162,7 +172,7 @@ func TestVoiceGateway(t *testing.T) {
 		var wg sync.WaitGroup
 		for range 32 {
 			wg.Go(func() {
-				if g.admit(1) {
+				if admitVoice(g, 1) {
 					accepted.Add(1)
 				}
 			})
@@ -178,7 +188,7 @@ func TestVoiceGateway(t *testing.T) {
 		t.Parallel()
 		bridge := &blockingVoiceBridge{started: make(chan struct{}), proceed: make(chan struct{})}
 		g := newVoiceGateway(testlog.New(t), bridge)
-		if !g.admit(1) {
+		if !admitVoice(g, 1) {
 			t.Fatal("initial offer denied")
 		}
 		first := &voiceReservation{gateway: g, owner: 1}
@@ -187,7 +197,7 @@ func TestVoiceGateway(t *testing.T) {
 		if err != nil {
 			t.Fatalf("initial offer: %v", err)
 		}
-		if !g.admit(1) {
+		if !admitVoice(g, 1) {
 			t.Fatal("replacement offer denied")
 		}
 		second := &voiceReservation{gateway: g, owner: 1}
@@ -207,7 +217,7 @@ func TestVoiceGateway(t *testing.T) {
 		case <-time.After(3 * time.Second):
 			t.Fatal("replacement did not reach bridge")
 		}
-		if g.admit(1) {
+		if admitVoice(g, 1) {
 			t.Fatal("concurrent offer admitted during replacement")
 		}
 		g.Close(oldID)
@@ -241,8 +251,8 @@ func TestVoiceGateway(t *testing.T) {
 				}
 				g.release(1)
 			}
-			if admitVoiceAt(g, 1, now.Add(time.Minute-time.Nanosecond)) {
-				t.Fatal("offer admitted just before per-user window expired")
+			if wait, ok := admitVoiceWait(g, 1, now.Add(time.Minute-time.Nanosecond)); ok || wait != time.Nanosecond {
+				t.Fatalf("got wait %v, ok %v; want a rejection until the oldest offer leaves the minute", wait, ok)
 			}
 			if !admitVoiceAt(g, 1, now.Add(time.Minute)) {
 				t.Fatal("offer denied when per-user window expired")
@@ -259,8 +269,8 @@ func TestVoiceGateway(t *testing.T) {
 				g.release(id)
 			}
 			nextID := ksid.ID(voiceOffersAll + 1)
-			if admitVoiceAt(g, nextID, now.Add(time.Minute-time.Nanosecond)) {
-				t.Fatal("offer admitted just before global window expired")
+			if wait, ok := admitVoiceWait(g, nextID, now.Add(time.Minute-time.Nanosecond)); ok || wait != time.Nanosecond {
+				t.Fatalf("got wait %v, ok %v; want a rejection until the oldest offer leaves the minute", wait, ok)
 			}
 			if !admitVoiceAt(g, nextID, now.Add(time.Minute)) {
 				t.Fatal("offer denied when global window expired")
@@ -298,7 +308,7 @@ func TestVoiceGateway(t *testing.T) {
 		t.Parallel()
 		bridge := &lifecycleVoiceBridge{sessions: make(map[string]struct{})}
 		g := newVoiceGateway(testlog.New(t), bridge)
-		if !g.admit(1) {
+		if !admitVoice(g, 1) {
 			t.Fatal("initial offer denied")
 		}
 		first := &voiceReservation{gateway: g, owner: 1}
@@ -310,7 +320,7 @@ func TestVoiceGateway(t *testing.T) {
 		bridge.mu.Lock()
 		bridge.closeBeforeReturn = true
 		bridge.mu.Unlock()
-		if !g.admit(1) {
+		if !admitVoice(g, 1) {
 			t.Fatal("replacement offer denied")
 		}
 		second := &voiceReservation{gateway: g, owner: 1}
@@ -338,7 +348,7 @@ func TestVoiceGateway(t *testing.T) {
 		var firstID string
 		for i := 1; i <= voiceMaxGlobal; i++ {
 			owner := ksid.ID(i)
-			if !g.admit(owner) {
+			if !admitVoice(g, owner) {
 				t.Fatalf("user %d denied before capacity", i)
 			}
 			r := &voiceReservation{gateway: g, owner: owner}
@@ -351,11 +361,11 @@ func TestVoiceGateway(t *testing.T) {
 				firstID = id
 			}
 		}
-		if g.admit(ksid.ID(voiceMaxGlobal + 1)) {
+		if admitVoice(g, ksid.ID(voiceMaxGlobal+1)) {
 			t.Fatal("offer admitted at full capacity")
 		}
 		bridge.Close(firstID)
-		if !g.admit(ksid.ID(voiceMaxGlobal + 1)) {
+		if !admitVoice(g, ksid.ID(voiceMaxGlobal+1)) {
 			t.Fatal("offer denied after media hangup freed capacity")
 		}
 		g.release(ksid.ID(voiceMaxGlobal + 1))

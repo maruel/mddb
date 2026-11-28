@@ -1,4 +1,4 @@
-// Tests for SSE event handlers.
+// Tests SSE event streaming, heartbeats, write bounds, and the connection cap.
 
 package handlers
 
@@ -48,6 +48,26 @@ func TestSSEHandler(t *testing.T) {
 			h.ServeHTTP(w, r)
 			if w.Code != http.StatusBadRequest {
 				t.Fatalf("want 400, got %d", w.Code)
+			}
+		})
+
+		t.Run("connection cap asks to retry after a keep-alive", func(t *testing.T) {
+			broker := sse.NewBroker()
+			h := &SSEHandler{Svc: &Services{Broker: broker}, Cfg: &Config{}}
+			user := &identityv1.User{ID: ksid.NewID(), Name: "test", Email: "t@t.com"}
+			ws := ksid.NewID()
+			for {
+				if _, err := broker.Subscribe(t.Context(), ws, user.ID, &sse.EventInterest{All: true}); err != nil {
+					break
+				}
+			}
+			r := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/"+ws.String()+"/events", http.NoBody)
+			r.SetPathValue("wsID", ws.String())
+			r = r.WithContext(reqctx.WithUser(r.Context(), user))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") != "30" {
+				t.Fatalf("status %d, Retry-After %q; want 429 with 30", w.Code, w.Header().Get("Retry-After"))
 			}
 		})
 

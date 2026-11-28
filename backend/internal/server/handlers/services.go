@@ -360,7 +360,7 @@ type BandwidthUpdater interface {
 
 // RateLimitsUpdater allows updating rate limits at runtime.
 type RateLimitsUpdater interface {
-	Update(authRate, writeRate, readAuthRate, readUnauthRate int)
+	Update(limits storagev1.RateLimits)
 }
 
 // Config holds configuration values needed by handlers.
