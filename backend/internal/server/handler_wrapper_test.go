@@ -1,4 +1,4 @@
-// Tests request body decoding errors and benchmarks the body limit for read-only multipart transports.
+// Tests request body decoding errors, error response headers, and benchmarks the body limit for read-only multipart transports.
 
 package server
 
@@ -68,4 +68,14 @@ func BenchmarkReadOnlyMultipartBodyLimit(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestWriteAPIError(t *testing.T) {
+	t.Run("a handler's rate limit error carries Retry-After", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		writeAPIError(w, dto.RateLimitExceeded(7))
+		if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") != "7" {
+			t.Fatalf("status %d, Retry-After %q; want 429 with 7", w.Code, w.Header().Get("Retry-After"))
+		}
+	})
 }

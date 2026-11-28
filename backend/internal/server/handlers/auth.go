@@ -7,12 +7,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	identityv1 "github.com/maruel/mddb/backend/internal/storage/identity/data/v1"
 
 	"github.com/gomodedev/gomode/httpserver"
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
@@ -25,9 +25,8 @@ type AuthHandler struct {
 	svc *Services
 	cfg *Config
 
-	// Rate limiting for verification emails (1 per 10s per user)
-	verifyRateLimitMu sync.Mutex
-	verifyRateLimit   map[ksid.ID]time.Time
+	// verifyRateLimit allows one verification email per 10 s per user.
+	verifyRateLimit *gmratelimit.Limiter
 }
 
 // NewAuthHandler creates a new auth handler.
@@ -35,7 +34,7 @@ func NewAuthHandler(svc *Services, cfg *Config) *AuthHandler {
 	return &AuthHandler{
 		svc:             svc,
 		cfg:             cfg,
-		verifyRateLimit: make(map[ksid.ID]time.Time),
+		verifyRateLimit: gmratelimit.New(1, 10*time.Second, 1),
 	}
 }
 
@@ -318,15 +317,9 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identityv
 		}, nil
 	}
 
-	// Rate limit: 1 per 10 seconds per user
-	h.verifyRateLimitMu.Lock()
-	lastSent, exists := h.verifyRateLimit[user.ID]
-	if exists && time.Since(lastSent) < 10*time.Second {
-		h.verifyRateLimitMu.Unlock()
-		return nil, dto.NewAPIError(429, dto.ErrorCodeRateLimitExceeded, "Please wait before requesting another verification email")
+	if result := h.verifyRateLimit.Allow(user.ID.String()); !result.Allowed {
+		return nil, dto.RateLimitExceeded(gmratelimit.RetryAfterSeconds(result.RetryAfter))
 	}
-	h.verifyRateLimit[user.ID] = time.Now()
-	h.verifyRateLimitMu.Unlock()
 
 	// Create verification token
 	verification, err := h.svc.EmailVerif.Create(user.ID, user.Email)

@@ -404,11 +404,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.handler.ServeHTTP(w, req)
 }
 
-// Close stops the rate-limiter cleanup workers. Call it once after HTTP serving stops.
-func (r *Router) Close() {
-	r.limiters.Close()
-}
-
 // bandwidthWriter applies the host egress limit while preserving response control.
 type bandwidthWriter struct {
 	http.ResponseWriter

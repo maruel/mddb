@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gomodedev/gomode/httpserver"
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto/v1"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -886,6 +887,10 @@ func invalidBody(message string) *dto.APIError {
 // writeErrorResponseWithCode writes a detailed error response as JSON with code and details.
 func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.ErrorCode, message string, details map[string]any) {
 	w.Header().Set("Content-Type", "application/json")
+	// Every rate limit rejection carries its wait both in the body and as Retry-After.
+	if seconds, ok := details["retry_after_seconds"].(int); ok && statusCode == http.StatusTooManyRequests {
+		w.Header().Set("Retry-After", strconv.Itoa(seconds))
+	}
 	w.WriteHeader(statusCode)
 
 	response := dto.ErrorResponse{
@@ -902,8 +907,8 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.
 }
 
 // writeRateLimitError writes a 429 rate limit error response.
-func writeRateLimitError(w http.ResponseWriter, result ratelimit.Result) {
-	writeAPIError(w, dto.RateLimitExceeded(int(result.RetryAfter.Seconds())))
+func writeRateLimitError(w http.ResponseWriter, result gmratelimit.Result) {
+	writeAPIError(w, dto.RateLimitExceeded(gmratelimit.RetryAfterSeconds(result.RetryAfter)))
 }
 
 // writeAPIError writes e as the JSON error body that SDK clients decode.

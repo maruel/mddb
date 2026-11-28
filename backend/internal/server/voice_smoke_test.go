@@ -97,7 +97,6 @@ func TestSmokeVoiceGatewayGemini(t *testing.T) {
 
 	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "smoke", VoiceBridge: bridge})
-	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 

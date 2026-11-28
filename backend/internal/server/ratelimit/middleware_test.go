@@ -7,13 +7,15 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 )
 
 func TestWriteHeaders(t *testing.T) {
 	t.Run("allowed", func(t *testing.T) {
 		w := httptest.NewRecorder()
 
-		result := Result{
+		result := gmratelimit.Result{
 			Allowed:    true,
 			Limit:      60,
 			Remaining:  45,
@@ -40,12 +42,12 @@ func TestWriteHeaders(t *testing.T) {
 	t.Run("rate limited", func(t *testing.T) {
 		w := httptest.NewRecorder()
 
-		result := Result{
+		result := gmratelimit.Result{
 			Allowed:    false,
 			Limit:      60,
 			Remaining:  0,
 			ResetAt:    time.Unix(1706012345, 0),
-			RetryAfter: 30 * time.Second,
+			RetryAfter: 29500 * time.Millisecond,
 		}
 
 		WriteHeaders(w, result)
@@ -57,7 +59,7 @@ func TestWriteHeaders(t *testing.T) {
 			t.Errorf("X-RateLimit-Remaining = %s, want 0", got)
 		}
 		if got := w.Header().Get("Retry-After"); got != "30" {
-			t.Errorf("Retry-After = %s, want 30", got)
+			t.Errorf("Retry-After = %s, want 29.5 s rounded up to 30", got)
 		}
 	})
 }
@@ -89,7 +91,7 @@ func TestRateLimitResponseWriter(t *testing.T) {
 	t.Run("Write", func(t *testing.T) {
 		underlying := httptest.NewRecorder()
 
-		result := Result{
+		result := gmratelimit.Result{
 			Allowed:   true,
 			Limit:     100,
 			Remaining: 99,
@@ -115,7 +117,7 @@ func TestRateLimitResponseWriter(t *testing.T) {
 		t.Run("injects headers first", func(t *testing.T) {
 			underlying := httptest.NewRecorder()
 
-			result := Result{
+			result := gmratelimit.Result{
 				Allowed:   true,
 				Limit:     100,
 				Remaining: 99,
@@ -138,7 +140,7 @@ func TestRateLimitResponseWriter(t *testing.T) {
 		t.Run("headers only once", func(t *testing.T) {
 			underlying := httptest.NewRecorder()
 
-			result := Result{
+			result := gmratelimit.Result{
 				Allowed:   true,
 				Limit:     100,
 				Remaining: 99,
@@ -165,7 +167,7 @@ func TestRateLimitResponseWriter(t *testing.T) {
 
 	t.Run("Flush", func(t *testing.T) {
 		underlying := httptest.NewRecorder()
-		rw := NewResponseWriter(underlying, Result{Allowed: true})
+		rw := NewResponseWriter(underlying, gmratelimit.Result{Allowed: true})
 
 		var flusher http.Flusher = rw
 		flusher.Flush()

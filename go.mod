@@ -10,7 +10,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gomodedev/gomode v0.5.1-0.20261127221433-8de2f68d251c
+	github.com/gomodedev/gomode v0.5.1-0.20261128012316-8d170775cfaa
 	github.com/invopop/jsonschema v0.14.0
 	github.com/klauspost/compress v1.20.5
 	github.com/lmittmann/tint v1.2.1
@@ -23,7 +23,6 @@ require (
 	golang.org/x/crypto v0.59.0
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
-	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -269,6 +268,7 @@ require (
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
+	golang.org/x/time v0.16.0 // indirect
 	golang.org/x/tools v0.53.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

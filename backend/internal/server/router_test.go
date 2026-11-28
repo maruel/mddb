@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"strings"
-	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -53,7 +52,6 @@ func TestRouter(t *testing.T) {
 						cfg.IPGeo = checker
 					}
 					router := NewRouter(testlog.New(t), env.services, cfg)
-					t.Cleanup(router.Close)
 					req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://other.example.com/api/v1/auth/register", strings.NewReader(`{"email":"metadata@example.com","password":"password123","name":"Metadata"}`))
 					req.RemoteAddr = tc.peer
 					req.Header.Set("X-Forwarded-For", tc.forwarded)
@@ -91,7 +89,6 @@ func TestRouter(t *testing.T) {
 					IPGeo:          checker,
 					TrustedProxies: []netip.Prefix{netip.MustParsePrefix("192.0.2.1/32")},
 				})
-				t.Cleanup(router.Close)
 				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"filter@example.com","password":"password123","name":"Filter"}`))
 				req.RemoteAddr = peer
 				req.Header.Set("X-Forwarded-For", forwarded)
@@ -130,7 +127,6 @@ func TestRouter(t *testing.T) {
 				BaseURL:        "https://configured.example.com",
 			}
 			router := NewRouter(testlog.New(t), env.services, cfg)
-			t.Cleanup(router.Close)
 			for _, host := range []string{"first.example.com", "second.example.com"} {
 				r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://"+host+"/api/v1/health", http.NoBody)
 				w := httptest.NewRecorder()
@@ -159,7 +155,6 @@ func TestRouter(t *testing.T) {
 			cfg := &Config{ServerSettings: storage.NewServerSettings(settings)}
 			synctest.Test(t, func(t *testing.T) {
 				router := NewRouter(testlog.New(t), env.services, cfg)
-				t.Cleanup(router.Close)
 				ctx, cancel := context.WithCancel(t.Context())
 				t.Cleanup(cancel)
 				w := httptest.NewRecorder()
@@ -216,19 +211,16 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("registration ignored the published user quota: %d", status)
 		}
 	})
-	t.Run("Close", func(t *testing.T) {
+	t.Run("auth tier limits login without owning a worker", func(t *testing.T) {
 		env := setupTestEnv(t)
 		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{
 			JWTSecret:  testJWTSecret,
 			Quotas:     storage.DefaultServerQuotas(false),
 			RateLimits: storage.DefaultRateLimits(),
 		})}
+		// The bubble cannot complete if the router leaves a goroutine running.
 		synctest.Test(t, func(t *testing.T) {
 			r := NewRouter(testlog.New(t), env.services, cfg)
-			var wg sync.WaitGroup
-			wg.Go(r.Close)
-			t.Cleanup(wg.Wait)
-			// Request processing and rate-limit enforcement survive cleanup shutdown.
 			for range 5 {
 				w := httptest.NewRecorder()
 				r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader("{}")))
@@ -236,13 +228,14 @@ func TestRouter(t *testing.T) {
 					t.Fatalf("login status = %d", w.Code)
 				}
 			}
-			wg.Wait()
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader("{}")))
 			if w.Code != http.StatusTooManyRequests {
-				t.Fatalf("login limit after Close = %d", w.Code)
+				t.Fatalf("login status after the burst = %d", w.Code)
 			}
-			// The bubble cannot complete if any owned cleanup worker remains alive.
+			if got := w.Header().Get("Retry-After"); got != "12" {
+				t.Errorf("Retry-After = %q, want the 12 s until the next of 5 tokens per minute", got)
+			}
 		})
 	})
 }

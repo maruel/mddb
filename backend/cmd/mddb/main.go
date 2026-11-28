@@ -435,7 +435,6 @@ Flags:
 	}
 
 	router := server.NewRouter(logger, svc, routerCfg)
-	defer router.Close()
 
 	httpServer := &http.Server{
 		Addr:              addr,

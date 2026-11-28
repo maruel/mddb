@@ -1,10 +1,13 @@
 // Defines rate limit tiers and routing rules.
 
+// Package ratelimit routes mddb requests to configurable rate limit tiers.
 package ratelimit
 
 import (
 	"strings"
 	"time"
+
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 )
 
 // fastRateMultiplier multiplies every rate limit for an e2e server, whose
@@ -78,7 +81,7 @@ func DefaultConfig(fastLimits bool) *Config {
 type Tier struct {
 	TierConfig
 
-	Limiter *Limiter
+	Limiter *gmratelimit.Limiter
 }
 
 // Limiters holds active rate limiters.
@@ -93,10 +96,10 @@ type Limiters struct {
 // NewLimiters creates limiters from config.
 func NewLimiters(cfg *Config) *Limiters {
 	return &Limiters{
-		Auth:       Tier{TierConfig: cfg.Auth, Limiter: NewLimiter(cfg.Auth.Rate, cfg.Auth.Window, cfg.Auth.Burst)},
-		Write:      Tier{TierConfig: cfg.Write, Limiter: NewLimiter(cfg.Write.Rate, cfg.Write.Window, cfg.Write.Burst)},
-		ReadAuth:   Tier{TierConfig: cfg.ReadAuth, Limiter: NewLimiter(cfg.ReadAuth.Rate, cfg.ReadAuth.Window, cfg.ReadAuth.Burst)},
-		ReadUnauth: Tier{TierConfig: cfg.ReadUnauth, Limiter: NewLimiter(cfg.ReadUnauth.Rate, cfg.ReadUnauth.Window, cfg.ReadUnauth.Burst)},
+		Auth:       Tier{TierConfig: cfg.Auth, Limiter: gmratelimit.New(cfg.Auth.Rate, cfg.Auth.Window, cfg.Auth.Burst)},
+		Write:      Tier{TierConfig: cfg.Write, Limiter: gmratelimit.New(cfg.Write.Rate, cfg.Write.Window, cfg.Write.Burst)},
+		ReadAuth:   Tier{TierConfig: cfg.ReadAuth, Limiter: gmratelimit.New(cfg.ReadAuth.Rate, cfg.ReadAuth.Window, cfg.ReadAuth.Burst)},
+		ReadUnauth: Tier{TierConfig: cfg.ReadUnauth, Limiter: gmratelimit.New(cfg.ReadUnauth.Rate, cfg.ReadUnauth.Window, cfg.ReadUnauth.Burst)},
 		startTime:  time.Now(),
 	}
 }
@@ -109,14 +112,6 @@ func (l *Limiters) Counts() (auth, write, readAuth, readUnauth int64) {
 // StartTime returns when the limiters were created (server start time).
 func (l *Limiters) StartTime() time.Time {
 	return l.startTime
-}
-
-// Close stops and waits for all limiter cleanup goroutines. Call it once.
-func (l *Limiters) Close() {
-	l.Auth.Limiter.Close()
-	l.Write.Limiter.Close()
-	l.ReadAuth.Limiter.Close()
-	l.ReadUnauth.Limiter.Close()
 }
 
 // Update changes the rate limits at runtime. 0 means unlimited.
@@ -173,8 +168,8 @@ func (l *Limiters) MatchAuth(method, path string) *Tier {
 		return nil
 	}
 
-	// Search, MCP, ephemeral selection, and voice signaling have their own access controls. Voice
-	// offers also use a dedicated per-user and global limiter at the gateway.
+	// Search, MCP, ephemeral selection, and voice signaling have their own access controls, so they
+	// share the generous authenticated read tier.
 	if method == "POST" && (path == "/api/v1/gomode/mcp" || (strings.HasPrefix(path, "/api/v1/workspaces/") && strings.HasSuffix(path, "/gomode/focus")) || strings.HasSuffix(path, "/search") || strings.HasPrefix(path, "/api/voicegateway/v1/voice/rtc/") || strings.HasPrefix(path, "/api/voicegateway/v2/voice/rtc/")) {
 		return &l.ReadAuth
 	}

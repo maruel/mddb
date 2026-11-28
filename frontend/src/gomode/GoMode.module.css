@@ -31,9 +31,3 @@
   --color-danger: var(--c-text-danger);
   --color-success: var(--c-text-success);
 }
-
-.error {
-  padding: var(--s-2);
-  color: var(--c-text-danger);
-  background: var(--c-surface-danger);
-}

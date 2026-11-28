@@ -33,7 +33,6 @@ func TestServerHandler(t *testing.T) {
 		}
 		bw := bandwidth.NewLimiter(0)
 		rl := ratelimit.NewLimiters(ratelimit.DefaultConfig(false))
-		t.Cleanup(rl.Close)
 		return &ServerHandler{Settings: storage.NewServerSettings(cfg), ConfigDir: dir, BandwidthLimiter: bw, RateLimiters: rl}, bw, rl
 	}
 	t.Run("UpdateConfig/valid", func(t *testing.T) {

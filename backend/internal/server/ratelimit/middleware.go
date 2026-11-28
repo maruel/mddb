@@ -5,18 +5,20 @@ package ratelimit
 import (
 	"net/http"
 	"strconv"
+
+	gmratelimit "github.com/gomodedev/gomode/httpserver/ratelimit"
 )
 
 // WriteHeaders writes rate limit headers to the response.
 // Headers are written on all responses (both success and 429).
-func WriteHeaders(w http.ResponseWriter, result Result) {
+func WriteHeaders(w http.ResponseWriter, result gmratelimit.Result) {
 	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(result.Limit))
 	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
 	w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(result.ResetAt.Unix(), 10))
 
 	// Retry-After only on 429 responses
 	if !result.Allowed {
-		w.Header().Set("Retry-After", strconv.Itoa(int(result.RetryAfter.Seconds())))
+		gmratelimit.SetRetryAfter(w.Header(), result.RetryAfter)
 	}
 }
 
@@ -25,12 +27,12 @@ func WriteHeaders(w http.ResponseWriter, result Result) {
 type rateLimitResponseWriter struct {
 	http.ResponseWriter
 
-	result      Result
+	result      gmratelimit.Result
 	wroteHeader bool
 }
 
 // NewResponseWriter creates a response writer that injects rate limit headers.
-func NewResponseWriter(w http.ResponseWriter, result Result) *rateLimitResponseWriter {
+func NewResponseWriter(w http.ResponseWriter, result gmratelimit.Result) *rateLimitResponseWriter {
 	return &rateLimitResponseWriter{
 		ResponseWriter: w,
 		result:         result,

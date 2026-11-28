@@ -53,7 +53,6 @@ func TestLimiters(t *testing.T) {
 	t.Run("NewLimiters", func(t *testing.T) {
 		cfg := DefaultConfig(false)
 		limiters := NewLimiters(cfg)
-		t.Cleanup(limiters.Close)
 
 		// Verify limiters are initialized
 		if limiters.Auth.Limiter == nil {
@@ -80,7 +79,6 @@ func TestLimiters(t *testing.T) {
 
 	t.Run("MatchUnauth", func(t *testing.T) {
 		limiters := NewLimiters(DefaultConfig(false))
-		t.Cleanup(limiters.Close)
 
 		tests := []struct {
 			method   string
@@ -117,7 +115,6 @@ func TestLimiters(t *testing.T) {
 
 	t.Run("MatchAuth", func(t *testing.T) {
 		limiters := NewLimiters(DefaultConfig(false))
-		t.Cleanup(limiters.Close)
 
 		tests := []struct {
 			method   string

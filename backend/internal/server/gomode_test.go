@@ -110,7 +110,6 @@ func TestGoModeVoiceGateway(t *testing.T) {
 	serverCfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	bridge := &testVoiceChoiceBridge{testVoiceBridge: testVoiceBridge{rtcErrors: map[string]string{"session-1": "provider disconnected"}}}
 	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(serverCfg), Version: "test", VoiceBridge: bridge})
-	t.Cleanup(router.Close)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 
@@ -863,7 +862,6 @@ func TestGoModeTextVoiceBrowser(t *testing.T) {
 	}
 	cfg := &storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}
 	router := NewRouter(testlog.New(t), env.services, &Config{ServerSettings: storage.NewServerSettings(cfg), Version: "test", VoiceBridge: &websocketVoiceBridge{}})
-	t.Cleanup(router.Close)
 	ts := httptest.NewServer(router)
 	t.Cleanup(ts.Close)
 	ticketRequest := func(token string) *http.Response {

@@ -52,7 +52,6 @@ func TestDeviceLogin(t *testing.T) {
 		}
 		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}), ConfigDir: dir, BaseURL: "https://mddb.example", FastRateLimits: true, VoiceBridge: &testVoiceBridge{}, OAuth: OAuthConfig{GoogleClientID: "client", GoogleClientSecret: "secret"}}
 		h := NewRouter(testlog.New(t), env.services, cfg)
-		t.Cleanup(h.Close)
 		return env, h, dir, auth
 	}
 	t.Run("normal session user agent is UTF-8 bounded", func(t *testing.T) {
@@ -435,7 +434,6 @@ func TestDeviceLogin(t *testing.T) {
 					cfg.ConfigDir = ""
 				}
 				h := NewRouter(testlog.New(t), env.services, cfg)
-				t.Cleanup(h.Close)
 				for _, name := range []string{"start", "poll", "lookup", "approve"} {
 					if w := post(h, name, "{}", "", ""); w.Code != 404 {
 						t.Fatalf("%s=%d", name, w.Code)
@@ -448,7 +446,6 @@ func TestDeviceLogin(t *testing.T) {
 		env, _, dir, _ := setup(t)
 		cfg := &Config{ServerSettings: storage.NewServerSettings(&storagev1.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(false), RateLimits: storage.DefaultRateLimits()}), ConfigDir: dir}
 		h := NewRouter(testlog.New(t), env.services, cfg)
-		t.Cleanup(h.Close)
 		for range 5 {
 			start(t, h)
 		}

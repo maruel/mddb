@@ -38,12 +38,7 @@ func TestExternalVoiceGateway(t *testing.T) {
 				}
 				var h *Router
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { h.ServeHTTP(w, r) }))
-				t.Cleanup(func() {
-					ts.Close()
-					if h != nil {
-						h.Close()
-					}
-				})
+				t.Cleanup(ts.Close)
 				var key any
 				var public ed25519.PublicKey
 				if mode == "scoped" {

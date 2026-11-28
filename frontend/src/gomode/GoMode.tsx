@@ -163,8 +163,6 @@ export const GoModeProvider: ParentComponent = (props) => {
                   resourceEvents={workspaceEvents() ? resourceEvents : undefined}
                   messages={messages}
                   setupFailed={t("voice.setupFailed") || ""}
-                  errorClass={styles.error}
-                  onError={(error) => console.error("Could not configure mddb voice gateway", error)}
                 />
               </div>
             );

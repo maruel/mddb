@@ -151,7 +151,6 @@ func setupTestEnv(t testing.TB) *testEnv {
 		OAuth:          OAuthConfig{GitHubClientID: "client", GitHubClientSecret: "secret"},
 	}
 	router := NewRouter(testlog.New(t), svc, cfg)
-	t.Cleanup(router.Close)
 
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
